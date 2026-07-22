@@ -86,26 +86,51 @@ export default function App() {
     alert(`เพิ่มหน่วยงาน "${name}" เข้าสู่ระบบเรียบร้อยแล้ว`);
   };
 
-  // Add New User
-  const handleAddUser = () => {
-    const uname = prompt('กรุณาระบุ Username เจ้าหน้าที่ใหม่:');
-    if (!uname) return;
-    const fullName = prompt('กรุณาระบุ ชื่อ-นามสกุล เจ้าหน้าที่:') || uname;
-    const orgId = prompt('กรุณาระบุ รหัสหน่วยงาน (เช่น org_dopa, org_rd):') || 'org_dopa';
-    const role = prompt('กรุณาระบุ บทบาทสิทธิ์ (admin, intake, dpo, approver, owner):') || 'intake';
+  // Modal States
+  const [showAddUserModal, setShowAddUserModal] = useState(false);
+  const [newUserData, setNewUserData] = useState({
+    username: '',
+    fullName: '',
+    email: '',
+    orgId: '',
+    role: 'intake',
+    department: ''
+  });
+
+  // Open Add User Modal
+  const handleOpenAddUserModal = () => {
+    setNewUserData({
+      username: '',
+      fullName: '',
+      email: '',
+      orgId: tenants[0]?.id || 'org_dopa',
+      role: 'intake',
+      department: ''
+    });
+    setShowAddUserModal(true);
+  };
+
+  // Submit New User Form
+  const handleCreateUserSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newUserData.username || !newUserData.fullName) {
+      alert('กรุณากรอกข้อมูล Username และชื่อ-นามสกุลให้ครบถ้วน');
+      return;
+    }
 
     const newUser: User = {
       id: `usr_${Date.now()}`,
-      orgId: orgId,
-      username: uname,
-      fullName: fullName,
-      email: `${uname}@${orgId.replace('org_', '')}.go.th`,
-      role: role,
-      department: 'หน่วยงานผู้ปฏิบัติงาน'
+      orgId: newUserData.orgId,
+      username: newUserData.username.trim(),
+      fullName: newUserData.fullName.trim(),
+      email: newUserData.email.trim() || `${newUserData.username.trim()}@pdpa-system.or.th`,
+      role: newUserData.role,
+      department: newUserData.department.trim() || 'หน่วยงานผู้ปฏิบัติงาน'
     };
 
     setUsers([...users, newUser]);
-    alert(`สร้างบัญชีเจ้าหน้าที่ "${fullName}" เรียบร้อยแล้ว`);
+    setShowAddUserModal(false);
+    alert(`สร้างบัญชีเจ้าหน้าที่ "${newUser.fullName}" เรียบร้อยแล้ว`);
   };
 
   // Reset User Password
@@ -329,11 +354,11 @@ export default function App() {
             </button>
           ) : (
             <button
-              onClick={handleAddUser}
+              onClick={handleOpenAddUserModal}
               className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-4 py-2 rounded-lg transition shadow-sm flex items-center gap-1.5"
             >
               <Plus className="h-4 w-4" />
-              <span>+ สร้างผู้ใช้ใหม่</span>
+              <span>+ สร้างผู้ใช้ใหม่ (Add User)</span>
             </button>
           )}
         </div>
@@ -423,6 +448,140 @@ export default function App() {
         )}
 
       </main>
+
+      {/* Add User Modal Dialog (Form + Dropdown Selection) */}
+      {showAddUserModal && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className={`border rounded-2xl p-6 max-w-lg w-full shadow-2xl space-y-5 ${cardBgClass} animate-fade-in`}>
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="p-2 bg-emerald-500/20 border border-emerald-500/30 rounded-lg text-emerald-400">
+                  <UserCheck className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-base">สร้างบัญชีผู้ใช้ใหม่ (Create New User)</h3>
+                  <p className="text-xs text-slate-400">เลือกหน่วยงานและกำหนดสิทธิ์เจ้าหน้าที่ในฟอร์มเดียว</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowAddUserModal(false)}
+                className="text-slate-400 hover:text-white text-lg font-bold px-2"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateUserSubmit} className="space-y-4">
+              {/* 1. เลือกหน่วยงาน (Dropdown) */}
+              <div>
+                <label className="block text-xs font-bold mb-1.5 flex items-center justify-between">
+                  <span>🏢 เลือกหน่วยงานต้นสังกัด (Select Tenant Organization)</span>
+                  <span className="text-emerald-500 text-[10px]">✓ ป้องกันการพิมพ์รหัสผิด</span>
+                </label>
+                <select
+                  value={newUserData.orgId}
+                  onChange={(e) => setNewUserData({ ...newUserData, orgId: e.target.value })}
+                  className={`w-full px-3 py-2.5 border rounded-xl text-xs font-semibold focus:outline-none focus:border-emerald-500 ${inputBgClass}`}
+                  required
+                >
+                  {tenants.map((org) => (
+                    <option key={org.id} value={org.id} className="bg-slate-900 text-white">
+                      {org.nameTh} ({org.id})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* 2. Username & Full Name */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold mb-1">Username เข้าใช้งาน *</label>
+                  <input
+                    type="text"
+                    value={newUserData.username}
+                    onChange={(e) => setNewUserData({ ...newUserData, username: e.target.value })}
+                    placeholder="เช่น intake.dopa"
+                    className={`w-full px-3 py-2 border rounded-xl text-xs focus:outline-none focus:border-emerald-500 ${inputBgClass}`}
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold mb-1">ชื่อ - นามสกุล *</label>
+                  <input
+                    type="text"
+                    value={newUserData.fullName}
+                    onChange={(e) => setNewUserData({ ...newUserData, fullName: e.target.value })}
+                    placeholder="เช่น สมชาย ใจดี"
+                    className={`w-full px-3 py-2 border rounded-xl text-xs focus:outline-none focus:border-emerald-500 ${inputBgClass}`}
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* 3. Role & Email */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold mb-1">บทบาทสิทธิ์ (Role) *</label>
+                  <select
+                    value={newUserData.role}
+                    onChange={(e) => setNewUserData({ ...newUserData, role: e.target.value })}
+                    className={`w-full px-3 py-2 border rounded-xl text-xs font-semibold focus:outline-none focus:border-emerald-500 ${inputBgClass}`}
+                    required
+                  >
+                    <option value="intake" className="bg-slate-900 text-white">INTAKE - เจ้าหน้าที่รับเรื่อง</option>
+                    <option value="owner" className="bg-slate-900 text-white">OWNER - เจ้าของข้อมูล/ระบบงาน</option>
+                    <option value="dpo" className="bg-slate-900 text-white">DPO - เจ้าหน้าที่คุ้มครองข้อมูล</option>
+                    <option value="approver" className="bg-slate-900 text-white">APPROVER - ผู้อนุมัติคำขอ</option>
+                    <option value="admin" className="bg-slate-900 text-white">ADMIN - ผู้ดูแลประจำหน่วยงาน</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold mb-1">อีเมลติดต่อ</label>
+                  <input
+                    type="email"
+                    value={newUserData.email}
+                    onChange={(e) => setNewUserData({ ...newUserData, email: e.target.value })}
+                    placeholder="officer@dopa.go.th"
+                    className={`w-full px-3 py-2 border rounded-xl text-xs focus:outline-none focus:border-emerald-500 ${inputBgClass}`}
+                  />
+                </div>
+              </div>
+
+              {/* 4. Department */}
+              <div>
+                <label className="block text-xs font-semibold mb-1">แผนก / สำนัก / กองงาน</label>
+                <input
+                  type="text"
+                  value={newUserData.department}
+                  onChange={(e) => setNewUserData({ ...newUserData, department: e.target.value })}
+                  placeholder="เช่น ศูนย์รับเรื่องร้องเรียน PDPA"
+                  className={`w-full px-3 py-2 border rounded-xl text-xs focus:outline-none focus:border-emerald-500 ${inputBgClass}`}
+                />
+              </div>
+
+              {/* Buttons */}
+              <div className="flex gap-2 pt-2 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setShowAddUserModal(false)}
+                  className="w-1/3 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold py-2.5 rounded-xl text-xs transition"
+                >
+                  ยกเลิก
+                </button>
+                <button
+                  type="submit"
+                  className="w-2/3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 rounded-xl text-xs transition shadow-lg"
+                >
+                  บันทึกสร้างบัญชีผู้ใช้ใหม่
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Footer */}
       <footer className={`border-t p-4 text-center text-xs text-slate-500 ${headerBgClass}`}>
