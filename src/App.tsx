@@ -1743,23 +1743,45 @@ export default function App() {
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-1">
-                          <label className="text-xs font-medium text-slate-700">ขอบเขตวันและเวลาเริ่มต้นข้อมูล</label>
+                          <label className="text-xs font-medium text-slate-700 flex justify-between">
+                            <span>ขอบเขตวันและเวลาเริ่มต้นข้อมูล</span>
+                            <span className="text-[10px] text-slate-400">ไม่เกินวันปัจจุบัน</span>
+                          </label>
                           <input
                             type="date"
-                            max={new Date().toISOString().split('T')[0]}
+                            max={new Date().toLocaleDateString('sv-SE')}
                             value={scopeForm.timeframeStart}
-                            onChange={(e) => setScopeForm({...scopeForm, timeframeStart: e.target.value})}
-                            className="w-full text-xs border border-slate-300 rounded-lg p-2 focus:ring-1 focus:ring-brand-500"
+                            onChange={(e) => {
+                              const selected = e.target.value;
+                              const today = new Date().toLocaleDateString('sv-SE');
+                              if (selected > today) {
+                                alert('⚠️ ไม่สามารถเลือกวันที่เริ่มต้นเกิน "วันที่ปัจจุบัน" ได้');
+                                return;
+                              }
+                              setScopeForm({...scopeForm, timeframeStart: selected});
+                            }}
+                            className="w-full text-xs border border-slate-300 rounded-lg p-2 focus:ring-1 focus:ring-brand-500 font-mono"
                           />
                         </div>
                         <div className="space-y-1">
-                          <label className="text-xs font-medium text-slate-700">ขอบเขตวันและเวลาสิ้นสุดข้อมูล</label>
+                          <label className="text-xs font-medium text-slate-700 flex justify-between">
+                            <span>ขอบเขตวันและเวลาสิ้นสุดข้อมูล</span>
+                            <span className="text-[10px] text-slate-400">ไม่เกินวันปัจจุบัน</span>
+                          </label>
                           <input
                             type="date"
-                            max={new Date().toISOString().split('T')[0]}
+                            max={new Date().toLocaleDateString('sv-SE')}
                             value={scopeForm.timeframeEnd}
-                            onChange={(e) => setScopeForm({...scopeForm, timeframeEnd: e.target.value})}
-                            className="w-full text-xs border border-slate-300 rounded-lg p-2 focus:ring-1 focus:ring-brand-500"
+                            onChange={(e) => {
+                              const selected = e.target.value;
+                              const today = new Date().toLocaleDateString('sv-SE');
+                              if (selected > today) {
+                                alert('⚠️ ไม่สามารถเลือกวันที่สิ้นสุดเกิน "วันที่ปัจจุบัน" ได้');
+                                return;
+                              }
+                              setScopeForm({...scopeForm, timeframeEnd: selected});
+                            }}
+                            className="w-full text-xs border border-slate-300 rounded-lg p-2 focus:ring-1 focus:ring-brand-500 font-mono"
                           />
                         </div>
                       </div>
