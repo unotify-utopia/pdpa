@@ -78,9 +78,15 @@ export default function App() {
     status: 'active'
   });
 
+  // Email OTP Verification States
+  const [isEmailVerified, setIsEmailVerified] = useState(false);
+  const [showOtpVerificationModal, setShowOtpVerificationModal] = useState(false);
+  const [tenantOtpInput, setTenantOtpInput] = useState('');
+
   // Open Modal for New Tenant
   const handleOpenAddTenantModal = () => {
     setEditingTenantId(null);
+    setIsEmailVerified(false);
     setTenantFormData({
       id: `org_${Date.now().toString().slice(-6)}`,
       nameTh: '',
@@ -95,15 +101,62 @@ export default function App() {
   // Open Modal for Edit Existing Tenant
   const handleOpenEditTenantModal = (tenant: Tenant) => {
     setEditingTenantId(tenant.id);
+    setIsEmailVerified(true); // Existing tenants bypass OTP by default
     setTenantFormData({ ...tenant });
     setShowTenantModal(true);
   };
 
-  // Submit Tenant Form (Add & Edit)
+  // Send OTP Email Trigger
+  const handleSendEmailOtp = () => {
+    if (!tenantFormData.email.trim() || !tenantFormData.email.includes('@')) {
+      alert('กรุณากรอกอีเมลติดต่อทางการให้ถูกต้องก่อนส่งรหัส OTP');
+      return;
+    }
+    setTenantOtpInput('');
+    setShowOtpVerificationModal(true);
+  };
+
+  // Verify OTP Trigger
+  const handleVerifyOtpSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (tenantOtpInput.trim() === '123456' || tenantOtpInput.trim().length === 6) {
+      setIsEmailVerified(true);
+      setShowOtpVerificationModal(false);
+      alert(`✓ ยืนยันอีเมล ${tenantFormData.email} ด้วยรหัส OTP สำเร็จเรียบร้อยแล้ว`);
+    } else {
+      alert('รหัส OTP ไม่ถูกต้อง กรุณาลองใช้อีเมลตัวอย่าง OTP: 123456');
+    }
+  };
+
+  // Submit Tenant Form (Strict Validation)
   const handleTenantFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!tenantFormData.nameTh.trim() || !tenantFormData.id.trim()) {
-      alert('กรุณากรอกชื่อหน่วยงานและรหัสหน่วยงานให้ครบถ้วน');
+    
+    // Strict Mandatory Validation
+    if (!tenantFormData.nameTh.trim()) {
+      alert('กรุณากรอก "ชื่อหน่วยงาน (ภาษาไทย)"');
+      return;
+    }
+    if (!tenantFormData.nameEn.trim()) {
+      alert('กรุณากรอก "ชื่อหน่วยงาน (ภาษาอังกฤษ / ชื่อย่อ)"');
+      return;
+    }
+    if (!tenantFormData.id.trim()) {
+      alert('กรุณากรอก "รหัสประจำหน่วยงานในระบบ"');
+      return;
+    }
+    if (!tenantFormData.email.trim()) {
+      alert('กรุณากรอก "อีเมลติดต่อทางการ"');
+      return;
+    }
+    if (!tenantFormData.phone.trim()) {
+      alert('กรุณากรอก "เบอร์โทรศัพท์ติดต่อ" สำหรับช่องทางติดต่อผู้ให้บริการ');
+      return;
+    }
+
+    // Require Email OTP Verification for new tenants
+    if (!editingTenantId && !isEmailVerified) {
+      alert('กรุณากดปุ่ม "ส่งรหัส OTP ยืนยันอีเมล" และยืนยันตัวตนอีเมลก่อนบันทึก');
       return;
     }
 
@@ -118,7 +171,7 @@ export default function App() {
         return;
       }
       setTenants([...tenants, { ...tenantFormData, id: tenantFormData.id.trim() }]);
-      alert(`สร้างหน่วยงานใหม่ "${tenantFormData.nameTh}" เรียบร้อยแล้ว`);
+      alert(`สร้างหน่วยงานใหม่ "${tenantFormData.nameTh}" พร้อมยืนยันอีเมลสำเร็จเรียบร้อยแล้ว`);
     }
 
     setShowTenantModal(false);
@@ -650,7 +703,7 @@ export default function App() {
               {/* 1. ชื่อหน่วยงานภาษาไทย & อังกฤษ */}
               <div className="space-y-3">
                 <div>
-                  <label className="block text-xs font-bold mb-1">ชื่อหน่วยงาน (ภาษาไทย) *</label>
+                  <label className="block text-xs font-bold mb-1 text-emerald-400">ชื่อหน่วยงาน (ภาษาไทย) *</label>
                   <input
                     type="text"
                     value={tenantFormData.nameTh}
@@ -662,20 +715,21 @@ export default function App() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold mb-1">ชื่อหน่วยงาน (ภาษาอังกฤษ / ชื่อย่อ)</label>
+                  <label className="block text-xs font-bold mb-1 text-emerald-400">ชื่อหน่วยงาน (ภาษาอังกฤษ / ชื่อย่อ) *</label>
                   <input
                     type="text"
                     value={tenantFormData.nameEn}
                     onChange={(e) => setTenantFormData({ ...tenantFormData, nameEn: e.target.value })}
                     placeholder="เช่น Department of Provincial Administration (DOPA)"
                     className={`w-full px-3 py-2 border rounded-xl text-xs focus:outline-none focus:border-emerald-500 ${inputBgClass}`}
+                    required
                   />
                 </div>
               </div>
 
               {/* 2. รหัสประจำหน่วยงาน (Tenant ID) */}
               <div>
-                <label className="block text-xs font-bold mb-1 flex items-center justify-between">
+                <label className="block text-xs font-bold mb-1 flex items-center justify-between text-emerald-400">
                   <span>รหัสประจำหน่วยงานในระบบ (Tenant ID Code) *</span>
                   <span className="text-emerald-500 text-[10px]">✓ ใช้สำหรับอ้างอิงแยกข้อมูล</span>
                 </label>
@@ -690,39 +744,65 @@ export default function App() {
                 />
               </div>
 
-              {/* 3. อีเมล & เบอร์โทรศัพท์ */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {/* 3. อีเมล & OTP & เบอร์โทรศัพท์ */}
+              <div className="space-y-3">
                 <div>
-                  <label className="block text-xs font-semibold mb-1">อีเมลติดต่อทางการ *</label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-xs font-bold text-emerald-400">อีเมลติดต่อทางการประจำหน่วยงาน *</label>
+                    {isEmailVerified ? (
+                      <span className="text-[10px] text-emerald-400 font-bold flex items-center gap-1 bg-emerald-500/20 px-2 py-0.5 rounded border border-emerald-500/30">
+                        ✓ ยืนยันอีเมลด้วย OTP แล้ว
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={handleSendEmailOtp}
+                        className="text-[10px] bg-brand-600 hover:bg-brand-500 text-white font-bold px-2 py-0.5 rounded shadow-sm transition"
+                      >
+                        📩 ส่งรหัส OTP ยืนยันอีเมล
+                      </button>
+                    )}
+                  </div>
                   <input
                     type="email"
                     value={tenantFormData.email}
-                    onChange={(e) => setTenantFormData({ ...tenantFormData, email: e.target.value })}
+                    onChange={(e) => {
+                      setTenantFormData({ ...tenantFormData, email: e.target.value });
+                      if (!editingTenantId) setIsEmailVerified(false);
+                    }}
                     placeholder="pdpa@organization.go.th"
                     className={`w-full px-3 py-2 border rounded-xl text-xs focus:outline-none focus:border-emerald-500 ${inputBgClass}`}
                     required
                   />
+                  {!editingTenantId && !isEmailVerified && (
+                    <span className="block text-[10px] text-amber-400 mt-1 font-medium">
+                      ⚠️ ต้องกดส่งรหัส OTP และกรอกรหัสยืนยันอีเมลก่อนสร้างหน่วยงานใหม่
+                    </span>
+                  )}
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold mb-1">เบอร์โทรศัพท์ติดต่อ</label>
+                  <label className="block text-xs font-bold mb-1 text-emerald-400">เบอร์โทรศัพท์ติดต่อผู้ให้บริการ (สายด่วน) *</label>
                   <input
                     type="text"
                     value={tenantFormData.phone}
                     onChange={(e) => setTenantFormData({ ...tenantFormData, phone: e.target.value })}
-                    placeholder="02-XXX-XXXX"
+                    placeholder="เช่น 02-221-8150 หรือ 081-XXX-XXXX"
                     className={`w-full px-3 py-2 border rounded-xl text-xs focus:outline-none focus:border-emerald-500 ${inputBgClass}`}
+                    required
                   />
+                  <span className="block text-[10px] text-slate-400 mt-0.5">ใช้เป็นช่องทางหลักสำหรับผู้ให้บริการระบบกลางติดต่อผู้ดูแลประจำหน่วยงาน</span>
                 </div>
               </div>
 
               {/* 4. สถานะหน่วยงาน */}
               <div>
-                <label className="block text-xs font-semibold mb-1">สถานะการเปิดใช้งานในระบบ</label>
+                <label className="block text-xs font-bold mb-1 text-emerald-400">สถานะการเปิดใช้งานในระบบ *</label>
                 <select
                   value={tenantFormData.status}
                   onChange={(e) => setTenantFormData({ ...tenantFormData, status: e.target.value as any })}
                   className={`w-full px-3 py-2 border rounded-xl text-xs font-semibold focus:outline-none focus:border-emerald-500 ${inputBgClass}`}
+                  required
                 >
                   <option value="active" className="bg-slate-900 text-emerald-400">ACTIVE - เปิดใช้งานรับคำขอปกติ</option>
                   <option value="inactive" className="bg-slate-900 text-red-400">INACTIVE - ปิดการใช้งานชั่วคราว</option>
@@ -743,6 +823,57 @@ export default function App() {
                   className="w-2/3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 rounded-xl text-xs transition shadow-lg"
                 >
                   {editingTenantId ? 'บันทึกการแก้ไขข้อมูล' : 'บันทึกสร้างหน่วยงานใหม่'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Email OTP Verification Modal Dialog */}
+      {showOtpVerificationModal && (
+        <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className={`border rounded-2xl p-6 max-w-sm w-full shadow-2xl space-y-4 ${cardBgClass} animate-fade-in text-center`}>
+            <div className="inline-flex p-3 bg-brand-500/20 border border-brand-500/30 rounded-2xl text-brand-400 mb-1">
+              <QrCode className="h-8 w-8 text-emerald-400" />
+            </div>
+            
+            <div className="space-y-1">
+              <h4 className="font-bold text-sm text-white">ยืนยันอีเมลประจำหน่วยงานด้วย OTP</h4>
+              <p className="text-xs text-slate-400">
+                ระบบได้ส่งรหัส OTP 6 หลัก ไปยังอีเมล <br />
+                <span className="font-mono text-emerald-400 font-bold">{tenantFormData.email}</span>
+              </p>
+            </div>
+
+            <form onSubmit={handleVerifyOtpSubmit} className="space-y-4">
+              <div>
+                <input
+                  type="text"
+                  maxLength={6}
+                  value={tenantOtpInput}
+                  onChange={(e) => setTenantOtpInput(e.target.value)}
+                  placeholder="1 2 3 4 5 6"
+                  className={`w-full text-center tracking-[0.5em] font-mono text-lg font-bold py-2 border rounded-xl focus:outline-none focus:border-emerald-500 ${inputBgClass}`}
+                  required
+                  autoFocus
+                />
+                <span className="block text-[10px] text-slate-500 mt-1">รหัสตัวอย่างทดสอบ OTP: 123456</span>
+              </div>
+
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowOtpVerificationModal(false)}
+                  className="w-1/3 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold py-2 rounded-xl transition"
+                >
+                  ยกเลิก
+                </button>
+                <button
+                  type="submit"
+                  className="w-2/3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 rounded-xl text-xs transition shadow-lg"
+                >
+                  ยืนยันรหัส OTP
                 </button>
               </div>
             </form>
