@@ -55,7 +55,7 @@ import {
 } from './db';
 
 
-import { initialOrganizations } from './mockData';
+import { initialOrganizations, systemUsers } from './mockData';
 import { SignaturePad } from './components/SignaturePad';
 import { WatermarkedUpload } from './components/WatermarkedUpload';
 import { RedactionCanvas } from './components/RedactionCanvas';
@@ -67,7 +67,7 @@ export default function App() {
   // App context navigation states
   const [view, setView] = useState<'public' | 'internal' | 'tracking' | 'download'>('public');
   const [publicTab, setPublicTab] = useState<'landing' | 'submit' | 'submitted_success'>('landing');
-  const [internalTab, setInternalTab] = useState<'dashboard' | 'requests' | 'kanban' | 'compliance' | 'templates' | 'retention' | 'audit'>('dashboard');
+  const [internalTab, setInternalTab] = useState<'dashboard' | 'requests' | 'kanban' | 'users' | 'compliance' | 'templates' | 'retention' | 'audit'>('dashboard');
 
   // DB States
   const [requests, setRequests] = useState<Request[]>([]);
@@ -2027,6 +2027,7 @@ export default function App() {
                   { id: 'dashboard', label: 'หน้าแผงควบคุมหลัก', icon: Layers, roles: ['admin', 'intake', 'dpo', 'approver', 'auditor'] },
                   { id: 'requests', label: 'รายการคำขอทั้งหมด', icon: List, roles: ['admin', 'intake', 'dpo', 'approver', 'auditor', 'owner'] },
                   { id: 'kanban', label: 'Kanban บอร์ดสิทธิ์', icon: Layers, roles: ['admin', 'intake', 'dpo', 'approver', 'owner'] },
+                  { id: 'users', label: 'จัดการผู้ใช้และสิทธิ์', icon: UserCheck, roles: ['admin'] },
                   { id: 'compliance', label: 'Compliance ตั้งค่ากฎหมาย', icon: Scale, roles: ['admin', 'dpo'] },
                   { id: 'templates', label: 'Template หนังสือราชการ', icon: FileCheck2, roles: ['admin', 'dpo'] },
                   { id: 'retention', label: 'ทำลายและจัดเก็บข้อมูล', icon: Trash2, roles: ['admin', 'dpo'] },
@@ -2874,7 +2875,95 @@ export default function App() {
                   </div>
                 )}
 
-                {/* 4.2 Request List Tab */}
+                {/* User & Access Management Tab for Admin */}
+                {internalTab === 'users' && (
+                  <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden space-y-6 p-6">
+                    <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 pb-4">
+                      <div>
+                        <h3 className="font-bold text-sm text-slate-800 flex items-center gap-2">
+                          <UserCheck className="h-4 w-4 text-brand-600" />
+                          <span>การจัดการบัญชีผู้ใช้และกำหนดสิทธิ์ (User & Access Control Management)</span>
+                        </h3>
+                        <p className="text-xs text-slate-400 mt-0.5">
+                          การบริหารจัดการรายชื่อเจ้าหน้าที่ สิทธิ์การเข้าถึง (Multi-Role) และการตรวจสอบความเสี่ยง SOD ตามมาตรฐานความมั่นคงปลอดภัย
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => alert('จำลองการเปิด Modal เพิ่มเจ้าหน้าที่ใหม่ในองค์กร')}
+                        className="bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs px-3.5 py-2 rounded-lg transition shadow-sm flex items-center gap-1.5"
+                      >
+                        <span>+ เพิ่มผู้ใช้งานใหม่ (Add User)</span>
+                      </button>
+                    </div>
+
+                    {/* Users Table */}
+                    <div className="overflow-x-auto border border-slate-200 rounded-xl">
+                      <table className="w-full text-left text-xs border-collapse">
+                        <thead>
+                          <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold">
+                            <th className="p-3">ชื่อ-นามสกุล</th>
+                            <th className="p-3">Username / อีเมล</th>
+                            <th className="p-3">หน่วยงาน / แผนก</th>
+                            <th className="p-3">บทบาทสิทธิ์ถือครอง (Roles)</th>
+                            <th className="p-3">สถานะความเสี่ยง SOD</th>
+                            <th className="p-3 text-center">จัดการ</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 text-slate-700">
+                          {systemUsers
+                            .filter((u: UserType) => activeUser.orgId === 'org_admin' || u.orgId === activeUser.orgId)
+                            .map((user: UserType) => (
+                              <tr key={user.id} className="hover:bg-slate-50/80 transition">
+                                <td className="p-3 font-bold text-slate-900">
+                                  {user.fullNameTh}
+                                  <span className="block text-[10px] font-normal text-slate-400">{user.fullNameEn}</span>
+                                </td>
+                                <td className="p-3">
+                                  <span className="font-mono text-brand-600 block">{user.username}</span>
+                                  <span className="text-[10px] text-slate-400 block">{user.email}</span>
+                                </td>
+                                <td className="p-3 text-slate-600 font-medium">{user.department || '-'}</td>
+                                <td className="p-3">
+                                  <div className="flex flex-wrap gap-1">
+                                    {(user.roles || [user.role]).map((r: Role) => (
+                                      <span
+                                        key={r}
+                                        className="bg-brand-50 text-brand-700 border border-brand-200 px-2 py-0.5 rounded text-[10px] font-bold uppercase"
+                                      >
+                                        {r}
+                                      </span>
+                                    ))}
+                                  </div>
+                                </td>
+                                <td className="p-3">
+                                  {user.sodWarnings && user.sodWarnings.length > 0 ? (
+                                    <span className="bg-amber-100 text-amber-900 border border-amber-300 px-2 py-0.5 rounded text-[10px] font-bold flex items-center gap-1 w-fit">
+                                      <AlertTriangle className="h-3 w-3 text-amber-600" />
+                                      <span>⚠️ SOD Conflict</span>
+                                    </span>
+                                  ) : (
+                                    <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded text-[10px] font-bold">
+                                      ✓ Compliant (Normal)
+                                    </span>
+                                  )}
+                                </td>
+                                <td className="p-3 text-center">
+                                  <button
+                                    type="button"
+                                    onClick={() => alert(`จำลองแก้ไขสิทธิ์ของ: ${user.fullNameTh}`)}
+                                    className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-2.5 py-1 rounded text-[11px] font-semibold transition"
+                                  >
+                                    แก้ไขสิทธิ์
+                                  </button>
+                                </td>
+                              </tr>
+                            ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
                 {internalTab === 'requests' && (
                   <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden space-y-0">
                     
