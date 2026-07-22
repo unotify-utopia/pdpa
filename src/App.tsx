@@ -98,7 +98,7 @@ export default function App() {
   };
 
   // Active Selections
-  const [selectedTargetOrgId, setSelectedTargetOrgId] = useState<string>('org_dopa');
+  const [selectedTargetOrgId, setSelectedTargetOrgId] = useState<string>('');
   const [tenantSearchQuery, setTenantSearchQuery] = useState<string>('');
   const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
   const [isNewRequestSuccess, setIsNewRequestSuccess] = useState<Request | null>(null);
@@ -1564,8 +1564,14 @@ export default function App() {
                       <div className="flex justify-end pt-4">
                         <button
                           type="button"
-                          onClick={() => setWizardStep(2)}
-                          className="bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold py-2 px-6 rounded-lg transition"
+                          onClick={() => {
+                            if (!selectedTargetOrgId) {
+                              alert('⚠️ กรุณาค้นหาและคลิกเลือก "หน่วยงานรับเรื่อง" ก่อนกดขั้นตอนถัดไป');
+                              return;
+                            }
+                            setWizardStep(2);
+                          }}
+                          className="bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold py-2.5 px-6 rounded-lg transition shadow-md"
                         >
                           ขั้นตอนถัดไป
                         </button>
