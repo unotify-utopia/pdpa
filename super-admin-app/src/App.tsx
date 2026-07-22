@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ShieldCheck, Building2, UserCheck, Key, Lock, LogOut, Plus, Sun, Moon, QrCode, Smartphone, CheckCircle2 } from 'lucide-react';
+import { ShieldCheck, Building2, UserCheck, Key, Lock, LogOut, Plus, Sun, Moon, QrCode, Smartphone, CheckCircle2, Trash2 } from 'lucide-react';
 
 interface Tenant {
   id: string;
@@ -175,6 +175,29 @@ export default function App() {
     }
 
     setShowTenantModal(false);
+  };
+
+  // Delete Tenant Confirmation Modal State
+  const [deletingTenant, setDeletingTenant] = useState<Tenant | null>(null);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+
+  // Handle Delete Tenant Confirmation
+  const handleConfirmDeleteTenant = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!deletingTenant) return;
+    
+    if (deleteConfirmText.trim().toUpperCase() !== 'DELETE') {
+      alert('กรุณาพิมพ์คำว่า "DELETE" ให้ถูกต้องเพื่อยืนยันการลบหน่วยงาน');
+      return;
+    }
+
+    setTenants(tenants.filter(t => t.id !== deletingTenant.id));
+    // Also cleanup users under this tenant
+    setUsers(users.filter(u => u.orgId !== deletingTenant.id));
+    
+    alert(`🗑️ ลบหน่วยงาน "${deletingTenant.nameTh}" และยูสเซอร์ในสังกัดออกจากระบบเรียบร้อยแล้ว`);
+    setDeletingTenant(null);
+    setDeleteConfirmText('');
   };
 
   // Modal States
@@ -474,12 +497,25 @@ export default function App() {
                   <p>เบอร์โทรศัพท์: <span className="font-medium">{t.phone}</span></p>
                 </div>
 
-                <button
-                  onClick={() => handleOpenEditTenantModal(t)}
-                  className={`w-full text-xs py-1.5 rounded-lg font-semibold transition border ${isDark ? 'bg-slate-800 border-slate-700 text-slate-300' : 'bg-slate-100 border-slate-200 text-slate-700'}`}
-                >
-                  แก้ไขข้อมูลหน่วยงาน
-                </button>
+                <div className="flex gap-2 pt-1">
+                  <button
+                    onClick={() => handleOpenEditTenantModal(t)}
+                    className={`flex-1 text-xs py-1.5 rounded-lg font-semibold transition border ${isDark ? 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700' : 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200'}`}
+                  >
+                    แก้ไขข้อมูล
+                  </button>
+                  <button
+                    onClick={() => {
+                      setDeletingTenant(t);
+                      setDeleteConfirmText('');
+                    }}
+                    className="bg-red-500/10 hover:bg-red-600 text-red-500 hover:text-white border border-red-500/30 text-xs px-3 py-1.5 rounded-lg transition font-semibold flex items-center gap-1"
+                    title="ลบหน่วยงานออกจากระบบ"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    <span>ลบ</span>
+                  </button>
+                </div>
               </div>
             ))}
           </div>
@@ -874,6 +910,69 @@ export default function App() {
                   className="w-2/3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 rounded-xl text-xs transition shadow-lg"
                 >
                   ยืนยันรหัส OTP
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Tenant Confirmation Modal Dialog */}
+      {deletingTenant && (
+        <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className={`border rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-4 ${cardBgClass} animate-fade-in`}>
+            <div className="flex items-center gap-3 border-b border-red-500/20 pb-3">
+              <div className="p-3 bg-red-500/20 border border-red-500/30 rounded-2xl text-red-500">
+                <Trash2 className="h-6 w-6" />
+              </div>
+              <div>
+                <h3 className="font-bold text-base text-red-500">ยืนยันลบหน่วยงานออกจากระบบ</h3>
+                <p className="text-xs text-slate-400">การลบนี้จะมีผลถาวรและไม่สามารถย้อนคืนได้</p>
+              </div>
+            </div>
+
+            <div className={`p-3.5 rounded-xl border text-xs space-y-1.5 ${isDark ? 'bg-slate-950/80 border-slate-800 text-slate-300' : 'bg-red-50 border-red-100 text-slate-700'}`}>
+              <p>หน่วยงานที่จะลบ: <span className="font-bold text-red-400">{deletingTenant.nameTh}</span></p>
+              <p>รหัสหน่วยงาน: <span className="font-mono text-slate-400">{deletingTenant.id}</span></p>
+              <p className="text-[11px] text-amber-400 pt-1 border-t border-slate-800/60 font-semibold">
+                ⚠️ คำเตือน: ยูสเซอร์เจ้าหน้าที่ทั้งหมดในสังกัดหน่วยงานนี้จะถูกลบออกจากระบบด้วยเช่นกัน
+              </p>
+            </div>
+
+            <form onSubmit={handleConfirmDeleteTenant} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold mb-1.5 text-slate-300">
+                  พิมพ์คำว่า <span className="text-red-500 font-mono font-bold">DELETE</span> เพื่อยืนยันการลบถาวร:
+                </label>
+                <input
+                  type="text"
+                  value={deleteConfirmText}
+                  onChange={(e) => setDeleteConfirmText(e.target.value)}
+                  placeholder="พิมพ์ DELETE ที่นี่"
+                  className={`w-full font-mono text-center text-sm font-bold uppercase py-2 border rounded-xl focus:outline-none focus:border-red-500 ${inputBgClass}`}
+                  required
+                  autoFocus
+                />
+              </div>
+
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setDeletingTenant(null)}
+                  className="w-1/3 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold py-2.5 rounded-xl transition"
+                >
+                  ยกเลิก
+                </button>
+                <button
+                  type="submit"
+                  disabled={deleteConfirmText.trim().toUpperCase() !== 'DELETE'}
+                  className={`w-2/3 text-white font-bold py-2.5 rounded-xl text-xs transition shadow-lg ${
+                    deleteConfirmText.trim().toUpperCase() === 'DELETE'
+                      ? 'bg-red-600 hover:bg-red-500 opacity-100 cursor-pointer'
+                      : 'bg-red-900/50 opacity-40 cursor-not-allowed'
+                  }`}
+                >
+                  🗑️ ยืนยันลบหน่วยงานถาวร
                 </button>
               </div>
             </form>
