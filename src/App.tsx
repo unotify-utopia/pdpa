@@ -65,6 +65,33 @@ import { ThaiLetterView, convertToThaiDate } from './components/ThaiLetterView';
 import { DashboardCharts } from './components/DashboardCharts';
 import { StaffLoginModal } from './components/StaffLoginModal';
 
+// Helper: Thai Citizen ID Modulus 11 Checksum Validator
+export const validateThaiCitizenId = (id: string): boolean => {
+  const cleanId = id.replace(/[^0-9]/g, '');
+  if (cleanId.length !== 13) return false;
+  
+  let sum = 0;
+  for (let i = 0; i < 12; i++) {
+    sum += parseInt(cleanId.charAt(i)) * (13 - i);
+  }
+  const checkDigit = (11 - (sum % 11)) % 10;
+  return checkDigit === parseInt(cleanId.charAt(12));
+};
+
+// Helper: Auto-Format Thai Citizen ID Mask (X-XXXX-XXXXX-XX-X)
+export const formatThaiCitizenIdMask = (val: string): string => {
+  const clean = val.replace(/[^a-zA-Z0-9]/g, '');
+  // If numeric and 13 digits, format with Thai Citizen ID hyphen mask
+  if (/^\d+$/.test(clean)) {
+    if (clean.length <= 1) return clean;
+    if (clean.length <= 5) return `${clean.substring(0, 1)}-${clean.substring(1)}`;
+    if (clean.length <= 10) return `${clean.substring(0, 1)}-${clean.substring(1, 5)}-${clean.substring(5)}`;
+    if (clean.length <= 12) return `${clean.substring(0, 1)}-${clean.substring(1, 5)}-${clean.substring(5, 10)}-${clean.substring(10)}`;
+    return `${clean.substring(0, 1)}-${clean.substring(1, 5)}-${clean.substring(5, 10)}-${clean.substring(10, 12)}-${clean.substring(12, 13)}`;
+  }
+  return val; // Foreign passport format fallback
+};
+
 export default function App() {
   // App context navigation states
   const [view, setView] = useState<'public' | 'internal' | 'tracking' | 'download' | 'superadmin'>('public');
@@ -1474,16 +1501,16 @@ export default function App() {
                         <div className="space-y-1 md:col-span-2">
                           <label className="text-xs font-medium text-slate-700 flex justify-between">
                             <span>เลขประจำตัวประชาชน / พาสปอร์ต (ID / Passport No.) <span className="text-red-500">*</span></span>
-                            <span className="text-[10px] text-slate-400">13 หลัก หรือ เลขพาสปอร์ต</span>
+                            <span className="text-[10px] text-brand-600 font-semibold">ฟอร์แมตขีดอัตโนมัติ X-XXXX-XXXXX-XX-X</span>
                           </label>
                           <input
                             type="text"
                             required
-                            maxLength={20}
-                            placeholder="ตัวอย่าง: 1100200300405 หรือ Passport No."
+                            maxLength={17}
+                            placeholder="ตัวอย่าง: 1-1002-00300-40-5 หรือ Passport No."
                             value={requesterForm.idNumber}
-                            onChange={(e) => setRequesterForm({...requesterForm, idNumber: e.target.value})}
-                            className="w-full text-xs border border-slate-300 rounded-lg p-2.5 focus:ring-1 focus:ring-brand-500 font-mono"
+                            onChange={(e) => setRequesterForm({ ...requesterForm, idNumber: formatThaiCitizenIdMask(e.target.value) })}
+                            className="w-full text-xs border border-slate-300 rounded-lg p-2.5 focus:ring-1 focus:ring-brand-500 font-mono tracking-wider font-bold"
                           />
                         </div>
                         <div className="space-y-1">
@@ -1607,11 +1634,19 @@ export default function App() {
                               return;
                             }
 
-                            // 2. Validate ID / Passport Number
+                            // 2. Validate ID / Passport Number (Strict Modulus 11 for 13-digit numeric IDs)
                             const cleanId = requesterForm.idNumber.replace(/[^a-zA-Z0-9]/g, '');
                             if (!cleanId || cleanId.length < 7) {
                               alert('⚠️ กรุณากรอก "เลขประจำตัวประชาชน (13 หลัก)" หรือ "เลขพาสปอร์ต" ให้ถูกต้อง');
                               return;
+                            }
+
+                            // If 13 numeric digits, enforce Thai Citizen ID Modulus 11 Checksum Algorithm
+                            if (/^\d{13}$/.test(cleanId)) {
+                              if (!validateThaiCitizenId(cleanId)) {
+                                alert('❌ เลขประจำตัวประชาชน 13 หลักไม่ถูกต้องตามสูตรคำนวณของกรมการปกครอง (Check Digit Mismatch)\n\nกรุณาตรวจสอบตัวเลข 13 หลักอีกครั้ง');
+                                return;
+                              }
                             }
 
                             // 3. Validate Phone Number (Supports 9-10 digits for Landline and Mobile)
