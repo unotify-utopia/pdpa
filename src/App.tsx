@@ -1152,9 +1152,13 @@ export default function App() {
                 
                 {/* Visual Intro Banner */}
                 <div className="bg-gradient-to-r from-brand-900 to-slate-900 text-white rounded-2xl p-8 shadow-md relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-6">
-                  <div className="space-y-4 max-w-xl">
-                    <span className="bg-brand-500/20 text-brand-300 border border-brand-500/30 text-xs px-2.5 py-1 rounded-full font-bold">พ.ร.บ. คุ้มครองข้อมูลส่วนบุคคล พ.ศ. 2562 (มาตรา 30)</span>
-                    <h2 className="text-2xl md:text-3xl font-bold">มีสิทธิขอเข้าถึงและรับสำเนาข้อมูลส่วนบุคคลของท่านที่อยู่ในความดูแลขององค์กร</h2>
+                  <div className="space-y-3 max-w-xl">
+                    <span className="inline-block bg-brand-500/20 text-brand-300 border border-brand-500/40 text-[11px] px-3.5 py-1.5 rounded-full font-bold mb-1 shadow-sm tracking-wide">
+                      พ.ร.บ. คุ้มครองข้อมูลส่วนบุคคล พ.ศ. 2562 (มาตรา 30)
+                    </span>
+                    <h2 className="text-2xl md:text-3xl font-bold leading-snug pt-1">
+                      มีสิทธิขอเข้าถึงและรับสำเนาข้อมูลส่วนบุคคลของท่านที่อยู่ในความดูแลขององค์กร
+                    </h2>
                     <p className="text-xs text-slate-300 leading-relaxed">
                       ท่านสามารถยื่นคำร้องขอตรวจสอบ หรือคัดลอกไฟล์ประวัติการจอง การเข้าใช้บริการ ประวัติพนักงาน หรือบันทึกข้อมูลอื่นที่เป็นของท่านได้อย่างรวดเร็ว ปลอดภัย และถูกต้องตามขั้นตอน
                     </p>
