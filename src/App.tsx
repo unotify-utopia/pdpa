@@ -21,7 +21,8 @@ import {
   ArrowLeft,
   Mail,
   FileCheck2,
-  Scale
+  Scale,
+  Building2
 } from 'lucide-react';
 
 import type {
@@ -96,6 +97,7 @@ export default function App() {
   };
 
   // Active Selections
+  const [selectedTargetOrgId, setSelectedTargetOrgId] = useState<string>('org_dopa');
   const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
   const [isNewRequestSuccess, setIsNewRequestSuccess] = useState<Request | null>(null);
   
@@ -268,6 +270,7 @@ export default function App() {
     });
 
     const newReq = createRequest({
+      orgId: selectedTargetOrgId,
       requesterType: reqType,
       requester: requesterForm,
       representative: reqType === 'representative' ? {
@@ -1299,6 +1302,27 @@ export default function App() {
                   {/* Step 1: Requester Details */}
                   {wizardStep === 1 && (
                     <div className="space-y-4">
+                      {/* Select Target Tenant Organization */}
+                      <div className="bg-brand-50/70 border border-brand-200 rounded-xl p-4 space-y-2">
+                        <label className="block text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                          <Building2 className="h-4 w-4 text-brand-600" />
+                          <span>🏢 เลือกหน่วยงานที่ท่านต้องการยื่นคำขอเข้าถึงข้อมูลส่วนบุคคล (Target Organization) *</span>
+                        </label>
+                        <select
+                          value={selectedTargetOrgId}
+                          onChange={(e) => setSelectedTargetOrgId(e.target.value)}
+                          className="w-full text-xs font-semibold border border-brand-300 rounded-lg px-3 py-2.5 outline-none focus:ring-2 focus:ring-brand-500 bg-white text-slate-900 shadow-sm"
+                          required
+                        >
+                          <option value="org_dopa">กรมการปกครอง (Department of Provincial Administration - DOPA)</option>
+                          <option value="org_rd">กรมสรรพากร (Revenue Department - RD)</option>
+                          <option value="org_tech_th">บริษัท ไทยเทคโนโลยี อินโนเวชั่น จำกัด (Thai Tech Innovation Co., Ltd.)</option>
+                        </select>
+                        <p className="text-[11px] text-brand-700 font-medium">
+                          ✓ คำขอและข้อมูลยืนยันตัวตนของท่านจะถูกจัดส่งตรงไปยังเจ้าหน้าที่ประจำหน่วยงานที่ท่านเลือกเท่านั้น
+                        </p>
+                      </div>
+
                       <div className="flex gap-4 border-b border-slate-100 pb-4 mb-4">
                         <label className="flex items-center gap-2 cursor-pointer text-xs font-bold">
                           <input

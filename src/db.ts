@@ -170,7 +170,7 @@ export const generateTrackingNumber = (): string => {
 };
 
 // Insert New Request (Section 3.2)
-export const createRequest = (requestData: Omit<Request, 'id' | 'orgId' | 'uuid' | 'trackingNo' | 'status' | 'submissionDate' | 'slaRemainingDays' | 'slaDaysUsed' | 'slaPaused' | 'slaExtended' | 'slaEvents' | 'statusHistory' | 'dataCollectionTasks' | 'redactionRecords' | 'feeCalculation' | 'messageThread' | 'legalHold' | 'identityVerification'>): Request => {
+export const createRequest = (requestData: Omit<Request, 'id' | 'uuid' | 'trackingNo' | 'status' | 'submissionDate' | 'slaRemainingDays' | 'slaDaysUsed' | 'slaPaused' | 'slaExtended' | 'slaEvents' | 'statusHistory' | 'dataCollectionTasks' | 'redactionRecords' | 'feeCalculation' | 'messageThread' | 'legalHold' | 'identityVerification'> & { orgId?: string }): Request => {
   const requests = getRequests();
   const config = getComplianceConfig();
   
