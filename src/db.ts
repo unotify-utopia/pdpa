@@ -14,7 +14,7 @@ const KEYS = {
 // Initialize DB with seed data if not present or empty
 export const initializeDB = () => {
   const existingRequests = localStorage.getItem(KEYS.REQUESTS);
-  if (!existingRequests || JSON.parse(existingRequests).length === 0) {
+  if (!existingRequests || JSON.parse(existingRequests).length < 4) {
     localStorage.setItem(KEYS.REQUESTS, JSON.stringify(seedRequests));
   }
   if (!localStorage.getItem(KEYS.CONFIG)) {
