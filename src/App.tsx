@@ -1447,63 +1447,71 @@ export default function App() {
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-1">
-                          <label className="text-xs font-medium text-slate-700">ชื่อจริง (Thai First Name) <span className="text-red-500">*</span></label>
+                          <label className="text-xs font-medium text-slate-700">ชื่อจริง (First Name) <span className="text-red-500">*</span></label>
                           <input
                             type="text"
                             required
-                            placeholder="เช่น สมเกียรติ"
+                            placeholder="เช่น สมชาย หรือ Somchai"
                             value={requesterForm.firstName}
                             onChange={(e) => setRequesterForm({...requesterForm, firstName: e.target.value})}
-                            className="w-full text-xs border border-slate-300 rounded-lg p-2 focus:ring-1 focus:ring-brand-500"
+                            className="w-full text-xs border border-slate-300 rounded-lg p-2.5 focus:ring-1 focus:ring-brand-500"
                           />
                         </div>
                         <div className="space-y-1">
-                          <label className="text-xs font-medium text-slate-700">นามสกุล (Thai Last Name) <span className="text-red-500">*</span></label>
+                          <label className="text-xs font-medium text-slate-700">นามสกุล (Last Name) <span className="text-red-500">*</span></label>
                           <input
                             type="text"
                             required
-                            placeholder="เช่น รักไทย"
+                            placeholder="เช่น ใจดี หรือ Jaidee"
                             value={requesterForm.lastName}
                             onChange={(e) => setRequesterForm({...requesterForm, lastName: e.target.value})}
-                            className="w-full text-xs border border-slate-300 rounded-lg p-2 focus:ring-1 focus:ring-brand-500"
+                            className="w-full text-xs border border-slate-300 rounded-lg p-2.5 focus:ring-1 focus:ring-brand-500"
                           />
                         </div>
                       </div>
 
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div className="space-y-1 md:col-span-2">
-                          <label className="text-xs font-medium text-slate-700">เลขบัตรประจำตัวประชาชน <span className="text-red-500">*</span></label>
+                          <label className="text-xs font-medium text-slate-700 flex justify-between">
+                            <span>เลขประจำตัวประชาชน / พาสปอร์ต (ID / Passport No.) <span className="text-red-500">*</span></span>
+                            <span className="text-[10px] text-slate-400">13 หลัก หรือ เลขพาสปอร์ต</span>
+                          </label>
                           <input
                             type="text"
                             required
-                            placeholder="เช่น 1-1234-56789-01-2"
+                            maxLength={20}
+                            placeholder="ตัวอย่าง: 1100200300405 หรือ Passport No."
                             value={requesterForm.idNumber}
                             onChange={(e) => setRequesterForm({...requesterForm, idNumber: e.target.value})}
-                            className="w-full text-xs border border-slate-300 rounded-lg p-2 focus:ring-1 focus:ring-brand-500"
+                            className="w-full text-xs border border-slate-300 rounded-lg p-2.5 focus:ring-1 focus:ring-brand-500 font-mono"
                           />
                         </div>
                         <div className="space-y-1">
-                          <label className="text-xs font-medium text-slate-700">เบอร์โทรศัพท์ติดต่อ <span className="text-red-500">*</span></label>
+                          <label className="text-xs font-medium text-slate-700 flex justify-between">
+                            <span>เบอร์โทรศัพท์ติดต่อ <span className="text-red-500">*</span></span>
+                            <span className="text-[10px] text-slate-400">มือถือ/สายตรง</span>
+                          </label>
                           <input
                             type="tel"
                             required
-                            placeholder="เช่น 081-234-5678"
+                            maxLength={12}
+                            placeholder="ตัวอย่าง: 0812345678 หรือ 022218150"
                             value={requesterForm.phone}
                             onChange={(e) => setRequesterForm({...requesterForm, phone: e.target.value})}
-                            className="w-full text-xs border border-slate-300 rounded-lg p-2 focus:ring-1 focus:ring-brand-500"
+                            className="w-full text-xs border border-slate-300 rounded-lg p-2.5 focus:ring-1 focus:ring-brand-500 font-mono"
                           />
                         </div>
                       </div>
 
                       <div className="space-y-1">
-                        <label className="text-xs font-medium text-slate-700">อีเมลติดต่อ <span className="text-red-500">*</span></label>
+                        <label className="text-xs font-medium text-slate-700">อีเมลติดต่อ (Email Address) <span className="text-red-500">*</span></label>
                         <input
                           type="email"
                           required
-                          placeholder="เช่น somkiat@example.com"
+                          placeholder="ตัวอย่าง: name@example.com"
                           value={requesterForm.email}
                           onChange={(e) => setRequesterForm({...requesterForm, email: e.target.value})}
-                          className="w-full text-xs border border-slate-300 rounded-lg p-2 focus:ring-1 focus:ring-brand-500"
+                          className="w-full text-xs border border-slate-300 rounded-lg p-2.5 focus:ring-1 focus:ring-brand-500"
                         />
                       </div>
 
@@ -1592,6 +1600,42 @@ export default function App() {
                               alert('⚠️ กรุณาค้นหาและคลิกเลือก "หน่วยงานรับเรื่อง" ก่อนกดขั้นตอนถัดไป');
                               return;
                             }
+
+                            // 1. Validate First & Last Name
+                            if (!requesterForm.firstName.trim() || !requesterForm.lastName.trim()) {
+                              alert('⚠️ กรุณากรอก "ชื่อจริง" และ "นามสกุล" ให้ครบถ้วน');
+                              return;
+                            }
+
+                            // 2. Validate ID / Passport Number
+                            const cleanId = requesterForm.idNumber.replace(/[^a-zA-Z0-9]/g, '');
+                            if (!cleanId || cleanId.length < 7) {
+                              alert('⚠️ กรุณากรอก "เลขประจำตัวประชาชน (13 หลัก)" หรือ "เลขพาสปอร์ต" ให้ถูกต้อง');
+                              return;
+                            }
+
+                            // 3. Validate Phone Number (Supports 9-10 digits for Landline and Mobile)
+                            const cleanPhone = requesterForm.phone.replace(/[^0-9]/g, '');
+                            if (!cleanPhone || cleanPhone.length < 9 || cleanPhone.length > 10) {
+                              alert('⚠️ กรุณากรอก "เบอร์โทรศัพท์ติดต่อ" ให้ถูกต้อง (เบอร์มือถือ 10 หลัก เช่น 0812345678 หรือ เบอร์สายตรง 9 หลัก เช่น 022218150)');
+                              return;
+                            }
+
+                            // 4. Validate Email Address
+                            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                            if (!requesterForm.email.trim() || !emailRegex.test(requesterForm.email.trim())) {
+                              alert('⚠️ กรุณากรอก "อีเมลติดต่อ" ให้ถูกต้องในรูปแบบที่ใช้งานได้จริง (เช่น name@example.com)');
+                              return;
+                            }
+
+                            // If Representative option is checked, validate Rep details
+                            if (reqType === 'representative') {
+                              if (!repForm.firstName.trim() || !repForm.lastName.trim() || !repForm.idNumber.trim() || !repForm.phone.trim()) {
+                                alert('⚠️ กรุณากรอกข้อมูลผู้แทนสิทธิ (ชื่อ นามสกุล เลขบัตร และเบอร์โทร) ให้ครบถ้วน');
+                                return;
+                              }
+                            }
+
                             setWizardStep(2);
                           }}
                           className="bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold py-2.5 px-6 rounded-lg transition shadow-md"
