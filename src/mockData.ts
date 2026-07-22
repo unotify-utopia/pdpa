@@ -3,6 +3,13 @@ import type { Organization, ComplianceConfig, User, Request, DocumentTemplate } 
 // Mock Organizations list (Multi-tenant)
 export const initialOrganizations: Organization[] = [
   {
+    id: 'org_admin',
+    nameTh: 'ศูนย์บริหารจัดการระบบกลาง (Central Administrator Portal)',
+    nameEn: 'Central System Administrator',
+    contactEmail: 'admin@pdpa-system.or.th',
+    contactPhone: '02-000-0000'
+  },
+  {
     id: 'org_dopa',
     nameTh: 'กรมการปกครอง (Department of Provincial Administration)',
     nameEn: 'Department of Provincial Administration',
@@ -59,6 +66,7 @@ export const initialComplianceConfig: ComplianceConfig = {
 
 // Default Workspace Users (Multi-tenant & Multi-role support with SOD conflict check)
 export const systemUsers: User[] = [
+  { id: 'usr_super_admin', orgId: 'org_admin', username: 'super.admin', fullNameTh: 'ผู้ดูแลระบบกลางภาพรวม (Super Admin)', fullNameEn: 'Super System Administrator', email: 'admin@pdpa-system.or.th', role: 'admin', roles: ['admin', 'auditor'], department: 'ศูนย์บริหารจัดการระบบกลาง (Central Admin)', mfaEnabled: true },
   { id: 'usr_admin', orgId: 'org_dopa', username: 'admin.pdpa', fullNameTh: 'สมเจตน์ จัดการดี (DOPA Admin)', fullNameEn: 'Somjet Kankardee', email: 'admin@dopa.go.th', role: 'admin', roles: ['admin'], department: 'เทคโนโลยีสารสนเทศ (กรมการปกครอง)', mfaEnabled: true },
   { id: 'usr_intake', orgId: 'org_dopa', username: 'intake.pdpa', fullNameTh: 'กิตติพงษ์ รับเรื่อง (DOPA Intake)', fullNameEn: 'Kittipong Rubruang', email: 'intake@dopa.go.th', role: 'intake', roles: ['intake'], department: 'ศูนย์รับเรื่องร้องเรียน (กรมการปกครอง)', mfaEnabled: true },
   { id: 'usr_intake_demo', orgId: 'org_dopa', username: 'intake.demo', fullNameTh: 'สมชาย รับเรื่องทดสอบ (DOPA Intake Only)', fullNameEn: 'Somchai Intake Demo', email: 'intake.demo@dopa.go.th', role: 'intake', roles: ['intake'], department: 'ศูนย์รับเรื่องและคัดกรองคำขอ PDPA', mfaEnabled: true },
