@@ -53,7 +53,8 @@ import {
   recalculateAllSLAs,
   addAuditLog,
   getRequestById,
-  saveComplianceConfig
+  saveComplianceConfig,
+  saveRequests
 } from './db';
 
 
@@ -325,7 +326,27 @@ export default function App() {
       attachments: attachmentsList
     });
 
-    setIsNewRequestSuccess(newReq);
+    // Fetch single true tracking number from PostgreSQL Master DB API
+    fetch('/api/public/requests', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newReq)
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.success && data.request) {
+        setIsNewRequestSuccess(data.request);
+        // Also sync local storage with actual server tracking number
+        newReq.trackingNo = data.request.trackingNo;
+        saveRequests(getRequests().map(r => r.id === newReq.id ? newReq : r));
+      } else {
+        setIsNewRequestSuccess(newReq);
+      }
+    })
+    .catch(() => {
+      setIsNewRequestSuccess(newReq);
+    });
+
     setPublicTab('submitted_success');
     handleResetWizard();
     reloadData();

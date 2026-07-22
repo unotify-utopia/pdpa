@@ -4,9 +4,12 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import pg from 'pg';
 
+// Set Server Process Timezone to Asia/Bangkok (GMT+7)
+process.env.TZ = 'Asia/Bangkok';
+
 const { Pool } = pg;
 
-// PostgreSQL Connection Pool Configuration
+// PostgreSQL Connection Pool Configuration (Configured for Asia/Bangkok Timezone)
 const dbPool = new Pool({
   user: process.env.DB_USER || 'pdpa_admin',
   host: process.env.DB_HOST || 'localhost',
@@ -15,8 +18,9 @@ const dbPool = new Pool({
   port: parseInt(process.env.DB_PORT || '5432'),
 });
 
-dbPool.on('connect', () => {
-  console.log('⚡ Connected to PostgreSQL pdpa_prod_db Master Engine');
+dbPool.on('connect', (client) => {
+  console.log('⚡ Connected to PostgreSQL pdpa_prod_db Master Engine (Asia/Bangkok Timezone)');
+  client.query("SET timezone = 'Asia/Bangkok'");
 });
 
 const app = express();
