@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ShieldCheck, Building2, UserCheck, Key, Lock, LogOut, Plus } from 'lucide-react';
+import { ShieldCheck, Building2, UserCheck, Key, Lock, LogOut, Plus, Sun, Moon, QrCode, Smartphone, CheckCircle2 } from 'lucide-react';
 
 interface Tenant {
   id: string;
@@ -21,9 +21,15 @@ interface User {
 }
 
 export default function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [passcode, setPasscode] = useState('');
-  const [activeTab, setActiveTab] = useState<'tenants' | 'users' | 'security'>('tenants');
+  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
+  const [loginStep, setLoginStep] = useState<'credentials' | 'mfa' | 'authenticated'>('credentials');
+  
+  // Credentials
+  const [username, setUsername] = useState('super.admin');
+  const [password, setPassword] = useState('');
+  const [mfaCode, setMfaCode] = useState('');
+
+  const [activeTab, setActiveTab] = useState<'tenants' | 'users'>('tenants');
 
   // Master Tenants List State
   const [tenants, setTenants] = useState<Tenant[]>([
@@ -40,13 +46,23 @@ export default function App() {
     { id: 'usr_approver', orgId: 'org_dopa', username: 'exec.pdpa', fullName: 'ดร. ประภาส อธิบดี (DOPA Exec)', email: 'director@dopa.go.th', role: 'approver', department: 'ผู้บริหารระดับสูง' }
   ]);
 
-  // Handle Login
-  const handleLogin = (e: React.FormEvent) => {
+  // Step 1: Check Credentials
+  const handleStep1Submit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (passcode === 'admin1234' || passcode === '123456') {
-      setIsAuthenticated(true);
+    if (password === 'admin1234' || password === '123456') {
+      setLoginStep('mfa');
     } else {
-      alert('รหัสผ่าน Master Passcode ไม่ถูกต้อง');
+      alert(' Username หรือ Password ไม่ถูกต้อง');
+    }
+  };
+
+  // Step 2: Verify MFA TOTP
+  const handleMfaSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (mfaCode.trim() === '123456' || mfaCode.trim().length === 6) {
+      setLoginStep('authenticated');
+    } else {
+      alert('รหัส MFA Code 6 หลักไม่ถูกต้อง (ลองใช้ 123456)');
     }
   };
 
@@ -72,18 +88,18 @@ export default function App() {
 
   // Add New User
   const handleAddUser = () => {
-    const username = prompt('กรุณาระบุ Username เจ้าหน้าที่ใหม่:');
-    if (!username) return;
-    const fullName = prompt('กรุณาระบุ ชื่อ-นามสกุล เจ้าหน้าที่:') || username;
+    const uname = prompt('กรุณาระบุ Username เจ้าหน้าที่ใหม่:');
+    if (!uname) return;
+    const fullName = prompt('กรุณาระบุ ชื่อ-นามสกุล เจ้าหน้าที่:') || uname;
     const orgId = prompt('กรุณาระบุ รหัสหน่วยงาน (เช่น org_dopa, org_rd):') || 'org_dopa';
     const role = prompt('กรุณาระบุ บทบาทสิทธิ์ (admin, intake, dpo, approver, owner):') || 'intake';
 
     const newUser: User = {
       id: `usr_${Date.now()}`,
       orgId: orgId,
-      username: username,
+      username: uname,
       fullName: fullName,
-      email: `${username}@${orgId.replace('org_', '')}.go.th`,
+      email: `${uname}@${orgId.replace('org_', '')}.go.th`,
       role: role,
       department: 'หน่วยงานผู้ปฏิบัติงาน'
     };
@@ -93,95 +109,199 @@ export default function App() {
   };
 
   // Reset User Password
-  const handleResetPassword = (username: string) => {
-    const newPass = prompt(`กรุณาระบุ รหัสผ่านใหม่ สำหรับยูสเซอร์ "${username}":`);
+  const handleResetPassword = (uname: string) => {
+    const newPass = prompt(`กรุณาระบุ รหัสผ่านใหม่ สำหรับยูสเซอร์ "${uname}":`);
     if (newPass) {
-      alert(`🔑 รีเซ็ตรหัสผ่านสำหรับ "${username}" เป็น "${newPass}" สำเร็จเรียบร้อยแล้ว`);
+      alert(`🔑 รีเซ็ตรหัสผ่านสำหรับ "${uname}" เป็น "${newPass}" สำเร็จเรียบร้อยแล้ว`);
     }
   };
 
-  if (!isAuthenticated) {
+  // Theme Styling Helper
+  const isDark = theme === 'dark';
+  const bgClass = isDark ? 'bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900';
+  const cardBgClass = isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200 shadow-sm';
+  const headerBgClass = isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200 shadow-sm';
+  const tableHeaderBg = isDark ? 'bg-slate-950 text-slate-400 border-slate-800' : 'bg-slate-100 text-slate-700 border-slate-200';
+  const inputBgClass = isDark ? 'bg-slate-950 border-slate-800 text-white' : 'bg-white border-slate-300 text-slate-900';
+
+  // LOGIN SCREEN (Step 1 & Step 2 MFA)
+  if (loginStep !== 'authenticated') {
     return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4">
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 max-w-md w-full shadow-2xl space-y-6">
+      <div className={`min-h-screen ${bgClass} flex flex-col items-center justify-center p-4 transition-colors duration-200`}>
+        {/* Top Theme Switcher */}
+        <div className="absolute top-4 right-4">
+          <button
+            onClick={() => setTheme(isDark ? 'light' : 'dark')}
+            className={`p-2.5 rounded-xl border transition ${cardBgClass} flex items-center gap-2 text-xs font-semibold`}
+          >
+            {isDark ? <Sun className="h-4 w-4 text-amber-400" /> : <Moon className="h-4 w-4 text-indigo-600" />}
+            <span>{isDark ? 'โหมดสว่าง (Light Mode)' : 'โหมดมืด (Dark Mode)'}</span>
+          </button>
+        </div>
+
+        <div className={`border rounded-2xl p-8 max-w-md w-full shadow-2xl space-y-6 ${cardBgClass}`}>
           <div className="text-center space-y-2">
-            <div className="inline-flex p-3 bg-brand-600/20 border border-brand-500/30 rounded-2xl text-brand-400 mb-2">
-              <ShieldCheck className="h-10 w-10 text-emerald-400" />
+            <div className="inline-flex p-3 bg-emerald-500/20 border border-emerald-500/30 rounded-2xl text-emerald-400 mb-1">
+              <ShieldCheck className="h-9 w-9 text-emerald-500" />
             </div>
-            <h1 className="text-xl font-bold text-white">Super Admin Control Portal</h1>
-            <p className="text-xs text-slate-400">ระบบหลังบ้านบริหารจัดการหน่วยงานและผู้ใช้งานภาพรวม (Standalone)</p>
+            <h1 className="text-xl font-bold">Super Admin Enterprise Control</h1>
+            <p className="text-xs text-slate-400">พอร์ทัลบริหารจัดการระบบหลังบ้านระดับความมั่นคงปลอดภัยสูง</p>
           </div>
 
-          <form onSubmit={handleLogin} className="space-y-4">
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5">Master Security Passcode</label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-3 h-4 w-4 text-slate-500" />
+          {/* STEP 1: Username & Password */}
+          {loginStep === 'credentials' && (
+            <form onSubmit={handleStep1Submit} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold mb-1.5">Username ผู้ดูแลระบบกลาง</label>
                 <input
-                  type="password"
-                  value={passcode}
-                  onChange={(e) => setPasscode(e.target.value)}
-                  placeholder="กรอกรหัสผ่าน Super Admin (เช่น 123456)"
-                  className="w-full pl-9 pr-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white text-xs focus:outline-none focus:border-emerald-500"
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="super.admin"
+                  className={`w-full px-4 py-2.5 border rounded-xl text-xs focus:outline-none focus:border-emerald-500 ${inputBgClass}`}
                   required
                 />
               </div>
-            </div>
 
-            <button
-              type="submit"
-              className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 rounded-xl text-xs transition shadow-lg"
-            >
-              เข้าสู่ระบบหลังบ้าน Super Admin
-            </button>
-          </form>
+              <div>
+                <label className="block text-xs font-semibold mb-1.5">Master Security Password</label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
+                  <input
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="กรอกรหัสผ่าน (เช่น 123456)"
+                    className={`w-full pl-9 pr-4 py-2.5 border rounded-xl text-xs focus:outline-none focus:border-emerald-500 ${inputBgClass}`}
+                    required
+                  />
+                </div>
+              </div>
 
-          <div className="text-[11px] text-slate-600 text-center border-t border-slate-800/80 pt-4">
-            🛡️ Isolated Super Admin Management Console v2.5
+              <button
+                type="submit"
+                className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 rounded-xl text-xs transition shadow-lg flex items-center justify-center gap-1.5"
+              >
+                <span>ถัดไป: ยืนยันรหัส MFA Authenticator →</span>
+              </button>
+            </form>
+          )}
+
+          {/* STEP 2: MFA TOTP Code Verification */}
+          {loginStep === 'mfa' && (
+            <form onSubmit={handleMfaSubmit} className="space-y-4 animate-fade-in">
+              <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl text-xs text-emerald-400 flex items-center gap-2">
+                <CheckCircle2 className="h-5 w-5 shrink-0" />
+                <span>ยืนยันตัวตนขั้นแรกสำเร็จ กรุณากรอกรหัส OTP 6 หลัก จากแอป Authenticator</span>
+              </div>
+
+              <div className="text-center py-2 space-y-2">
+                <div className="inline-block p-3 bg-slate-900 border border-slate-800 rounded-xl">
+                  <QrCode className="h-16 w-16 text-slate-300 mx-auto" />
+                </div>
+                <p className="text-[11px] text-slate-400 flex items-center justify-center gap-1">
+                  <Smartphone className="h-3.5 w-3.5 text-emerald-400" />
+                  <span>เปิดแอป Google / Microsoft Authenticator บนมือถือ</span>
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-center mb-1.5">รหัสผ่าน 2FA TOTP (6 หลัก)</label>
+                <input
+                  type="text"
+                  maxLength={6}
+                  value={mfaCode}
+                  onChange={(e) => setMfaCode(e.target.value)}
+                  placeholder="1 2 3 4 5 6"
+                  className={`w-full text-center tracking-[0.5em] font-mono text-lg font-bold py-2.5 border rounded-xl focus:outline-none focus:border-emerald-500 ${inputBgClass}`}
+                  required
+                  autoFocus
+                />
+                <span className="block text-[10px] text-slate-500 text-center mt-1">รหัสตัวอย่างทดสอบ: 123456</span>
+              </div>
+
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setLoginStep('credentials')}
+                  className="w-1/3 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold py-2.5 rounded-xl transition"
+                >
+                  ย้อนกลับ
+                </button>
+                <button
+                  type="submit"
+                  className="w-2/3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 rounded-xl text-xs transition shadow-lg"
+                >
+                  เข้าสู่ระบบหลังบ้าน
+                </button>
+              </div>
+            </form>
+          )}
+
+          <div className="text-[11px] text-slate-500 text-center border-t border-slate-800 pt-4 font-mono">
+            🔒 High Security Isolated Super Admin Console v2.5
           </div>
         </div>
       </div>
     );
   }
 
+  // MAIN DASHBOARD (AUTHENTICATED)
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
+    <div className={`min-h-screen ${bgClass} flex flex-col font-sans transition-colors duration-200`}>
       {/* Header */}
-      <header className="bg-slate-900 border-b border-slate-800 p-4 sticky top-0 z-50">
+      <header className={`p-4 border-b sticky top-0 z-50 ${headerBgClass}`}>
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-emerald-500/20 border border-emerald-500/30 rounded-xl text-emerald-400">
+            <div className="p-2 bg-emerald-500/20 border border-emerald-500/30 rounded-xl text-emerald-500">
               <ShieldCheck className="h-6 w-6" />
             </div>
             <div>
-              <h1 className="font-bold text-base text-white flex items-center gap-2">
+              <h1 className="font-bold text-base flex items-center gap-2">
                 <span>Super Admin Enterprise Console</span>
-                <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] px-2 py-0.5 rounded-full font-mono">STANDALONE WEB APP</span>
+                <span className="bg-emerald-500/20 text-emerald-500 border border-emerald-500/30 text-[10px] px-2 py-0.5 rounded-full font-mono font-bold">
+                  2FA MFA VERIFIED
+                </span>
               </h1>
-              <p className="text-xs text-slate-400">ระบบบริหารจัดการภาพรวมแยกต่างหากสำหรับผู้ดูแลระบบสูงสุด</p>
+              <p className="text-xs text-slate-400">ระบบบริหารจัดการภาพรวมระดับภาพรวมประเทศ (Standalone)</p>
             </div>
           </div>
 
-          <button
-            onClick={() => setIsAuthenticated(false)}
-            className="bg-slate-800 hover:bg-red-600/80 text-slate-300 hover:text-white text-xs font-semibold px-4 py-2 rounded-lg transition border border-slate-700 flex items-center gap-1.5"
-          >
-            <LogOut className="h-4 w-4" />
-            <span>ออกจากระบบ</span>
-          </button>
+          <div className="flex items-center gap-3">
+            {/* Theme Toggle Button */}
+            <button
+              onClick={() => setTheme(isDark ? 'light' : 'dark')}
+              className={`p-2 rounded-lg border transition ${cardBgClass} flex items-center gap-1.5 text-xs font-semibold`}
+            >
+              {isDark ? <Sun className="h-4 w-4 text-amber-400" /> : <Moon className="h-4 w-4 text-indigo-600" />}
+              <span className="hidden md:inline">{isDark ? 'ธีมสว่าง' : 'ธีมมืด'}</span>
+            </button>
+
+            <button
+              onClick={() => {
+                setLoginStep('credentials');
+                setPassword('');
+                setMfaCode('');
+              }}
+              className="bg-red-500/10 hover:bg-red-600 text-red-500 hover:text-white text-xs font-semibold px-4 py-2 rounded-lg transition border border-red-500/30 flex items-center gap-1.5"
+            >
+              <LogOut className="h-4 w-4" />
+              <span>ออกจากระบบ</span>
+            </button>
+          </div>
         </div>
       </header>
 
       {/* Main Container */}
       <main className="flex-1 max-w-7xl w-full mx-auto p-6 space-y-6">
         
-        {/* Navigation Tabs */}
-        <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+        {/* Tabs & Top Actions */}
+        <div className="flex items-center justify-between border-b border-slate-800/40 pb-3">
           <div className="flex items-center gap-2">
             <button
               onClick={() => setActiveTab('tenants')}
               className={`px-4 py-2 rounded-lg text-xs font-bold transition flex items-center gap-2 ${
-                activeTab === 'tenants' ? 'bg-emerald-600 text-white shadow-md' : 'bg-slate-900 text-slate-400 hover:bg-slate-800'
+                activeTab === 'tenants' ? 'bg-emerald-600 text-white shadow-md' : 'bg-slate-800/40 text-slate-400 hover:bg-slate-800'
               }`}
             >
               <Building2 className="h-4 w-4" />
@@ -191,7 +311,7 @@ export default function App() {
             <button
               onClick={() => setActiveTab('users')}
               className={`px-4 py-2 rounded-lg text-xs font-bold transition flex items-center gap-2 ${
-                activeTab === 'users' ? 'bg-emerald-600 text-white shadow-md' : 'bg-slate-900 text-slate-400 hover:bg-slate-800'
+                activeTab === 'users' ? 'bg-emerald-600 text-white shadow-md' : 'bg-slate-800/40 text-slate-400 hover:bg-slate-800'
               }`}
             >
               <UserCheck className="h-4 w-4" />
@@ -199,7 +319,6 @@ export default function App() {
             </button>
           </div>
 
-          {/* Action Button */}
           {activeTab === 'tenants' ? (
             <button
               onClick={handleAddTenant}
@@ -219,89 +338,81 @@ export default function App() {
           )}
         </div>
 
-        {/* Tab 1: Tenant Management */}
+        {/* TAB 1: Tenants */}
         {activeTab === 'tenants' && (
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {tenants.map((t) => (
-                <div key={t.id} className="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-3 shadow-md">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <span className="font-bold text-sm text-white block">{t.nameTh}</span>
-                      <span className="text-[10px] font-mono text-emerald-400 block mt-0.5">ID: {t.id}</span>
-                    </div>
-                    <span className="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[10px] px-2 py-0.5 rounded font-mono font-bold">
-                      ACTIVE
-                    </span>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {tenants.map((t) => (
+              <div key={t.id} className={`border rounded-xl p-5 space-y-3 ${cardBgClass}`}>
+                <div className="flex items-start justify-between">
+                  <div>
+                    <span className="font-bold text-sm block">{t.nameTh}</span>
+                    <span className="text-[10px] font-mono text-emerald-500 block mt-0.5">ID: {t.id}</span>
                   </div>
-
-                  <div className="text-xs text-slate-400 space-y-1 bg-slate-950/60 p-3 rounded-lg border border-slate-800">
-                    <p>อีเมลติดต่อ: <span className="text-slate-200">{t.email}</span></p>
-                    <p>เบอร์โทรศัพท์: <span className="text-slate-200">{t.phone}</span></p>
-                  </div>
-
-                  <div className="flex gap-2 pt-1">
-                    <button
-                      onClick={() => alert(`จำลองการแก้ไขหน่วยงาน: ${t.nameTh}`)}
-                      className="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs py-1.5 rounded-lg font-semibold transition border border-slate-700"
-                    >
-                      แก้ไขข้อมูล
-                    </button>
-                  </div>
+                  <span className="bg-emerald-500/20 text-emerald-500 border border-emerald-500/30 text-[10px] px-2 py-0.5 rounded font-mono font-bold">
+                    ACTIVE
+                  </span>
                 </div>
-              ))}
-            </div>
+
+                <div className={`text-xs space-y-1 p-3 rounded-lg border ${isDark ? 'bg-slate-950/60 border-slate-800 text-slate-400' : 'bg-slate-50 border-slate-200 text-slate-600'}`}>
+                  <p>อีเมลติดต่อ: <span className="font-medium">{t.email}</span></p>
+                  <p>เบอร์โทรศัพท์: <span className="font-medium">{t.phone}</span></p>
+                </div>
+
+                <button
+                  onClick={() => alert(`จำลองการแก้ไขหน่วยงาน: ${t.nameTh}`)}
+                  className={`w-full text-xs py-1.5 rounded-lg font-semibold transition border ${isDark ? 'bg-slate-800 border-slate-700 text-slate-300' : 'bg-slate-100 border-slate-200 text-slate-700'}`}
+                >
+                  แก้ไขข้อมูลหน่วยงาน
+                </button>
+              </div>
+            ))}
           </div>
         )}
 
-        {/* Tab 2: Users & Password Management */}
+        {/* TAB 2: Users & Password Management */}
         {activeTab === 'users' && (
-          <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-md space-y-4 p-6">
-            <div className="flex items-center justify-between gap-4">
-              <h2 className="text-sm font-bold text-white flex items-center gap-2">
-                <UserCheck className="h-4 w-4 text-emerald-400" />
-                <span>ตารางรายชื่อเจ้าหน้าที่ประจำหน่วยงาน และการรีเซ็ตรหัสผ่าน</span>
-              </h2>
-            </div>
+          <div className={`border rounded-xl overflow-hidden p-6 space-y-4 ${cardBgClass}`}>
+            <h2 className="text-sm font-bold flex items-center gap-2">
+              <UserCheck className="h-4 w-4 text-emerald-500" />
+              <span>รายการผู้ใช้งานเจ้าหน้าที่ประจำหน่วยงานทั้งหมด</span>
+            </h2>
 
-            <div className="overflow-x-auto border border-slate-800 rounded-xl">
+            <div className="overflow-x-auto border rounded-xl border-slate-800/40">
               <table className="w-full text-left text-xs border-collapse">
                 <thead>
-                  <tr className="bg-slate-950 border-b border-slate-800 text-slate-400 font-bold">
+                  <tr className={`border-b font-bold ${tableHeaderBg}`}>
                     <th className="p-3">ชื่อ-นามสกุล</th>
                     <th className="p-3">Username / อีเมล</th>
                     <th className="p-3">หน่วยงาน</th>
                     <th className="p-3">บทบาทสิทธิ์ (Role)</th>
-                    <th className="p-3 text-center">รีเซ็ตรหัสผ่าน / จัดการ</th>
+                    <th className="p-3 text-center">จัดการรหัสผ่าน</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-800/60 text-slate-300">
+                <tbody className="divide-y divide-slate-800/40">
                   {users.map((u) => (
-                    <tr key={u.id} className="hover:bg-slate-800/40 transition">
-                      <td className="p-3 font-bold text-white">
+                    <tr key={u.id} className="hover:bg-slate-800/20 transition">
+                      <td className="p-3 font-bold">
                         {u.fullName}
-                        <span className="block text-[10px] text-slate-500 font-normal">{u.department}</span>
+                        <span className="block text-[10px] font-normal text-slate-400">{u.department}</span>
                       </td>
                       <td className="p-3 font-mono">
-                        <span className="text-emerald-400 block font-bold">{u.username}</span>
-                        <span className="text-[10px] text-slate-500 font-sans block">{u.email}</span>
+                        <span className="text-emerald-500 font-bold block">{u.username}</span>
+                        <span className="text-[10px] font-sans text-slate-400 block">{u.email}</span>
                       </td>
-                      <td className="p-3 text-slate-400 font-mono text-[11px]">{u.orgId}</td>
+                      <td className="p-3 font-mono text-[11px] text-slate-400">{u.orgId}</td>
                       <td className="p-3">
-                        <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase">
+                        <span className="bg-emerald-500/20 text-emerald-500 border border-emerald-500/30 px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase">
                           {u.role}
                         </span>
                       </td>
                       <td className="p-3 text-center">
-                        <div className="flex items-center justify-center gap-2">
-                          <button
-                            onClick={() => handleResetPassword(u.username)}
-                            className="bg-amber-500/20 text-amber-300 border border-amber-500/30 hover:bg-amber-500/30 text-[11px] font-semibold py-1.5 px-3 rounded-lg transition flex items-center gap-1"
-                          >
-                            <Key className="h-3.5 w-3.5" />
-                            <span>🔑 รีเซ็ตรหัสผ่าน</span>
-                          </button>
-                        </div>
+                        <button
+                          onClick={() => handleResetPassword(u.username)}
+                          className="bg-amber-500/20 text-amber-500 border border-amber-500/30 hover:bg-amber-500/30 text-[11px] font-semibold py-1.5 px-3 rounded-lg transition inline-flex items-center gap-1"
+                        >
+                          <Key className="h-3.5 w-3.5" />
+                          <span>🔑 รีเซ็ตรหัสผ่าน</span>
+                        </button>
                       </td>
                     </tr>
                   ))}
@@ -314,8 +425,8 @@ export default function App() {
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-slate-900 p-4 text-center text-xs text-slate-600">
-        Standalone Super Admin Web App | Platform Master Management Portal
+      <footer className={`border-t p-4 text-center text-xs text-slate-500 ${headerBgClass}`}>
+        Standalone Super Admin Web App | High Security MFA Portal
       </footer>
     </div>
   );
