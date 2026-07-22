@@ -1746,6 +1746,7 @@ export default function App() {
                           <label className="text-xs font-medium text-slate-700">ขอบเขตวันและเวลาเริ่มต้นข้อมูล</label>
                           <input
                             type="date"
+                            max={new Date().toISOString().split('T')[0]}
                             value={scopeForm.timeframeStart}
                             onChange={(e) => setScopeForm({...scopeForm, timeframeStart: e.target.value})}
                             className="w-full text-xs border border-slate-300 rounded-lg p-2 focus:ring-1 focus:ring-brand-500"
@@ -1755,6 +1756,7 @@ export default function App() {
                           <label className="text-xs font-medium text-slate-700">ขอบเขตวันและเวลาสิ้นสุดข้อมูล</label>
                           <input
                             type="date"
+                            max={new Date().toISOString().split('T')[0]}
                             value={scopeForm.timeframeEnd}
                             onChange={(e) => setScopeForm({...scopeForm, timeframeEnd: e.target.value})}
                             className="w-full text-xs border border-slate-300 rounded-lg p-2 focus:ring-1 focus:ring-brand-500"
@@ -1802,8 +1804,40 @@ export default function App() {
                         </button>
                         <button
                           type="button"
-                          onClick={() => setWizardStep(3)}
-                          className="bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold py-2 px-6 rounded-lg transition"
+                          onClick={() => {
+                            // 1. Mandatory Description Check
+                            if (!scopeForm.description.trim()) {
+                              alert('⚠️ กรุณากรอก "ข้อ 3. รายละเอียดระบุข้อมูลส่วนบุคคลที่ต้องการเข้าถึงโดยละเอียด"');
+                              return;
+                            }
+
+                            // 2. Mandatory Target Database Checklist Check
+                            if (scopeForm.systems.length === 0) {
+                              alert('⚠️ กรุณาคลิกเลือกหมวดหมู่ "ระบบหรือฐานข้อมูลที่เกี่ยวข้องเท่าที่ทราบ" อย่างน้อย 1 รายการ');
+                              return;
+                            }
+
+                            // 3. Date Range Validation Checks
+                            const todayStr = new Date().toISOString().split('T')[0];
+
+                            if (scopeForm.timeframeStart && scopeForm.timeframeStart > todayStr) {
+                              alert('⚠️ "ขอบเขตวันที่เริ่มต้นข้อมูล" ต้องไม่เกินวันที่ปัจจุบัน');
+                              return;
+                            }
+
+                            if (scopeForm.timeframeEnd && scopeForm.timeframeEnd > todayStr) {
+                              alert('⚠️ "ขอบเขตวันที่สิ้นสุดข้อมูล" ต้องไม่เกินวันที่ปัจจุบัน');
+                              return;
+                            }
+
+                            if (scopeForm.timeframeStart && scopeForm.timeframeEnd && scopeForm.timeframeStart > scopeForm.timeframeEnd) {
+                              alert('⚠️ "ขอบเขตวันที่เริ่มต้นข้อมูล" ต้องไม่มากกว่า "ขอบเขตวันที่สิ้นสุดข้อมูล"');
+                              return;
+                            }
+
+                            setWizardStep(3);
+                          }}
+                          className="bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold py-2 px-6 rounded-lg transition shadow-md"
                         >
                           ขั้นตอนถัดไป
                         </button>
