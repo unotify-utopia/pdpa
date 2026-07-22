@@ -214,8 +214,15 @@ export const createRequest = (requestData: Omit<Request, 'id' | 'orgId' | 'uuid'
     legalHold: false,
   };
 
-  requests.push(newRequest);
+  requests.unshift(newRequest);
   saveRequests(requests);
+
+  // Sync to PostgreSQL Master Database via API
+  fetch('/api/public/requests', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(newRequest)
+  }).catch((err) => console.log('PostgreSQL Background Sync:', err));
 
   // Log creation
   const mockSystemUser: User = { id: 'system', orgId: 'org_dopa', username: 'system', fullNameTh: 'พอร์ทัลสาธารณะ', fullNameEn: 'Public Portal', email: '', role: 'intake', roles: ['intake'], mfaEnabled: false };

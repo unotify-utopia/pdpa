@@ -2,6 +2,22 @@ import express from 'express';
 import cors from 'cors';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
+import pg from 'pg';
+
+const { Pool } = pg;
+
+// PostgreSQL Connection Pool Configuration
+const dbPool = new Pool({
+  user: process.env.DB_USER || 'pdpa_admin',
+  host: process.env.DB_HOST || 'localhost',
+  database: process.env.DB_NAME || 'pdpa_prod_db',
+  password: process.env.DB_PASSWORD || 'PdpaSecure_Prod2026',
+  port: parseInt(process.env.DB_PORT || '5432'),
+});
+
+dbPool.on('connect', () => {
+  console.log('⚡ Connected to PostgreSQL pdpa_prod_db Master Engine');
+});
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -190,53 +206,67 @@ app.get('/api/auth/me', authenticateJWT, (req, res) => {
 
 // --- PUBLIC ROUTES ---
 
-// POST /api/public/requests (Submit new request)
-app.post('/api/public/requests', (req, res) => {
-  const requestData = req.body;
-  const year = new Date().getFullYear();
-  const trackingNo = `REQ-${year}-${(requests.length + 1).toString().padStart(4, '0')}`;
-  const uuid = 'pk-' + Math.random().toString(36).substring(2, 15);
+// POST /api/public/requests (Submit new request to PostgreSQL)
+app.post('/api/public/requests', async (req, res) => {
+  try {
+    const requestData = req.body;
+    const year = new Date().getFullYear();
+    const countRes = await dbPool.query('SELECT COUNT(*) FROM requests');
+    const requestCount = parseInt(countRes.rows[0].count) + 1;
+    
+    const orgId = requestData.orgId || 'org_dopa';
+    const trackingNo = `REQ-${year}-${requestCount.toString().padStart(4, '0')}`;
+    const reqId = `req_${Date.now()}`;
+    const requesterType = requestData.requesterInfo?.requesterType || 'self';
+    const status = 'Submitted';
 
-  const newRequest = {
-    ...requestData,
-    id: `req_${Date.now()}`,
-    uuid,
-    trackingNo,
-    status: 'Submitted',
-    submissionDate: new Date().toISOString(),
-    slaRemainingDays: 30,
-    slaDaysUsed: 0,
-    slaPaused: false,
-    slaExtended: false,
-    slaEvents: [],
-    statusHistory: [
-      { status: 'Submitted', changedAt: new Date().toISOString(), changedBy: 'System (Public Portal)' }
-    ],
-    identityVerification: {
-      status: 'pending',
-      assuranceLevel: 'low',
-      method: 'document_check'
-    },
-    dataCollectionTasks: [],
-    redactionRecords: [],
-    feeCalculation: {
-      noFee: requestData.requestDetails?.deliveryMethod === 'secure_download',
-      paperPages: 0,
-      computerPages: 0,
-      certificationsCount: 0,
-      otherCosts: [],
-      totalCalculated: 0,
-      isApproved: false,
-      paymentStatus: 'pending'
-    },
-    messageThread: [],
-    legalHold: false
-  };
+    // Insert into PostgreSQL Master Database
+    await dbPool.query(
+      'INSERT INTO requests (id, org_id, tracking_no, requester_type, status) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (id) DO NOTHING',
+      [reqId, orgId, trackingNo, requesterType, status]
+    );
 
-  requests.push(newRequest);
-  addServerAuditLog('SUBMIT_REQUEST', `ผู้รับข้อมูลยื่นคำขอใหม่แบบออนไลน์ เลขที่ ${trackingNo}`, null, newRequest.id, trackingNo);
+    const newRequest = {
+      ...requestData,
+      id: reqId,
+      orgId,
+      trackingNo,
+      status,
+      submissionDate: new Date().toISOString(),
+      slaRemainingDays: 30,
+      slaDaysUsed: 0
+    };
 
-  res.status(201).json({ success: true, request: newRequest });
+    // Insert Audit Log into PostgreSQL
+    await dbPool.query(
+      'INSERT INTO audit_logs (id, org_id, action, details, performed_by) VALUES ($1, $2, $3, $4, $5)',
+      [`log_${Date.now()}`, orgId, 'CREATE_REQUEST', `ประชาชนยื่นคำขอใหม่ ${trackingNo} สำเร็จ`, 'Public Portal User']
+    );
+
+    return res.status(201).json({
+      success: true,
+      message: 'ยื่นแบบคำขอขอเข้าถึงข้อมูลส่วนบุคคลสำเร็จ ข้อมูลถูกบันทึกลง PostgreSQL 16 เรียบร้อยแล้ว',
+      request: newRequest
+    });
+  } catch (error) {
+    console.error('Error inserting request to PostgreSQL:', error);
+    return res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดในการบันทึกข้อมูลลงฐานข้อมูล PostgreSQL' });
+  }
+});
+
+// GET /api/requests (Fetch all requests from PostgreSQL)
+app.get('/api/requests', async (req, res) => {
+  try {
+    const result = await dbPool.query('SELECT * FROM requests ORDER BY created_at DESC');
+    return res.json({
+      success: true,
+      count: result.rows.length,
+      requests: result.rows
+    });
+  } catch (error) {
+    console.error('Error fetching requests from PostgreSQL:', error);
+    return res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดในการอ่านข้อมูลจาก PostgreSQL' });
+  }
 });
 
 // GET /api/public/track/:trackingNo
