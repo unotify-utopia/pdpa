@@ -11,9 +11,10 @@ const KEYS = {
   CURRENT_USER: 'pdpa_req_current_user',
 };
 
-// Initialize DB with seed data if not present
+// Initialize DB with seed data if not present or empty
 export const initializeDB = () => {
-  if (!localStorage.getItem(KEYS.REQUESTS)) {
+  const existingRequests = localStorage.getItem(KEYS.REQUESTS);
+  if (!existingRequests || JSON.parse(existingRequests).length === 0) {
     localStorage.setItem(KEYS.REQUESTS, JSON.stringify(seedRequests));
   }
   if (!localStorage.getItem(KEYS.CONFIG)) {
