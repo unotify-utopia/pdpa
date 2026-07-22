@@ -1499,9 +1499,8 @@ export default function App() {
 
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div className="space-y-1 md:col-span-2">
-                          <label className="text-xs font-medium text-slate-700 flex justify-between">
-                            <span>เลขประจำตัวประชาชน / พาสปอร์ต (ID / Passport No.) <span className="text-red-500">*</span></span>
-                            <span className="text-[10px] text-brand-600 font-semibold">ฟอร์แมตขีดอัตโนมัติ X-XXXX-XXXXX-XX-X</span>
+                          <label className="text-xs font-medium text-slate-700">
+                            เลขประจำตัวประชาชน / พาสปอร์ต (ID / Passport No.) <span className="text-red-500">*</span>
                           </label>
                           <input
                             type="text"
@@ -1514,9 +1513,8 @@ export default function App() {
                           />
                         </div>
                         <div className="space-y-1">
-                          <label className="text-xs font-medium text-slate-700 flex justify-between">
-                            <span>เบอร์โทรศัพท์ติดต่อ <span className="text-red-500">*</span></span>
-                            <span className="text-[10px] text-slate-400">มือถือ/สายตรง</span>
+                          <label className="text-xs font-medium text-slate-700">
+                            เบอร์โทรศัพท์ติดต่อ <span className="text-red-500">*</span>
                           </label>
                           <input
                             type="tel"
