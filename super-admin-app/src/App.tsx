@@ -66,24 +66,62 @@ export default function App() {
     }
   };
 
-  // Add New Tenant
-  const handleAddTenant = () => {
-    const name = prompt('กรุณาระบุชื่อหน่วยงานใหม่ที่จะเพิ่มเข้าระบบ:');
-    if (!name) return;
-    const code = prompt('กรุณาระบุรหัสย่อหน่วยงาน (เช่น ORG_EXCISE):') || `org_${Date.now()}`;
-    const email = prompt('กรุณาระบุอีเมลติดต่อหน่วยงาน:') || 'admin@org.go.th';
+  // Tenant Modal States
+  const [showTenantModal, setShowTenantModal] = useState(false);
+  const [editingTenantId, setEditingTenantId] = useState<string | null>(null);
+  const [tenantFormData, setTenantFormData] = useState<Tenant>({
+    id: '',
+    nameTh: '',
+    nameEn: '',
+    email: '',
+    phone: '',
+    status: 'active'
+  });
 
-    const newOrg: Tenant = {
-      id: code,
-      nameTh: name,
-      nameEn: code.toUpperCase(),
-      email: email,
-      phone: '02-000-0000',
+  // Open Modal for New Tenant
+  const handleOpenAddTenantModal = () => {
+    setEditingTenantId(null);
+    setTenantFormData({
+      id: `org_${Date.now().toString().slice(-6)}`,
+      nameTh: '',
+      nameEn: '',
+      email: '',
+      phone: '',
       status: 'active'
-    };
+    });
+    setShowTenantModal(true);
+  };
 
-    setTenants([...tenants, newOrg]);
-    alert(`เพิ่มหน่วยงาน "${name}" เข้าสู่ระบบเรียบร้อยแล้ว`);
+  // Open Modal for Edit Existing Tenant
+  const handleOpenEditTenantModal = (tenant: Tenant) => {
+    setEditingTenantId(tenant.id);
+    setTenantFormData({ ...tenant });
+    setShowTenantModal(true);
+  };
+
+  // Submit Tenant Form (Add & Edit)
+  const handleTenantFormSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!tenantFormData.nameTh.trim() || !tenantFormData.id.trim()) {
+      alert('กรุณากรอกชื่อหน่วยงานและรหัสหน่วยงานให้ครบถ้วน');
+      return;
+    }
+
+    if (editingTenantId) {
+      // Update existing
+      setTenants(tenants.map(t => t.id === editingTenantId ? { ...tenantFormData } : t));
+      alert(`อัปเดตข้อมูลหน่วยงาน "${tenantFormData.nameTh}" เรียบร้อยแล้ว`);
+    } else {
+      // Create new
+      if (tenants.some(t => t.id === tenantFormData.id.trim())) {
+        alert('รหัสหน่วยงาน (Tenant ID) นี้มีอยู่ในระบบแล้ว กรุณาใช้รหัสอื่น');
+        return;
+      }
+      setTenants([...tenants, { ...tenantFormData, id: tenantFormData.id.trim() }]);
+      alert(`สร้างหน่วยงานใหม่ "${tenantFormData.nameTh}" เรียบร้อยแล้ว`);
+    }
+
+    setShowTenantModal(false);
   };
 
   // Modal States
@@ -346,11 +384,11 @@ export default function App() {
 
           {activeTab === 'tenants' ? (
             <button
-              onClick={handleAddTenant}
+              onClick={handleOpenAddTenantModal}
               className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-4 py-2 rounded-lg transition shadow-sm flex items-center gap-1.5"
             >
               <Plus className="h-4 w-4" />
-              <span>+ เพิ่มหน่วยงานใหม่</span>
+              <span>+ เพิ่มหน่วยงานใหม่ (Add Tenant)</span>
             </button>
           ) : (
             <button
@@ -384,7 +422,7 @@ export default function App() {
                 </div>
 
                 <button
-                  onClick={() => alert(`จำลองการแก้ไขหน่วยงาน: ${t.nameTh}`)}
+                  onClick={() => handleOpenEditTenantModal(t)}
                   className={`w-full text-xs py-1.5 rounded-lg font-semibold transition border ${isDark ? 'bg-slate-800 border-slate-700 text-slate-300' : 'bg-slate-100 border-slate-200 text-slate-700'}`}
                 >
                   แก้ไขข้อมูลหน่วยงาน
@@ -576,6 +614,135 @@ export default function App() {
                   className="w-2/3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 rounded-xl text-xs transition shadow-lg"
                 >
                   บันทึกสร้างบัญชีผู้ใช้ใหม่
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Enterprise Tenant Modal Dialog (Create & Edit Tenant Form) */}
+      {showTenantModal && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className={`border rounded-2xl p-6 max-w-lg w-full shadow-2xl space-y-5 ${cardBgClass} animate-fade-in`}>
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="p-2 bg-emerald-500/20 border border-emerald-500/30 rounded-lg text-emerald-400">
+                  <Building2 className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-base">
+                    {editingTenantId ? 'แก้ไขข้อมูลหน่วยงาน (Edit Tenant)' : 'เพิ่มหน่วยงานใหม่เข้าระบบ (Add New Tenant)'}
+                  </h3>
+                  <p className="text-xs text-slate-400">กำหนดโครงสร้าง รหัสย่อ และข้อมูลติดต่อประจำหน่วยงาน</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowTenantModal(false)}
+                className="text-slate-400 hover:text-white text-lg font-bold px-2"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleTenantFormSubmit} className="space-y-4">
+              {/* 1. ชื่อหน่วยงานภาษาไทย & อังกฤษ */}
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-xs font-bold mb-1">ชื่อหน่วยงาน (ภาษาไทย) *</label>
+                  <input
+                    type="text"
+                    value={tenantFormData.nameTh}
+                    onChange={(e) => setTenantFormData({ ...tenantFormData, nameTh: e.target.value })}
+                    placeholder="เช่น กรมการปกครอง, บริษัท ไทยเทคโนโลยี จำกัด"
+                    className={`w-full px-3 py-2 border rounded-xl text-xs font-medium focus:outline-none focus:border-emerald-500 ${inputBgClass}`}
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold mb-1">ชื่อหน่วยงาน (ภาษาอังกฤษ / ชื่อย่อ)</label>
+                  <input
+                    type="text"
+                    value={tenantFormData.nameEn}
+                    onChange={(e) => setTenantFormData({ ...tenantFormData, nameEn: e.target.value })}
+                    placeholder="เช่น Department of Provincial Administration (DOPA)"
+                    className={`w-full px-3 py-2 border rounded-xl text-xs focus:outline-none focus:border-emerald-500 ${inputBgClass}`}
+                  />
+                </div>
+              </div>
+
+              {/* 2. รหัสประจำหน่วยงาน (Tenant ID) */}
+              <div>
+                <label className="block text-xs font-bold mb-1 flex items-center justify-between">
+                  <span>รหัสประจำหน่วยงานในระบบ (Tenant ID Code) *</span>
+                  <span className="text-emerald-500 text-[10px]">✓ ใช้สำหรับอ้างอิงแยกข้อมูล</span>
+                </label>
+                <input
+                  type="text"
+                  value={tenantFormData.id}
+                  onChange={(e) => setTenantFormData({ ...tenantFormData, id: e.target.value })}
+                  placeholder="เช่น org_dopa, org_rd, org_excise"
+                  disabled={!!editingTenantId}
+                  className={`w-full px-3 py-2 border rounded-xl text-xs font-mono font-bold focus:outline-none focus:border-emerald-500 ${inputBgClass} ${editingTenantId ? 'opacity-60 cursor-not-allowed' : ''}`}
+                  required
+                />
+              </div>
+
+              {/* 3. อีเมล & เบอร์โทรศัพท์ */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold mb-1">อีเมลติดต่อทางการ *</label>
+                  <input
+                    type="email"
+                    value={tenantFormData.email}
+                    onChange={(e) => setTenantFormData({ ...tenantFormData, email: e.target.value })}
+                    placeholder="pdpa@organization.go.th"
+                    className={`w-full px-3 py-2 border rounded-xl text-xs focus:outline-none focus:border-emerald-500 ${inputBgClass}`}
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold mb-1">เบอร์โทรศัพท์ติดต่อ</label>
+                  <input
+                    type="text"
+                    value={tenantFormData.phone}
+                    onChange={(e) => setTenantFormData({ ...tenantFormData, phone: e.target.value })}
+                    placeholder="02-XXX-XXXX"
+                    className={`w-full px-3 py-2 border rounded-xl text-xs focus:outline-none focus:border-emerald-500 ${inputBgClass}`}
+                  />
+                </div>
+              </div>
+
+              {/* 4. สถานะหน่วยงาน */}
+              <div>
+                <label className="block text-xs font-semibold mb-1">สถานะการเปิดใช้งานในระบบ</label>
+                <select
+                  value={tenantFormData.status}
+                  onChange={(e) => setTenantFormData({ ...tenantFormData, status: e.target.value as any })}
+                  className={`w-full px-3 py-2 border rounded-xl text-xs font-semibold focus:outline-none focus:border-emerald-500 ${inputBgClass}`}
+                >
+                  <option value="active" className="bg-slate-900 text-emerald-400">ACTIVE - เปิดใช้งานรับคำขอปกติ</option>
+                  <option value="inactive" className="bg-slate-900 text-red-400">INACTIVE - ปิดการใช้งานชั่วคราว</option>
+                </select>
+              </div>
+
+              {/* Buttons */}
+              <div className="flex gap-2 pt-2 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setShowTenantModal(false)}
+                  className="w-1/3 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold py-2.5 rounded-xl text-xs transition"
+                >
+                  ยกเลิก
+                </button>
+                <button
+                  type="submit"
+                  className="w-2/3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 rounded-xl text-xs transition shadow-lg"
+                >
+                  {editingTenantId ? 'บันทึกการแก้ไขข้อมูล' : 'บันทึกสร้างหน่วยงานใหม่'}
                 </button>
               </div>
             </form>
