@@ -22,7 +22,8 @@ import {
   Mail,
   FileCheck2,
   Scale,
-  Building2
+  Building2,
+  CheckCircle2
 } from 'lucide-react';
 
 import type {
@@ -98,6 +99,7 @@ export default function App() {
 
   // Active Selections
   const [selectedTargetOrgId, setSelectedTargetOrgId] = useState<string>('org_dopa');
+  const [tenantSearchQuery, setTenantSearchQuery] = useState<string>('');
   const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
   const [isNewRequestSuccess, setIsNewRequestSuccess] = useState<Request | null>(null);
   
@@ -1302,25 +1304,99 @@ export default function App() {
                   {/* Step 1: Requester Details */}
                   {wizardStep === 1 && (
                     <div className="space-y-4">
-                      {/* Select Target Tenant Organization */}
-                      <div className="bg-brand-50/70 border border-brand-200 rounded-xl p-4 space-y-2">
-                        <label className="block text-xs font-bold text-slate-800 flex items-center gap-1.5">
-                          <Building2 className="h-4 w-4 text-brand-600" />
-                          <span>🏢 เลือกหน่วยงานที่ท่านต้องการยื่นคำขอเข้าถึงข้อมูลส่วนบุคคล (Target Organization) *</span>
-                        </label>
-                        <select
-                          value={selectedTargetOrgId}
-                          onChange={(e) => setSelectedTargetOrgId(e.target.value)}
-                          className="w-full text-xs font-semibold border border-brand-300 rounded-lg px-3 py-2.5 outline-none focus:ring-2 focus:ring-brand-500 bg-white text-slate-900 shadow-sm"
-                          required
-                        >
-                          <option value="org_dopa">กรมการปกครอง (Department of Provincial Administration - DOPA)</option>
-                          <option value="org_rd">กรมสรรพากร (Revenue Department - RD)</option>
-                          <option value="org_tech_th">บริษัท ไทยเทคโนโลยี อินโนเวชั่น จำกัด (Thai Tech Innovation Co., Ltd.)</option>
-                        </select>
-                        <p className="text-[11px] text-brand-700 font-medium">
-                          ✓ คำขอและข้อมูลยืนยันตัวตนของท่านจะถูกจัดส่งตรงไปยังเจ้าหน้าที่ประจำหน่วยงานที่ท่านเลือกเท่านั้น
-                        </p>
+                      {/* Smart Searchable Tenant Organization Selector */}
+                      <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5 space-y-4 shadow-sm">
+                        <div className="flex items-center justify-between">
+                          <label className="block text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                            <Building2 className="h-4 w-4 text-brand-600" />
+                            <span>🏢 ค้นหาและเลือกหน่วยงานที่ท่านต้องการยื่นคำขอ (Search Target Organization) *</span>
+                          </label>
+                          <span className="text-[10px] bg-brand-100 text-brand-700 font-bold px-2 py-0.5 rounded-full">
+                            ค้นหาอัจฉริยะ ⚡
+                          </span>
+                        </div>
+
+                        {/* Search Input Bar */}
+                        <div className="relative">
+                          <Search className="absolute left-3.5 top-3 h-4 w-4 text-slate-400" />
+                          <input
+                            type="text"
+                            value={tenantSearchQuery}
+                            onChange={(e) => setTenantSearchQuery(e.target.value)}
+                            placeholder="พิมพ์ชื่อหน่วยงาน เช่น กรมการปกครอง, สรรพากร, หรือพิมพ์ dopa..."
+                            className="w-full text-xs font-medium pl-10 pr-4 py-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 bg-white text-slate-900 shadow-inner"
+                          />
+                          {tenantSearchQuery && (
+                            <button
+                              type="button"
+                              onClick={() => setTenantSearchQuery('')}
+                              className="absolute right-3 top-2.5 text-xs text-slate-400 hover:text-slate-600 font-bold px-1"
+                            >
+                              ✕
+                            </button>
+                          )}
+                        </div>
+
+                        {/* Selected Active Tenant Badge */}
+                        {selectedTargetOrgId && (
+                          <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3.5 flex items-center justify-between shadow-sm animate-fade-in">
+                            <div className="flex items-center gap-3">
+                              <div className="p-2 bg-emerald-600 text-white rounded-lg">
+                                <Building2 className="h-5 w-5" />
+                              </div>
+                              <div>
+                                <span className="text-[10px] text-emerald-600 font-bold uppercase tracking-wider block">✓ หน่วยงานที่เลือกรับเรื่อง</span>
+                                <h4 className="font-bold text-xs text-slate-900">
+                                  {initialOrganizations.find(o => o.id === selectedTargetOrgId)?.nameTh || 'หน่วยงานที่เลือก'} 
+                                  <span className="text-slate-500 font-normal ml-1">({selectedTargetOrgId})</span>
+                                </h4>
+                              </div>
+                            </div>
+                            <span className="text-emerald-700 text-xs font-bold bg-emerald-100 px-2.5 py-1 rounded-full flex items-center gap-1">
+                              <CheckCircle2 className="h-3.5 w-3.5" /> เลือกแล้ว
+                            </span>
+                          </div>
+                        )}
+
+                        {/* Filtered Organization List Results */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 pt-1 max-h-56 overflow-y-auto pr-1">
+                          {initialOrganizations
+                            .filter(org => 
+                              !tenantSearchQuery.trim() || 
+                              org.nameTh.toLowerCase().includes(tenantSearchQuery.toLowerCase()) ||
+                              org.nameEn.toLowerCase().includes(tenantSearchQuery.toLowerCase()) ||
+                              org.id.toLowerCase().includes(tenantSearchQuery.toLowerCase())
+                            )
+                            .map(org => {
+                              const isSelected = selectedTargetOrgId === org.id;
+                              return (
+                                <button
+                                  key={org.id}
+                                  type="button"
+                                  onClick={() => setSelectedTargetOrgId(org.id)}
+                                  className={`p-3 rounded-xl border text-left transition flex items-start justify-between gap-2 ${
+                                    isSelected
+                                      ? 'bg-brand-50 border-brand-500 ring-2 ring-brand-500/20 shadow-sm'
+                                      : 'bg-white border-slate-200 hover:border-brand-300 hover:bg-slate-50/80'
+                                  }`}
+                                >
+                                  <div className="space-y-0.5">
+                                    <h5 className={`font-bold text-xs ${isSelected ? 'text-brand-900' : 'text-slate-800'}`}>
+                                      {org.nameTh}
+                                    </h5>
+                                    <p className="text-[10px] text-slate-500 font-medium">
+                                      {org.nameEn} • <span className="font-mono text-slate-400">{org.id}</span>
+                                    </p>
+                                  </div>
+                                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md shrink-0 ${
+                                    isSelected ? 'bg-brand-600 text-white' : 'bg-slate-100 text-slate-600'
+                                  }`}>
+                                    {isSelected ? '✓ เลือกอยู่' : 'เลือก'}
+                                  </span>
+                                </button>
+                              );
+                            })}
+                        </div>
                       </div>
 
                       <div className="flex gap-4 border-b border-slate-100 pb-4 mb-4">
