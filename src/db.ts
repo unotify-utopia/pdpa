@@ -149,19 +149,22 @@ export const getRequestByTrackingNo = (trackingNo: string): Request | undefined 
   return getRequests().find((r) => r.trackingNo.toUpperCase() === trackingNo.trim().toUpperCase());
 };
 
-// Generate Next Tracking Number (REQ-YYYY-XXXX)
-export const generateTrackingNumber = (): string => {
+// Generate Next Tenant-Specific Tracking Number (REQ-[TENANT_CODE]-[YEAR]-[0001])
+export const generateTrackingNumber = (orgId: string = 'org_dopa'): string => {
   const requests = getRequests();
   const year = new Date().getFullYear();
-  const prefix = `REQ-${year}-`;
+  const orgCodePrefix = orgId.replace(/^org_/, '').toUpperCase().replace('_TH', '');
+  const prefix = `REQ-${orgCodePrefix}-${year}-`;
   
-  // Find highest number in current year
+  // Count existing requests for this specific tenant organization
   let maxNum = 0;
   requests.forEach((r) => {
-    if (r.trackingNo.startsWith(prefix)) {
-      const parts = r.trackingNo.split('-');
-      const num = parseInt(parts[2], 10);
-      if (num > maxNum) maxNum = num;
+    if (r.orgId === orgId || (r.trackingNo && r.trackingNo.startsWith(prefix))) {
+      const parts = r.trackingNo ? r.trackingNo.split('-') : [];
+      if (parts.length >= 4) {
+        const num = parseInt(parts[3], 10);
+        if (!isNaN(num) && num > maxNum) maxNum = num;
+      }
     }
   });
 
@@ -173,14 +176,15 @@ export const generateTrackingNumber = (): string => {
 export const createRequest = (requestData: Omit<Request, 'id' | 'uuid' | 'trackingNo' | 'status' | 'submissionDate' | 'slaRemainingDays' | 'slaDaysUsed' | 'slaPaused' | 'slaExtended' | 'slaEvents' | 'statusHistory' | 'dataCollectionTasks' | 'redactionRecords' | 'feeCalculation' | 'messageThread' | 'legalHold' | 'identityVerification'> & { orgId?: string }): Request => {
   const requests = getRequests();
   const config = getComplianceConfig();
+  const targetOrgId = requestData.orgId || 'org_dopa';
   
-  const trackingNo = generateTrackingNumber();
+  const trackingNo = generateTrackingNumber(targetOrgId);
   const uuid = 'pk-' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
   
   const newRequest: Request = {
     ...requestData,
     id: `req_${Date.now()}`,
-    orgId: (requestData as any).orgId || 'org_dopa',
+    orgId: targetOrgId,
     uuid,
     trackingNo,
     status: 'Submitted',

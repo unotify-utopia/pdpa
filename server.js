@@ -210,16 +210,22 @@ app.get('/api/auth/me', authenticateJWT, (req, res) => {
 
 // --- PUBLIC ROUTES ---
 
-// POST /api/public/requests (Submit new request to PostgreSQL)
+// POST /api/public/requests (Submit new request to PostgreSQL with Tenant-Specific Tracking Generator)
 app.post('/api/public/requests', async (req, res) => {
   try {
     const requestData = req.body;
     const year = new Date().getFullYear();
-    const countRes = await dbPool.query('SELECT COUNT(*) FROM requests');
-    const requestCount = parseInt(countRes.rows[0].count) + 1;
-    
     const orgId = requestData.orgId || 'org_dopa';
-    const trackingNo = `REQ-${year}-${requestCount.toString().padStart(4, '0')}`;
+    
+    // Extract clean org code prefix (e.g. org_dopa -> DOPA, org_rd -> RD, org_tech_th -> TECH)
+    const orgCodePrefix = orgId.replace(/^org_/, '').toUpperCase().replace('_TH', '');
+    
+    // Count existing requests ONLY for this specific tenant organization
+    const countRes = await dbPool.query('SELECT COUNT(*) FROM requests WHERE org_id = $1', [orgId]);
+    const tenantCount = parseInt(countRes.rows[0].count) + 1;
+    
+    // Format: REQ-[TENANT_CODE]-[YEAR]-[0001] (e.g. REQ-DOPA-2026-0001, REQ-RD-2026-0001)
+    const trackingNo = `REQ-${orgCodePrefix}-${year}-${tenantCount.toString().padStart(4, '0')}`;
     const reqId = `req_${Date.now()}`;
     const requesterType = requestData.requesterInfo?.requesterType || 'self';
     const status = 'Submitted';
