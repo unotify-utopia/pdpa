@@ -46,7 +46,15 @@ const generateChecksum = (data: string): string => {
 // Core DB Accessors
 export const getRequests = (): Request[] => {
   initializeDB();
-  return JSON.parse(localStorage.getItem(KEYS.REQUESTS) || '[]');
+  const raw = localStorage.getItem(KEYS.REQUESTS);
+  let parsed: Request[] = raw ? JSON.parse(raw) : [];
+  
+  // If storage got cleared or empty array, force re-seed
+  if (!parsed || parsed.length === 0) {
+    localStorage.setItem(KEYS.REQUESTS, JSON.stringify(seedRequests));
+    parsed = seedRequests;
+  }
+  return parsed;
 };
 
 export const saveRequests = (requests: Request[]) => {
