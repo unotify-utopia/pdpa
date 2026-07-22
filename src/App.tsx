@@ -1683,12 +1683,13 @@ export default function App() {
                   {wizardStep === 2 && (
                     <div className="space-y-4">
                       
+                      {/* 1. Request Type */}
                       <div className="space-y-1">
-                        <label className="text-xs font-medium text-slate-700">ประเภทสิทธิที่ต้องการขอใช้ <span className="text-red-500">*</span></label>
+                        <label className="text-xs font-bold text-slate-800">1. ประเภทสิทธิที่ต้องการขอใช้ (Right Category) <span className="text-red-500">*</span></label>
                         <select
                           value={scopeForm.requestType}
                           onChange={(e) => setScopeForm({...scopeForm, requestType: e.target.value as any})}
-                          className="w-full text-xs border border-slate-300 rounded-lg p-2 focus:ring-1 focus:ring-brand-500"
+                          className="w-full text-xs font-semibold border border-slate-300 rounded-lg p-2.5 focus:ring-1 focus:ring-brand-500 bg-white"
                         >
                           <option value="access">ขอเข้าถึงข้อมูลส่วนบุคคล (Right to Access)</option>
                           <option value="copy">ขอรับสำเนาข้อมูลส่วนบุคคล (Right to obtain a copy)</option>
@@ -1696,47 +1697,48 @@ export default function App() {
                         </select>
                       </div>
 
-                      <div className="space-y-1">
-                        <label className="text-xs font-medium text-slate-700">รายละเอียดระบุข้อมูลส่วนบุคคลที่ท่านต้องการเข้าถึง <span className="text-red-500">*</span></label>
-                        <textarea
-                          required
-                          rows={3}
-                          placeholder="กรุณาระบุหมวดหมู่ข้อมูล เช่น รายการสมาชิกภาพ, ประวัติสั่งซื้อผลิตภัณฑ์, ไฟล์เสียงสนทนากับเจ้าหน้าที่คอลเซ็นเตอร์..."
-                          value={scopeForm.description}
-                          onChange={(e) => setScopeForm({...scopeForm, description: e.target.value})}
-                          className="w-full text-xs border border-slate-300 rounded-lg p-2 focus:ring-1 focus:ring-brand-500"
-                        />
-                      </div>
-
-                      {/* Systems selector (Data sources checklist) */}
-                      <div className="space-y-2">
-                        <label className="text-xs font-medium text-slate-700">ระบุระบบที่จัดเก็บข้อมูลเท่าที่ทราบ (Target Databases)</label>
+                      {/* 2. Systems selector Checklist (Government-Neutral Target Databases) - Moved to top */}
+                      <div className="space-y-2 pt-1">
+                        <label className="text-xs font-bold text-slate-800">2. ระบุระบบหรือหมวดหมู่ฐานข้อมูลที่เกี่ยวข้องเท่าที่ทราบ (Target Databases) <span className="text-red-500">*</span></label>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                           {[
-                            'ระบบบริหารลูกค้า (CRM)',
-                            'ระบบสมาชิกเว็บไซต์และแอป',
-                            'ระบบบริหารทรัพยากรบุคคล (HR)',
-                            'ระบบการเงินและชำระค่าสินค้า',
-                            'กล้องวงจรปิดนิรภัย (CCTV)'
+                            'ภาพบันทึกจากกล้องวงจรปิดนิรภัย (CCTV Footage)',
+                            'ระบบทะเบียนและบริการประชาชน (Citizen & Registration Services)',
+                            'ระบบบริหารทรัพยากรบุคคลและบุคลากร (HR & Personnel Records)',
+                            'ระบบสมาชิก พอร์ทัล และแอปพลิเคชัน (Portal & Digital Services)',
+                            'ระบบสารบรรณและฐานข้อมูลเอกสารทั่วไป (General Document & Records)'
                           ].map((sys) => (
                             <label
                               key={sys}
-                              className={`flex items-center gap-2 p-2 border rounded-lg cursor-pointer text-xs transition ${
+                              className={`flex items-center gap-2 p-2.5 border rounded-xl cursor-pointer text-xs transition ${
                                 scopeForm.systems.includes(sys)
-                                  ? 'bg-brand-50 border-brand-300 font-semibold'
-                                  : 'bg-white border-slate-200'
+                                  ? 'bg-brand-50 border-brand-500 font-semibold text-brand-900 shadow-sm'
+                                  : 'bg-white border-slate-200 hover:border-brand-300'
                               }`}
                             >
                               <input
                                 type="checkbox"
                                 checked={scopeForm.systems.includes(sys)}
                                 onChange={() => handleSystemToggle(sys)}
-                                className="rounded text-brand-600 focus:ring-brand-500"
+                                className="rounded text-brand-600 focus:ring-brand-500 h-4 w-4"
                               />
                               <span>{sys}</span>
                             </label>
                           ))}
                         </div>
+                      </div>
+
+                      {/* 3. Detailed Request Description - Moved to bottom */}
+                      <div className="space-y-1 pt-1">
+                        <label className="text-xs font-bold text-slate-800">3. รายละเอียดระบุข้อมูลส่วนบุคคลที่ต้องการเข้าถึงโดยละเอียด <span className="text-red-500">*</span></label>
+                        <textarea
+                          required
+                          rows={4}
+                          placeholder="ตัวอย่าง: ขอไฟล์ภาพกล้องวงจรปิด CCTV วันที่ 20 ก.ค. 2569 ช่วงเวลา 10:00 - 11:00 น. บริเวณหน้าประตูทางเข้าอาคาร 1 หรือ ขอสำเนาประวัติการยื่นคำขอย้อนหลัง..."
+                          value={scopeForm.description}
+                          onChange={(e) => setScopeForm({...scopeForm, description: e.target.value})}
+                          className="w-full text-xs border border-slate-300 rounded-lg p-2.5 focus:ring-1 focus:ring-brand-500 leading-relaxed"
+                        />
                       </div>
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
