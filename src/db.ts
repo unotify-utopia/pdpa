@@ -1,5 +1,5 @@
 import type { Request, ComplianceConfig, DocumentTemplate, AuditLog, User, RequestStatus, SLAEvent } from './types';
-import { initialComplianceConfig, systemUsers, initialDocumentTemplates, seedRequests, initialAuditLogs } from './mockData';
+import { initialComplianceConfig, initialDocumentTemplates, seedRequests, initialAuditLogs } from './mockData';
 
 
 // Storage keys
@@ -27,8 +27,8 @@ export const initializeDB = () => {
     localStorage.setItem(KEYS.AUDIT_LOGS, JSON.stringify(initialAuditLogs));
   }
   if (!localStorage.getItem(KEYS.CURRENT_USER)) {
-    // Default to intake officer for demonstration
-    localStorage.setItem(KEYS.CURRENT_USER, JSON.stringify(systemUsers[1]));
+    // Initial state is unauthenticated (Clean Public Portal)
+    localStorage.removeItem(KEYS.CURRENT_USER);
   }
 };
 

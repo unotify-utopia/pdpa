@@ -74,7 +74,7 @@ export default function App() {
   const [config, setConfig] = useState<ComplianceConfig | null>(null);
   const [templates, setTemplates] = useState<DocumentTemplate[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
-  const [activeUser, setActiveUser] = useState<UserType | null>(getCurrentUser());
+  const [activeUser, setActiveUser] = useState<UserType | null>(null);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
 
   // Reload local state from DB with Multi-tenant Filtering
