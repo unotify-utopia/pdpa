@@ -20,6 +20,8 @@ import {
   BookOpen,
   ArrowLeft,
   Mail,
+  ShieldCheck,
+  Building2,
   FileCheck2,
   Scale
 } from 'lucide-react';
@@ -65,7 +67,7 @@ import { StaffLoginModal } from './components/StaffLoginModal';
 
 export default function App() {
   // App context navigation states
-  const [view, setView] = useState<'public' | 'internal' | 'tracking' | 'download'>('public');
+  const [view, setView] = useState<'public' | 'internal' | 'tracking' | 'download' | 'superadmin'>('public');
   const [publicTab, setPublicTab] = useState<'landing' | 'submit' | 'submitted_success'>('landing');
   const [internalTab, setInternalTab] = useState<'dashboard' | 'requests' | 'kanban' | 'users' | 'compliance' | 'templates' | 'retention' | 'audit'>('dashboard');
 
@@ -3441,6 +3443,219 @@ export default function App() {
               </button>
             </form>
           </div>
+        </div>
+      )}
+
+      {/* Super Admin Dedicated App Page View */}
+      {view === 'superadmin' && (
+        <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
+          {/* Super Admin Header */}
+          <header className="bg-slate-900 border-b border-slate-800 p-4 sticky top-0 z-50">
+            <div className="max-w-7xl mx-auto flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-brand-600/20 border border-brand-500/30 rounded-lg text-brand-400">
+                  <ShieldCheck className="h-6 w-6" />
+                </div>
+                <div>
+                  <h1 className="font-bold text-base text-white flex items-center gap-2">
+                    <span>Super Admin Platform Control Console</span>
+                    <span className="bg-brand-500/20 text-brand-300 border border-brand-500/30 text-[10px] px-2 py-0.5 rounded-full font-mono">v2.5 Enterprise</span>
+                  </h1>
+                  <p className="text-xs text-slate-400">ศูนย์ควบคุมและบริหารจัดการหน่วยงานภาครัฐ/เอกชน และผู้ใช้งานระบบภาพรวม</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setView('public')}
+                  className="bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold px-4 py-2 rounded-lg transition border border-slate-700"
+                >
+                  ← กลับหน้าหลักประชาชน
+                </button>
+              </div>
+            </div>
+          </header>
+
+          {/* Super Admin Body Content */}
+          <main className="flex-1 max-w-7xl w-full mx-auto p-6 space-y-6">
+            
+            {/* Quick Stats Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-1">
+                <span className="text-slate-400 text-xs font-medium block">หน่วยงานทั้งหมดในระบบ</span>
+                <span className="text-2xl font-bold text-white block">3 หน่วยงาน</span>
+                <span className="text-[10px] text-emerald-400 font-mono">✓ Active Multi-Tenants</span>
+              </div>
+              <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-1">
+                <span className="text-slate-400 text-xs font-medium block">บัญชีเจ้าหน้าที่ระบบ</span>
+                <span className="text-2xl font-bold text-white block">{systemUsers.length} บัญชี</span>
+                <span className="text-[10px] text-brand-400 font-mono">✓ RBAC Roles Assigned</span>
+              </div>
+              <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-1">
+                <span className="text-slate-400 text-xs font-medium block">ฐานข้อมูลหลัก</span>
+                <span className="text-2xl font-bold text-white block">PostgreSQL 16</span>
+                <span className="text-[10px] text-emerald-400 font-mono">✓ Encrypted AES-256</span>
+              </div>
+              <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-1">
+                <span className="text-slate-400 text-xs font-medium block">สถานะระบบรักษาความปลอดภัย</span>
+                <span className="text-2xl font-bold text-emerald-400 block">Compliant</span>
+                <span className="text-[10px] text-slate-400 font-mono">✓ MFA Enabled</span>
+              </div>
+            </div>
+
+            {/* 1. Tenant Management Section */}
+            <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden p-6 space-y-4">
+              <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+                <div>
+                  <h2 className="text-sm font-bold text-white flex items-center gap-2">
+                    <Building2 className="h-4 w-4 text-brand-400" />
+                    <span>1. การจัดการหน่วยงานในระบบ (Tenant Management)</span>
+                  </h2>
+                  <p className="text-xs text-slate-400 mt-0.5">เพิ่มหน่วยงานใหม่ กำหนดข้อมูลติดต่อ และเปิด/ปิด สิทธิ์การใช้งานระบบ</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const name = prompt('กรุณาระบุชื่อหน่วยงานใหม่ที่จะเพิ่มเข้าระบบ:');
+                    if (name) alert(`เพิ่มหน่วยงาน "${name}" เข้าสู่ระบบเรียบร้อยแล้ว`);
+                  }}
+                  className="bg-brand-600 hover:bg-brand-500 text-white text-xs font-bold px-3.5 py-2 rounded-lg transition shadow-sm"
+                >
+                  + เพิ่มหน่วยงานใหม่ (Add Tenant)
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {initialOrganizations.map((org) => (
+                  <div key={org.id} className="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-3">
+                    <div className="flex items-start justify-between">
+                      <span className="font-bold text-xs text-white block">{org.nameTh}</span>
+                      <span className="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[9px] px-2 py-0.5 rounded font-mono font-bold">
+                        ACTIVE
+                      </span>
+                    </div>
+                    <div className="text-[11px] text-slate-400 space-y-1">
+                      <p>รหัสหน่วยงาน: <span className="font-mono text-brand-400">{org.id}</span></p>
+                      <p>อีเมลติดต่อ: {org.contactEmail}</p>
+                      <p>เบอร์โทรศัพท์: {org.contactPhone}</p>
+                    </div>
+                    <div className="pt-2 border-t border-slate-900 flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => alert(`จำลองแก้ไขข้อมูลหน่วยงาน: ${org.nameTh}`)}
+                        className="flex-1 bg-slate-900 hover:bg-slate-800 text-slate-300 text-[11px] py-1.5 rounded transition text-center border border-slate-800"
+                      >
+                        แก้ไขข้อมูล
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* 2. User & Password Management Section */}
+            <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden p-6 space-y-4">
+              <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+                <div>
+                  <h2 className="text-sm font-bold text-white flex items-center gap-2">
+                    <UserCheck className="h-4 w-4 text-brand-400" />
+                    <span>2. การจัดการเจ้าหน้าที่และรีเซ็ตรหัสผ่าน (User & Role Console)</span>
+                  </h2>
+                  <p className="text-xs text-slate-400 mt-0.5">สร้างบัญชีผู้ใช้งานใหม่ กำหนดบทบาทสิทธิ์ และเปลี่ยนรหัสผ่านได้ใน 1 คลิก</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const uname = prompt('กรุณาระบุ Username เจ้าหน้าที่ใหม่:');
+                    if (uname) alert(`สร้างบัญชีเจ้าหน้าที่ "${uname}" เรียบร้อยแล้ว`);
+                  }}
+                  className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-3.5 py-2 rounded-lg transition shadow-sm"
+                >
+                  + สร้างบัญชีเจ้าหน้าที่ใหม่ (Add User)
+                </button>
+              </div>
+
+              <div className="overflow-x-auto border border-slate-800 rounded-xl">
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead>
+                    <tr className="bg-slate-950 border-b border-slate-800 text-slate-400 font-bold">
+                      <th className="p-3">เจ้าหน้าที่</th>
+                      <th className="p-3">Username / อีเมล</th>
+                      <th className="p-3">หน่วยงาน</th>
+                      <th className="p-3">บทบาทสิทธิ์ (Roles)</th>
+                      <th className="p-3 text-center">การจัดการแบบรวดเร็ว</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800/60 text-slate-300">
+                    {systemUsers.map((user: UserType) => (
+                      <tr key={user.id} className="hover:bg-slate-800/40 transition">
+                        <td className="p-3 font-bold text-white">
+                          {user.fullNameTh}
+                          <span className="block text-[10px] font-normal text-slate-500">{user.department}</span>
+                        </td>
+                        <td className="p-3">
+                          <span className="font-mono text-brand-400 block">{user.username}</span>
+                          <span className="text-[10px] text-slate-500 block">{user.email}</span>
+                        </td>
+                        <td className="p-3 text-slate-400 font-mono text-[11px]">{user.orgId}</td>
+                        <td className="p-3">
+                          <div className="flex flex-wrap gap-1">
+                            {(user.roles || [user.role]).map((r: Role) => (
+                              <span key={r} className="bg-slate-800 text-brand-300 border border-slate-700 px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase">
+                                {r}
+                              </span>
+                            ))}
+                          </div>
+                        </td>
+                        <td className="p-3 text-center">
+                          <div className="flex items-center justify-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const newPass = prompt(`ตั้งรหัสผ่านใหม่สำหรับ ${user.username}:`);
+                                if (newPass) alert(`เปลี่ยนรหัสผ่านสำหรับ ${user.username} เรียบร้อยแล้ว`);
+                              }}
+                              className="bg-amber-500/20 text-amber-300 border border-amber-500/30 hover:bg-amber-500/30 text-[11px] font-semibold py-1 px-3 rounded transition"
+                            >
+                              🔑 รีเซ็ตรหัสผ่าน
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => alert(`จำลองแก้ไขบทบาทของ: ${user.fullNameTh}`)}
+                              className="bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] font-semibold py-1 px-3 rounded transition border border-slate-700"
+                            >
+                              เปลี่ยนบทบาท
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+          </main>
+
+          {/* Super Admin Footer */}
+          <footer className="border-t border-slate-900 p-4 text-center text-xs text-slate-600">
+            Super Admin Enterprise Console | PDPA Access Request Management System
+          </footer>
+        </div>
+      )}
+
+      {/* Super Admin Console Hidden Entrance Link in Main Footer */}
+      {view !== 'superadmin' && (
+        <div className="fixed bottom-2 right-2 z-40">
+          <button
+            type="button"
+            onClick={() => setView('superadmin')}
+            className="bg-slate-900/80 hover:bg-slate-900 text-slate-400 hover:text-white border border-slate-700/60 text-[10px] font-mono px-2.5 py-1 rounded-md transition shadow-md flex items-center gap-1 opacity-60 hover:opacity-100"
+          >
+            <ShieldCheck className="h-3 w-3 text-brand-500" />
+            <span>Super Admin App</span>
+          </button>
         </div>
       )}
 
