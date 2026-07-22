@@ -116,6 +116,14 @@ export default function App() {
   // Dashboard Interactive Navigation Filter State
   const [statusFilterGroup, setStatusFilterGroup] = useState<RequestStatus[] | null>(null);
 
+  // Auto switch to staff portal if user is already logged in
+  useEffect(() => {
+    if (activeUser && view === 'public') {
+      setView('internal');
+      setInternalTab('dashboard');
+    }
+  }, []);
+
 
 
   useEffect(() => {
