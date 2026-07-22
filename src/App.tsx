@@ -2912,7 +2912,7 @@ export default function App() {
                         </thead>
                         <tbody className="divide-y divide-slate-100 text-slate-700">
                           {systemUsers
-                            .filter((u: UserType) => activeUser.orgId === 'org_admin' || u.orgId === activeUser.orgId)
+                            .filter((u: UserType) => u.orgId === activeUser.orgId)
                             .map((user: UserType) => (
                               <tr key={user.id} className="hover:bg-slate-50/80 transition">
                                 <td className="p-3 font-bold text-slate-900">
