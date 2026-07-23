@@ -2103,6 +2103,10 @@ export default function App() {
 
                 <div className="border-t border-slate-100 pt-3 space-y-2 text-xs text-slate-600">
                   <div className="flex justify-between">
+                    <span>ผู้ยื่นคำขอ:</span>
+                    <span className="font-bold text-slate-900">{trackedRequest.requester.firstName} {trackedRequest.requester.lastName}</span>
+                  </div>
+                  <div className="flex justify-between">
                     <span>วันที่ส่งคำขอ:</span>
                     <span className="font-semibold">{convertToThaiDate(trackedRequest.submissionDate)}</span>
                   </div>
@@ -2453,7 +2457,7 @@ export default function App() {
                     <div>
                       <div className="flex items-center gap-2 flex-wrap">
                         <h3 className="font-bold text-slate-900 text-base">{activeRequestObj.trackingNo}</h3>
-                        <span className="bg-brand-50 text-brand-700 text-xs px-2 py-0.5 rounded-full font-bold">
+                        <span className="bg-brand-50 text-brand-700 text-xs px-2.5 py-0.5 rounded-full font-bold border border-brand-200">
                           {activeRequestObj.status}
                         </span>
                         {activeRequestObj.slaPaused && (
@@ -2462,7 +2466,13 @@ export default function App() {
                           </span>
                         )}
                       </div>
-                      <p className="text-xs text-slate-400 mt-0.5">ผู้ขอ: {activeRequestObj.requester.firstName} {activeRequestObj.requester.lastName} ({activeRequestObj.requesterType === 'self' ? 'เจ้าของสิทธิยื่นเอง' : 'ผู้แทนตามหนังสือมอบอำนาจ'})</p>
+                      <div className="flex items-center gap-1.5 text-xs text-slate-600 mt-1 font-medium">
+                        <User className="h-3.5 w-3.5 text-brand-600 shrink-0" />
+                        <span>ผู้ยื่นคำขอ: <strong className="text-slate-900 font-bold">{activeRequestObj.requester.firstName} {activeRequestObj.requester.lastName}</strong></span>
+                        <span className="text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.2 rounded">
+                          ({activeRequestObj.requesterType === 'self' ? 'เจ้าของสิทธิยื่นเอง' : 'ผู้แทนตามหนังสือมอบอำนาจ'})
+                        </span>
+                      </div>
                     </div>
                   </div>
 
@@ -2503,6 +2513,76 @@ export default function App() {
                   {/* Left Column: Intake details, identity, completeness checks */}
                   <div className="lg:col-span-2 space-y-6">
                     
+                    {/* Module 0: Data Subject & Requester Profile Card */}
+                    <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-4">
+                      <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                        <span className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                          <User className="h-4 w-4 text-brand-600" />
+                          <span>ข้อมูลผู้ยื่นคำขอและเจ้าของข้อมูลส่วนบุคคล (Data Subject Profile)</span>
+                        </span>
+                        <span className="text-[10px] bg-brand-50 text-brand-700 font-bold px-2.5 py-1 rounded-full border border-brand-200">
+                          {activeRequestObj.requesterType === 'self' ? '👤 ยื่นคำขอด้วยตนเอง (Self)' : '👥 ยื่นแทนโดยผู้รับมอบอำนาจ (Representative)'}
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+                        <div className="space-y-1 bg-slate-50 p-2.5 rounded-lg border border-slate-100">
+                          <span className="text-slate-400 block font-semibold text-[11px]">ชื่อ-นามสกุล ผู้ยื่นคำขอ:</span>
+                          <span className="font-bold text-slate-900 text-sm block">
+                            {activeRequestObj.requester.firstName} {activeRequestObj.requester.lastName}
+                          </span>
+                        </div>
+
+                        <div className="space-y-1 bg-slate-50 p-2.5 rounded-lg border border-slate-100">
+                          <span className="text-slate-400 block font-semibold text-[11px]">เลขบัตรประจำตัวประชาชน:</span>
+                          <span className="font-bold text-slate-800 font-mono text-xs block">
+                            {activeRequestObj.requester.idNumber || 'ไม่ระบุ'}
+                          </span>
+                        </div>
+
+                        <div className="space-y-1 bg-slate-50 p-2.5 rounded-lg border border-slate-100">
+                          <span className="text-slate-400 block font-semibold text-[11px]">อีเมลติดต่อ (Email Address):</span>
+                          <span className="font-bold text-brand-700 font-mono text-xs block truncate">
+                            {activeRequestObj.requester.email || 'ไม่ระบุ'}
+                          </span>
+                        </div>
+
+                        <div className="space-y-1 bg-slate-50 p-2.5 rounded-lg border border-slate-100">
+                          <span className="text-slate-400 block font-semibold text-[11px]">เบอร์โทรศัพท์ติดต่อ:</span>
+                          <span className="font-bold text-slate-800 font-mono text-xs block">
+                            {activeRequestObj.requester.phone || 'ไม่ระบุ'}
+                          </span>
+                        </div>
+
+                        <div className="md:col-span-2 space-y-1 bg-slate-50 p-2.5 rounded-lg border border-slate-100">
+                          <span className="text-slate-400 block font-semibold text-[11px]">ที่อยู่ติดต่อ/จัดส่งข้อมูล:</span>
+                          <span className="font-semibold text-slate-800 text-xs block">
+                            {activeRequestObj.requester.address || 'ไม่ระบุที่อยู่'}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* If Representative */}
+                      {activeRequestObj.requesterType === 'representative' && activeRequestObj.representative && (
+                        <div className="mt-3 p-3.5 bg-amber-50/70 border border-amber-200 rounded-xl text-xs space-y-2">
+                          <span className="font-bold text-amber-900 block flex items-center gap-1.5 text-xs">
+                            <UserCheck className="h-4 w-4 text-amber-700 shrink-0" />
+                            <span>ข้อมูลผู้รับมอบอำนาจกระทำการแทน (Authorized Representative):</span>
+                          </span>
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-[11px] text-amber-950 pt-1">
+                            <div><span className="text-amber-800 font-semibold">ผู้แทน:</span> <strong>{activeRequestObj.representative.firstName} {activeRequestObj.representative.lastName}</strong></div>
+                            <div><span className="text-amber-800 font-semibold">เลขบัตรผู้แทน:</span> <span className="font-mono font-bold">{activeRequestObj.representative.idNumber}</span></div>
+                            <div><span className="text-amber-800 font-semibold">ติดต่อ:</span> {activeRequestObj.representative.email} ({activeRequestObj.representative.phone})</div>
+                            <div className="md:col-span-3 bg-white/80 p-2 rounded border border-amber-200">
+                              <span className="text-amber-800 font-semibold block">ขอบเขตอำนาจกระทำการแทน:</span>
+                              <p className="text-slate-800 font-medium">{activeRequestObj.representative.scopeOfAuthority}</p>
+                              <span className="text-[10px] text-slate-400 block mt-0.5">ระยะเวลาหนังสือมอบอำนาจ: {activeRequestObj.representative.validFrom} ถึง {activeRequestObj.representative.validTo}</span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
                     {/* General Request Metadata */}
                     <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-4">
                       <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider">ขอบเขตข้อมูลที่ร้องขอ (Request Scope)</span>
