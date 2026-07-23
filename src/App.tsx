@@ -124,23 +124,74 @@ export default function App() {
   const [activeUser, setActiveUser] = useState<UserType | null>(null);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
 
-  // Reload local state from DB with Multi-tenant Filtering
+  // Reload local state from DB with Multi-tenant Filtering & Cross-Browser API Sync
   const reloadData = () => {
     const currentUser = getCurrentUser();
-    const allRequests = getRequests();
+    let localReqs = getRequests();
     const allLogs = getAuditLogs();
 
-    if (currentUser && currentUser.orgId) {
-      setRequests(allRequests.filter((r) => !r.orgId || r.orgId === currentUser.orgId));
-      setAuditLogs(allLogs.filter((l) => !l.orgId || l.orgId === currentUser.orgId));
-    } else {
-      setRequests(allRequests);
-      setAuditLogs(allLogs);
-    }
+    const applyState = (reqs: Request[]) => {
+      if (currentUser && currentUser.orgId) {
+        setRequests(reqs.filter((r) => !r.orgId || r.orgId === currentUser.orgId));
+        setAuditLogs(allLogs.filter((l) => !l.orgId || l.orgId === currentUser.orgId));
+      } else {
+        setRequests(reqs);
+        setAuditLogs(allLogs);
+      }
+    };
+
+    // Apply local state immediately
+    applyState(localReqs);
+
+    // Sync from server background API
+    fetch('/api/public/requests')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && Array.isArray(data.requests) && data.requests.length > 0) {
+          const merged = [...localReqs];
+          let updated = false;
+          for (const serverReq of data.requests) {
+            const idx = merged.findIndex((r) => r.id === serverReq.id || r.trackingNo === serverReq.trackingNo);
+            if (idx === -1) {
+              merged.unshift(serverReq);
+              updated = true;
+            } else {
+              // Update status/messages if newer
+              merged[idx] = { ...merged[idx], ...serverReq };
+            }
+          }
+          if (updated) {
+            saveRequests(merged);
+            applyState(merged);
+          }
+        }
+      })
+      .catch(() => {});
 
     setConfig(getComplianceConfig());
     setTemplates(getDocumentTemplates());
   };
+
+  useEffect(() => {
+    reloadData();
+
+    const handleSync = () => {
+      reloadData();
+    };
+
+    window.addEventListener('focus', handleSync);
+    window.addEventListener('storage', handleSync);
+
+    const timer = setInterval(() => {
+      reloadData();
+    }, 3000);
+
+    return () => {
+      window.removeEventListener('focus', handleSync);
+      window.removeEventListener('storage', handleSync);
+      clearInterval(timer);
+    };
+  }, [activeUser]);
 
   // Withdraw OTP Verification Modal States
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
