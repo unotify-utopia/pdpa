@@ -448,15 +448,15 @@ export default function App() {
     updateRequest(updated, mockUser, 'UPLOAD_EVIDENCE', `ผู้ยื่นอัปโหลดเอกสารเพิ่มเติมชื่อ: ${fileName}`);
     setTrackedRequest(updated);
     
-    // Automatically transition if waiting for info
+    // Automatically transition status and resume SLA when citizen uploads additional documents
     if (trackedRequest.status === 'Awaiting Additional Information') {
-      changeRequestStatus(trackedRequest.id, 'Completeness Review', mockUser, 'ผู้ยื่นอัปโหลดเอกสารแก้ไขเรียบร้อยแล้ว');
+      changeRequestStatus(trackedRequest.id, 'Completeness Review', mockUser, `ผู้ยื่นอัปโหลดเอกสารแก้ไขเรียบร้อยแล้ว (${fileName}) - ปลดล็อกนับเวลา SLA ต่อไป`);
       const updatedReq = getRequestById(trackedRequest.id);
       if (updatedReq) setTrackedRequest(updatedReq);
     }
     
     reloadData();
-    alert('อัปโหลดไฟล์เพิ่มเติมเรียบร้อยแล้ว');
+    alert('✅ อัปโหลดรูปภาพบัตรประชาชน / เอกสารเพิ่มเติมเรียบร้อยแล้ว!\n\nระบบทำการปลดล็อกนับเวลา SLA และส่งเรื่องกลับหาเจ้าหน้าที่คัดกรองเรียบร้อยแล้ว');
   };
 
   // --- SECURE DOWNLOAD VERIFICATION (Section 3.9) ---
@@ -2134,20 +2134,35 @@ export default function App() {
 
               {/* Upload extra files when requested */}
               {trackedRequest.status === 'Awaiting Additional Information' && (
-                <div className="bg-amber-50 border border-amber-200 rounded-xl p-5 space-y-3">
-                  <span className="block font-bold text-amber-900 text-xs flex items-center gap-1">
-                    <AlertTriangle className="h-4 w-4 text-amber-600" />
-                    เจ้าหน้าที่ร้องขอหลักฐานเพิ่มเติม
-                  </span>
-                  <p className="text-[11px] text-amber-700 leading-relaxed">
-                    กรุณาถ่ายรูปเอกสารที่ถูกต้องหรืออัปเดตไฟล์ให้เหมาะสมเพื่อดำเนินการประมวลผลต่อ
-                  </p>
+                <div className="bg-amber-50 border-2 border-amber-300 rounded-2xl p-5 space-y-3.5 shadow-md animate-fadeIn">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-amber-900 text-xs flex items-center gap-1.5">
+                      <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" />
+                      <span>เจ้าหน้าที่แจ้งขอเอกสารเพิ่มเติม (Action Required)</span>
+                    </span>
+                    <span className="text-[10px] bg-amber-200 text-amber-900 font-bold px-2 py-0.5 rounded-full">
+                      SLA หยุดนับชั่วคราว
+                    </span>
+                  </div>
+
+                  <div className="bg-white border border-amber-200 rounded-xl p-3 text-xs text-amber-900 leading-relaxed font-medium space-y-1">
+                    <span className="block font-bold text-amber-800">รายละเอียดเอกสารที่ร้องขอเพิ่ม:</span>
+                    <p className="text-slate-700 bg-amber-50/50 p-2 rounded border border-amber-100 font-mono text-[11px]">
+                      {trackedRequest.statusHistory.find(h => h.status === 'Awaiting Additional Information')?.comment || 'โปรดแนบรูปถ่ายสำเนาบัตรประจำตัวประชาชนเพิ่มเติมเพื่อยืนยันตัวตน'}
+                    </p>
+                    <p className="text-[10px] text-amber-700 pt-1 font-semibold">
+                      ⏱️ กรุณาอัปโหลดเพิ่มเติมภายในเวลาที่กำหนด (10 วัน) มิฉะนั้นเรื่องจะถูกยกเลิกคำขอตามระบบอัตโนมัติ
+                    </p>
+                  </div>
                   
-                  <WatermarkedUpload
-                    label="เอกสารเพิ่มเติมที่ร้องขอ"
-                    orgName="สถาบันคุ้มครองข้อมูลองค์กร"
-                    onFileProcessed={handleUploadAdditionalTrack}
-                  />
+                  <div className="space-y-1">
+                    <span className="text-xs font-bold text-slate-800 block">อัปโหลดรูปภาพบัตรประชาชน / เอกสารเพิ่มเติมที่นี่:</span>
+                    <WatermarkedUpload
+                      label="แนบรูปถ่ายบัตรประชาชน หรือ เอกสารเพิ่มเติมที่ร้องขอ"
+                      orgName="สถาบันคุ้มครองข้อมูลองค์กร"
+                      onFileProcessed={handleUploadAdditionalTrack}
+                    />
+                  </div>
                 </div>
               )}
 
@@ -2624,30 +2639,50 @@ export default function App() {
                             <div className="pt-4 border-t border-slate-100 flex gap-2">
                               
                               {showIncompletePanel ? (
-                                <div className="w-full space-y-2 p-3 bg-amber-50 rounded-lg border border-amber-200">
-                                  <label className="block text-xs font-semibold text-amber-900">ระบุรายละเอียดเอกสารหลักฐานที่ขาด:</label>
-                                  <textarea
-                                    required
-                                    value={incompleteComment}
-                                    onChange={(e) => setIncompleteComment(e.target.value)}
-                                    placeholder="ระบุ เช่น ภาพบัตรประชาชนเบลอมาก, ข้อมูลหนังสือมอบอำนาจกรอกวันหมดอายุผู้แทนไม่ชัด..."
-                                    className="w-full text-xs border border-amber-300 rounded p-2 bg-white"
-                                  />
-                                  <div className="flex gap-2 justify-end">
-                                    <button
-                                      type="button"
-                                      onClick={() => setShowIncompletePanel(false)}
-                                      className="text-slate-500 text-xs px-2.5"
-                                    >
-                                      ยกเลิก
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => markCompletenessDeficient(activeRequestObj.id)}
-                                      className="bg-amber-600 hover:bg-amber-700 text-white font-semibold py-1 px-3 rounded text-xs transition"
-                                    >
-                                      ส่งแจ้งเตือนขาดเอกสาร (Pause SLA)
-                                    </button>
+                                <div className="w-full space-y-3 p-4 bg-amber-50 rounded-xl border border-amber-300 shadow-sm">
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-xs font-bold text-amber-900 flex items-center gap-1.5">
+                                      <AlertTriangle className="h-4 w-4 text-amber-600" />
+                                      <span>ระบุรายละเอียดเอกสารหลักฐานที่ต้องแนบเพิ่มเติม (Deficiency Notice)</span>
+                                    </span>
+                                    <span className="text-[10px] bg-amber-200 text-amber-900 font-bold px-2 py-0.5 rounded-full">
+                                      หยุดนับเวลา SLA อัตโนมัติ (Pause SLA)
+                                    </span>
+                                  </div>
+
+                                  <div className="space-y-1">
+                                    <label className="block text-[11px] font-semibold text-slate-700">รายละเอียดเอกสารที่ขาด / ข้อบกพร่องที่ต้องแก้ไข:</label>
+                                    <textarea
+                                      required
+                                      rows={2}
+                                      value={incompleteComment}
+                                      onChange={(e) => setIncompleteComment(e.target.value)}
+                                      placeholder="ตัวอย่าง: ไม่พบการแนบสำเนาบัตรประชาชน กรุณาถ่ายรูปภาพบัตรประชาชนที่ปิดบังข้อมูลศาสนาและแนบเพิ่มเติม..."
+                                      className="w-full text-xs border border-amber-300 rounded-lg p-2.5 bg-white focus:ring-1 focus:ring-amber-500"
+                                    />
+                                  </div>
+
+                                  <div className="flex items-center justify-between gap-4 flex-wrap pt-1">
+                                    <div className="text-[11px] text-amber-800 font-medium">
+                                      ⏱️ ให้ระยะเวลาประชาชนแก้ไข: <strong>10 วัน</strong> (หากเกินกำหนด คำขอจะถูกยกเลิกอัตโนมัติ)
+                                    </div>
+                                    <div className="flex gap-2">
+                                      <button
+                                        type="button"
+                                        onClick={() => setShowIncompletePanel(false)}
+                                        className="bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold text-xs px-3 py-1.5 rounded-lg transition"
+                                      >
+                                        ยกเลิก
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => markCompletenessDeficient(activeRequestObj.id)}
+                                        className="bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs py-1.5 px-4 rounded-lg transition shadow-sm flex items-center gap-1.5"
+                                      >
+                                        <AlertTriangle className="h-3.5 w-3.5" />
+                                        <span>ส่งแจ้งตีกลับเอกสาร (Pause SLA)</span>
+                                      </button>
+                                    </div>
                                   </div>
                                 </div>
                               ) : (
@@ -2655,16 +2690,18 @@ export default function App() {
                                   <button
                                     type="button"
                                     onClick={() => markCompletenessDone(activeRequestObj.id)}
-                                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-4 rounded-lg text-xs transition"
+                                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-5 rounded-xl text-xs transition shadow-sm flex items-center gap-1.5"
                                   >
-                                    เอกสารครบถ้วนแล้ว (Mark Complete)
+                                    <CheckCircle2 className="h-4 w-4" />
+                                    <span>เอกสารครบถ้วนแล้ว (Mark Complete)</span>
                                   </button>
                                   <button
                                     type="button"
                                     onClick={() => setShowIncompletePanel(true)}
-                                    className="bg-amber-500 hover:bg-amber-600 text-white font-bold py-2 px-4 rounded-lg text-xs transition"
+                                    className="bg-amber-500 hover:bg-amber-600 text-white font-bold py-2.5 px-5 rounded-xl text-xs transition shadow-sm flex items-center gap-1.5"
                                   >
-                                    ปฏิเสธ / แจ้งขอเพิ่ม
+                                    <AlertTriangle className="h-4 w-4" />
+                                    <span>ตีกลับขอเอกสารเพิ่ม (Pause SLA)</span>
                                   </button>
                                 </>
                               )}
