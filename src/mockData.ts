@@ -88,7 +88,12 @@ export const systemUsers: User[] = [
 
   // Users for Revenue Department (org_rd)
   { id: 'usr_dpo_rd', orgId: 'org_rd', username: 'dpo.rd', fullNameTh: 'วิชัย ภาษีเจริญ (RD DPO)', fullNameEn: 'Wichai DPO RD', email: 'dpo@rd.go.th', role: 'dpo', roles: ['dpo'], department: 'สำนักกฎหมาย กรมสรรพากร', mfaEnabled: true },
-  { id: 'usr_intake_rd', orgId: 'org_rd', username: 'intake.rd', fullNameTh: 'นภา รับแจ้ง (RD Intake)', fullNameEn: 'Napha Intake RD', email: 'intake@rd.go.th', role: 'intake', roles: ['intake'], department: 'ศูนย์บริการข้อมูลผู้เสียภาษี', mfaEnabled: true }
+  { id: 'usr_intake_rd', orgId: 'org_rd', username: 'intake.rd', fullNameTh: 'นภา รับแจ้ง (RD Intake)', fullNameEn: 'Napha Intake RD', email: 'intake@rd.go.th', role: 'intake', roles: ['intake'], department: 'ศูนย์บริการข้อมูลผู้เสียภาษี', mfaEnabled: true },
+
+  // Users for Thai Tech Innovation Co., Ltd. (org_tech_th)
+  { id: 'usr_intake_tech', orgId: 'org_tech_th', username: 'intake.tech', fullNameTh: 'พงศธร เทคโนโลยี (Tech Intake)', fullNameEn: 'Pongsatorn Intake Tech', email: 'intake@thaitech.co.th', role: 'intake', roles: ['intake'], department: 'แผนกบริการลูกค้า IT', mfaEnabled: true },
+  { id: 'usr_dpo_tech', orgId: 'org_tech_th', username: 'dpo.tech', fullNameTh: 'ณัฐพงษ์ คุ้มครอง (Tech DPO)', fullNameEn: 'Nattapong DPO Tech', email: 'dpo@thaitech.co.th', role: 'dpo', roles: ['dpo'], department: 'สำนักการปฏิบัติตามกฎหมาย PDPA', mfaEnabled: true },
+  { id: 'usr_approver_tech', orgId: 'org_tech_th', username: 'approver.tech', fullNameTh: 'เกียรติศักดิ์ บริหาร (Tech Exec)', fullNameEn: 'Kiattisak Exec Tech', email: 'exec@thaitech.co.th', role: 'approver', roles: ['approver'], department: 'คณะกรรมการบริหารด้านความปลอดภัย', mfaEnabled: true }
 ];
 
 // Document Templates (Section 11)
