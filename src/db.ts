@@ -188,10 +188,14 @@ export const generateTrackingNumber = (orgId: string = 'org_dopa', isManual: boo
   requests.forEach((r) => {
     if (r.orgId === orgId && r.trackingNo) {
       const parts = r.trackingNo.split('-');
-      if (parts.length >= 3) {
+      // Must start with REQ-ORG... to filter out old REQ-MANUAL-YYYY-XXXX entries
+      if (parts.length >= 3 && parts[0] === 'REQ' && parts[1].startsWith(orgCodePrefix)) {
         // The sequential number is always the last part after a dash
         const num = parseInt(parts[parts.length - 1], 10);
-        if (!isNaN(num) && num > maxNum) maxNum = num;
+        // Ensure the parsed number is valid and less than a reasonable threshold to prevent parsing years/random big numbers
+        if (!isNaN(num) && num < 100000 && num > maxNum) {
+          maxNum = num;
+        }
       }
     }
   });
