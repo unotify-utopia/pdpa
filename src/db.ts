@@ -26,7 +26,7 @@ export const initializeDB = () => {
         if (idx === -1) {
           merged.push(seed);
           updated = true;
-        } else if (merged[idx].requester.firstName === 'พงศกร' || merged[idx].requester.firstName === 'somkiat' || (merged[idx].messageThread[0] && merged[idx].messageThread[0].timestamp.endsWith('Z'))) {
+        } else if (!merged[idx].orgId || merged[idx].requester.firstName === 'พงศกร' || merged[idx].requester.firstName === 'somkiat' || (merged[idx].messageThread[0] && merged[idx].messageThread[0].timestamp.endsWith('Z'))) {
           merged[idx] = seed;
           updated = true;
         }
