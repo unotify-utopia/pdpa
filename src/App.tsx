@@ -248,6 +248,13 @@ export default function App() {
   const [isNewRequestSuccess, setIsNewRequestSuccess] = useState<Request | null>(null);
   
   // --- REAL SMTP OTP LOGIC HELPER ---
+  const getContactInfo = (req: Request) => {
+    if (req.requesterType === 'representative' && req.representative) {
+      return { email: req.representative.email || req.requester.email, phone: req.representative.phone || req.requester.phone };
+    }
+    return { email: req.requester.email, phone: req.requester.phone };
+  };
+
   const triggerRealOtp = async (email: string, phone: string, trackingNo?: string) => {
     try {
       await fetch('/api/public/send-otp', {
@@ -4206,7 +4213,7 @@ export default function App() {
               <Mail className="h-10 w-10 text-brand-600 mx-auto" />
               <h4 className="font-bold text-slate-800 text-sm">การยืนยันรหัส OTP ในระบบ Sandbox</h4>
               <p className="text-xs text-slate-400">
-                ระบบจะส่งรหัส OTP ไปที่ข้อมูลติดต่อเจ้าของสิทธิ ({trackedRequest.requester.email})
+                ระบบจะส่งรหัส OTP ไปที่ข้อมูลติดต่อ ({getContactInfo(trackedRequest).email})
               </p>
             </div>
 
@@ -4215,7 +4222,8 @@ export default function App() {
                 <button
                   type="button"
                   onClick={() => {
-                    triggerRealOtp(trackedRequest.requester.email, trackedRequest.requester.phone, trackedRequest.trackingNo);
+                    const contact = getContactInfo(trackedRequest);
+                    triggerRealOtp(contact.email, contact.phone, trackedRequest.trackingNo);
                     setOtpSent(true);
                   }}
                   className="w-full bg-brand-600 hover:bg-brand-700 text-white font-bold py-2.5 rounded-lg text-sm transition"
