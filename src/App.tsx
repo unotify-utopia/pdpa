@@ -124,7 +124,7 @@ export default function App() {
   const [activeUser, setActiveUser] = useState<UserType | null>(null);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
 
-  // Reload local state from DB with Multi-tenant Filtering & Cross-Browser API Sync
+  // Reload local state from DB with Multi-tenant Filtering & Bidirectional Cross-Browser API Sync
   const reloadData = () => {
     const currentUser = getCurrentUser();
     let localReqs = getRequests();
@@ -147,19 +147,47 @@ export default function App() {
     fetch('/api/public/requests')
       .then((res) => res.json())
       .then((data) => {
-        if (data.success && Array.isArray(data.requests) && data.requests.length > 0) {
+        if (data.success && Array.isArray(data.requests)) {
+          const serverReqs: Request[] = data.requests;
           const merged = [...localReqs];
           let updated = false;
-          for (const serverReq of data.requests) {
+
+          // 1. Download missing/updated requests from server
+          for (const serverReq of serverReqs) {
             const idx = merged.findIndex((r) => r.id === serverReq.id || r.trackingNo === serverReq.trackingNo);
             if (idx === -1) {
               merged.unshift(serverReq);
               updated = true;
             } else {
-              // Update status/messages if newer
-              merged[idx] = { ...merged[idx], ...serverReq };
+              // Update status/messages if newer or different
+              const localMsgCount = merged[idx].messageThread?.length || 0;
+              const serverMsgCount = serverReq.messageThread?.length || 0;
+              if (
+                merged[idx].status !== serverReq.status ||
+                localMsgCount !== serverMsgCount ||
+                merged[idx].statusHistory?.length !== serverReq.statusHistory?.length
+              ) {
+                merged[idx] = { ...merged[idx], ...serverReq };
+                updated = true;
+              }
             }
           }
+
+          // 2. Upload local-only requests to server
+          const localOnly = localReqs.filter(
+            (l) => !serverReqs.some((s) => s.id === l.id || s.trackingNo === l.trackingNo)
+          );
+
+          if (localOnly.length > 0) {
+            localOnly.forEach((req) => {
+              fetch('/api/public/requests', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(req),
+              }).catch(() => {});
+            });
+          }
+
           if (updated) {
             saveRequests(merged);
             applyState(merged);
