@@ -3915,7 +3915,7 @@ export default function App() {
                               required
                               value={requesterForm.firstName}
                               onChange={(e) => setRequesterForm({...requesterForm, firstName: e.target.value})}
-                              className="w-full text-xs border border-slate-300 rounded-lg p-2.5"
+                              className="w-full text-xs border border-slate-300 rounded-lg p-2.5 focus:ring-1 focus:ring-brand-500"
                             />
                           </div>
                           <div className="space-y-1">
@@ -3925,36 +3925,43 @@ export default function App() {
                               required
                               value={requesterForm.lastName}
                               onChange={(e) => setRequesterForm({...requesterForm, lastName: e.target.value})}
-                              className="w-full text-xs border border-slate-300 rounded-lg p-2.5"
+                              className="w-full text-xs border border-slate-300 rounded-lg p-2.5 focus:ring-1 focus:ring-brand-500"
                             />
                           </div>
-                          <div className="space-y-1">
-                            <label className="text-xs font-medium text-slate-700">เบอร์โทรศัพท์ <span className="text-red-500">*</span></label>
-                            <input
-                              type="text"
-                              required
-                              value={requesterForm.phone}
-                              onChange={(e) => setRequesterForm({...requesterForm, phone: e.target.value})}
-                              className="w-full text-xs border border-slate-300 rounded-lg p-2.5"
-                            />
-                          </div>
-                          <div className="space-y-1">
-                            <label className="text-xs font-medium text-slate-700">อีเมล (ถ้ามี)</label>
-                            <input
-                              type="email"
-                              value={requesterForm.email}
-                              onChange={(e) => setRequesterForm({...requesterForm, email: e.target.value})}
-                              className="w-full text-xs border border-slate-300 rounded-lg p-2.5"
-                            />
+                          <div className="space-y-1 md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-1">
+                              <label className="text-xs font-medium text-slate-700">เบอร์โทรศัพท์ <span className="text-red-500">*</span></label>
+                              <input
+                                type="tel"
+                                required
+                                maxLength={12}
+                                value={requesterForm.phone}
+                                onChange={(e) => setRequesterForm({...requesterForm, phone: e.target.value})}
+                                className="w-full text-xs border border-slate-300 rounded-lg p-2.5 font-mono focus:ring-1 focus:ring-brand-500"
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <label className="text-xs font-medium text-slate-700">
+                                อีเมล {manualChannel === 'email' ? <span className="text-red-500">*</span> : '(ถ้ามี)'}
+                              </label>
+                              <input
+                                type="email"
+                                required={manualChannel === 'email'}
+                                value={requesterForm.email}
+                                onChange={(e) => setRequesterForm({...requesterForm, email: e.target.value})}
+                                className="w-full text-xs border border-slate-300 rounded-lg p-2.5 focus:ring-1 focus:ring-brand-500"
+                              />
+                            </div>
                           </div>
                           <div className="space-y-1 md:col-span-2">
                             <label className="text-xs font-medium text-slate-700">เลขบัตรประชาชน / Passport ID <span className="text-red-500">*</span></label>
                             <input
                               type="text"
                               required
+                              maxLength={17}
                               value={requesterForm.idNumber}
-                              onChange={(e) => setRequesterForm({...requesterForm, idNumber: e.target.value})}
-                              className="w-full text-xs border border-slate-300 rounded-lg p-2.5"
+                              onChange={(e) => setRequesterForm({...requesterForm, idNumber: formatThaiCitizenIdMask(e.target.value)})}
+                              className="w-full text-xs border border-slate-300 rounded-lg p-2.5 font-mono tracking-wider font-bold focus:ring-1 focus:ring-brand-500"
                             />
                           </div>
                           <div className="space-y-1 md:col-span-2">
@@ -3963,11 +3970,101 @@ export default function App() {
                               rows={2}
                               value={requesterForm.address}
                               onChange={(e) => setRequesterForm({...requesterForm, address: e.target.value})}
-                              className="w-full text-xs border border-slate-300 rounded-lg p-2.5"
+                              className="w-full text-xs border border-slate-300 rounded-lg p-2.5 focus:ring-1 focus:ring-brand-500"
                             />
                           </div>
                         </div>
                       </div>
+
+                      {/* Rep Details Form */}
+                      {reqType === 'representative' && (
+                        <div className="p-4 bg-teal-50 border border-teal-200 rounded-xl space-y-4">
+                          <div className="flex items-center justify-between border-b border-teal-200 pb-2">
+                            <span className="font-bold text-teal-900 text-sm flex items-center gap-1.5">
+                              <Users className="h-4 w-4 text-teal-700" />
+                              <span>ข้อมูลสำหรับผู้รับมอบอำนาจ (Authorized Representative)</span>
+                            </span>
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-1">
+                              <label className="text-xs font-medium text-slate-700">ชื่อจริง <span className="text-red-500">*</span></label>
+                              <input
+                                type="text"
+                                required
+                                value={repForm.firstName}
+                                onChange={(e) => setRepForm({...repForm, firstName: e.target.value})}
+                                className="w-full text-xs border border-slate-300 rounded-lg p-2.5 focus:ring-1 focus:ring-brand-500"
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <label className="text-xs font-medium text-slate-700">นามสกุล <span className="text-red-500">*</span></label>
+                              <input
+                                type="text"
+                                required
+                                value={repForm.lastName}
+                                onChange={(e) => setRepForm({...repForm, lastName: e.target.value})}
+                                className="w-full text-xs border border-slate-300 rounded-lg p-2.5 focus:ring-1 focus:ring-brand-500"
+                              />
+                            </div>
+                            <div className="space-y-1 md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div className="space-y-1">
+                                <label className="text-xs font-medium text-slate-700">เบอร์โทรศัพท์ <span className="text-red-500">*</span></label>
+                                <input
+                                  type="tel"
+                                  required
+                                  maxLength={12}
+                                  value={repForm.phone}
+                                  onChange={(e) => setRepForm({...repForm, phone: e.target.value})}
+                                  className="w-full text-xs border border-slate-300 rounded-lg p-2.5 font-mono focus:ring-1 focus:ring-brand-500"
+                                />
+                              </div>
+                              <div className="space-y-1">
+                                <label className="text-xs font-medium text-slate-700">
+                                  อีเมล {manualChannel === 'email' ? <span className="text-red-500">*</span> : '(ถ้ามี)'}
+                                </label>
+                                <input
+                                  type="email"
+                                  required={manualChannel === 'email'}
+                                  value={repForm.email}
+                                  onChange={(e) => setRepForm({...repForm, email: e.target.value})}
+                                  className="w-full text-xs border border-slate-300 rounded-lg p-2.5 focus:ring-1 focus:ring-brand-500"
+                                />
+                              </div>
+                            </div>
+                            <div className="space-y-1 md:col-span-2">
+                              <label className="text-xs font-medium text-slate-700">เลขบัตรประชาชน / Passport ID <span className="text-red-500">*</span></label>
+                              <input
+                                type="text"
+                                required
+                                maxLength={17}
+                                value={repForm.idNumber}
+                                onChange={(e) => setRepForm({...repForm, idNumber: formatThaiCitizenIdMask(e.target.value)})}
+                                className="w-full text-xs border border-slate-300 rounded-lg p-2.5 font-mono tracking-wider font-bold focus:ring-1 focus:ring-brand-500"
+                              />
+                            </div>
+                            <div className="space-y-1 md:col-span-2">
+                              <label className="text-xs font-medium text-slate-700">ที่อยู่ติดต่อได้</label>
+                              <textarea
+                                rows={2}
+                                value={repForm.address}
+                                onChange={(e) => setRepForm({...repForm, address: e.target.value})}
+                                className="w-full text-xs border border-slate-300 rounded-lg p-2.5 focus:ring-1 focus:ring-brand-500"
+                              />
+                            </div>
+                            <div className="space-y-1 md:col-span-2">
+                              <label className="text-xs font-medium text-slate-700">ขอบเขตการมอบอำนาจ <span className="text-red-500">*</span></label>
+                              <textarea
+                                required
+                                rows={2}
+                                placeholder="เช่น ดำเนินการยื่นคำขอและรับเอกสารแทน"
+                                value={repForm.scope}
+                                onChange={(e) => setRepForm({...repForm, scope: e.target.value})}
+                                className="w-full text-xs border border-slate-300 rounded-lg p-2.5 focus:ring-1 focus:ring-brand-500"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      )}
 
                       {/* Section 4: Request Details */}
                       <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-4">
