@@ -176,19 +176,21 @@ export const getRequestByTrackingNo = (trackingNo: string): Request | undefined 
 };
 
 // Generate Next Tenant-Specific Tracking Number (REQ-[TENANT_CODE]-[YEAR]-[0001])
-export const generateTrackingNumber = (orgId: string = 'org_dopa'): string => {
+export const generateTrackingNumber = (orgId: string = 'org_dopa', isManual: boolean = false): string => {
   const requests = getRequests();
-  const year = new Date().getFullYear();
+  const yearBE = new Date().getFullYear() + 543;
   const orgCodePrefix = orgId.replace(/^org_/, '').toUpperCase().replace('_TH', '');
-  const prefix = `REQ-${orgCodePrefix}-${year}-`;
+  const manualSuffix = isManual ? 'M' : '';
+  const prefix = `REQ-${orgCodePrefix}${manualSuffix}-${yearBE}-`;
   
   // Count existing requests for this specific tenant organization
   let maxNum = 0;
   requests.forEach((r) => {
-    if (r.orgId === orgId || (r.trackingNo && r.trackingNo.startsWith(prefix))) {
-      const parts = r.trackingNo ? r.trackingNo.split('-') : [];
-      if (parts.length >= 4) {
-        const num = parseInt(parts[3], 10);
+    if (r.orgId === orgId && r.trackingNo) {
+      const parts = r.trackingNo.split('-');
+      if (parts.length >= 3) {
+        // The sequential number is always the last part after a dash
+        const num = parseInt(parts[parts.length - 1], 10);
         if (!isNaN(num) && num > maxNum) maxNum = num;
       }
     }

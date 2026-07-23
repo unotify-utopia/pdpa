@@ -594,7 +594,7 @@ export default function App() {
       id: `REQ-${Date.now()}`,
       orgId,
       uuid: crypto.randomUUID ? crypto.randomUUID() : `uuid-${Date.now()}`,
-      trackingNo: generateTrackingNumber(orgId),
+      trackingNo: generateTrackingNumber(orgId, true),
       requesterType: reqType,
       contactChannel: manualChannel as any,
       refNo: manualChannel !== 'office' ? manualRefNo : undefined,
