@@ -112,7 +112,7 @@ export const DashboardCharts: React.FC<DashboardChartsProps> = ({ requests }) =>
             <div key={t.label} className="text-center space-y-2 flex flex-col items-center">
               {/* Draw custom SVG circle progress */}
               <div className="relative h-16 w-16 flex items-center justify-center">
-                <svg className="absolute inset-0 h-full w-full -rotate-90">
+                <svg className="absolute inset-0 h-full w-full -rotate-90" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
                   <circle cx="32" cy="32" r="28" fill="transparent" stroke="#f1f5f9" strokeWidth="6" />
                   <circle
                     cx="32"
