@@ -33,6 +33,8 @@ export const StaffLoginModal: React.FC<StaffLoginModalProps> = ({
     const matchedOrg = initialOrganizations.find(
       (o) =>
         o.id.toLowerCase() === query ||
+        o.id.toLowerCase() === `org_${query}` ||
+        o.nameTh.toLowerCase() === query ||
         o.nameTh.toLowerCase().includes(query) ||
         o.nameEn.toLowerCase().includes(query) ||
         (query.includes('dopa') && o.id === 'org_dopa') ||
@@ -108,23 +110,92 @@ export const StaffLoginModal: React.FC<StaffLoginModalProps> = ({
 
           {!mfaStep ? (
             <form onSubmit={handleLoginSubmit} className="space-y-4">
-              {/* Organization Search / Org Code Input (No endless dropdown) */}
-              <div className="space-y-1">
-                <label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
-                  <Building2 className="h-3.5 w-3.5 text-brand-600" />
-                  <span>รหัสหน่วยงาน / ชื่อองค์กร (Org Code)</span>
+              {/* Organization Search / Org Code Input with Smart Autocomplete */}
+              <div className="space-y-1 relative">
+                <label className="text-xs font-semibold text-slate-700 flex items-center justify-between">
+                  <span className="flex items-center gap-1.5">
+                    <Building2 className="h-3.5 w-3.5 text-brand-600" />
+                    <span>ค้นหาหน่วยงาน / รหัสองค์กร (Org Code)</span>
+                  </span>
+                  <span className="text-[10px] text-brand-600 font-bold">พิมพ์ค้นหาได้ทันที ⚡</span>
                 </label>
                 <div className="relative">
                   <input
                     type="text"
                     required
-                    placeholder="พิมพ์รหัสหรือชื่อหน่วยงาน เช่น dopa, rd, ปกครอง"
+                    placeholder="พิมพ์ชื่อหน่วยงาน เช่น กรมการปกครอง, สรรพากร, หรือ dopa..."
                     value={orgInput}
                     onChange={(e) => setOrgInput(e.target.value)}
-                    className="w-full text-xs border border-slate-300 rounded-lg p-2.5 pl-8 outline-none focus:ring-2 focus:ring-brand-500 text-slate-900 font-medium"
+                    className="w-full text-xs border border-slate-300 rounded-lg p-2.5 pl-8 pr-7 outline-none focus:ring-2 focus:ring-brand-500 text-slate-900 font-semibold"
                   />
                   <Search className="h-4 w-4 text-slate-400 absolute left-2.5 top-2.5" />
+                  {orgInput && (
+                    <button
+                      type="button"
+                      onClick={() => setOrgInput('')}
+                      className="absolute right-2.5 top-2.5 text-xs text-slate-400 hover:text-slate-600 font-bold"
+                    >
+                      ✕
+                    </button>
+                  )}
                 </div>
+
+                {/* Live Autocomplete Results Dropdown Overlay */}
+                {orgInput.trim() !== '' && (
+                  <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-brand-300 rounded-xl shadow-2xl z-30 max-h-52 overflow-y-auto divide-y divide-slate-100 animate-fadeIn">
+                    <div className="p-1.5 bg-slate-50 text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+                      ผลการค้นหาหน่วยงาน ({
+                        initialOrganizations.filter(o => 
+                          o.nameTh.toLowerCase().includes(orgInput.toLowerCase()) ||
+                          o.nameEn.toLowerCase().includes(orgInput.toLowerCase()) ||
+                          o.id.toLowerCase().includes(orgInput.toLowerCase())
+                        ).length
+                      } หน่วยงาน)
+                    </div>
+
+                    {initialOrganizations.filter(o => 
+                      o.nameTh.toLowerCase().includes(orgInput.toLowerCase()) ||
+                      o.nameEn.toLowerCase().includes(orgInput.toLowerCase()) ||
+                      o.id.toLowerCase().includes(orgInput.toLowerCase())
+                    ).length === 0 ? (
+                      <div className="p-3 text-center text-xs text-slate-400">
+                        ไม่พบหน่วยงานตรงกับ "{orgInput}"
+                      </div>
+                    ) : (
+                      initialOrganizations
+                        .filter(o => 
+                          o.nameTh.toLowerCase().includes(orgInput.toLowerCase()) ||
+                          o.nameEn.toLowerCase().includes(orgInput.toLowerCase()) ||
+                          o.id.toLowerCase().includes(orgInput.toLowerCase())
+                        )
+                        .map((org) => {
+                          const cleanCode = org.id.replace(/^org_/, '');
+                          return (
+                            <button
+                              key={org.id}
+                              type="button"
+                              onClick={() => {
+                                setOrgInput(cleanCode);
+                              }}
+                              className="w-full text-left p-2.5 hover:bg-brand-50 transition flex items-center justify-between group"
+                            >
+                              <div>
+                                <div className="text-xs font-bold text-slate-800 group-hover:text-brand-700">
+                                  {org.nameTh}
+                                </div>
+                                <div className="text-[10px] text-slate-400">
+                                  {org.nameEn}
+                                </div>
+                              </div>
+                              <span className="text-[10px] font-mono font-bold bg-slate-100 text-slate-700 px-2 py-0.5 rounded border border-slate-200 group-hover:bg-brand-600 group-hover:text-white group-hover:border-brand-600 transition">
+                                {cleanCode}
+                              </span>
+                            </button>
+                          );
+                        })
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Username */}
