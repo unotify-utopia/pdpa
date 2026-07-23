@@ -55,7 +55,8 @@ import {
   addAuditLog,
   getRequestById,
   saveComplianceConfig,
-  saveRequests
+  saveRequests,
+  generateTrackingNumber
 } from './db';
 
 
@@ -593,7 +594,7 @@ export default function App() {
       id: `REQ-${Date.now()}`,
       orgId,
       uuid: crypto.randomUUID ? crypto.randomUUID() : `uuid-${Date.now()}`,
-      trackingNo: `REQ-MANUAL-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 9999)).padStart(4, '0')}`,
+      trackingNo: generateTrackingNumber(orgId),
       requesterType: reqType,
       contactChannel: manualChannel as any,
       refNo: manualChannel !== 'office' ? manualRefNo : undefined,
