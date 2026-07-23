@@ -237,7 +237,6 @@ export default function App() {
   // Submission Email OTP Modal States
   const [showSubmissionOtpModal, setShowSubmissionOtpModal] = useState(false);
   const [submissionOtpCode, setSubmissionOtpCode] = useState('');
-  const [expectedSubmissionOtp, setExpectedSubmissionOtp] = useState('');
 
   // Attachment Document Preview Modal State
   const [previewAttachment, setPreviewAttachment] = useState<{ name: string; fileUrl: string; size: number; isMasked?: boolean; watermarkApplied?: boolean } | null>(null);
@@ -248,6 +247,37 @@ export default function App() {
   const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
   const [isNewRequestSuccess, setIsNewRequestSuccess] = useState<Request | null>(null);
   
+  // --- REAL SMTP OTP LOGIC HELPER ---
+  const triggerRealOtp = async (email: string, phone: string, trackingNo?: string) => {
+    try {
+      await fetch('/api/public/send-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, phone, reference: trackingNo })
+      });
+    } catch (err) {
+      console.error('Failed to send OTP via SMTP', err);
+    }
+  };
+
+  const verifyRealOtp = async (email: string, phone: string, otpCodeStr: string, trackingNo?: string): Promise<boolean> => {
+    try {
+      const res = await fetch('/api/public/verify-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, phone, otp: otpCodeStr, reference: trackingNo })
+      });
+      const data = await res.json();
+      if (!data.success) {
+        alert(`❌ ${data.message}`);
+        return false;
+      }
+      return true;
+    } catch (err) {
+      alert('❌ ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์เพื่อยืนยัน OTP ได้');
+      return false;
+    }
+  };
   // Public tracking inputs
   const [trackNo, setTrackNo] = useState('');
   const [showOtpModal, setShowOtpModal] = useState(false);
@@ -410,44 +440,15 @@ export default function App() {
         return;
       }
     }
-    
-  // --- REAL SMTP OTP LOGIC HELPER ---
-  const triggerRealOtp = async (email: string, phone: string, trackingNo?: string) => {
-    try {
-      await fetch('/api/public/send-otp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, phone, reference: trackingNo })
-      });
-    } catch (err) {
-      console.error('Failed to send OTP via SMTP', err);
-    }
-  };
-
-  const verifyRealOtp = async (email: string, phone: string, otpCodeStr: string, trackingNo?: string): Promise<boolean> => {
-    try {
-      const res = await fetch('/api/public/verify-otp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, phone, otp: otpCodeStr, reference: trackingNo })
-      });
-      const data = await res.json();
-      if (!data.success) {
-        alert(`❌ ${data.message}`);
-        return false;
-      }
-      return true;
-    } catch (err) {
-      alert('❌ ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์เพื่อยืนยัน OTP ได้');
-      return false;
-    }
-  };
 
     // 3. Trigger Email OTP Verification Modal
+    const targetEmail = reqType === 'self' ? requesterForm.email : repForm.email;
+    const targetPhone = reqType === 'self' ? requesterForm.phone : repForm.phone;
+    
     fetch('/api/public/send-otp', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: subjectUser.email, phone: subjectUser.phone })
+      body: JSON.stringify({ email: targetEmail, phone: targetPhone })
     }).catch(err => console.error('Failed to send OTP:', err));
     
     setSubmissionOtpCode('');
@@ -457,12 +458,14 @@ export default function App() {
   const handleFinalizeSubmissionOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     const cleanOtp = submissionOtpCode.trim();
+    const targetEmail = reqType === 'self' ? requesterForm.email : repForm.email;
+    const targetPhone = reqType === 'self' ? requesterForm.phone : repForm.phone;
     
     try {
       const res = await fetch('/api/public/verify-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: subjectUser.email, phone: subjectUser.phone, otp: cleanOtp })
+        body: JSON.stringify({ email: targetEmail, phone: targetPhone, otp: cleanOtp })
       });
       const data = await res.json();
       
@@ -4553,9 +4556,7 @@ export default function App() {
               </p>
             </div>
 
-            <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-[11px] text-amber-900 font-medium text-center">
-              💡 รหัส OTP สำหรับทดสอบยื่นเรื่อง (Demo Mode): <strong className="text-amber-800 text-sm font-mono tracking-widest">{expectedSubmissionOtp}</strong>
-            </div>
+
 
             <form onSubmit={handleFinalizeSubmissionOtp} className="space-y-4">
               <div className="space-y-1">
