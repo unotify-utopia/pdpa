@@ -85,6 +85,14 @@ export const getRequests = (): Request[] => {
 
 export const saveRequests = (requests: Request[]) => {
   localStorage.setItem(KEYS.REQUESTS, JSON.stringify(requests));
+  // Sync each request to server background API for persistent cross-browser consistency
+  requests.forEach(r => {
+    fetch('/api/public/requests', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(r)
+    }).catch(() => {});
+  });
 };
 
 export const getComplianceConfig = (): ComplianceConfig => {

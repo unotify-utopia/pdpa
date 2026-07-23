@@ -208,25 +208,45 @@ app.get('/api/auth/me', authenticateJWT, (req, res) => {
   res.json({ success: true, user: req.user });
 });
 
-// --- IN-MEMORY MASTER REQUEST STORE (Centralized Sync Pool across All Browsers) ---
-let serverRequests = [];
+import fs from 'fs';
+import path from 'path';
+
+// --- PERSISTENT MASTER REQUEST STORE (File DB across PM2 restarts & All Browsers) ---
+const DB_FILE = path.join(process.cwd(), 'server_requests_db.json');
+
+function loadServerRequests() {
+  try {
+    if (fs.existsSync(DB_FILE)) {
+      const data = fs.readFileSync(DB_FILE, 'utf-8');
+      const parsed = JSON.parse(data);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed;
+      }
+    }
+  } catch (err) {
+    console.error('Error reading server_requests_db.json:', err);
+  }
+  return [];
+}
+
+function saveServerRequests(reqs) {
+  try {
+    fs.writeFileSync(DB_FILE, JSON.stringify(reqs, null, 2), 'utf-8');
+  } catch (err) {
+    console.error('Error writing server_requests_db.json:', err);
+  }
+}
+
+let serverRequests = loadServerRequests();
 
 // GET /api/public/requests (Cross-Browser Public Request Sync API)
 app.get('/api/public/requests', async (req, res) => {
-  try {
-    const dbRes = await dbPool.query('SELECT * FROM requests ORDER BY created_at DESC');
-    return res.json({
-      success: true,
-      count: serverRequests.length,
-      requests: serverRequests
-    });
-  } catch (error) {
-    return res.json({
-      success: true,
-      count: serverRequests.length,
-      requests: serverRequests
-    });
-  }
+  const currentReqs = loadServerRequests();
+  return res.json({
+    success: true,
+    count: currentReqs.length,
+    requests: currentReqs
+  });
 });
 
 // POST /api/public/requests (Submit new request to PostgreSQL & Master Sync Engine)
@@ -239,7 +259,8 @@ app.post('/api/public/requests', async (req, res) => {
     // Extract clean org code prefix (e.g. org_dopa -> DOPA, org_rd -> RD, org_tech_th -> TECH)
     const orgCodePrefix = orgId.replace(/^org_/, '').toUpperCase().replace('_TH', '');
     
-    let tenantCount = serverRequests.filter(r => r.orgId === orgId).length + 1;
+    let currentReqs = loadServerRequests();
+    let tenantCount = currentReqs.filter(r => r.orgId === orgId).length + 1;
     try {
       const countRes = await dbPool.query('SELECT COUNT(*) FROM requests WHERE org_id = $1', [orgId]);
       tenantCount = Math.max(tenantCount, parseInt(countRes.rows[0].count) + 1);
@@ -270,13 +291,16 @@ app.post('/api/public/requests', async (req, res) => {
       slaDaysUsed: requestData.slaDaysUsed || 0
     };
 
-    // Store in Master Server Requests array for instant multi-browser sync
-    const existingIdx = serverRequests.findIndex(r => r.id === reqId || r.trackingNo === trackingNo);
+    // Store in Master Server Requests array & Persist to server_requests_db.json
+    const existingIdx = currentReqs.findIndex(r => r.id === reqId || r.trackingNo === trackingNo);
     if (existingIdx !== -1) {
-      serverRequests[existingIdx] = newRequest;
+      currentReqs[existingIdx] = { ...currentReqs[existingIdx], ...newRequest };
     } else {
-      serverRequests.unshift(newRequest);
+      currentReqs.unshift(newRequest);
     }
+
+    saveServerRequests(currentReqs);
+    serverRequests = currentReqs;
 
     return res.status(201).json({
       success: true,
