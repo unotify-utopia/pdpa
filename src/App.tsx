@@ -23,6 +23,7 @@ import {
   FileCheck2,
   Scale,
   Building2,
+  MessageSquare,
   CheckCircle2
 } from 'lucide-react';
 
@@ -2789,6 +2790,75 @@ export default function App() {
                             </div>
                           )}
                         </div>
+                      </div>
+                    )}
+
+                    {/* Staff Direct Message Board with Citizen */}
+                    {['intake', 'admin', 'dpo', 'owner'].includes(activeUser.role) && (
+                      <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden flex flex-col h-[400px]">
+                        <div className="bg-slate-900 text-white px-5 py-3.5 flex items-center justify-between">
+                          <div>
+                            <span className="block font-bold text-sm text-white flex items-center gap-2">
+                              <MessageSquare className="h-4 w-4 text-brand-400" />
+                              <span>ช่องทางติดต่อและส่งข้อความหาประชาชนโดยตรง (Direct Message Board)</span>
+                            </span>
+                            <span className="text-[10px] text-slate-300">
+                              กระดานข้อความสนทนาโต้ตอบแบบบันทึกประวัติกับผู้ยื่นคำขอ ({activeRequestObj.requester.firstName} {activeRequestObj.requester.lastName})
+                            </span>
+                          </div>
+                          <span className="text-[10px] bg-emerald-500/20 text-emerald-300 font-bold px-2.5 py-1 rounded-full border border-emerald-500/30">
+                            ● สื่อสารตรง
+                          </span>
+                        </div>
+                        
+                        {/* Chat items */}
+                        <div className="flex-1 p-4 overflow-y-auto space-y-3 bg-slate-50">
+                          {activeRequestObj.messageThread.length === 0 ? (
+                            <div className="text-center py-12 text-slate-400 text-xs font-medium">
+                              ยังไม่มีประวัติการส่งข้อความ สามารถพิมพ์ข้อความแนะนำส่งถึงประชาชนได้จากช่องด้านล่าง
+                            </div>
+                          ) : (
+                            activeRequestObj.messageThread.map((msg) => (
+                              <div
+                                key={msg.id}
+                                className={`flex flex-col max-w-[80%] rounded-xl p-3 text-xs shadow-sm ${
+                                  msg.sender === 'staff'
+                                    ? 'bg-brand-600 text-white ml-auto'
+                                    : 'bg-white text-slate-900 border border-slate-200 mr-auto'
+                                }`}
+                              >
+                                <span className={`font-bold text-[10px] mb-1 ${msg.sender === 'staff' ? 'text-brand-100' : 'text-brand-700'}`}>
+                                  {msg.senderName} {msg.sender === 'staff' ? '(เจ้าหน้าที่)' : '(ผู้ยื่นคำขอ)'}
+                                </span>
+                                <p className="leading-relaxed font-medium">{msg.message}</p>
+                                <span className={`text-[9px] text-right mt-1.5 ${msg.sender === 'staff' ? 'text-brand-200' : 'text-slate-400'}`}>
+                                  {new Date(msg.timestamp).toLocaleTimeString('th-TH')} น.
+                                </span>
+                              </div>
+                            ))
+                          )}
+                        </div>
+
+                        <form
+                          onSubmit={(e) => handleSendMessage(e, activeRequestObj.id, 'staff')}
+                          className="border-t border-slate-200 p-2.5 flex gap-2 bg-white"
+                        >
+                          <input
+                            type="text"
+                            required
+                            placeholder="พิมพ์ข้อความสื่อสารตอบกลับส่งถึงประชาชนผู้ยื่นคำขอที่นี่..."
+                            value={chatMessage}
+                            onChange={(e) => setChatMessage(e.target.value)}
+                            className="flex-1 text-xs border border-slate-300 rounded-xl px-3.5 py-2.5 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500"
+                          />
+                          <button
+                            type="submit"
+                            className="bg-brand-600 hover:bg-brand-700 text-white font-bold px-4 py-2.5 rounded-xl transition flex items-center gap-1.5 text-xs shadow-sm"
+                          >
+                            <Send className="h-4 w-4" />
+                            <span>ส่งข้อความ</span>
+                          </button>
+                        </form>
                       </div>
                     )}
 
