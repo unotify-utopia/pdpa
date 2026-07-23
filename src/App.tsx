@@ -125,6 +125,12 @@ export default function App() {
     setTemplates(getDocumentTemplates());
   };
 
+  // Withdraw OTP Verification Modal States
+  const [showWithdrawModal, setShowWithdrawModal] = useState(false);
+  const [withdrawStep, setWithdrawStep] = useState<'reason' | 'otp'>('reason');
+  const [withdrawReasonText, setWithdrawReasonText] = useState('');
+  const [withdrawOtpCode, setWithdrawOtpCode] = useState('');
+
   // Active Selections
   const [selectedTargetOrgId, setSelectedTargetOrgId] = useState<string>('');
   const [tenantSearchQuery, setTenantSearchQuery] = useState<string>('');
@@ -2115,17 +2121,17 @@ export default function App() {
 
               {/* Withdraw request action */}
               {!['Closed', 'Withdrawn', 'Destroyed'].includes(trackedRequest.status) && (
-                <div className="bg-white border border-slate-200 rounded-xl p-4 text-center">
+                <div className="bg-white border border-slate-200 rounded-xl p-4 text-center shadow-sm">
                   <button
                     onClick={() => {
-                      const reason = prompt('กรุณากรอกเหตุผลความจำเป็นในการขอถอนสิทธิยื่นคำขอนี้:');
-                      if (reason) {
-                        handleWithdrawRequest(trackedRequest.id, reason);
-                      }
+                      setWithdrawReasonText('');
+                      setWithdrawOtpCode('');
+                      setWithdrawStep('reason');
+                      setShowWithdrawModal(true);
                     }}
-                    className="text-xs text-red-500 hover:text-red-700 font-medium transition"
+                    className="text-xs text-rose-600 hover:text-rose-700 font-bold transition flex items-center justify-center gap-1.5 w-full py-1"
                   >
-                    ต้องการถอนคำร้องขอเข้าถึงข้อมูล (Withdraw)
+                    <span>⚠️ ต้องการถอนคำร้องขอเข้าถึงข้อมูล (Withdraw Request)</span>
                   </button>
                 </div>
               )}
@@ -2134,9 +2140,9 @@ export default function App() {
             {/* Right details: Status timeline and communication */}
             <div className="md:col-span-2 space-y-6">
               
-              {/* Timeline list */}
+              {/* Timeline list with Thai Time */}
               <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm space-y-4">
-                <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider">บันทึกขั้นตอนการดำเนินการ (Timeline History)</span>
+                <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider">บันทึกขั้นตอนการดำเนินการ (TIMELINE HISTORY)</span>
                 
                 <div className="relative pl-6 border-l border-slate-200 space-y-6 pt-2">
                   {trackedRequest.statusHistory.slice().reverse().map((h, i) => (
@@ -2146,7 +2152,9 @@ export default function App() {
                         ✓
                       </span>
                       <div className="text-xs font-bold text-slate-800">{h.status}</div>
-                      <div className="text-[10px] text-slate-400">{convertToThaiDate(h.changedAt)} โดย {h.changedBy}</div>
+                      <div className="text-[11px] text-slate-500 font-medium">
+                        {convertToThaiDate(h.changedAt, true)} โดย <span className="font-semibold text-slate-700">{h.changedBy}</span>
+                      </div>
                       {h.comment && (
                         <div className="mt-1 p-2 bg-slate-50 border border-slate-100 rounded text-slate-600 text-[11px] leading-relaxed">
                           {h.comment}
@@ -3729,6 +3737,116 @@ export default function App() {
         </div>
       )}
 
+      {/* --- MOCK WITHDRAW REQUEST OTP MODAL --- */}
+      {showWithdrawModal && trackedRequest && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn">
+          <div className="bg-white rounded-2xl border border-slate-200 p-6 max-w-md w-full space-y-4 shadow-2xl">
+            <div className="text-center space-y-1">
+              <AlertTriangle className="h-10 w-10 text-rose-600 mx-auto" />
+              <h4 className="font-bold text-slate-800 text-sm">ขอยืนยันการถอนคำร้องขอเข้าถึงข้อมูล (Withdraw Request)</h4>
+              <p className="text-xs text-slate-500">
+                เลขคำขอ: <strong className="text-slate-800">{trackedRequest.trackingNo}</strong>
+              </p>
+            </div>
+
+            {withdrawStep === 'reason' && (
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (!withdrawReasonText.trim()) {
+                    alert('⚠️ กรุณากรอกเหตุผลความจำเป็นในการขอถอนสิทธิยื่นคำขอนี้');
+                    return;
+                  }
+                  setWithdrawStep('otp');
+                }}
+                className="space-y-4"
+              >
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-700 block">
+                    เหตุผลความจำเป็นในการขอถอนคำร้องขอ <span className="text-red-500">*</span>
+                  </label>
+                  <textarea
+                    required
+                    rows={3}
+                    placeholder="กรุณาระบุเหตุผลการยกเลิกคำขอ..."
+                    value={withdrawReasonText}
+                    onChange={(e) => setWithdrawReasonText(e.target.value)}
+                    className="w-full text-xs border border-slate-300 rounded-lg p-2.5 focus:ring-1 focus:ring-rose-500"
+                  />
+                </div>
+
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowWithdrawModal(false)}
+                    className="w-1/2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2 rounded-lg text-xs transition"
+                  >
+                    ยกเลิก
+                  </button>
+                  <button
+                    type="submit"
+                    className="w-1/2 bg-rose-600 hover:bg-rose-700 text-white font-bold py-2 rounded-lg text-xs transition shadow-sm"
+                  >
+                    ถัดไป (รับรหัส OTP)
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {withdrawStep === 'otp' && (
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (withdrawOtpCode !== '123456') {
+                    alert('❌ รหัส OTP 6 หลักไม่ถูกต้อง กรุณาระบุ: 123456');
+                    return;
+                  }
+                  
+                  handleWithdrawRequest(trackedRequest.id, withdrawReasonText);
+                  setShowWithdrawModal(false);
+                  alert('✅ ระบบทำการถอนคำร้องขอเรียบร้อยแล้ว');
+                }}
+                className="space-y-4"
+              >
+                <div className="p-3 bg-rose-50 border border-rose-100 rounded-xl text-center space-y-1">
+                  <span className="text-xs font-bold text-rose-900 block">ระบบส่งรหัส OTP 6 หลักไปยังอีเมลเรียบร้อยแล้ว</span>
+                  <span className="text-[11px] text-rose-700 block">ส่งถึง: {trackedRequest.requester.email}</span>
+                  <span className="text-[10px] text-slate-500 block pt-1">(สำหรับทดสอบระบบใช้รหัส: <strong>123456</strong>)</span>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs text-slate-600 block text-center">กรอกรหัสยืนยัน OTP 6 หลัก</label>
+                  <input
+                    type="text"
+                    maxLength={6}
+                    required
+                    placeholder="123456"
+                    value={withdrawOtpCode}
+                    onChange={(e) => setWithdrawOtpCode(e.target.value)}
+                    className="w-full text-center font-mono font-bold text-base tracking-widest border border-slate-300 rounded-lg p-2.5 text-slate-800 focus:outline-none focus:ring-1 focus:ring-rose-500"
+                  />
+                </div>
+
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setWithdrawStep('reason')}
+                    className="w-1/2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2 rounded-lg text-xs transition"
+                  >
+                    ย้อนกลับ
+                  </button>
+                  <button
+                    type="submit"
+                    className="w-1/2 bg-rose-600 hover:bg-rose-700 text-white font-bold py-2 rounded-lg text-xs transition shadow-sm"
+                  >
+                    ยืนยันถอนคำร้องขอ
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

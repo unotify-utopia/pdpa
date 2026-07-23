@@ -10,8 +10,8 @@ interface ThaiLetterViewProps {
   onPrintMock?: () => void;
 }
 
-// Helper: Convert Gregorian date to Thai Buddhist Era Date (e.g., 21 กรกฎาคม 2569)
-export const convertToThaiDate = (dateString?: string): string => {
+// Helper: Convert Gregorian date to Thai Buddhist Era Date & Time (e.g., 22 กรกฎาคม พ.ศ. 2569 เวลา 22:49 น.)
+export const convertToThaiDate = (dateString?: string, includeTime: boolean = false): string => {
   if (!dateString) return '...';
   const monthsTh = [
     'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
@@ -23,6 +23,12 @@ export const convertToThaiDate = (dateString?: string): string => {
   const month = monthsTh[date.getMonth()];
   const yearBe = date.getFullYear() + 543; // BE offset
 
+  const hours = date.getHours().toString().padStart(2, '0');
+  const minutes = date.getMinutes().toString().padStart(2, '0');
+
+  if (includeTime) {
+    return `${day} ${month} พ.ศ. ${yearBe} เวลา ${hours}:${minutes} น.`;
+  }
   return `${day} ${month} พ.ศ. ${yearBe}`;
 };
 
