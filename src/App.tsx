@@ -1629,10 +1629,15 @@ export default function App() {
                       {/* Rep Details Form */}
                       {reqType === 'representative' && (
                         <div className="p-4 bg-teal-50 border border-teal-200 rounded-xl space-y-4 mt-6">
-                          <span className="block font-bold text-teal-900 text-xs flex items-center gap-1">
-                            <Users className="h-4 w-4" />
-                            ข้อมูลสำหรับผู้รับมอบอำนาจ (Authorized Representative)
-                          </span>
+                          <div className="flex items-center justify-between border-b border-teal-200 pb-2">
+                            <span className="font-bold text-teal-900 text-xs flex items-center gap-1.5">
+                              <Users className="h-4 w-4 text-teal-700" />
+                              <span>ข้อมูลสำหรับผู้รับมอบอำนาจ (Authorized Representative)</span>
+                            </span>
+                            <span className="text-[10px] bg-teal-100 text-teal-800 font-bold px-2 py-0.5 rounded border border-teal-300">
+                              * บังคับกรอกเงื่อนไขแบบเดียวกับเจ้าของสิทธิ
+                            </span>
+                          </div>
 
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="space-y-1">
@@ -1640,9 +1645,10 @@ export default function App() {
                               <input
                                 type="text"
                                 required
+                                placeholder="เช่น นายวิชัย หรือ Wichai"
                                 value={repForm.firstName}
                                 onChange={(e) => setRepForm({...repForm, firstName: e.target.value})}
-                                className="w-full text-xs border border-slate-300 rounded-lg p-2 focus:ring-1 focus:ring-brand-500 bg-white"
+                                className="w-full text-xs border border-slate-300 rounded-lg p-2.5 focus:ring-1 focus:ring-brand-500 bg-white"
                               />
                             </div>
                             <div className="space-y-1">
@@ -1650,34 +1656,55 @@ export default function App() {
                               <input
                                 type="text"
                                 required
+                                placeholder="เช่น มีสุข หรือ Meesuk"
                                 value={repForm.lastName}
                                 onChange={(e) => setRepForm({...repForm, lastName: e.target.value})}
-                                className="w-full text-xs border border-slate-300 rounded-lg p-2 focus:ring-1 focus:ring-brand-500 bg-white"
+                                className="w-full text-xs border border-slate-300 rounded-lg p-2.5 focus:ring-1 focus:ring-brand-500 bg-white"
                               />
                             </div>
                           </div>
 
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="space-y-1">
-                              <label className="text-xs font-medium text-slate-700">เลขบัตรผู้แทนสิทธิ <span className="text-red-500">*</span></label>
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div className="space-y-1 md:col-span-2">
+                              <label className="text-xs font-medium text-slate-700">
+                                เลขบัตรผู้แทนสิทธิ / พาสปอร์ต (ID / Passport No.) <span className="text-red-500">*</span>
+                              </label>
                               <input
                                 type="text"
                                 required
+                                maxLength={17}
+                                placeholder="ตัวอย่าง: 1-1002-00300-40-5 หรือ Passport No."
                                 value={repForm.idNumber}
-                                onChange={(e) => setRepForm({...repForm, idNumber: e.target.value})}
-                                className="w-full text-xs border border-slate-300 rounded-lg p-2 focus:ring-1 focus:ring-brand-500 bg-white"
+                                onChange={(e) => setRepForm({ ...repForm, idNumber: formatThaiCitizenIdMask(e.target.value) })}
+                                className="w-full text-xs border border-slate-300 rounded-lg p-2.5 focus:ring-1 focus:ring-brand-500 font-mono tracking-wider font-bold bg-white"
                               />
                             </div>
                             <div className="space-y-1">
-                              <label className="text-xs font-medium text-slate-700">เบอร์โทรผู้แทน <span className="text-red-500">*</span></label>
+                              <label className="text-xs font-medium text-slate-700">
+                                เบอร์โทรผู้แทน <span className="text-red-500">*</span>
+                              </label>
                               <input
                                 type="tel"
                                 required
+                                maxLength={12}
+                                placeholder="ตัวอย่าง: 0812345678"
                                 value={repForm.phone}
                                 onChange={(e) => setRepForm({...repForm, phone: e.target.value})}
-                                className="w-full text-xs border border-slate-300 rounded-lg p-2 focus:ring-1 focus:ring-brand-500 bg-white"
+                                className="w-full text-xs border border-slate-300 rounded-lg p-2.5 focus:ring-1 focus:ring-brand-500 font-mono bg-white"
                               />
                             </div>
+                          </div>
+
+                          <div className="space-y-1">
+                            <label className="text-xs font-medium text-slate-700">อีเมลติดต่อผู้แทน (Email Address) <span className="text-red-500">*</span></label>
+                            <input
+                              type="email"
+                              required
+                              placeholder="ตัวอย่าง: rep.name@example.com"
+                              value={repForm.email}
+                              onChange={(e) => setRepForm({...repForm, email: e.target.value})}
+                              className="w-full text-xs border border-slate-300 rounded-lg p-2.5 focus:ring-1 focus:ring-brand-500 bg-white"
+                            />
                           </div>
 
                           <div className="space-y-1">
@@ -1685,9 +1712,10 @@ export default function App() {
                             <input
                               type="text"
                               required
+                              placeholder="เช่น การยื่นขอใช้สิทธิดึงประวัติการเงินและข้อมูลส่วนบุคคลแทนผู้มอบอำนาจทั้งหมด"
                               value={repForm.scope}
                               onChange={(e) => setRepForm({...repForm, scope: e.target.value})}
-                              className="w-full text-xs border border-slate-300 rounded-lg p-2 focus:ring-1 focus:ring-brand-500 bg-white"
+                              className="w-full text-xs border border-slate-300 rounded-lg p-2.5 focus:ring-1 focus:ring-brand-500 bg-white"
                             />
                           </div>
                         </div>
@@ -1702,45 +1730,74 @@ export default function App() {
                               return;
                             }
 
-                            // 1. Validate First & Last Name
+                            // 1. Validate Requester (Data Subject) First & Last Name
                             if (!requesterForm.firstName.trim() || !requesterForm.lastName.trim()) {
-                              alert('⚠️ กรุณากรอก "ชื่อจริง" และ "นามสกุล" ให้ครบถ้วน');
+                              alert('⚠️ กรุณากรอก "ชื่อจริง" และ "นามสกุล" ของเจ้าของข้อมูลให้ครบถ้วน');
                               return;
                             }
 
-                            // 2. Validate ID / Passport Number (Strict Modulus 11 for 13-digit numeric IDs)
+                            // 2. Validate Requester ID / Passport Number
                             const cleanId = requesterForm.idNumber.replace(/[^a-zA-Z0-9]/g, '');
                             if (!cleanId || cleanId.length < 7) {
-                              alert('⚠️ กรุณากรอก "เลขประจำตัวประชาชน (13 หลัก)" หรือ "เลขพาสปอร์ต" ให้ถูกต้อง');
+                              alert('⚠️ กรุณากรอก "เลขประจำตัวประชาชน (13 หลัก)" หรือ "เลขพาสปอร์ต" ของเจ้าของข้อมูลให้ถูกต้อง');
                               return;
                             }
 
-                            // If 13 numeric digits, enforce Thai Citizen ID Modulus 11 Checksum Algorithm
+                            // Enforce Thai Citizen ID Modulus 11 Checksum Algorithm for Requester
                             if (/^\d{13}$/.test(cleanId)) {
                               if (!validateThaiCitizenId(cleanId)) {
-                                alert('❌ เลขประจำตัวประชาชน 13 หลักไม่ถูกต้องตามสูตรคำนวณของกรมการปกครอง (Check Digit Mismatch)\n\nกรุณาตรวจสอบตัวเลข 13 หลักอีกครั้ง');
+                                alert('❌ เลขประจำตัวประชาชน 13 หลักของเจ้าของข้อมูลไม่ถูกต้องตามสูตรคำนวณของกรมการปกครอง (Check Digit Mismatch)\n\nกรุณาตรวจสอบตัวเลข 13 หลักอีกครั้ง');
                                 return;
                               }
                             }
 
-                            // 3. Validate Phone Number (Supports 9-10 digits for Landline and Mobile)
+                            // 3. Validate Requester Phone Number
                             const cleanPhone = requesterForm.phone.replace(/[^0-9]/g, '');
                             if (!cleanPhone || cleanPhone.length < 9 || cleanPhone.length > 10) {
-                              alert('⚠️ กรุณากรอก "เบอร์โทรศัพท์ติดต่อ" ให้ถูกต้อง (เบอร์มือถือ 10 หลัก เช่น 0812345678 หรือ เบอร์สายตรง 9 หลัก เช่น 022218150)');
+                              alert('⚠️ กรุณากรอก "เบอร์โทรศัพท์ติดต่อ" ของเจ้าของข้อมูลให้ถูกต้อง (เบอร์มือถือ 10 หลัก เช่น 0812345678 หรือ เบอร์สายตรง 9 หลัก เช่น 022218150)');
                               return;
                             }
 
-                            // 4. Validate Email Address
+                            // 4. Validate Requester Email Address
                             const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
                             if (!requesterForm.email.trim() || !emailRegex.test(requesterForm.email.trim())) {
-                              alert('⚠️ กรุณากรอก "อีเมลติดต่อ" ให้ถูกต้องในรูปแบบที่ใช้งานได้จริง (เช่น name@example.com)');
+                              alert('⚠️ กรุณากรอก "อีเมลติดต่อ" ของเจ้าของข้อมูลให้ถูกต้องในรูปแบบที่ใช้งานได้จริง (เช่น name@example.com)');
                               return;
                             }
 
-                            // If Representative option is checked, validate Rep details
+                            // 5. If Representative option is checked, validate Rep details with SAME STRICT CONDITIONS
                             if (reqType === 'representative') {
-                              if (!repForm.firstName.trim() || !repForm.lastName.trim() || !repForm.idNumber.trim() || !repForm.phone.trim()) {
-                                alert('⚠️ กรุณากรอกข้อมูลผู้แทนสิทธิ (ชื่อ นามสกุล เลขบัตร และเบอร์โทร) ให้ครบถ้วน');
+                              if (!repForm.firstName.trim() || !repForm.lastName.trim()) {
+                                alert('⚠️ กรุณากรอก "ชื่อจริง" และ "นามสกุล" ของผู้รับมอบอำนาจให้ครบถ้วน');
+                                return;
+                              }
+
+                              const cleanRepId = repForm.idNumber.replace(/[^a-zA-Z0-9]/g, '');
+                              if (!cleanRepId || cleanRepId.length < 7) {
+                                alert('⚠️ กรุณากรอก "เลขบัตรผู้แทนสิทธิ / พาสปอร์ต (13 หลัก)" ของผู้รับมอบอำนาจให้ถูกต้อง');
+                                return;
+                              }
+
+                              if (/^\d{13}$/.test(cleanRepId)) {
+                                if (!validateThaiCitizenId(cleanRepId)) {
+                                  alert('❌ เลขบัตรประจำตัว 13 หลักของผู้รับมอบอำนาจไม่ถูกต้องตามสูตรคำนวณของกรมการปกครอง (Check Digit Mismatch)\n\nกรุณาตรวจสอบเลข 13 หลักของผู้แทนสิทธิอีกครั้ง');
+                                  return;
+                                }
+                              }
+
+                              const cleanRepPhone = repForm.phone.replace(/[^0-9]/g, '');
+                              if (!cleanRepPhone || cleanRepPhone.length < 9 || cleanRepPhone.length > 10) {
+                                alert('⚠️ กรุณากรอก "เบอร์โทรผู้แทน" ให้ถูกต้อง (เบอร์มือถือ 10 หลัก หรือ เบอร์สายตรง 9 หลัก)');
+                                return;
+                              }
+
+                              if (!repForm.email.trim() || !emailRegex.test(repForm.email.trim())) {
+                                alert('⚠️ กรุณากรอก "อีเมลติดต่อผู้แทน" ให้ถูกต้องในรูปแบบที่ใช้งานได้จริง (เช่น rep.name@example.com)');
+                                return;
+                              }
+
+                              if (!repForm.scope.trim()) {
+                                alert('⚠️ กรุณาระบุ "ขอบเขตอำนาจกระทำการแทนตามใบมอบอำนาจ" ให้ชัดเจน');
                                 return;
                               }
                             }
