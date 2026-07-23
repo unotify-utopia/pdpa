@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { ShieldCheck, EyeOff, Check, AlertCircle } from 'lucide-react';
+import { ShieldCheck, EyeOff, Check, AlertCircle, FileText } from 'lucide-react';
 
 interface WatermarkedUploadProps {
   label: string;
@@ -16,6 +16,7 @@ export const WatermarkedUpload: React.FC<WatermarkedUploadProps> = ({
   const [fileName, setFileName] = useState<string>('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [isCompleted, setIsCompleted] = useState(false);
+  const [isPdfFile, setIsPdfFile] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -43,9 +44,11 @@ export const WatermarkedUpload: React.FC<WatermarkedUploadProps> = ({
       return;
     }
 
-    // Verify MIME type (images only for this visual mock tool)
-    if (!file.type.startsWith('image/')) {
-      setErrorMessage('กรุณาอัปโหลดเฉพาะไฟล์รูปภาพเพื่อใช้ระบบปกปิดข้อมูลออนไลน์ (JPEG, PNG Only)');
+    const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+    const isImage = file.type.startsWith('image/') || /\.(jpg|jpeg|png|webp)$/i.test(file.name);
+
+    if (!isPdf && !isImage) {
+      setErrorMessage('กรุณาอัปโหลดเฉพาะไฟล์รูปภาพ (JPEG, PNG) หรือไฟล์เอกสาร PDF (PDF Only)');
       return;
     }
 
@@ -55,7 +58,15 @@ export const WatermarkedUpload: React.FC<WatermarkedUploadProps> = ({
     const reader = new FileReader();
     reader.onload = (event) => {
       if (event.target?.result) {
-        setImageSrc(event.target.result as string);
+        const fileDataUrl = event.target.result as string;
+        if (isPdf) {
+          setIsCompleted(true);
+          setIsPdfFile(true);
+          onFileProcessed(file.name, fileDataUrl);
+        } else {
+          setIsPdfFile(false);
+          setImageSrc(fileDataUrl);
+        }
       }
     };
     reader.readAsDataURL(file);
@@ -177,19 +188,44 @@ export const WatermarkedUpload: React.FC<WatermarkedUploadProps> = ({
     <div className="w-full bg-white border border-slate-200 rounded-xl p-4 shadow-sm" ref={containerRef}>
       <span className="block text-sm font-semibold text-slate-800 mb-2">{label}</span>
 
-      {/* File input (if no image loaded) */}
-      {!imageSrc && (
+      {/* File input (if no image/pdf loaded) */}
+      {!imageSrc && !isPdfFile && (
         <div className="flex flex-col items-center justify-center border-2 border-dashed border-slate-300 rounded-lg p-6 bg-slate-50 hover:bg-slate-100/50 transition cursor-pointer relative">
           <input
             type="file"
-            accept="image/*"
+            accept="image/*,.pdf,application/pdf"
             onChange={handleFileChange}
             className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
             id={`file-input-${label}`}
           />
           <ShieldCheck className="h-10 w-10 text-brand-500 mb-2" />
-          <span className="text-sm font-medium text-slate-700">อัปโหลดภาพถ่ายบัตรประชาชน หรือเอกสารยืนยันตัวตน</span>
-          <span className="text-xs text-slate-400 mt-1">เฉพาะไฟล์รูปภาพ (JPEG, PNG) ขนาดไม่เกิน 5MB</span>
+          <span className="text-sm font-medium text-slate-700">อัปโหลดรูปภาพบัตรประชาชน หรือเอกสาร PDF รับรองถูกต้อง</span>
+          <span className="text-xs text-slate-400 mt-1">รองรับไฟล์รูปภาพและเอกสาร (JPEG, PNG, PDF) ขนาดไม่เกิน 5MB</span>
+        </div>
+      )}
+
+      {/* PDF File Preview Box */}
+      {isPdfFile && (
+        <div className="p-4 bg-emerald-50/80 border border-emerald-300 rounded-xl space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <FileText className="h-7 w-7 text-emerald-600 shrink-0" />
+              <div>
+                <span className="font-bold text-xs text-emerald-950 block">{fileName}</span>
+                <span className="text-[10px] text-emerald-700 font-medium">แนบไฟล์เอกสาร PDF สำเร็จ (Certified PDF Document Attached)</span>
+              </div>
+            </div>
+            <span className="bg-emerald-600 text-white text-[10px] font-bold px-3 py-1 rounded-full flex items-center gap-1 shadow-sm">
+              <Check className="h-3.5 w-3.5" /> แนบไฟล์สำเร็จ
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => { setIsPdfFile(false); setImageSrc(null); setFileName(''); }}
+            className="text-xs text-slate-500 hover:text-slate-800 font-semibold underline block"
+          >
+            เปลี่ยนไฟล์ PDF ใหม่ (Change PDF File)
+          </button>
         </div>
       )}
 

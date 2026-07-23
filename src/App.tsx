@@ -2004,31 +2004,58 @@ export default function App() {
                   {wizardStep === 3 && (
                     <div className="space-y-6">
                       
-                      {/* Identity Verification Component */}
-                      <div className="space-y-2">
-                        <label className="text-xs font-bold text-slate-700 block">อัปโหลดหลักฐานและป้องกันความเป็นส่วนตัว</label>
-                        <p className="text-[11px] text-slate-400">กรุณาอัปโหลดรูปภาพบัตรประชาชนและใช้ระบบขีดฆ่าถมดำเพื่อปิดบังข้อมูลศาสนา/เลเซอร์โค้ด</p>
-                        
-                        <WatermarkedUpload
-                          label={reqType === 'self' ? 'บัตรประชาชนของเจ้าของสิทธิ' : 'บัตรประจำตัวผู้รับมอบอำนาจ'}
-                          orgName="สถาบันคุ้มครองข้อมูลองค์กร"
-                          onFileProcessed={handleFileUpload}
-                        />
+                      {/* Identity Verification & Document Attachment Component */}
+                      <div className="space-y-4">
+                        <div>
+                          <label className="text-xs font-bold text-slate-800 block">
+                            อัปโหลดหลักฐานยืนยันตัวตน และป้องกันความเป็นส่วนตัว (Identity & Document Upload)
+                          </label>
+                          <p className="text-[11px] text-slate-500 mt-0.5">
+                            กรุณาอัปโหลดเอกสารยืนยันตัวตน (รองรับรูปภาพ JPEG, PNG หรือ เอกสาร PDF สำเนาที่มีการรับรองถูกต้อง)
+                          </p>
+                        </div>
 
-                        {reqType === 'representative' && (
-                          <div className="border border-slate-200 rounded-xl p-4 space-y-3 bg-slate-50">
-                            <span className="block text-xs font-bold text-slate-700">แนบเอกสารหนังสือมอบอำนาจ (Power of Attorney)</span>
-                            <input
-                              type="file"
-                              accept=".pdf,.png,.jpg"
-                              onChange={(e) => {
-                                const file = e.target.files?.[0];
-                                if (file) {
-                                  setUploadedAttachments(prev => [...prev, { name: file.name, data: 'mock_pdf_poa_blob' }]);
-                                }
-                              }}
-                              className="text-xs block w-full text-slate-500 file:mr-4 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-teal-50 file:text-teal-700 hover:file:bg-teal-100"
+                        {reqType === 'self' ? (
+                          <WatermarkedUpload
+                            label="สำเนาบัตรประชาชน/เอกสารยืนยันตัวตนเจ้าของข้อมูลส่วนบุคคล (JPEG, PNG, PDF)"
+                            orgName="สถาบันคุ้มครองข้อมูลองค์กร"
+                            onFileProcessed={handleFileUpload}
+                          />
+                        ) : (
+                          <div className="space-y-4">
+                            {/* 1. Data Subject ID Card */}
+                            <WatermarkedUpload
+                              label="1. สำเนาบัตรประจำตัวประชาชนผู้มอบอำนาจ (เจ้าของข้อมูลส่วนบุคคล) (JPEG, PNG, PDF)"
+                              orgName="สถาบันคุ้มครองข้อมูลองค์กร"
+                              onFileProcessed={(fileName, dataUrl) => handleFileUpload(`[ผู้มอบอำนาจ] ${fileName}`, dataUrl)}
                             />
+
+                            {/* 2. Authorized Representative ID Card */}
+                            <WatermarkedUpload
+                              label="2. สำเนาบัตรประจำตัวประชาชนผู้รับมอบอำนาจ (Authorized Representative) (JPEG, PNG, PDF)"
+                              orgName="สถาบันคุ้มครองข้อมูลองค์กร"
+                              onFileProcessed={(fileName, dataUrl) => handleFileUpload(`[ผู้รับมอบอำนาจ] ${fileName}`, dataUrl)}
+                            />
+
+                            {/* 3. Power of Attorney Document */}
+                            <div className="border border-teal-200 rounded-xl p-4 space-y-2.5 bg-teal-50/60 shadow-sm">
+                              <span className="block text-xs font-bold text-teal-950 flex items-center gap-1.5">
+                                <FileText className="h-4 w-4 text-teal-700" />
+                                <span>3. แนบเอกสารหนังสือมอบอำนาจฉบับจริงหรือสำเนาที่มีการรับรอง (Power of Attorney)</span>
+                              </span>
+                              <p className="text-[10px] text-teal-800">รองรับไฟล์เอกสาร PDF หรือรูปภาพ (PDF, JPEG, PNG) ขนาดไม่เกิน 5MB</p>
+                              <input
+                                type="file"
+                                accept=".pdf,.png,.jpg,.jpeg,application/pdf"
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0];
+                                  if (file) {
+                                    handleFileUpload(`[หนังสือมอบอำนาจ] ${file.name}`, 'mock_pdf_poa_blob');
+                                  }
+                                }}
+                                className="text-xs block w-full text-slate-600 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-teal-600 file:text-white hover:file:bg-teal-700 cursor-pointer"
+                              />
+                            </div>
                           </div>
                         )}
                       </div>
