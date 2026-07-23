@@ -144,7 +144,7 @@ export default function App() {
     applyState(localReqs);
 
     // Sync from server background API
-    fetch('/api/public/requests')
+    fetch('/api/public/requests', { cache: 'no-store' })
       .then((res) => res.json())
       .then((data) => {
         if (data.success && Array.isArray(data.requests)) {
@@ -189,6 +189,8 @@ export default function App() {
           }
 
           if (updated) {
+            // Ensure requests are always sorted by latest submission date first
+            merged.sort((a, b) => new Date(b.submissionDate).getTime() - new Date(a.submissionDate).getTime());
             saveRequests(merged);
             applyState(merged);
           }

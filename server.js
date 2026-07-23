@@ -3,6 +3,13 @@ import cors from 'cors';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import pg from 'pg';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const DB_FILE = path.join(__dirname, 'server_requests_db.json');
 
 // Set Server Process Timezone to Asia/Bangkok (GMT+7)
 process.env.TZ = 'Asia/Bangkok';
@@ -208,15 +215,7 @@ app.get('/api/auth/me', authenticateJWT, (req, res) => {
   res.json({ success: true, user: req.user });
 });
 
-import fs from 'fs';
-import path from 'path';
-
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const DB_FILE = path.join(__dirname, 'server_requests_db.json');
-
+// Filesystem DB logic
 function loadServerRequests() {
   try {
     if (fs.existsSync(DB_FILE)) {
