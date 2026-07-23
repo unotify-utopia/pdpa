@@ -114,7 +114,7 @@ export default function App() {
   // App context navigation states
   const [view, setView] = useState<'public' | 'internal' | 'tracking' | 'download' | 'superadmin'>('public');
   const [publicTab, setPublicTab] = useState<'landing' | 'submit' | 'submitted_success'>('landing');
-  const [internalTab, setInternalTab] = useState<'dashboard' | 'requests' | 'kanban' | 'users' | 'compliance' | 'templates' | 'retention' | 'audit'>('dashboard');
+  const [internalTab, setInternalTab] = useState<'dashboard' | 'requests' | 'kanban' | 'users' | 'compliance' | 'templates' | 'retention' | 'audit' | 'manual_entry'>('dashboard');
 
   // DB States
   const [requests, setRequests] = useState<Request[]>([]);
@@ -123,6 +123,9 @@ export default function App() {
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [activeUser, setActiveUser] = useState<UserType | null>(null);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [manualChannel, setManualChannel] = useState<'office' | 'post' | 'email' | 'e-service'>('office');
+  const [manualRefNo, setManualRefNo] = useState('');
+  const [manualEntrySuccessTrackingNo, setManualEntrySuccessTrackingNo] = useState<string | null>(null);
 
   // Reload local state from DB with Multi-tenant Filtering & Bidirectional Cross-Browser API Sync
   const reloadData = () => {
@@ -577,6 +580,133 @@ export default function App() {
     setPublicTab('submitted_success');
     handleResetWizard();
     reloadData();
+  };
+
+  // --- MANUAL ENTRY SUBMISSION FOR INTERNAL STAFF ---
+  const handleManualSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!activeUser) return;
+    
+    const orgId = activeUser.orgId || '';
+
+    const newReq: Request = {
+      id: `REQ-${Date.now()}`,
+      orgId,
+      uuid: crypto.randomUUID ? crypto.randomUUID() : `uuid-${Date.now()}`,
+      trackingNo: `REQ-MANUAL-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 9999)).padStart(4, '0')}`,
+      requesterType: reqType,
+      contactChannel: manualChannel as any,
+      refNo: manualChannel !== 'office' ? manualRefNo : undefined,
+      requester: requesterForm,
+      representative: reqType === 'representative' ? {
+        firstName: repForm.firstName,
+        lastName: repForm.lastName,
+        idNumber: repForm.idNumber,
+        email: repForm.email,
+        phone: repForm.phone,
+        address: repForm.address,
+        scopeOfAuthority: repForm.scope,
+        validFrom: repForm.validFrom,
+        validTo: repForm.validTo
+      } : undefined,
+      status: 'Submitted',
+      submissionDate: new Date().toISOString(),
+      slaExtended: false,
+      slaRemainingDays: 30,
+      slaDaysUsed: 0,
+      slaPaused: false,
+      slaEvents: [],
+      statusHistory: [{
+        status: 'Submitted',
+        changedAt: new Date().toISOString(),
+        changedBy: activeUser.fullNameTh || 'Internal Staff',
+        comment: 'Manual entry via internal dashboard'
+      }],
+      identityVerification: {
+        status: 'verified',
+        assuranceLevel: 'high',
+        verifiedAt: new Date().toISOString(),
+        method: 'in_person',
+      },
+      requestDetails: {
+        requestType: scopeForm.requestType,
+        description: scopeForm.description,
+        targetSystems: scopeForm.systems,
+        timeframeStart: scopeForm.timeframeStart || undefined,
+        timeframeEnd: scopeForm.timeframeEnd || undefined,
+        deliveryMethod: scopeForm.deliveryMethod
+      },
+      attachments: uploadedAttachments.map((f, index) => ({
+        id: `att_man_${Date.now()}_${index}`,
+        name: f.name,
+        size: Math.round(f.data.length * 0.75),
+        type: f.name.endsWith('.pdf') ? 'application/pdf' : 'image/jpeg',
+        isMasked: false,
+        watermarkApplied: true,
+        uploadedAt: new Date().toISOString(),
+        fileUrl: f.data
+      })),
+      dataCollectionTasks: [],
+      redactionRecords: [],
+      feeCalculation: {
+        noFee: true,
+        paperPages: 0,
+        computerPages: 0,
+        certificationsCount: 0,
+        otherCosts: [],
+        totalCalculated: 0,
+        isApproved: false,
+        paymentStatus: 'pending'
+      },
+      messageThread: [],
+      legalHold: false
+    };
+
+    // Immediately save locally first
+    const saveLocal = (req: Request) => {
+      const allLocal = getRequests();
+      const idx = allLocal.findIndex(r => r.id === req.id);
+      if (idx !== -1) allLocal[idx] = req;
+      else allLocal.unshift(req);
+      saveRequests(allLocal);
+    };
+    saveLocal(newReq);
+
+    // Sync to PostgreSQL DB API
+    fetch('/api/public/requests', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newReq)
+    })
+    .then(res => {
+      if (!res.ok) throw new Error('Network error');
+      return res.json();
+    })
+    .then(data => {
+      if (data.success && data.request) {
+        newReq.trackingNo = data.request.trackingNo;
+        saveLocal(newReq);
+        setManualEntrySuccessTrackingNo(data.request.trackingNo);
+      } else {
+        setManualEntrySuccessTrackingNo(newReq.trackingNo);
+      }
+      
+      handleResetWizard();
+      setManualRefNo('');
+      setManualChannel('office');
+      setInternalTab('requests');
+      reloadData();
+    })
+    .catch(err => {
+      console.error('Failed to sync manual entry:', err);
+      setManualEntrySuccessTrackingNo(newReq.trackingNo);
+      
+      handleResetWizard();
+      setManualRefNo('');
+      setManualChannel('office');
+      setInternalTab('requests');
+      reloadData();
+    });
   };
 
   // Enterprise Search Lookup Modal State
@@ -3694,6 +3824,210 @@ export default function App() {
                   </div>
                 )}
 
+                {/* Manual Entry Tab for Internal Staff */}
+                {internalTab === 'manual_entry' && (
+                  <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden p-6 max-w-4xl mx-auto space-y-6">
+                    <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+                      <div>
+                        <h3 className="font-bold text-lg text-slate-800">บันทึกคำร้องใหม่ (Manual Entry)</h3>
+                        <p className="text-xs text-slate-500">สำหรับเจ้าหน้าที่บันทึกคำร้องที่ได้รับจากช่องทางอื่น (ไปรษณีย์, สำนักงาน, อีเมล, e-Service)</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setInternalTab('requests')}
+                        className="text-slate-500 hover:text-slate-700 text-xs font-bold underline"
+                      >
+                        ยกเลิกและกลับไปหน้ารายการ
+                      </button>
+                    </div>
+
+                    <form onSubmit={handleManualSubmit} className="space-y-6">
+                      {/* Section 1: Channel & Reference */}
+                      <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-4">
+                        <h4 className="font-bold text-slate-700 text-sm border-b border-slate-200 pb-2">1. ช่องทางรับเรื่อง</h4>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-1">
+                            <label className="text-xs font-medium text-slate-700">รับเรื่องจากช่องทาง <span className="text-red-500">*</span></label>
+                            <select
+                              required
+                              value={manualChannel}
+                              onChange={(e) => setManualChannel(e.target.value as any)}
+                              className="w-full text-xs border border-slate-300 rounded-lg p-2.5 focus:ring-1 focus:ring-brand-500 bg-white"
+                            >
+                              <option value="office">Walk-in (สำนักงาน)</option>
+                              <option value="email">อีเมล (Email)</option>
+                              <option value="post">ไปรษณีย์ (Post)</option>
+                              <option value="e-service">ระบบ E-Service (อื่นๆ)</option>
+                            </select>
+                          </div>
+                          
+                          {manualChannel !== 'office' && (
+                            <div className="space-y-1">
+                              <label className="text-xs font-medium text-slate-700">เลขที่อ้างอิง (ถ้ามี)</label>
+                              <input
+                                type="text"
+                                placeholder="เช่น เลขที่เอกสารรับเข้า หรือรหัสทิกเก็ต"
+                                value={manualRefNo}
+                                onChange={(e) => setManualRefNo(e.target.value)}
+                                className="w-full text-xs border border-slate-300 rounded-lg p-2.5 focus:ring-1 focus:ring-brand-500"
+                              />
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Section 2: Requester Type */}
+                      <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-4">
+                        <h4 className="font-bold text-slate-700 text-sm border-b border-slate-200 pb-2">2. ประเภทผู้ยื่นคำร้อง</h4>
+                        <div className="flex gap-4">
+                          <label className="flex items-center gap-2 cursor-pointer text-xs font-bold">
+                            <input
+                              type="radio"
+                              name="manualReqType"
+                              checked={reqType === 'self'}
+                              onChange={() => setReqType('self')}
+                              className="text-brand-600 focus:ring-brand-500"
+                            />
+                            <span>เจ้าของข้อมูลยื่นด้วยตนเอง</span>
+                          </label>
+                          <label className="flex items-center gap-2 cursor-pointer text-xs font-bold">
+                            <input
+                              type="radio"
+                              name="manualReqType"
+                              checked={reqType === 'representative'}
+                              onChange={() => setReqType('representative')}
+                              className="text-brand-600 focus:ring-brand-500"
+                            />
+                            <span>รับมอบอำนาจ</span>
+                          </label>
+                        </div>
+                      </div>
+
+                      {/* Section 3: Requester Details */}
+                      <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-4">
+                        <h4 className="font-bold text-slate-700 text-sm border-b border-slate-200 pb-2">3. ข้อมูลผู้ยื่นคำร้อง (ผู้ติดต่อหลัก)</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-1">
+                            <label className="text-xs font-medium text-slate-700">ชื่อจริง <span className="text-red-500">*</span></label>
+                            <input
+                              type="text"
+                              required
+                              value={requesterForm.firstName}
+                              onChange={(e) => setRequesterForm({...requesterForm, firstName: e.target.value})}
+                              className="w-full text-xs border border-slate-300 rounded-lg p-2.5"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-xs font-medium text-slate-700">นามสกุล <span className="text-red-500">*</span></label>
+                            <input
+                              type="text"
+                              required
+                              value={requesterForm.lastName}
+                              onChange={(e) => setRequesterForm({...requesterForm, lastName: e.target.value})}
+                              className="w-full text-xs border border-slate-300 rounded-lg p-2.5"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-xs font-medium text-slate-700">เบอร์โทรศัพท์ <span className="text-red-500">*</span></label>
+                            <input
+                              type="text"
+                              required
+                              value={requesterForm.phone}
+                              onChange={(e) => setRequesterForm({...requesterForm, phone: e.target.value})}
+                              className="w-full text-xs border border-slate-300 rounded-lg p-2.5"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-xs font-medium text-slate-700">อีเมล (ถ้ามี)</label>
+                            <input
+                              type="email"
+                              value={requesterForm.email}
+                              onChange={(e) => setRequesterForm({...requesterForm, email: e.target.value})}
+                              className="w-full text-xs border border-slate-300 rounded-lg p-2.5"
+                            />
+                          </div>
+                          <div className="space-y-1 md:col-span-2">
+                            <label className="text-xs font-medium text-slate-700">เลขบัตรประชาชน / Passport ID <span className="text-red-500">*</span></label>
+                            <input
+                              type="text"
+                              required
+                              value={requesterForm.idNumber}
+                              onChange={(e) => setRequesterForm({...requesterForm, idNumber: e.target.value})}
+                              className="w-full text-xs border border-slate-300 rounded-lg p-2.5"
+                            />
+                          </div>
+                          <div className="space-y-1 md:col-span-2">
+                            <label className="text-xs font-medium text-slate-700">ที่อยู่ติดต่อได้</label>
+                            <textarea
+                              rows={2}
+                              value={requesterForm.address}
+                              onChange={(e) => setRequesterForm({...requesterForm, address: e.target.value})}
+                              className="w-full text-xs border border-slate-300 rounded-lg p-2.5"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Section 4: Request Details */}
+                      <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-4">
+                        <h4 className="font-bold text-slate-700 text-sm border-b border-slate-200 pb-2">4. รายละเอียดคำขอ</h4>
+                        <div className="space-y-4">
+                          <div className="space-y-1">
+                            <label className="text-xs font-medium text-slate-700">ประเภทคำขอ <span className="text-red-500">*</span></label>
+                            <select
+                              required
+                              value={scopeForm.requestType}
+                              onChange={(e) => setScopeForm({...scopeForm, requestType: e.target.value as any})}
+                              className="w-full text-xs border border-slate-300 rounded-lg p-2.5 bg-white"
+                            >
+                              <option value="access">ขอเข้าถึงข้อมูล (Access Only)</option>
+                              <option value="copy">ขอรับสำเนาข้อมูล (Copy Only)</option>
+                              <option value="access_and_copy">ขอเข้าถึงและรับสำเนาข้อมูล (Access & Copy)</option>
+                            </select>
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-xs font-medium text-slate-700">รายละเอียดข้อมูลที่ต้องการ <span className="text-red-500">*</span></label>
+                            <textarea
+                              required
+                              rows={3}
+                              value={scopeForm.description}
+                              onChange={(e) => setScopeForm({...scopeForm, description: e.target.value})}
+                              className="w-full text-xs border border-slate-300 rounded-lg p-2.5"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-xs font-medium text-slate-700">ระบบ / ฐานข้อมูล / ฝ่ายที่เกี่ยวข้อง</label>
+                            <input
+                              type="text"
+                              value={scopeForm.systems.join(', ')}
+                              onChange={(e) => setScopeForm({...scopeForm, systems: e.target.value.split(',').map(s => s.trim())})}
+                              placeholder="เช่น ระบบ CRM, แผนกบุคคล (คั่นด้วยลูกน้ำ)"
+                              className="w-full text-xs border border-slate-300 rounded-lg p-2.5"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="pt-4 border-t border-slate-200 flex justify-end gap-3">
+                        <button
+                          type="button"
+                          onClick={() => setInternalTab('requests')}
+                          className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2.5 px-6 rounded-lg text-xs transition"
+                        >
+                          ยกเลิก
+                        </button>
+                        <button
+                          type="submit"
+                          className="bg-brand-600 hover:bg-brand-700 text-white font-bold py-2.5 px-8 rounded-lg text-xs transition shadow-sm"
+                        >
+                          บันทึกคำร้องเข้าระบบ
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                )}
+
                 {/* User & Access Management Tab for Admin */}
                 {internalTab === 'users' && (
                   <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden space-y-6 p-6">
@@ -3810,6 +4144,17 @@ export default function App() {
                         ตารางสืบค้นและดำเนินงานคำร้องขอใช้สิทธิข้อมูลส่วนบุคคล (Data Subject Access Requests) 
                         ({requests.filter((r) => !statusFilterGroup || statusFilterGroup.includes(r.status)).length} รายการ)
                       </span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          handleResetWizard();
+                          setInternalTab('manual_entry');
+                        }}
+                        className="bg-brand-600 hover:bg-brand-700 text-white font-bold text-[11px] px-3 py-1.5 rounded transition shadow-sm flex items-center gap-1.5"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        บันทึกคำร้องใหม่ (Manual Entry)
+                      </button>
                     </div>
 
                     <div className="overflow-x-auto">
@@ -4641,6 +4986,38 @@ export default function App() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* --- MANUAL ENTRY SUCCESS MODAL --- */}
+      {manualEntrySuccessTrackingNo && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn">
+          <div className="bg-white rounded-2xl border border-slate-200 p-8 max-w-md w-full space-y-6 shadow-2xl text-center">
+            <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto border border-emerald-200 shadow-inner">
+              <CheckCircle2 className="h-8 w-8" />
+            </div>
+            
+            <div className="space-y-2">
+              <h4 className="font-bold text-slate-800 text-xl">บันทึกคำร้องสำเร็จ!</h4>
+              <p className="text-sm text-slate-600">
+                คุณสามารถนำเลขติดตามนี้แจ้งให้ผู้ยื่นคำร้องทราบ เพื่อใช้ตรวจสอบสถานะได้ทุกช่องทาง
+              </p>
+            </div>
+
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-6 shadow-inner">
+              <div className="text-xs text-slate-500 font-bold mb-2">เลขติดตามคำขอ (Tracking Number)</div>
+              <div className="font-mono text-3xl font-black text-brand-700 tracking-wider">
+                {manualEntrySuccessTrackingNo}
+              </div>
+            </div>
+
+            <button
+              onClick={() => setManualEntrySuccessTrackingNo(null)}
+              className="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-3 rounded-xl text-sm transition shadow-md"
+            >
+              ปิดหน้าต่าง (Close)
+            </button>
           </div>
         </div>
       )}
