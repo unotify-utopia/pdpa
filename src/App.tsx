@@ -358,19 +358,49 @@ export default function App() {
     reloadData();
   };
 
-  // --- PUBLIC TRACKING LOGIC ---
-  const handleTrackSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  // Enterprise Search Lookup Modal State
+  const [showSearchLookupModal, setShowSearchLookupModal] = useState(false);
+  const [searchKeyword, setSearchKeyword] = useState('');
+
+  // --- PUBLIC TRACKING LOGIC (Smart Keyword-Based Search) ---
+  const handleTrackSubmit = (e?: React.FormEvent, customKeyword?: string) => {
+    if (e) e.preventDefault();
     setTrackingError(null);
-    const req = requests.find(r => r.trackingNo.toUpperCase() === trackNo.trim().toUpperCase());
-    
-    if (!req) {
-      setTrackingError('ไม่พบเลขคำขอดังกล่าวในระบบ กรุณาตรวจสอบความถูกต้องอีกครั้ง');
+
+    const query = (customKeyword || searchKeyword || trackNo).trim().toUpperCase();
+    if (!query) {
+      setTrackingError('กรุณากรอกตัวเลขคำขอ หรือคำค้นหา Keyword');
       return;
     }
 
-    // Simulate OTP triggers
-    setTrackedRequest(req);
+    const allReqs = getRequests();
+
+    // 1. Match Exact Tracking Number
+    let matchedReq = allReqs.find(r => r.trackingNo.toUpperCase() === query);
+
+    // 2. Match Keyword partial or numeric suffix (e.g., '0008', '8', 'DOPA')
+    if (!matchedReq) {
+      matchedReq = allReqs.find(r => {
+        const tNo = r.trackingNo.toUpperCase();
+        // Check if query is in tracking number, or numeric suffix match
+        if (tNo.includes(query)) return true;
+        const cleanDigitsQuery = query.replace(/[^0-9]/g, '');
+        if (cleanDigitsQuery.length > 0) {
+          const tNoDigits = tNo.replace(/[^0-9]/g, '');
+          return tNoDigits.endsWith(cleanDigitsQuery);
+        }
+        return false;
+      });
+    }
+
+    if (!matchedReq) {
+      setTrackingError(`ไม่พบข้อมูลคำร้องขอที่มีรหัสหรือคำค้นหา "${query}" ในระบบ`);
+      return;
+    }
+
+    setTrackNo(matchedReq.trackingNo);
+    setTrackedRequest(matchedReq);
+    setShowSearchLookupModal(false);
     setShowOtpModal(true);
   };
 
@@ -1182,21 +1212,14 @@ export default function App() {
                 </button>
                 <button
                   onClick={() => {
-                    const no = prompt('กรุณาระบุเลขติดตามคำขอตัวอย่าง เพื่อความรวดเร็ว:\n- REQ-2026-0001 (สถานะอนุมัติแล้ว)\n- REQ-2026-0002 (สถานะรอเอกสารเพิ่มเติม)\n- REQ-2026-0003 (สถานะยื่นใหม่)\n- REQ-2026-0004 (อยู่ระหว่างค้นหา)');
-                    if (no) {
-                      setTrackNo(no);
-                      const req = requests.find(r => r.trackingNo.toUpperCase() === no.trim().toUpperCase());
-                      if (req) {
-                        setTrackedRequest(req);
-                        setShowOtpModal(true);
-                      } else {
-                        alert('ไม่พบเลขคำขอดังกล่าว');
-                      }
-                    }
+                    setSearchKeyword('');
+                    setTrackingError(null);
+                    setShowSearchLookupModal(true);
                   }}
-                  className="bg-slate-100 hover:bg-slate-200 text-slate-800 px-3 py-1.5 rounded-lg transition"
+                  className="bg-brand-600 hover:bg-brand-700 text-white font-bold px-3 py-1.5 rounded-lg transition shadow-sm flex items-center gap-1.5"
                 >
-                  ติดตามสถานะคำขอ
+                  <Search className="h-3.5 w-3.5" />
+                  <span>ติดตามสถานะคำขอ</span>
                 </button>
               </div>
             </div>
@@ -1272,26 +1295,32 @@ export default function App() {
                 <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-4">
                   <h3 className="font-bold text-slate-800 text-sm flex items-center gap-1.5">
                     <Search className="h-4 w-4 text-brand-600" />
-                    <span>ค้นหาและติดตามสถานะคำร้องขอข้อมูล</span>
+                    <span>ค้นหาและติดตามสถานะคำร้องขอข้อมูล (Search & Track Status)</span>
                   </h3>
-                  <form onSubmit={handleTrackSubmit} className="flex gap-2 flex-col sm:flex-row items-stretch">
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      handleTrackSubmit(e, trackNo);
+                    }}
+                    className="flex gap-2 flex-col sm:flex-row items-stretch"
+                  >
                     <input
                       type="text"
-                      placeholder="กรอกเลขคำขอ เช่น REQ-2026-0001"
+                      placeholder="พิมพ์เลขคำขอ หรือคำค้นหา เช่น 0008, DOPA, REQ-DOPA-2026-0008..."
                       value={trackNo}
                       onChange={(e) => setTrackNo(e.target.value)}
-                      className="flex-1 text-xs border border-slate-300 rounded-lg px-3 py-2 outline-none focus:ring-1 focus:ring-brand-500 bg-white text-slate-900"
+                      className="flex-1 text-xs border border-slate-300 rounded-lg px-3 py-2.5 outline-none focus:ring-1 focus:ring-brand-500 bg-white text-slate-900 font-medium"
                     />
                     <button
                       type="submit"
-                      className="bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold py-2 px-5 rounded-lg transition shrink-0"
+                      className="bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold py-2.5 px-6 rounded-lg transition shrink-0 shadow-sm"
                     >
                       ค้นหาคำร้อง
                     </button>
                   </form>
                   {trackingError && (
-                    <div className="text-red-600 text-xs mt-1 flex items-center gap-1">
-                      <AlertTriangle className="h-3.5 w-3.5" />
+                    <div className="text-rose-600 text-xs font-semibold mt-1 flex items-center gap-1 bg-rose-50 border border-rose-100 p-2.5 rounded-lg">
+                      <AlertTriangle className="h-4 w-4 text-rose-500 shrink-0" />
                       <span>{trackingError}</span>
                     </div>
                   )}
@@ -3844,6 +3873,73 @@ export default function App() {
                 </div>
               </form>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* --- ENTERPRISE SEARCH LOOKUP MODAL --- */}
+      {showSearchLookupModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn">
+          <div className="bg-white rounded-2xl border border-slate-200 p-6 max-w-md w-full space-y-4 shadow-2xl">
+            <div className="text-center space-y-1">
+              <div className="h-12 w-12 rounded-2xl bg-brand-50 border border-brand-100 text-brand-600 flex items-center justify-center mx-auto mb-2">
+                <Search className="h-6 w-6" />
+              </div>
+              <h4 className="font-bold text-slate-900 text-base">ค้นหาและติดตามสถานะคำร้องขอ</h4>
+              <p className="text-xs text-slate-500">
+                ระบบค้นหาอัจฉริยะ (สามารถระบุเลขคำขอเต็ม หรือพิมพ์เฉพาะตัวเลข/รหัสย่อได้)
+              </p>
+            </div>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleTrackSubmit(e, searchKeyword);
+              }}
+              className="space-y-4"
+            >
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 block">
+                  พิมพ์คำค้นหา หรือ เลขที่คำขอ <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  autoFocus
+                  placeholder="ตัวอย่าง: 0008, DOPA, REQ-DOPA-2026-0008..."
+                  value={searchKeyword}
+                  onChange={(e) => {
+                    setSearchKeyword(e.target.value);
+                    setTrackingError(null);
+                  }}
+                  className="w-full text-xs font-semibold border border-slate-300 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 text-slate-900 shadow-inner"
+                />
+              </div>
+
+              {trackingError && (
+                <div className="bg-rose-50 border border-rose-100 rounded-xl p-3 text-rose-600 text-xs font-medium flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4 shrink-0 text-rose-500" />
+                  <span>{trackingError}</span>
+                </div>
+              )}
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowSearchLookupModal(false)}
+                  className="w-1/2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2.5 rounded-xl text-xs transition"
+                >
+                  ยกเลิก
+                </button>
+                <button
+                  type="submit"
+                  className="w-1/2 bg-brand-600 hover:bg-brand-700 text-white font-bold py-2.5 rounded-xl text-xs transition shadow-md flex items-center justify-center gap-1.5"
+                >
+                  <Search className="h-4 w-4" />
+                  <span>ค้นหาข้อมูล</span>
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
