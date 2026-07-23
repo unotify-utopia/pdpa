@@ -4306,7 +4306,8 @@ export default function App() {
                     alert('⚠️ กรุณากรอกเหตุผลความจำเป็นในการขอถอนสิทธิยื่นคำขอนี้');
                     return;
                   }
-                  triggerRealOtp(trackedRequest.requester.email, trackedRequest.requester.phone, trackedRequest.trackingNo);
+                  const contact = getContactInfo(trackedRequest);
+                  triggerRealOtp(contact.email, contact.phone, trackedRequest.trackingNo);
                   setWithdrawStep('otp');
                 }}
                 className="space-y-4"
@@ -4348,7 +4349,8 @@ export default function App() {
                 onSubmit={async (e) => {
                   e.preventDefault();
                   
-                  const isValid = await verifyRealOtp(trackedRequest.requester.email, trackedRequest.requester.phone, withdrawOtpCode, trackedRequest.trackingNo);
+                  const contact = getContactInfo(trackedRequest);
+                  const isValid = await verifyRealOtp(contact.email, contact.phone, withdrawOtpCode, trackedRequest.trackingNo);
                   if (!isValid) return;
                   
                   handleWithdrawRequest(trackedRequest.id, withdrawReasonText);
@@ -4359,7 +4361,7 @@ export default function App() {
               >
                 <div className="p-3 bg-rose-50 border border-rose-100 rounded-xl text-center space-y-1">
                   <span className="text-xs font-bold text-rose-900 block">ระบบส่งรหัส OTP 6 หลักไปยังอีเมลเรียบร้อยแล้ว</span>
-                  <span className="text-[11px] text-rose-700 block">ส่งถึง: {trackedRequest.requester.email}</span>
+                  <span className="text-[11px] text-rose-700 block">ส่งถึง: {getContactInfo(trackedRequest).email}</span>
                 </div>
 
                 <div className="space-y-1.5">
@@ -4368,7 +4370,7 @@ export default function App() {
                     type="text"
                     maxLength={6}
                     required
-                    placeholder="123456"
+                    placeholder="XXXXXX"
                     value={withdrawOtpCode}
                     onChange={(e) => setWithdrawOtpCode(e.target.value)}
                     className="w-full text-center font-mono font-bold text-base tracking-widest border border-slate-300 rounded-lg p-2.5 text-slate-800 focus:outline-none focus:ring-1 focus:ring-rose-500"
