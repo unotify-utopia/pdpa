@@ -94,6 +94,22 @@ export const formatThaiCitizenIdMask = (val: string): string => {
   return val; // Foreign passport format fallback
 };
 
+export const formatThaiTimeString = (dateStr: string): string => {
+  if (!dateStr) return '';
+  try {
+    const d = new Date(dateStr);
+    return d.toLocaleTimeString('th-TH', {
+      timeZone: 'Asia/Bangkok',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false
+    }) + ' น.';
+  } catch {
+    return dateStr;
+  }
+};
+
 export default function App() {
   // App context navigation states
   const [view, setView] = useState<'public' | 'internal' | 'tracking' | 'download' | 'superadmin'>('public');
@@ -2243,7 +2259,7 @@ export default function App() {
                         <span className="font-bold text-[10px] text-slate-400 mb-0.5">{msg.senderName}</span>
                         <p>{msg.message}</p>
                         <span className="text-[9px] text-slate-400 text-right mt-1">
-                          {new Date(msg.timestamp).toLocaleTimeString('th-TH')}
+                          {formatThaiTimeString(msg.timestamp)}
                         </span>
                       </div>
                     ))
@@ -2832,7 +2848,7 @@ export default function App() {
                                 </span>
                                 <p className="leading-relaxed font-medium">{msg.message}</p>
                                 <span className={`text-[9px] text-right mt-1.5 ${msg.sender === 'staff' ? 'text-brand-200' : 'text-slate-400'}`}>
-                                  {new Date(msg.timestamp).toLocaleTimeString('th-TH')} น.
+                                  {formatThaiTimeString(msg.timestamp)}
                                 </span>
                               </div>
                             ))
