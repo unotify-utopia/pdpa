@@ -98,7 +98,7 @@ export const SignaturePad: React.FC<SignaturePadProps> = ({ onSave, onClear }) =
   return (
     <div className="w-full">
       <div className="flex justify-between items-center mb-1">
-        <label className="text-sm font-medium text-slate-700">ลงลายมือชื่ออิเล็กทรอนิกส์ (Signature) <span className="text-red-500">*</span></label>
+        <label className="text-sm font-medium text-slate-700">ลงลายมือชื่ออิเล็กทรอนิกส์ (Signature) <span className="text-slate-400 text-xs font-normal">(ถ้ามี / Optional)</span></label>
         {hasSigned && (
           <button
             type="button"
