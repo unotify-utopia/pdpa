@@ -40,11 +40,11 @@ export const StaffLoginModal: React.FC<StaffLoginModalProps> = ({
         o.nameEn.toLowerCase().includes(query) ||
         (query.includes('dopa') && o.id === 'org_dopa') ||
         (query.includes('rd') && o.id === 'org_rd') ||
-        (query.includes('tech') && o.id === 'org_tech_th')
+        ((query.includes('tech') || query.includes('tech_th')) && o.id === 'org_tech_th')
     );
 
     if (!matchedOrg) {
-      setErrorMsg('ไม่พบรหัสหรือชื่อหน่วยงานนี้ในระบบ (ลองพิมพ์: dopa, rd, สรรพากร, ปกครอง)');
+      setErrorMsg('ไม่พบรหัสหรือชื่อหน่วยงานนี้ในระบบ (ลองพิมพ์: dopa, rd, tech, สรรพากร, ปกครอง)');
       return;
     }
 
@@ -177,14 +177,14 @@ export const StaffLoginModal: React.FC<StaffLoginModalProps> = ({
                           o.id.toLowerCase().includes(orgInput.toLowerCase())
                         )
                         .map((org) => {
-                          const cleanCode = org.id.replace(/^org_/, '');
+                          const displayCode = org.id === 'org_tech_th' ? 'tech' : org.id.replace(/^org_/, '');
                           return (
                             <button
                               key={org.id}
                               type="button"
                               onClick={() => {
-                                setOrgInput(cleanCode);
-                                setShowOrgDropdown(false); // HIDE DROPDOWN IMMEDIATELY ON SELECT
+                                setOrgInput(org.nameTh);
+                                setShowOrgDropdown(false);
                               }}
                               className="w-full text-left p-2.5 hover:bg-brand-50 transition flex items-center justify-between group"
                             >
@@ -197,7 +197,7 @@ export const StaffLoginModal: React.FC<StaffLoginModalProps> = ({
                                 </div>
                               </div>
                               <span className="text-[10px] font-mono font-bold bg-slate-100 text-slate-700 px-2 py-0.5 rounded border border-slate-200 group-hover:bg-brand-600 group-hover:text-white group-hover:border-brand-600 transition">
-                                {cleanCode}
+                                {displayCode}
                               </span>
                             </button>
                           );
@@ -241,8 +241,9 @@ export const StaffLoginModal: React.FC<StaffLoginModalProps> = ({
 
               <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-[11px] text-slate-500 leading-relaxed space-y-1">
                 <span className="font-bold block text-slate-700">💡 ข้อมูลทดสอบระบบแบบแยกหน่วยงาน:</span>
-                <div>• กรมการปกครอง: รหัส <code className="bg-white px-1 border rounded font-bold text-brand-700">dopa</code> | User = <code className="bg-white px-1 border rounded">dpo.pdpa</code></div>
-                <div>• กรมสรรพากร: รหัส <code className="bg-white px-1 border rounded font-bold text-brand-700">rd</code> | User = <code className="bg-white px-1 border rounded">dpo.rd</code></div>
+                <div>• กรมการปกครอง: รหัส <code className="bg-white px-1 border rounded font-bold text-brand-700">dopa</code> | User = <code className="bg-white px-1 border rounded">dpo.pdpa</code> / <code className="bg-white px-1 border rounded">intake.pdpa</code></div>
+                <div>• กรมสรรพากร: รหัส <code className="bg-white px-1 border rounded font-bold text-brand-700">rd</code> | User = <code className="bg-white px-1 border rounded">dpo.rd</code> / <code className="bg-white px-1 border rounded">intake.rd</code></div>
+                <div>• บริษัท ไทยเทค: รหัส <code className="bg-white px-1 border rounded font-bold text-brand-700">tech</code> | User = <code className="bg-white px-1 border rounded">intake.tech</code> / <code className="bg-white px-1 border rounded">dpo.tech</code></div>
               </div>
 
               <div className="flex gap-2 pt-2">
