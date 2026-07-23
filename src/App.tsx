@@ -281,6 +281,7 @@ export default function App() {
   // Public tracking inputs
   const [trackNo, setTrackNo] = useState('');
   const [showOtpModal, setShowOtpModal] = useState(false);
+  const [otpSent, setOtpSent] = useState(false);
   const [otpCode, setOtpCode] = useState('');
   const [trackedRequest, setTrackedRequest] = useState<Request | null>(null);
   const [trackingError, setTrackingError] = useState<string | null>(null);
@@ -584,7 +585,7 @@ export default function App() {
       setTrackNo(exactMatches[0].trackingNo);
       setTrackedRequest(exactMatches[0]);
       setShowSearchLookupModal(false);
-      triggerRealOtp(exactMatches[0].requester.email, exactMatches[0].requester.phone, exactMatches[0].trackingNo);
+      setOtpSent(false);
       setShowOtpModal(true);
       return;
     }
@@ -1464,9 +1465,7 @@ export default function App() {
                         onClick={() => {
                           setTrackNo('REQ-2026-0001');
                           setTrackedRequest(requests[0]);
-                          if (requests[0]) {
-                            triggerRealOtp(requests[0].requester.email, requests[0].requester.phone, requests[0].trackingNo);
-                          }
+                          setOtpSent(false);
                           setShowOtpModal(true);
                         }}
                         className="bg-white/10 hover:bg-white/20 text-white border border-white/20 text-xs font-semibold py-2.5 px-5 rounded-lg transition"
@@ -2270,7 +2269,7 @@ export default function App() {
                             onChange={(e) => setConsentAccepted(e.target.checked)}
                             className="rounded text-brand-600 focus:ring-brand-500 mt-0.5"
                           />
-                          <span>ขอยินยอมให้องค์กรเก็บ รวบรวม และประมวลผลข้อมูลส่วนบุคคลของข้าพเจ้าที่ยื่นในคำขอนี้ เพื่อใช้สำหรับตรวจสอบสิทธิและจัดส่งข้อมูลตามความต้องการของสิทธินี้เท่านั้นตาม <strong className="text-brand-600 hover:underline">นโยบายความเป็นส่วนตัว (Privacy Notice)</strong></span>
+                          <span>ขอยินยอมให้องค์กรเก็บ รวบรวม และประมวลผลข้อมูลส่วนบุคคลของข้าพเจ้าที่ยื่นในคำขอนี้ เพื่อใช้สำหรับตรวจสอบสิทธิและจัดส่งข้อมูลตามความต้องการของสิทธิตาม <strong className="text-brand-600 hover:underline">นโยบายความเป็นส่วนตัว (Privacy Notice)</strong></span>
                         </label>
                         <label className="flex items-start gap-2.5 cursor-pointer text-xs text-slate-600">
                           <input
@@ -2346,7 +2345,7 @@ export default function App() {
                     onClick={() => {
                       setTrackNo(isNewRequestSuccess.trackingNo);
                       setTrackedRequest(isNewRequestSuccess);
-                      triggerRealOtp(isNewRequestSuccess.requester.email, isNewRequestSuccess.requester.phone, isNewRequestSuccess.trackingNo);
+                      setOtpSent(false);
                       setShowOtpModal(true);
                     }}
                     className="bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold py-2 px-5 rounded-lg transition shadow-sm"
@@ -4207,39 +4206,61 @@ export default function App() {
               <Mail className="h-10 w-10 text-brand-600 mx-auto" />
               <h4 className="font-bold text-slate-800 text-sm">การยืนยันรหัส OTP ในระบบ Sandbox</h4>
               <p className="text-xs text-slate-400">
-                ระบบได้ส่งรหัส OTP ไปที่ข้อมูลติดต่อเจ้าของสิทธิ ({trackedRequest.requester.email})
+                ระบบจะส่งรหัส OTP ไปที่ข้อมูลติดต่อเจ้าของสิทธิ ({trackedRequest.requester.email})
               </p>
             </div>
 
-            <form onSubmit={handleVerifyOtp} className="space-y-3">
-              <div className="space-y-1.5">
-                <label className="text-xs text-slate-600 block text-center">กรอกรหัสยืนยัน OTP 6 หลัก</label>
-                <input
-                  type="text"
-                  maxLength={6}
-                  required
-                  placeholder="XXXXXX"
-                  value={otpCode}
-                  onChange={(e) => setOtpCode(e.target.value)}
-                  className="w-full text-center font-mono font-bold border border-slate-300 rounded-lg p-2.5 text-slate-800 focus:outline-none focus:ring-1 focus:ring-brand-500"
-                />
+            {!otpSent ? (
+              <div className="space-y-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    triggerRealOtp(trackedRequest.requester.email, trackedRequest.requester.phone, trackedRequest.trackingNo);
+                    setOtpSent(true);
+                  }}
+                  className="w-full bg-brand-600 hover:bg-brand-700 text-white font-bold py-2.5 rounded-lg text-sm transition"
+                >
+                  คลิกเพื่อส่ง OTP ไปยังอีเมล
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowOtpModal(false)}
+                  className="w-full text-slate-500 hover:text-slate-700 text-xs py-1"
+                >
+                  ยกเลิก
+                </button>
               </div>
+            ) : (
+              <form onSubmit={handleVerifyOtp} className="space-y-3 pt-2">
+                <div className="space-y-1.5">
+                  <label className="text-xs text-emerald-600 font-bold block text-center">✓ ส่ง OTP สำเร็จแล้ว กรุณาเช็คอีเมล</label>
+                  <label className="text-xs text-slate-600 block text-center mt-2">กรอกรหัสยืนยัน OTP 6 หลัก</label>
+                  <input
+                    type="text"
+                    maxLength={6}
+                    required
+                    placeholder="XXXXXX"
+                    value={otpCode}
+                    onChange={(e) => setOtpCode(e.target.value)}
+                    className="w-full text-center font-mono font-bold border border-slate-300 rounded-lg p-2.5 text-slate-800 focus:outline-none focus:ring-1 focus:ring-brand-500"
+                  />
+                </div>
 
-              <button
-                type="submit"
-                className="w-full bg-brand-600 hover:bg-brand-700 text-white font-bold py-2 rounded-lg text-xs transition"
-              >
-                ยืนยันเพื่อติดตามสถานะสิทธิ์
-              </button>
-              
-              <button
-                type="button"
-                onClick={() => setShowOtpModal(false)}
-                className="w-full text-slate-500 text-xs py-1 transition"
-              >
-                ยกเลิก
-              </button>
-            </form>
+                <button
+                  type="submit"
+                  className="w-full bg-brand-600 hover:bg-brand-700 text-white font-bold py-2 rounded-lg text-xs transition"
+                >
+                  ยืนยันเพื่อติดตามสถานะสิทธิ์
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setShowOtpModal(false); setOtpSent(false); }}
+                  className="w-full text-slate-500 hover:text-slate-700 text-xs py-1 transition"
+                >
+                  ยกเลิก
+                </button>
+              </form>
+            )}
           </div>
         </div>
       )}
@@ -4383,7 +4404,7 @@ export default function App() {
                         setTrackNo(req.trackingNo);
                         setTrackedRequest(req);
                         setShowSearchLookupModal(false);
-                        triggerRealOtp(req.requester.email, req.requester.phone, req.trackingNo);
+                        setOtpSent(false);
                         setShowOtpModal(true);
                       }}
                       className="w-full text-left bg-slate-50 hover:bg-brand-50 border border-slate-200 hover:border-brand-300 p-3 rounded-xl transition flex flex-col gap-1"
