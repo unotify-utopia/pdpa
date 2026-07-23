@@ -31,8 +31,13 @@ export const initializeDB = () => {
           updated = true;
         }
       }
+      // Clean up legacy duplicate seed request REQ-TECH-2026-0008
+      const filtered = merged.filter(r => r.id !== 'req_tech_008' && r.trackingNo !== 'REQ-TECH-2026-0008');
+      if (filtered.length !== merged.length) {
+        updated = true;
+      }
       if (updated) {
-        localStorage.setItem(KEYS.REQUESTS, JSON.stringify(merged));
+        localStorage.setItem(KEYS.REQUESTS, JSON.stringify(filtered));
       }
     } catch {
       localStorage.setItem(KEYS.REQUESTS, JSON.stringify(seedRequests));
