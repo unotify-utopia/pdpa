@@ -22,8 +22,12 @@ export const initializeDB = () => {
       let updated = false;
       const merged = [...parsed];
       for (const seed of seedRequests) {
-        if (!merged.some(r => r.id === seed.id || r.trackingNo === seed.trackingNo)) {
+        const idx = merged.findIndex(r => r.id === seed.id || r.trackingNo === seed.trackingNo);
+        if (idx === -1) {
           merged.push(seed);
+          updated = true;
+        } else if (merged[idx].requester.firstName === 'พงศกร' || merged[idx].requester.firstName === 'somkiat') {
+          merged[idx] = seed;
           updated = true;
         }
       }
