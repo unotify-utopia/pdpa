@@ -540,19 +540,32 @@ export default function App() {
       attachments: attachmentsList
     });
 
+    // Immediately save locally first
+    const saveLocal = (req: Request) => {
+      const allLocal = getRequests();
+      const idx = allLocal.findIndex(r => r.id === req.id);
+      if (idx !== -1) allLocal[idx] = req;
+      else allLocal.unshift(req);
+      saveRequests(allLocal);
+    };
+    saveLocal(newReq);
+
     // Fetch single true tracking number from PostgreSQL Master DB API
     fetch('/api/public/requests', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(newReq)
     })
-    .then(res => res.json())
+    .then(res => {
+      if (!res.ok) throw new Error('Network error');
+      return res.json();
+    })
     .then(data => {
       if (data.success && data.request) {
         setIsNewRequestSuccess(data.request);
-        // Also sync local storage with actual server tracking number
+        // Sync local storage with actual server tracking number
         newReq.trackingNo = data.request.trackingNo;
-        saveRequests(getRequests().map(r => r.id === newReq.id ? newReq : r));
+        saveLocal(newReq);
       } else {
         setIsNewRequestSuccess(newReq);
       }
