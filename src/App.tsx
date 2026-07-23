@@ -410,20 +410,68 @@ export default function App() {
         return;
       }
     }
+    
+  // --- REAL SMTP OTP LOGIC HELPER ---
+  const triggerRealOtp = async (email: string, phone: string, trackingNo?: string) => {
+    try {
+      await fetch('/api/public/send-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, phone, reference: trackingNo })
+      });
+    } catch (err) {
+      console.error('Failed to send OTP via SMTP', err);
+    }
+  };
+
+  const verifyRealOtp = async (email: string, phone: string, otpCodeStr: string, trackingNo?: string): Promise<boolean> => {
+    try {
+      const res = await fetch('/api/public/verify-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, phone, otp: otpCodeStr, reference: trackingNo })
+      });
+      const data = await res.json();
+      if (!data.success) {
+        alert(`❌ ${data.message}`);
+        return false;
+      }
+      return true;
+    } catch (err) {
+      alert('❌ ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์เพื่อยืนยัน OTP ได้');
+      return false;
+    }
+  };
 
     // 3. Trigger Email OTP Verification Modal
-    const generatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
-    setExpectedSubmissionOtp(generatedOtp);
+    fetch('/api/public/send-otp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: subjectUser.email, phone: subjectUser.phone })
+    }).catch(err => console.error('Failed to send OTP:', err));
+    
     setSubmissionOtpCode('');
     setShowSubmissionOtpModal(true);
   };
 
-  const handleFinalizeSubmissionOtp = (e: React.FormEvent) => {
+  const handleFinalizeSubmissionOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     const cleanOtp = submissionOtpCode.trim();
-    // TODO: Remove backdoor OTPs ('123456', '889900') before production deployment / DB clear
-    if (cleanOtp !== expectedSubmissionOtp && cleanOtp !== '123456' && cleanOtp !== '889900') {
-      alert('❌ รหัส OTP ไม่ถูกต้อง กรุณาตรวจสอบรหัส 6 หลักที่ส่งไปยังอีเมลอีกครั้ง');
+    
+    try {
+      const res = await fetch('/api/public/verify-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: subjectUser.email, phone: subjectUser.phone, otp: cleanOtp })
+      });
+      const data = await res.json();
+      
+      if (!data.success) {
+        alert(`❌ ${data.message}`);
+        return;
+      }
+    } catch (err) {
+      alert('❌ ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์เพื่อยืนยัน OTP ได้');
       return;
     }
 
@@ -533,6 +581,7 @@ export default function App() {
       setTrackNo(exactMatches[0].trackingNo);
       setTrackedRequest(exactMatches[0]);
       setShowSearchLookupModal(false);
+      triggerRealOtp(exactMatches[0].requester.email, exactMatches[0].requester.phone, exactMatches[0].trackingNo);
       setShowOtpModal(true);
       return;
     }
@@ -560,13 +609,14 @@ export default function App() {
     setSearchLookupResults(partialMatches);
   };
 
-  const handleVerifyOtp = (e: React.FormEvent) => {
+  const handleVerifyOtp = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (otpCode === '123456') {
+    if (!trackedRequest) return;
+    
+    const isValid = await verifyRealOtp(trackedRequest.requester.email, trackedRequest.requester.phone, otpCode, trackedRequest.trackingNo);
+    if (isValid) {
       setShowOtpModal(false);
       setView('tracking');
-    } else {
-      alert('รหัส OTP ไม่ถูกต้อง (ระบุทดสอบเป็น: 123456)');
     }
   };
 
@@ -630,15 +680,17 @@ export default function App() {
     setDownloadRequest(req);
     setDownloadToken(uuid);
     setDownloadError(null);
+    triggerRealOtp(req.requester.email, req.requester.phone, req.trackingNo);
     setShowDownloadOtpModal(true);
     setView('download');
   };
 
-  const handleVerifyDownloadOtp = (e: React.FormEvent) => {
+  const handleVerifyDownloadOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!downloadRequest) return;
 
-    if (downloadOtpCode === '123456') {
+    const isValid = await verifyRealOtp(downloadRequest.requester.email, downloadRequest.requester.phone, downloadOtpCode, downloadRequest.trackingNo);
+    if (isValid) {
       setShowDownloadOtpModal(false);
       // Log downloand access
       const mockSubjectUser: UserType = {
@@ -669,8 +721,6 @@ export default function App() {
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-    } else {
-      alert('รหัส OTP ไม่ถูกต้อง (ระบุทดสอบเป็น: 123456)');
     }
   };
 
@@ -2276,7 +2326,7 @@ export default function App() {
 
                 <div className="p-3 bg-brand-50 border border-brand-100 text-brand-800 rounded-xl text-[11px] leading-relaxed max-w-sm mx-auto">
                   <strong>ข้อมูลประกอบระบบ Sandbox:</strong> <br />
-                  รหัสผ่านแบบใช้ครั้งเดียว (OTP) สำหรับยืนยันตัวตนเพื่อสืบค้นสถานะคือ: <strong>123456</strong>
+                  รหัสผ่านแบบใช้ครั้งเดียว (OTP) สำหรับยืนยันตัวตนเพื่อสืบค้นสถานะ จะส่งไปยังอีเมลของคุณ
                 </div>
 
                 <div className="flex gap-2 justify-center pt-2">
@@ -2547,7 +2597,7 @@ export default function App() {
                   </div>
 
                   <div className="space-y-1 text-slate-300">
-                    <label className="text-xs font-medium">ระบุรหัส OTP (สำหรับทดสอบกรอก: 123456)</label>
+                    <label className="text-xs font-medium">ระบุรหัส OTP 6 หลัก</label>
                     <input
                       type="text"
                       maxLength={6}
@@ -4156,7 +4206,7 @@ export default function App() {
 
             <form onSubmit={handleVerifyOtp} className="space-y-3">
               <div className="space-y-1.5">
-                <label className="text-xs text-slate-600 block text-center">กรอกรหัสยืนยัน OTP (สำหรับทดสอบระบุ: <strong>123456</strong>)</label>
+                <label className="text-xs text-slate-600 block text-center">กรอกรหัสยืนยัน OTP 6 หลัก</label>
                 <input
                   type="text"
                   maxLength={6}
@@ -4207,6 +4257,7 @@ export default function App() {
                     alert('⚠️ กรุณากรอกเหตุผลความจำเป็นในการขอถอนสิทธิยื่นคำขอนี้');
                     return;
                   }
+                  triggerRealOtp(trackedRequest.requester.email, trackedRequest.requester.phone, trackedRequest.trackingNo);
                   setWithdrawStep('otp');
                 }}
                 className="space-y-4"
@@ -4245,12 +4296,11 @@ export default function App() {
 
             {withdrawStep === 'otp' && (
               <form
-                onSubmit={(e) => {
+                onSubmit={async (e) => {
                   e.preventDefault();
-                  if (withdrawOtpCode !== '123456') {
-                    alert('❌ รหัส OTP 6 หลักไม่ถูกต้อง กรุณาระบุ: 123456');
-                    return;
-                  }
+                  
+                  const isValid = await verifyRealOtp(trackedRequest.requester.email, trackedRequest.requester.phone, withdrawOtpCode, trackedRequest.trackingNo);
+                  if (!isValid) return;
                   
                   handleWithdrawRequest(trackedRequest.id, withdrawReasonText);
                   setShowWithdrawModal(false);
@@ -4261,7 +4311,6 @@ export default function App() {
                 <div className="p-3 bg-rose-50 border border-rose-100 rounded-xl text-center space-y-1">
                   <span className="text-xs font-bold text-rose-900 block">ระบบส่งรหัส OTP 6 หลักไปยังอีเมลเรียบร้อยแล้ว</span>
                   <span className="text-[11px] text-rose-700 block">ส่งถึง: {trackedRequest.requester.email}</span>
-                  <span className="text-[10px] text-slate-500 block pt-1">(สำหรับทดสอบระบบใช้รหัส: <strong>123456</strong>)</span>
                 </div>
 
                 <div className="space-y-1.5">

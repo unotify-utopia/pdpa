@@ -6,6 +6,7 @@ import pg from 'pg';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import nodemailer from 'nodemailer';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -36,6 +37,20 @@ const JWT_SECRET = process.env.JWT_SECRET || 'pdpa-super-secret-jwt-key-2026';
 
 app.use(cors());
 app.use(express.json());
+
+// --- SMTP & OTP Configuration ---
+const transporter = nodemailer.createTransport({
+  host: process.env.SMTP_HOST || 'smtp.gmail.com',
+  port: parseInt(process.env.SMTP_PORT || '465'),
+  secure: true,
+  auth: {
+    user: process.env.SMTP_USER || 'your-org-email@gmail.com',
+    pass: process.env.SMTP_PASS || 'your-app-password',
+  },
+});
+
+// In-Memory OTP Cache (Map: email/phone -> { otp, expiresAt })
+const otpCache = new Map();
 
 // In-Memory Database Store (Initialized from mock seed)
 const users = [
@@ -317,6 +332,83 @@ app.post('/api/public/requests', async (req, res) => {
   } catch (error) {
     console.error('Error inserting request to PostgreSQL/Server:', error);
     return res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดในการบันทึกข้อมูล' });
+  }
+});
+
+// POST /api/public/send-otp
+app.post('/api/public/send-otp', async (req, res) => {
+  const { email, phone, reference } = req.body;
+  if (!email && !phone) return res.status(400).json({ success: false, message: 'กรุณาระบุอีเมลหรือเบอร์โทรศัพท์' });
+
+  // Generate 6-digit OTP
+  const otp = Math.floor(100000 + Math.random() * 900000).toString();
+  const key = reference || email || phone;
+  
+  // Store OTP with 5 minutes expiration
+  otpCache.set(key, {
+    otp,
+    expiresAt: Date.now() + 5 * 60 * 1000 // 5 minutes
+  });
+
+  // If email is provided, send via SMTP
+  if (email) {
+    try {
+      await transporter.sendMail({
+        from: `"PDPA Access Portal" <${process.env.SMTP_USER || 'noreply@organization.or.th'}>`,
+        to: email,
+        subject: 'รหัส OTP สำหรับยืนยันตัวตน (PDPA Portal)',
+        html: `
+          <div style="font-family: sans-serif; max-width: 500px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
+            <div style="background-color: #0f172a; padding: 20px; text-align: center;">
+              <h2 style="color: #ffffff; margin: 0;">รหัส OTP ยืนยันตัวตน</h2>
+            </div>
+            <div style="padding: 30px 20px; text-align: center;">
+              <p style="color: #475569; font-size: 16px; margin-bottom: 20px;">โปรดใช้รหัสผ่านแบบใช้ครั้งเดียว (OTP) ด้านล่างนี้เพื่อดำเนินการต่อ</p>
+              <div style="background-color: #f8fafc; border: 2px dashed #cbd5e1; border-radius: 8px; padding: 15px; font-size: 32px; font-weight: bold; letter-spacing: 4px; color: #0284c7; margin-bottom: 20px;">
+                ${otp}
+              </div>
+              <p style="color: #ef4444; font-size: 14px;">* รหัสนี้มีอายุการใช้งาน 5 นาที</p>
+            </div>
+          </div>
+        `
+      });
+      console.log(`[SMTP] Sent OTP ${otp} to ${email}`);
+    } catch (error) {
+      console.error('[SMTP] Error sending email:', error);
+      // Fallback for development if SMTP is not configured
+      if (!process.env.SMTP_PASS) {
+        console.log('[SMTP] Development Mode: Pretending email was sent.');
+      } else {
+        return res.status(500).json({ success: false, message: 'ไม่สามารถส่งอีเมลได้ กรุณาลองใหม่อีกครั้ง' });
+      }
+    }
+  }
+
+  return res.json({ success: true, message: 'ส่งรหัส OTP เรียบร้อยแล้ว' });
+});
+
+// POST /api/public/verify-otp
+app.post('/api/public/verify-otp', (req, res) => {
+  const { reference, email, phone, otp } = req.body;
+  const key = reference || email || phone;
+  
+  if (!key || !otp) return res.status(400).json({ success: false, message: 'ข้อมูลไม่ครบถ้วน' });
+
+  const record = otpCache.get(key);
+  if (!record) {
+    return res.status(400).json({ success: false, message: 'ไม่พบรหัส OTP หรือรหัสอาจหมดอายุแล้ว กรุณาขอใหม่' });
+  }
+
+  if (Date.now() > record.expiresAt) {
+    otpCache.delete(key);
+    return res.status(400).json({ success: false, message: 'รหัส OTP หมดอายุแล้ว กรุณาขอใหม่' });
+  }
+
+  if (record.otp === otp) {
+    otpCache.delete(key); // clear after success
+    return res.json({ success: true, message: 'ยืนยันรหัส OTP สำเร็จ' });
+  } else {
+    return res.status(400).json({ success: false, message: 'รหัส OTP ไม่ถูกต้อง' });
   }
 });
 
