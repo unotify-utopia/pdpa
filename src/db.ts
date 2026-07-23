@@ -14,8 +14,25 @@ const KEYS = {
 // Initialize DB with seed data if not present or empty
 export const initializeDB = () => {
   const existingRequests = localStorage.getItem(KEYS.REQUESTS);
-  if (!existingRequests || JSON.parse(existingRequests).length < 4) {
+  if (!existingRequests) {
     localStorage.setItem(KEYS.REQUESTS, JSON.stringify(seedRequests));
+  } else {
+    try {
+      const parsed: Request[] = JSON.parse(existingRequests);
+      let updated = false;
+      const merged = [...parsed];
+      for (const seed of seedRequests) {
+        if (!merged.some(r => r.id === seed.id || r.trackingNo === seed.trackingNo)) {
+          merged.push(seed);
+          updated = true;
+        }
+      }
+      if (updated) {
+        localStorage.setItem(KEYS.REQUESTS, JSON.stringify(merged));
+      }
+    } catch {
+      localStorage.setItem(KEYS.REQUESTS, JSON.stringify(seedRequests));
+    }
   }
   if (!localStorage.getItem(KEYS.CONFIG)) {
     localStorage.setItem(KEYS.CONFIG, JSON.stringify(initialComplianceConfig));
