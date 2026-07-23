@@ -2635,7 +2635,7 @@ export default function App() {
                           </div>
 
                           {/* Completeness submission bar */}
-                          {['Submitted', 'Received', 'Identity Verification', 'Completeness Review', 'Awaiting Additional Information'].includes(activeRequestObj.status) && (
+                          {['intake', 'admin', 'dpo'].includes(activeUser.role) && (
                             <div className="pt-4 border-t border-slate-100 flex gap-2">
                               
                               {showIncompletePanel ? (
@@ -3345,7 +3345,7 @@ export default function App() {
 
                     <div className="p-4 border-b border-slate-100 bg-slate-50 flex flex-wrap items-center justify-between gap-4">
                       <span className="text-xs font-bold text-slate-800">
-                        ตารางสืบค้นและดำเนินงานคำร้องขอรับสิทธิ์สิริประวัติ 
+                        ตารางสืบค้นและดำเนินงานคำร้องขอใช้สิทธิข้อมูลส่วนบุคคล (Data Subject Access Requests) 
                         ({requests.filter((r) => !statusFilterGroup || statusFilterGroup.includes(r.status)).length} รายการ)
                       </span>
                     </div>
