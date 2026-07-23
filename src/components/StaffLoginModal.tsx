@@ -15,6 +15,7 @@ export const StaffLoginModal: React.FC<StaffLoginModalProps> = ({
   onLoginSuccess,
 }) => {
   const [orgInput, setOrgInput] = useState('');
+  const [showOrgDropdown, setShowOrgDropdown] = useState(false);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
@@ -125,14 +126,21 @@ export const StaffLoginModal: React.FC<StaffLoginModalProps> = ({
                     required
                     placeholder="พิมพ์ชื่อหน่วยงาน เช่น กรมการปกครอง, สรรพากร, หรือ dopa..."
                     value={orgInput}
-                    onChange={(e) => setOrgInput(e.target.value)}
+                    onChange={(e) => {
+                      setOrgInput(e.target.value);
+                      setShowOrgDropdown(true);
+                    }}
+                    onFocus={() => setShowOrgDropdown(true)}
                     className="w-full text-xs border border-slate-300 rounded-lg p-2.5 pl-8 pr-7 outline-none focus:ring-2 focus:ring-brand-500 text-slate-900 font-semibold"
                   />
                   <Search className="h-4 w-4 text-slate-400 absolute left-2.5 top-2.5" />
                   {orgInput && (
                     <button
                       type="button"
-                      onClick={() => setOrgInput('')}
+                      onClick={() => {
+                        setOrgInput('');
+                        setShowOrgDropdown(false);
+                      }}
                       className="absolute right-2.5 top-2.5 text-xs text-slate-400 hover:text-slate-600 font-bold"
                     >
                       ✕
@@ -141,7 +149,7 @@ export const StaffLoginModal: React.FC<StaffLoginModalProps> = ({
                 </div>
 
                 {/* Live Autocomplete Results Dropdown Overlay */}
-                {orgInput.trim() !== '' && (
+                {showOrgDropdown && orgInput.trim() !== '' && (
                   <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-brand-300 rounded-xl shadow-2xl z-30 max-h-52 overflow-y-auto divide-y divide-slate-100 animate-fadeIn">
                     <div className="p-1.5 bg-slate-50 text-[10px] text-slate-400 font-bold uppercase tracking-wider">
                       ผลการค้นหาหน่วยงาน ({
@@ -176,6 +184,7 @@ export const StaffLoginModal: React.FC<StaffLoginModalProps> = ({
                               type="button"
                               onClick={() => {
                                 setOrgInput(cleanCode);
+                                setShowOrgDropdown(false); // HIDE DROPDOWN IMMEDIATELY ON SELECT
                               }}
                               className="w-full text-left p-2.5 hover:bg-brand-50 transition flex items-center justify-between group"
                             >
