@@ -1464,6 +1464,9 @@ export default function App() {
                         onClick={() => {
                           setTrackNo('REQ-2026-0001');
                           setTrackedRequest(requests[0]);
+                          if (requests[0]) {
+                            triggerRealOtp(requests[0].requester.email, requests[0].requester.phone, requests[0].trackingNo);
+                          }
                           setShowOtpModal(true);
                         }}
                         className="bg-white/10 hover:bg-white/20 text-white border border-white/20 text-xs font-semibold py-2.5 px-5 rounded-lg transition"
@@ -2343,6 +2346,7 @@ export default function App() {
                     onClick={() => {
                       setTrackNo(isNewRequestSuccess.trackingNo);
                       setTrackedRequest(isNewRequestSuccess);
+                      triggerRealOtp(isNewRequestSuccess.requester.email, isNewRequestSuccess.requester.phone, isNewRequestSuccess.trackingNo);
                       setShowOtpModal(true);
                     }}
                     className="bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold py-2 px-5 rounded-lg transition shadow-sm"
@@ -4379,6 +4383,7 @@ export default function App() {
                         setTrackNo(req.trackingNo);
                         setTrackedRequest(req);
                         setShowSearchLookupModal(false);
+                        triggerRealOtp(req.requester.email, req.requester.phone, req.trackingNo);
                         setShowOtpModal(true);
                       }}
                       className="w-full text-left bg-slate-50 hover:bg-brand-50 border border-slate-200 hover:border-brand-300 p-3 rounded-xl transition flex flex-col gap-1"
