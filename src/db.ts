@@ -85,14 +85,6 @@ export const getRequests = (): Request[] => {
 
 export const saveRequests = (requests: Request[]) => {
   localStorage.setItem(KEYS.REQUESTS, JSON.stringify(requests));
-  // Sync each request to server background API for persistent cross-browser consistency
-  requests.forEach(r => {
-    fetch('/api/public/requests', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(r)
-    }).catch(() => {});
-  });
 };
 
 export const getComplianceConfig = (): ComplianceConfig => {
@@ -277,6 +269,13 @@ export const updateRequest = (updatedReq: Request, actor: User, auditAction: str
     requests[index] = updatedReq;
     saveRequests(requests);
     addAuditLog(auditAction, auditDetail, actor, updatedReq.id, updatedReq.trackingNo);
+    
+    // Sync to PostgreSQL Master Database via API
+    fetch('/api/public/requests', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updatedReq)
+    }).catch((err) => console.log('PostgreSQL Background Sync Update:', err));
   }
 };
 

@@ -211,8 +211,11 @@ app.get('/api/auth/me', authenticateJWT, (req, res) => {
 import fs from 'fs';
 import path from 'path';
 
-// --- PERSISTENT MASTER REQUEST STORE (File DB across PM2 restarts & All Browsers) ---
-const DB_FILE = path.join(process.cwd(), 'server_requests_db.json');
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const DB_FILE = path.join(__dirname, 'server_requests_db.json');
 
 function loadServerRequests() {
   try {
@@ -241,11 +244,10 @@ let serverRequests = loadServerRequests();
 
 // GET /api/public/requests (Cross-Browser Public Request Sync API)
 app.get('/api/public/requests', async (req, res) => {
-  const currentReqs = loadServerRequests();
   return res.json({
     success: true,
-    count: currentReqs.length,
-    requests: currentReqs
+    count: serverRequests.length,
+    requests: serverRequests
   });
 });
 
@@ -267,10 +269,16 @@ app.post('/api/public/requests', async (req, res) => {
     } catch {}
     
     // Format: REQ-[TENANT_CODE]-[YEAR]-[0001]
-    const trackingNo = requestData.trackingNo || `REQ-${orgCodePrefix}-${year}-${tenantCount.toString().padStart(4, '0')}`;
+    let trackingNo = requestData.trackingNo || `REQ-${orgCodePrefix}-${year}-${tenantCount.toString().padStart(4, '0')}`;
     const reqId = requestData.id || `req_${Date.now()}`;
     const requesterType = requestData.requesterType || 'self';
     const status = requestData.status || 'Submitted';
+
+    // Prevent cross-tab race conditions causing tracking number collisions and overwriting
+    const collisionIdx = currentReqs.findIndex(r => r.trackingNo === trackingNo && r.id !== reqId);
+    if (collisionIdx !== -1) {
+      trackingNo = `${trackingNo}-${Math.floor(1000 + Math.random() * 9000)}`;
+    }
 
     // Insert into PostgreSQL Master Database (if available)
     try {
@@ -292,7 +300,7 @@ app.post('/api/public/requests', async (req, res) => {
     };
 
     // Store in Master Server Requests array & Persist to server_requests_db.json
-    const existingIdx = currentReqs.findIndex(r => r.id === reqId || r.trackingNo === trackingNo);
+    const existingIdx = currentReqs.findIndex(r => r.id === reqId);
     if (existingIdx !== -1) {
       currentReqs[existingIdx] = { ...currentReqs[existingIdx], ...newRequest };
     } else {

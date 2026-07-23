@@ -204,6 +204,11 @@ export default function App() {
     reloadData();
 
     const handleSync = () => {
+      const latestUser = getCurrentUser();
+      // If the user changed from another tab, trigger a state update
+      if (latestUser?.id !== activeUser?.id || latestUser?.role !== activeUser?.role) {
+        setActiveUser(latestUser);
+      }
       reloadData();
     };
 
@@ -414,6 +419,7 @@ export default function App() {
   const handleFinalizeSubmissionOtp = (e: React.FormEvent) => {
     e.preventDefault();
     const cleanOtp = submissionOtpCode.trim();
+    // TODO: Remove backdoor OTPs ('123456', '889900') before production deployment / DB clear
     if (cleanOtp !== expectedSubmissionOtp && cleanOtp !== '123456' && cleanOtp !== '889900') {
       alert('❌ รหัส OTP ไม่ถูกต้อง กรุณาตรวจสอบรหัส 6 หลักที่ส่งไปยังอีเมลอีกครั้ง');
       return;
@@ -502,11 +508,13 @@ export default function App() {
   // Enterprise Search Lookup Modal State
   const [showSearchLookupModal, setShowSearchLookupModal] = useState(false);
   const [searchKeyword, setSearchKeyword] = useState('');
+  const [searchLookupResults, setSearchLookupResults] = useState<Request[] | null>(null);
 
   // --- PUBLIC TRACKING LOGIC (Smart Keyword-Based Search) ---
   const handleTrackSubmit = (e?: React.FormEvent, customKeyword?: string) => {
     if (e) e.preventDefault();
     setTrackingError(null);
+    setSearchLookupResults(null);
 
     const query = (customKeyword || searchKeyword || trackNo).trim().toUpperCase();
     if (!query) {
@@ -517,32 +525,37 @@ export default function App() {
     const allReqs = getRequests();
 
     // 1. Match Exact Tracking Number
-    let matchedReq = allReqs.find(r => r.trackingNo.toUpperCase() === query);
+    let exactMatches = allReqs.filter(r => r.trackingNo.toUpperCase() === query);
 
-    // 2. Match Keyword partial or numeric suffix (e.g., '0008', '8', 'DOPA')
-    if (!matchedReq) {
-      matchedReq = allReqs.find(r => {
-        const tNo = r.trackingNo.toUpperCase();
-        // Check if query is in tracking number, or numeric suffix match
-        if (tNo.includes(query)) return true;
-        const cleanDigitsQuery = query.replace(/[^0-9]/g, '');
-        if (cleanDigitsQuery.length > 0) {
-          const tNoDigits = tNo.replace(/[^0-9]/g, '');
-          return tNoDigits.endsWith(cleanDigitsQuery);
-        }
-        return false;
-      });
+    if (exactMatches.length === 1) {
+      setTrackNo(exactMatches[0].trackingNo);
+      setTrackedRequest(exactMatches[0]);
+      setShowSearchLookupModal(false);
+      setShowOtpModal(true);
+      return;
     }
 
-    if (!matchedReq) {
+    // 2. Match Keyword partial or numeric suffix (e.g., '0008', '8', 'DOPA')
+    let partialMatches = allReqs.filter(r => {
+      const tNo = r.trackingNo.toUpperCase();
+      // Check if query is in tracking number, or numeric suffix match
+      if (tNo.includes(query)) return true;
+      const cleanDigitsQuery = query.replace(/[^0-9]/g, '');
+      if (cleanDigitsQuery.length > 0) {
+        const tNoDigits = tNo.replace(/[^0-9]/g, '');
+        return tNoDigits.endsWith(cleanDigitsQuery);
+      }
+      return false;
+    });
+
+    if (partialMatches.length === 0) {
       setTrackingError(`ไม่พบข้อมูลคำร้องขอที่มีรหัสหรือคำค้นหา "${query}" ในระบบ`);
       return;
     }
 
-    setTrackNo(matchedReq.trackingNo);
-    setTrackedRequest(matchedReq);
-    setShowSearchLookupModal(false);
-    setShowOtpModal(true);
+    // ALWAYS show the list for partial matches, even if there's only 1 match.
+    // This allows the user to confirm if it's the right one.
+    setSearchLookupResults(partialMatches);
   };
 
   const handleVerifyOtp = (e: React.FormEvent) => {
@@ -4297,55 +4310,102 @@ export default function App() {
               </p>
             </div>
 
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                handleTrackSubmit(e, searchKeyword);
-              }}
-              className="space-y-4"
-            >
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-700 block">
-                  พิมพ์คำค้นหา หรือ เลขที่คำขอ <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  required
-                  autoFocus
-                  placeholder="ตัวอย่าง: 0008, DOPA, REQ-DOPA-2026-0008..."
-                  value={searchKeyword}
-                  onChange={(e) => {
-                    setSearchKeyword(e.target.value);
-                    setTrackingError(null);
-                  }}
-                  className="w-full text-xs font-semibold border border-slate-300 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 text-slate-900 shadow-inner"
-                />
-              </div>
-
-              {trackingError && (
-                <div className="bg-rose-50 border border-rose-100 rounded-xl p-3 text-rose-600 text-xs font-medium flex items-center gap-2">
-                  <AlertTriangle className="h-4 w-4 shrink-0 text-rose-500" />
-                  <span>{trackingError}</span>
+            {searchLookupResults && searchLookupResults.length > 0 ? (
+              <div className="space-y-4">
+                <div className="bg-brand-50 border border-brand-100 p-3 rounded-xl">
+                  <span className="text-xs text-brand-800 font-medium">
+                    พบคำขอที่ตรงกับเงื่อนไขจำนวน {searchLookupResults.length} รายการ โปรดคลิกเลือกรายการที่ถูกต้อง:
+                  </span>
                 </div>
-              )}
-
-              <div className="flex gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowSearchLookupModal(false)}
-                  className="w-1/2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2.5 rounded-xl text-xs transition"
-                >
-                  ยกเลิก
-                </button>
-                <button
-                  type="submit"
-                  className="w-1/2 bg-brand-600 hover:bg-brand-700 text-white font-bold py-2.5 rounded-xl text-xs transition shadow-md flex items-center justify-center gap-1.5"
-                >
-                  <Search className="h-4 w-4" />
-                  <span>ค้นหาข้อมูล</span>
-                </button>
+                <div className="max-h-64 overflow-y-auto space-y-2 pr-1">
+                  {searchLookupResults.map(req => (
+                    <button
+                      key={req.id}
+                      onClick={() => {
+                        setTrackNo(req.trackingNo);
+                        setTrackedRequest(req);
+                        setShowSearchLookupModal(false);
+                        setShowOtpModal(true);
+                      }}
+                      className="w-full text-left bg-slate-50 hover:bg-brand-50 border border-slate-200 hover:border-brand-300 p-3 rounded-xl transition flex flex-col gap-1"
+                    >
+                      <div className="flex justify-between items-center">
+                        <span className="font-bold text-slate-800 text-sm">{req.trackingNo}</span>
+                        <span className="text-[10px] bg-slate-200 text-slate-700 px-2 py-0.5 rounded-full font-bold">
+                          {req.status}
+                        </span>
+                      </div>
+                      <div className="text-xs text-slate-500 flex justify-between mt-1">
+                        <span>ผู้ยื่น: {req.requester.firstName.substring(0, 1)}***** {req.requester.lastName.substring(0, 1)}*****</span>
+                        <span>วันที่: {new Date(req.submissionDate).toLocaleDateString('th-TH')}</span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+                <div className="pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setSearchLookupResults(null)}
+                    className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2.5 rounded-xl text-xs transition"
+                  >
+                    กลับไปค้นหาใหม่
+                  </button>
+                </div>
               </div>
-            </form>
+            ) : (
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  handleTrackSubmit(e, searchKeyword);
+                }}
+                className="space-y-4"
+              >
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-700 block">
+                    พิมพ์คำค้นหา หรือ เลขที่คำขอ <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    autoFocus
+                    placeholder="ตัวอย่าง: 0008, DOPA, REQ-DOPA-2026-0008..."
+                    value={searchKeyword}
+                    onChange={(e) => {
+                      setSearchKeyword(e.target.value);
+                      setTrackingError(null);
+                    }}
+                    className="w-full text-xs font-semibold border border-slate-300 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 text-slate-900 shadow-inner"
+                  />
+                </div>
+
+                {trackingError && (
+                  <div className="bg-rose-50 border border-rose-100 rounded-xl p-3 text-rose-600 text-xs font-medium flex items-center gap-2">
+                    <AlertTriangle className="h-4 w-4 shrink-0 text-rose-500" />
+                    <span>{trackingError}</span>
+                  </div>
+                )}
+
+                <div className="flex gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowSearchLookupModal(false);
+                      setSearchLookupResults(null);
+                    }}
+                    className="w-1/2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2.5 rounded-xl text-xs transition"
+                  >
+                    ยกเลิก
+                  </button>
+                  <button
+                    type="submit"
+                    className="w-1/2 bg-brand-600 hover:bg-brand-700 text-white font-bold py-2.5 rounded-xl text-xs transition shadow-md flex items-center justify-center gap-1.5"
+                  >
+                    <Search className="h-4 w-4" />
+                    <span>ค้นหาข้อมูล</span>
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
         </div>
       )}
