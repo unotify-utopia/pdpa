@@ -131,6 +131,9 @@ export default function App() {
   const [withdrawReasonText, setWithdrawReasonText] = useState('');
   const [withdrawOtpCode, setWithdrawOtpCode] = useState('');
 
+  // Attachment Document Preview Modal State
+  const [previewAttachment, setPreviewAttachment] = useState<{ name: string; fileUrl: string; size: number; isMasked?: boolean; watermarkApplied?: boolean } | null>(null);
+
   // Active Selections
   const [selectedTargetOrgId, setSelectedTargetOrgId] = useState<string>('');
   const [tenantSearchQuery, setTenantSearchQuery] = useState<string>('');
@@ -2535,18 +2538,13 @@ export default function App() {
                                 <button
                                   type="button"
                                   onClick={() => {
-                                    // Log download of uploader ID
                                     addAuditLog('VIEW_FILE', `เจ้าหน้าที่เปิดดูเอกสารประกอบ: ${att.name}`, activeUser, activeRequestObj.id, activeRequestObj.trackingNo);
-                                    if (att.fileUrl.startsWith('data:image')) {
-                                      const w = window.open();
-                                      w?.document.write(`<img src="${att.fileUrl}" style="max-width:100%"/>`);
-                                    } else {
-                                      alert('กำลังจำลองเปิดดูเนื้อหาเอกสารตามมาตรการความลับข้อมูล');
-                                    }
+                                    setPreviewAttachment(att);
                                   }}
-                                  className="text-brand-600 hover:text-brand-800 p-1 font-semibold"
+                                  className="bg-brand-50 hover:bg-brand-100 text-brand-700 font-bold px-2.5 py-1 rounded transition text-[11px] flex items-center gap-1 border border-brand-200"
                                 >
-                                  ดูไฟล์
+                                  <Search className="h-3 w-3" />
+                                  <span>ดูไฟล์เอกสาร</span>
                                 </button>
                               </div>
                             </div>
@@ -3940,6 +3938,81 @@ export default function App() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {/* --- ENTERPRISE ATTACHMENT DOCUMENT PREVIEW MODAL --- */}
+      {previewAttachment && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-fadeIn">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-3xl w-full max-h-[90vh] flex flex-col overflow-hidden">
+            {/* Header Toolbar */}
+            <div className="bg-slate-900 text-white px-6 py-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-brand-600 text-white rounded-xl">
+                  <FileText className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-sm text-white">{previewAttachment.name}</h3>
+                  <p className="text-[10px] text-slate-400">
+                    ขนาดไฟล์: {Math.round(previewAttachment.size / 1024)} KB 
+                    {previewAttachment.isMasked && <span className="ml-2 text-emerald-400 font-bold">• ผ่านการ Masked ปิดบังข้อมูล</span>}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPreviewAttachment(null)}
+                className="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold h-8 w-8 rounded-full flex items-center justify-center transition"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Viewer Content Area */}
+            <div className="flex-1 p-6 overflow-y-auto bg-slate-100 flex items-center justify-center min-h-[350px]">
+              {previewAttachment.fileUrl.startsWith('data:image') || previewAttachment.fileUrl.startsWith('blob:') || previewAttachment.name.endsWith('.png') || previewAttachment.name.endsWith('.jpg') ? (
+                <div className="bg-white p-3 rounded-xl shadow-md border border-slate-200 max-w-full text-center space-y-2">
+                  <img
+                    src={previewAttachment.fileUrl}
+                    alt={previewAttachment.name}
+                    className="max-h-[60vh] mx-auto object-contain rounded-lg border border-slate-100"
+                  />
+                  <span className="text-[10px] text-slate-400 block font-mono">
+                    ✓ แสดงผลไฟล์ภาพเอกสารสิทธิ์ความละเอียดสูง
+                  </span>
+                </div>
+              ) : (
+                <div className="bg-white p-8 rounded-2xl shadow-md border border-slate-200 text-center max-w-md space-y-3">
+                  <FileText className="h-16 w-16 text-brand-600 mx-auto" />
+                  <h4 className="font-bold text-slate-800 text-sm">{previewAttachment.name}</h4>
+                  <p className="text-xs text-slate-500 leading-relaxed">
+                    เอกสารประกอบฉบับเต็มถูกจัดเก็บแบบเข้ารหัสตามมาตรฐานความปลอดภัยข้อมูล พ.ร.บ. คุ้มครองข้อมูลส่วนบุคคล
+                  </p>
+                  <a
+                    href={previewAttachment.fileUrl}
+                    download={previewAttachment.name}
+                    className="inline-flex items-center justify-center gap-2 bg-brand-600 hover:bg-brand-700 text-white font-bold px-4 py-2 rounded-xl text-xs transition shadow-sm"
+                  >
+                    <Download className="h-4 w-4" />
+                    <span>ดาวน์โหลดตรวจสอบไฟล์เต็ม</span>
+                  </a>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer Controls */}
+            <div className="bg-white border-t border-slate-200 px-6 py-3.5 flex justify-between items-center">
+              <span className="text-[11px] text-slate-400 font-medium">
+                🔒 บันทึกประวัติการเปิดดูเอกสารเข้าตาราง Audit Log เรียบร้อย
+              </span>
+              <button
+                type="button"
+                onClick={() => setPreviewAttachment(null)}
+                className="bg-brand-600 hover:bg-brand-700 text-white font-bold py-2 px-6 rounded-xl text-xs transition shadow-sm"
+              >
+                เสร็จสิ้นการตรวจดู
+              </button>
+            </div>
           </div>
         </div>
       )}
