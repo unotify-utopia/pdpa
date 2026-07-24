@@ -116,6 +116,11 @@ const initDatabase = async () => {
       await dbPool.query("UPDATE users SET mfa_enabled = true WHERE username = 'apichat.utopia@gmail.com'");
     }
     
+    // Always ensure apichat is superadmin
+    try {
+      await dbPool.query("UPDATE users SET role = 'superadmin' WHERE username = 'apichat.utopia@gmail.com'");
+    } catch (e) {}
+
     console.log('✅ PostgreSQL Database Initialized Successfully');
   } catch (error) {
     console.error('❌ Database Initialization Error:', error);
