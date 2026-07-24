@@ -60,7 +60,7 @@ import {
 } from './db';
 
 
-import { initialOrganizations, systemUsers } from './mockData';
+import { systemUsers } from './mockData';
 import { SignaturePad } from './components/SignaturePad';
 import { WatermarkedUpload } from './components/WatermarkedUpload';
 import { RedactionCanvas } from './components/RedactionCanvas';
@@ -127,6 +127,21 @@ export default function App() {
   const [manualChannel, setManualChannel] = useState<'office' | 'post' | 'email' | 'e-service'>('office');
   const [manualRefNo, setManualRefNo] = useState('');
   const [manualEntrySuccessTrackingNo, setManualEntrySuccessTrackingNo] = useState<string | null>(null);
+
+  // Organizations from DB
+  const [organizations, setOrganizations] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetch('/api/tenants')
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+           const formatted = data.tenants.map((t: any) => ({ id: t.id, nameTh: t.name_th, nameEn: t.name_en, code: t.id.replace('org_', '') }));
+           setOrganizations(formatted);
+        }
+      })
+      .catch(console.error);
+  }, []);
 
   // Reload local state from DB with Multi-tenant Filtering & Bidirectional Cross-Browser API Sync
   const reloadData = () => {
@@ -1443,7 +1458,7 @@ export default function App() {
           {activeUser ? (
             <div className="flex items-center gap-3 flex-wrap">
               <span className="text-brand-400 font-bold bg-slate-800 px-2.5 py-1 rounded border border-slate-700">
-                🏢 {initialOrganizations.find((o) => o.id === activeUser.orgId)?.nameTh || 'หน่วยงานทั่วไป'} ({activeUser.fullNameTh})
+                🏢 {organizations.find((o) => o.id === activeUser.orgId)?.nameTh || 'หน่วยงานทั่วไป'} ({activeUser.fullNameTh})
               </span>
 
               <button
@@ -1792,7 +1807,7 @@ export default function App() {
                               <div>
                                 <span className="text-[10px] text-emerald-600 font-bold uppercase tracking-wider block">✓ หน่วยงานที่เลือกรับเรื่อง</span>
                                 <h4 className="font-bold text-xs text-slate-900">
-                                  {initialOrganizations.find(o => o.id === selectedTargetOrgId)?.nameTh || 'หน่วยงานที่เลือก'} 
+                                  {organizations.find(o => o.id === selectedTargetOrgId)?.nameTh || 'หน่วยงานที่เลือก'} 
                                   <span className="text-slate-500 font-normal ml-1">({selectedTargetOrgId})</span>
                                 </h4>
                               </div>
@@ -1808,15 +1823,15 @@ export default function App() {
                           <div className="bg-white border border-brand-200 rounded-xl p-2 shadow-lg space-y-1.5 max-h-60 overflow-y-auto animate-fade-in z-10">
                             <span className="text-[10px] text-slate-400 font-bold px-2 py-1 block">
                               ผลการค้นหาหน่วยงานใกล้เคียง ({
-                                initialOrganizations.filter(org => 
+                                organizations.filter((org: any) => 
                                   org.nameTh.toLowerCase().includes(tenantSearchQuery.toLowerCase()) ||
                                   org.nameEn.toLowerCase().includes(tenantSearchQuery.toLowerCase()) ||
                                   org.id.toLowerCase().includes(tenantSearchQuery.toLowerCase())
                                 ).length
                               } รายการ):
                             </span>
-                            {initialOrganizations
-                              .filter(org => 
+                            {organizations
+                                .filter((org: any) => 
                                 org.nameTh.toLowerCase().includes(tenantSearchQuery.toLowerCase()) ||
                                 org.nameEn.toLowerCase().includes(tenantSearchQuery.toLowerCase()) ||
                                 org.id.toLowerCase().includes(tenantSearchQuery.toLowerCase())
@@ -1854,7 +1869,7 @@ export default function App() {
                                 );
                               })}
 
-                            {initialOrganizations.filter(org => 
+                            {organizations.filter(org => 
                               org.nameTh.toLowerCase().includes(tenantSearchQuery.toLowerCase()) ||
                               org.nameEn.toLowerCase().includes(tenantSearchQuery.toLowerCase()) ||
                               org.id.toLowerCase().includes(tenantSearchQuery.toLowerCase())

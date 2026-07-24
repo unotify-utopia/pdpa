@@ -1,7 +1,7 @@
 // Backend Auth & API Service Layer
 import type { User } from '../types';
 
-const API_BASE_URL = 'http://localhost:3001/api';
+const API_BASE_URL = '/api';
 
 export interface LoginResponse {
   success: boolean;

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ShieldCheck, Building2, UserCheck, Key, Lock, LogOut, Plus, Sun, Moon, QrCode, Smartphone, CheckCircle2, Trash2 } from 'lucide-react';
 
 interface Tenant {
@@ -31,28 +31,50 @@ export default function App() {
 
   const [activeTab, setActiveTab] = useState<'tenants' | 'users'>('tenants');
 
+  // Token state
+  const [token, setToken] = useState<string | null>(null);
+
   // Master Tenants List State
-  const [tenants, setTenants] = useState<Tenant[]>([
-    { id: 'org_dopa', nameTh: 'กรมการปกครอง (Department of Provincial Administration)', nameEn: 'DOPA', email: 'pdpa@dopa.go.th', phone: '02-221-8150', status: 'active' },
-    { id: 'org_rd', nameTh: 'กรมสรรพากร (Revenue Department)', nameEn: 'RD', email: 'pdpa@rd.go.th', phone: '02-272-8000', status: 'active' },
-    { id: 'org_tech_th', nameTh: 'บริษัท ไทยเทคโนโลยี อินโนเวชั่น จำกัด', nameEn: 'Thai Tech', email: 'dpo@thaitech.co.th', phone: '02-999-8888', status: 'active' }
-  ]);
+  const [tenants, setTenants] = useState<Tenant[]>([]);
 
   // Master Users List State
-  const [users, setUsers] = useState<User[]>([
-    { id: 'usr_admin', orgId: 'org_dopa', username: 'admin.pdpa', fullName: 'สมเจตน์ จัดการดี (DOPA Admin)', email: 'admin@dopa.go.th', role: 'admin', department: 'เทคโนโลยีสารสนเทศ' },
-    { id: 'usr_intake', orgId: 'org_dopa', username: 'intake.pdpa', fullName: 'กิตติพงษ์ รับเรื่อง (DOPA Intake)', email: 'intake@dopa.go.th', role: 'intake', department: 'ศูนย์รับเรื่องร้องเรียน' },
-    { id: 'usr_dpo', orgId: 'org_dopa', username: 'dpo.pdpa', fullName: 'สุรพงษ์ ยุติธรรม (DOPA DPO)', email: 'dpo@dopa.go.th', role: 'dpo', department: 'กลุ่มงานคุ้มครองข้อมูลส่วนบุคคล' },
-    { id: 'usr_approver', orgId: 'org_dopa', username: 'exec.pdpa', fullName: 'ดร. ประภาส อธิบดี (DOPA Exec)', email: 'director@dopa.go.th', role: 'approver', department: 'ผู้บริหารระดับสูง' }
-  ]);
+  const [users, setUsers] = useState<User[]>([]);
+
+  // Fetch Data from Backend
+  const fetchData = async (authToken: string) => {
+    try {
+      const headers = { 'Authorization': `Bearer ${authToken}` };
+      const [tenantsRes, usersRes] = await Promise.all([
+        fetch('http://localhost:3001/api/tenants', { headers }),
+        fetch('http://localhost:3001/api/users', { headers })
+      ]);
+      const tenantsData = await tenantsRes.json();
+      const usersData = await usersRes.json();
+      if (tenantsData.success) setTenants(tenantsData.tenants);
+      if (usersData.success) setUsers(usersData.users);
+    } catch (err) {
+      console.error('Failed to fetch data', err);
+    }
+  };
 
   // Step 1: Check Credentials
-  const handleStep1Submit = (e: React.FormEvent) => {
+  const handleStep1Submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (password === 'admin1234' || password === '123456') {
-      setLoginStep('mfa');
-    } else {
-      alert(' Username หรือ Password ไม่ถูกต้อง');
+    try {
+      const res = await fetch('http://localhost:3001/api/super-admin/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setToken(data.token);
+        setLoginStep('mfa');
+      } else {
+        alert(data.message || 'Username หรือ Password ไม่ถูกต้อง');
+      }
+    } catch (err) {
+      alert('ไม่สามารถเชื่อมต่อระบบหลังบ้านได้ (Server Offline)');
     }
   };
 
@@ -61,6 +83,7 @@ export default function App() {
     e.preventDefault();
     if (mfaCode.trim() === '123456' || mfaCode.trim().length === 6) {
       setLoginStep('authenticated');
+      if (token) fetchData(token);
     } else {
       alert('รหัส MFA Code 6 หลักไม่ถูกต้อง (ลองใช้ 123456)');
     }
@@ -129,52 +152,50 @@ export default function App() {
   };
 
   // Submit Tenant Form (Strict Validation)
-  const handleTenantFormSubmit = (e: React.FormEvent) => {
+  const handleTenantFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     // Strict Mandatory Validation
-    if (!tenantFormData.nameTh.trim()) {
-      alert('กรุณากรอก "ชื่อหน่วยงาน (ภาษาไทย)"');
-      return;
-    }
-    if (!tenantFormData.nameEn.trim()) {
-      alert('กรุณากรอก "ชื่อหน่วยงาน (ภาษาอังกฤษ / ชื่อย่อ)"');
-      return;
-    }
-    if (!tenantFormData.id.trim()) {
-      alert('กรุณากรอก "รหัสประจำหน่วยงานในระบบ"');
-      return;
-    }
-    if (!tenantFormData.email.trim()) {
-      alert('กรุณากรอก "อีเมลติดต่อทางการ"');
-      return;
-    }
-    if (!tenantFormData.phone.trim()) {
-      alert('กรุณากรอก "เบอร์โทรศัพท์ติดต่อ" สำหรับช่องทางติดต่อผู้ให้บริการ');
-      return;
-    }
+    if (!tenantFormData.nameTh.trim()) return alert('กรุณากรอก "ชื่อหน่วยงาน (ภาษาไทย)"');
+    if (!tenantFormData.nameEn.trim()) return alert('กรุณากรอก "ชื่อหน่วยงาน (ภาษาอังกฤษ / ชื่อย่อ)"');
+    if (!tenantFormData.id.trim()) return alert('กรุณากรอก "รหัสประจำหน่วยงานในระบบ"');
+    if (!tenantFormData.email.trim()) return alert('กรุณากรอก "อีเมลติดต่อทางการ"');
+    if (!tenantFormData.phone.trim()) return alert('กรุณากรอก "เบอร์โทรศัพท์ติดต่อ" สำหรับช่องทางติดต่อผู้ให้บริการ');
 
     // Require Email OTP Verification for new tenants
     if (!editingTenantId && !isEmailVerified) {
-      alert('กรุณากดปุ่ม "ส่งรหัส OTP ยืนยันอีเมล" และยืนยันตัวตนอีเมลก่อนบันทึก');
-      return;
+      return alert('กรุณากดปุ่ม "ส่งรหัส OTP ยืนยันอีเมล" และยืนยันตัวตนอีเมลก่อนบันทึก');
     }
 
-    if (editingTenantId) {
-      // Update existing
-      setTenants(tenants.map(t => t.id === editingTenantId ? { ...tenantFormData } : t));
-      alert(`อัปเดตข้อมูลหน่วยงาน "${tenantFormData.nameTh}" เรียบร้อยแล้ว`);
-    } else {
-      // Create new
-      if (tenants.some(t => t.id === tenantFormData.id.trim())) {
-        alert('รหัสหน่วยงาน (Tenant ID) นี้มีอยู่ในระบบแล้ว กรุณาใช้รหัสอื่น');
-        return;
+    try {
+      const headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` };
+      if (editingTenantId) {
+        // Update existing
+        await fetch(`http://localhost:3001/api/tenants/${editingTenantId}`, {
+          method: 'PUT',
+          headers,
+          body: JSON.stringify(tenantFormData)
+        });
+        alert(`อัปเดตข้อมูลหน่วยงาน "${tenantFormData.nameTh}" เรียบร้อยแล้ว`);
+      } else {
+        // Create new
+        const checkRes = await fetch('http://localhost:3001/api/tenants', { headers });
+        const checkData = await checkRes.json();
+        if (checkData.success && checkData.tenants.some((t: Tenant) => t.id === tenantFormData.id.trim())) {
+          return alert('รหัสหน่วยงาน (Tenant ID) นี้มีอยู่ในระบบแล้ว กรุณาใช้รหัสอื่น');
+        }
+        await fetch('http://localhost:3001/api/tenants', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify(tenantFormData)
+        });
+        alert(`สร้างหน่วยงานใหม่ "${tenantFormData.nameTh}" พร้อมยืนยันอีเมลสำเร็จเรียบร้อยแล้ว`);
       }
-      setTenants([...tenants, { ...tenantFormData, id: tenantFormData.id.trim() }]);
-      alert(`สร้างหน่วยงานใหม่ "${tenantFormData.nameTh}" พร้อมยืนยันอีเมลสำเร็จเรียบร้อยแล้ว`);
+      if (token) fetchData(token);
+      setShowTenantModal(false);
+    } catch (err) {
+      alert('Error saving tenant');
     }
-
-    setShowTenantModal(false);
   };
 
   // Delete Tenant Confirmation Modal State
@@ -182,7 +203,7 @@ export default function App() {
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
 
   // Handle Delete Tenant Confirmation
-  const handleConfirmDeleteTenant = (e: React.FormEvent) => {
+  const handleConfirmDeleteTenant = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!deletingTenant) return;
     
@@ -191,13 +212,18 @@ export default function App() {
       return;
     }
 
-    setTenants(tenants.filter(t => t.id !== deletingTenant.id));
-    // Also cleanup users under this tenant
-    setUsers(users.filter(u => u.orgId !== deletingTenant.id));
-    
-    alert(`🗑️ ลบหน่วยงาน "${deletingTenant.nameTh}" และยูสเซอร์ในสังกัดออกจากระบบเรียบร้อยแล้ว`);
-    setDeletingTenant(null);
-    setDeleteConfirmText('');
+    try {
+      await fetch(`http://localhost:3001/api/tenants/${deletingTenant.id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      alert(`🗑️ ลบหน่วยงาน "${deletingTenant.nameTh}" และยูสเซอร์ในสังกัดออกจากระบบเรียบร้อยแล้ว`);
+      if (token) fetchData(token);
+      setDeletingTenant(null);
+      setDeleteConfirmText('');
+    } catch (err) {
+      alert('Error deleting tenant');
+    }
   };
 
   // Modal States
@@ -225,14 +251,14 @@ export default function App() {
   };
 
   // Submit New User Form
-  const handleCreateUserSubmit = (e: React.FormEvent) => {
+  const handleCreateUserSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newUserData.username || !newUserData.fullName) {
       alert('กรุณากรอกข้อมูล Username และชื่อ-นามสกุลให้ครบถ้วน');
       return;
     }
 
-    const newUser: User = {
+    const newUser = {
       id: `usr_${Date.now()}`,
       orgId: newUserData.orgId,
       username: newUserData.username.trim(),
@@ -242,9 +268,18 @@ export default function App() {
       department: newUserData.department.trim() || 'หน่วยงานผู้ปฏิบัติงาน'
     };
 
-    setUsers([...users, newUser]);
-    setShowAddUserModal(false);
-    alert(`สร้างบัญชีเจ้าหน้าที่ "${newUser.fullName}" เรียบร้อยแล้ว`);
+    try {
+      await fetch('http://localhost:3001/api/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify(newUser)
+      });
+      if (token) fetchData(token);
+      setShowAddUserModal(false);
+      alert(`สร้างบัญชีเจ้าหน้าที่ "${newUser.fullName}" เรียบร้อยแล้ว (รหัสผ่านเริ่มต้น: 123456)`);
+    } catch (err) {
+      alert('Error creating user');
+    }
   };
 
   // Reset User Password

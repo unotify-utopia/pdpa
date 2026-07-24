@@ -8,6 +8,9 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import nodemailer from 'nodemailer';
+import * as otplib from 'otplib';
+const { authenticator } = otplib;
+import QRCode from 'qrcode';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -31,6 +34,91 @@ dbPool.on('connect', (client) => {
   console.log('⚡ Connected to PostgreSQL pdpa_prod_db Master Engine (Asia/Bangkok Timezone)');
   client.query("SET timezone = 'Asia/Bangkok'");
 });
+
+// Database Initialization
+const initDatabase = async () => {
+  try {
+    await dbPool.query(`
+      CREATE TABLE IF NOT EXISTS tenants (
+        id VARCHAR(50) PRIMARY KEY,
+        name_th VARCHAR(255) NOT NULL,
+        name_en VARCHAR(255) NOT NULL,
+        email VARCHAR(255) NOT NULL,
+        phone VARCHAR(50) NOT NULL,
+        status VARCHAR(20) DEFAULT 'active',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+      
+      CREATE TABLE IF NOT EXISTS users (
+        id VARCHAR(50) PRIMARY KEY,
+        org_id VARCHAR(50) REFERENCES tenants(id) ON DELETE CASCADE,
+        username VARCHAR(100) NOT NULL,
+        password_hash VARCHAR(255) NOT NULL,
+        full_name_th VARCHAR(255),
+        full_name_en VARCHAR(255),
+        email VARCHAR(255),
+        role VARCHAR(50) NOT NULL,
+        department VARCHAR(255),
+        mfa_enabled BOOLEAN DEFAULT false,
+        two_factor_secret VARCHAR(255),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE (org_id, username)
+      );
+
+      CREATE TABLE IF NOT EXISTS requests (
+        id VARCHAR(100) PRIMARY KEY,
+        org_id VARCHAR(50) REFERENCES tenants(id) ON DELETE CASCADE,
+        tracking_no VARCHAR(100) UNIQUE,
+        requester_type VARCHAR(50),
+        status VARCHAR(50),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+    
+    try {
+      await dbPool.query('ALTER TABLE users ADD COLUMN two_factor_secret VARCHAR(255)');
+      console.log('✅ Added two_factor_secret column to users table');
+    } catch (e) {
+      // Column might already exist, which is fine
+    }
+
+    // Seed initial tenants if empty
+    const { rows: existingTenants } = await dbPool.query('SELECT count(*) as count FROM tenants');
+    if (parseInt(existingTenants[0].count) === 0) {
+      console.log('🌱 Seeding initial tenants...');
+      await dbPool.query(`
+        INSERT INTO tenants (id, name_th, name_en, email, phone) VALUES 
+        ('org_dopa', 'กรมการปกครอง', 'DOPA', 'pdpa@dopa.go.th', '02-221-8150'),
+        ('org_rd', 'กรมสรรพากร', 'RD', 'pdpa@rd.go.th', '02-272-8000'),
+        ('org_tech_th', 'บริษัท ไทยเทคโนโลยี อินโนเวชั่น จำกัด', 'Thai Tech', 'dpo@thaitech.co.th', '02-999-8888');
+      `);
+    }
+
+    // Seed initial users if empty
+    const { rows: existingUsers } = await dbPool.query('SELECT count(*) as count FROM users');
+    if (parseInt(existingUsers[0].count) === 0) {
+      console.log('🌱 Seeding initial users...');
+      const defaultPassword = await bcrypt.hash('admin1234', 10);
+      await dbPool.query(`
+        INSERT INTO users (id, org_id, username, password_hash, full_name_th, email, role, department) VALUES 
+        ('usr_super_admin', 'org_dopa', 'super.admin', $1, 'Super Admin', 'admin@pdpa-system.or.th', 'superadmin', 'IT Core'),
+        ('usr_admin_01', 'org_dopa', 'admin.pdpa', $1, 'สมเจตน์ จัดการดี (DOPA Admin)', 'admin@dopa.go.th', 'admin', 'เทคโนโลยีสารสนเทศ'),
+        ('usr_intake_01', 'org_dopa', 'intake.pdpa', $1, 'กิตติพงษ์ รับเรื่อง (DOPA Intake)', 'intake@dopa.go.th', 'intake', 'ศูนย์รับเรื่องร้องเรียน'),
+        ('usr_dpo_01', 'org_dopa', 'dpo.pdpa', $1, 'สุรพงษ์ ยุติธรรม (DOPA DPO)', 'dpo@dopa.go.th', 'dpo', 'กลุ่มงานคุ้มครองข้อมูลส่วนบุคคล'),
+        ('usr_apichat', 'org_dopa', 'apichat.utopia@gmail.com', $1, 'Apichat Utopia', 'apichat.utopia@gmail.com', 'admin', 'IT Security');
+      `, [defaultPassword]);
+
+      // Enable MFA for apichat by default
+      await dbPool.query("UPDATE users SET mfa_enabled = true WHERE username = 'apichat.utopia@gmail.com'");
+    }
+    
+    console.log('✅ PostgreSQL Database Initialized Successfully');
+  } catch (error) {
+    console.error('❌ Database Initialization Error:', error);
+  }
+};
+
+initDatabase();
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -194,42 +282,194 @@ const addServerAuditLog = (action, details, actor, requestId, trackingNo) => {
 // --- AUTHENTICATION ROUTES ---
 
 // POST /api/auth/login
-app.post('/api/auth/login', (req, res) => {
+app.post('/api/auth/login', async (req, res) => {
   const { username, password } = req.body;
 
   if (!username || !password) {
     return res.status(400).json({ success: false, message: 'กรุณากรอก Username และ Password' });
   }
 
-  const user = users.find((u) => u.username.toLowerCase() === username.toLowerCase());
-  if (!user || !bcrypt.compareSync(password, user.passwordHash)) {
-    return res.status(401).json({ success: false, message: 'ชื่อผู้ใช้งานหรือรหัสผ่านไม่ถูกต้อง' });
+  try {
+    const { rows } = await dbPool.query('SELECT * FROM users WHERE username = $1', [username]);
+    if (rows.length === 0) {
+      return res.status(401).json({ success: false, message: 'ชื่อผู้ใช้งานหรือรหัสผ่านไม่ถูกต้อง' });
+    }
+
+    const user = rows[0];
+    const valid = await bcrypt.compare(password, user.password_hash);
+    if (!valid) {
+      return res.status(401).json({ success: false, message: 'ชื่อผู้ใช้งานหรือรหัสผ่านไม่ถูกต้อง' });
+    }
+
+    // 2FA / MFA Check
+    if (user.mfa_enabled) {
+      const { mfaCode } = req.body;
+      
+      if (!user.two_factor_secret) {
+        // Needs setup
+        return res.json({ success: true, requires2FASetup: true, username: user.username });
+      }
+
+      if (!mfaCode) {
+        return res.json({ success: true, requires2FA: true, message: 'กรุณากรอกรหัส 2FA จาก Google Authenticator' });
+      }
+
+      const isValid = authenticator.verify({ token: mfaCode, secret: user.two_factor_secret });
+      if (!isValid) {
+        return res.status(401).json({ success: false, message: 'รหัส 2FA ไม่ถูกต้อง' });
+      }
+    }
+
+    // Generate JWT token
+    const tokenPayload = {
+      id: user.id,
+      username: user.username,
+      fullNameTh: user.full_name_th,
+      email: user.email,
+      role: user.role,
+      department: user.department,
+      orgId: user.org_id
+    };
+
+    const token = jwt.sign(tokenPayload, JWT_SECRET, { expiresIn: '10h' });
+
+    addServerAuditLog('AUTH_LOGIN_SUCCESS', `เข้าสู่ระบบสำเร็จในบทบาท ${user.role.toUpperCase()}`, user);
+
+    return res.json({
+      success: true,
+      token,
+      user: tokenPayload
+    });
+  } catch (err) {
+    console.error('Login Error:', err);
+    return res.status(500).json({ success: false, message: 'Server error' });
   }
+});
 
-  // Generate JWT token (expires in 10 minutes according to security policy)
-  const tokenPayload = {
-    id: user.id,
-    username: user.username,
-    fullNameTh: user.fullNameTh,
-    email: user.email,
-    role: user.role,
-    department: user.department
-  };
+// POST /api/auth/2fa/setup
+app.post('/api/auth/2fa/setup', async (req, res) => {
+  const { username, password } = req.body;
+  if (!username || !password) return res.status(400).json({ success: false, message: 'กรุณากรอก Username และ Password' });
 
-  const token = jwt.sign(tokenPayload, JWT_SECRET, { expiresIn: '10m' });
+  try {
+    const { rows } = await dbPool.query('SELECT * FROM users WHERE username = $1', [username]);
+    if (rows.length === 0) return res.status(401).json({ success: false, message: 'ไม่พบผู้ใช้' });
 
-  addServerAuditLog('AUTH_LOGIN_SUCCESS', `เข้าสู่ระบบสำเร็จในบทบาท ${user.role.toUpperCase()}`, user);
+    const user = rows[0];
+    const valid = await bcrypt.compare(password, user.password_hash);
+    if (!valid) return res.status(401).json({ success: false, message: 'รหัสผ่านไม่ถูกต้อง' });
 
-  return res.json({
-    success: true,
-    token,
-    user: tokenPayload
-  });
+    const secret = authenticator.generateSecret();
+    const otpauth = authenticator.keyuri(user.username, 'PDPA Request System', secret);
+    const qrCodeUrl = await QRCode.toDataURL(otpauth);
+
+    // Save secret to DB
+    await dbPool.query('UPDATE users SET two_factor_secret = $1 WHERE username = $2', [secret, username]);
+
+    res.json({ success: true, qrCodeUrl, secret });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
 });
 
 // GET /api/auth/me
 app.get('/api/auth/me', authenticateJWT, (req, res) => {
   res.json({ success: true, user: req.user });
+});
+
+// --- SUPER ADMIN & TENANT MANAGEMENT ROUTES ---
+
+// POST /api/super-admin/login
+app.post('/api/super-admin/login', async (req, res) => {
+  const { username, password } = req.body;
+  if (!username || !password) return res.status(400).json({ success: false, message: 'กรุณากรอก Username และ Password' });
+  
+  try {
+    const { rows } = await dbPool.query('SELECT * FROM users WHERE username = $1 AND role = $2', [username, 'superadmin']);
+    if (rows.length === 0) return res.status(401).json({ success: false, message: 'ไม่พบบัญชีผู้ดูแลระบบกลาง' });
+    
+    const user = rows[0];
+    const valid = await bcrypt.compare(password, user.password_hash);
+    if (!valid) return res.status(401).json({ success: false, message: 'รหัสผ่านไม่ถูกต้อง' });
+    
+    const token = jwt.sign({ id: user.id, role: user.role, username: user.username }, JWT_SECRET, { expiresIn: '1h' });
+    return res.json({ success: true, token, user: { id: user.id, username: user.username, role: user.role } });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// GET /api/tenants
+app.get('/api/tenants', async (req, res) => {
+  try {
+    const { rows } = await dbPool.query('SELECT * FROM tenants ORDER BY created_at ASC');
+    res.json({ success: true, tenants: rows });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// POST /api/tenants
+app.post('/api/tenants', async (req, res) => {
+  const { id, nameTh, nameEn, email, phone, status } = req.body;
+  try {
+    await dbPool.query(
+      'INSERT INTO tenants (id, name_th, name_en, email, phone, status) VALUES ($1, $2, $3, $4, $5, $6)',
+      [id, nameTh, nameEn, email, phone, status || 'active']
+    );
+    res.json({ success: true, tenant: req.body });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// PUT /api/tenants/:id
+app.put('/api/tenants/:id', async (req, res) => {
+  const { nameTh, nameEn, email, phone, status } = req.body;
+  try {
+    await dbPool.query(
+      'UPDATE tenants SET name_th = $1, name_en = $2, email = $3, phone = $4, status = $5 WHERE id = $6',
+      [nameTh, nameEn, email, phone, status, req.params.id]
+    );
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// DELETE /api/tenants/:id
+app.delete('/api/tenants/:id', async (req, res) => {
+  try {
+    await dbPool.query('DELETE FROM tenants WHERE id = $1', [req.params.id]);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// GET /api/users
+app.get('/api/users', async (req, res) => {
+  try {
+    const { rows } = await dbPool.query('SELECT id, org_id, username, full_name_th as "fullName", email, role, department FROM users ORDER BY created_at ASC');
+    res.json({ success: true, users: rows.map(r => ({ ...r, orgId: r.org_id })) });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// POST /api/users
+app.post('/api/users', async (req, res) => {
+  const { id, orgId, username, fullName, email, role, department, password } = req.body;
+  try {
+    const pwdHash = await bcrypt.hash(password || '123456', 10);
+    await dbPool.query(
+      'INSERT INTO users (id, org_id, username, full_name_th, email, role, department, password_hash) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)',
+      [id, orgId, username, fullName, email, role, department, pwdHash]
+    );
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
 });
 
 // Filesystem DB logic
@@ -446,6 +686,14 @@ app.get('/api/requests', authenticateJWT, (req, res) => {
 // GET /api/audit-logs (View audit logs - protected)
 app.get('/api/audit-logs', authenticateJWT, requireRole(['admin', 'auditor', 'dpo']), (req, res) => {
   res.json({ success: true, auditLogs });
+});
+
+// --- STATIC FRONTEND SERVING (PRODUCTION) ---
+app.use(express.static(path.join(__dirname, 'dist')));
+
+// SPA Fallback
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
 
 app.listen(PORT, () => {

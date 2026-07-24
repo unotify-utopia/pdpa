@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
-import { Lock, Building2, User, KeyRound, ShieldCheck, AlertCircle, Search } from 'lucide-react';
+import { Lock, User, KeyRound, ShieldCheck, AlertCircle } from 'lucide-react';
 import type { User as UserType } from '../types';
-import { initialOrganizations, systemUsers } from '../mockData';
 
 interface StaffLoginModalProps {
   isOpen: boolean;
@@ -14,73 +13,122 @@ export const StaffLoginModal: React.FC<StaffLoginModalProps> = ({
   onClose,
   onLoginSuccess,
 }) => {
-  const [orgInput, setOrgInput] = useState('');
-  const [showOrgDropdown, setShowOrgDropdown] = useState(false);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [mfaStep, setMfaStep] = useState(false);
   const [otpCode, setOtpCode] = useState('');
-  const [pendingUser, setPendingUser] = useState<UserType | null>(null);
-
+  const [pendingUser, setPendingUser] = useState<any | null>(null);
+  const [setup2FAUrl, setSetup2FAUrl] = useState<string | null>(null);
+  
   if (!isOpen) return null;
 
-  const handleLoginSubmit = (e: React.FormEvent) => {
+  const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
-
-    // Detect organization by Org Code, Name search, or Email Domain
-    const query = orgInput.trim().toLowerCase();
-    const matchedOrg = initialOrganizations.find(
-      (o) =>
-        o.id.toLowerCase() === query ||
-        o.id.toLowerCase() === `org_${query}` ||
-        o.nameTh.toLowerCase() === query ||
-        o.nameTh.toLowerCase().includes(query) ||
-        o.nameEn.toLowerCase().includes(query) ||
-        (query.includes('dopa') && o.id === 'org_dopa') ||
-        (query.includes('rd') && o.id === 'org_rd') ||
-        ((query.includes('tech') || query.includes('tech_th')) && o.id === 'org_tech_th')
-    );
-
-    if (!matchedOrg) {
-      setErrorMsg('ไม่พบรหัสหรือชื่อหน่วยงานนี้ในระบบ (ลองพิมพ์: dopa, rd, tech, สรรพากร, ปกครอง)');
-      return;
-    }
-
-    // Search user matching orgId and username
-    const matchedUser = systemUsers.find(
-      (u) => u.orgId === matchedOrg.id && u.username.toLowerCase() === username.trim().toLowerCase()
-    );
-
-    if (!matchedUser) {
-      setErrorMsg(`ไม่พบบัญชีผู้ใช้ใน ${matchedOrg.nameTh} หรือชื่อผู้ใช้ไม่ถูกต้อง`);
-      return;
-    }
 
     if (password.trim() === '') {
       setErrorMsg('กรุณากรอกรหัสผ่าน');
       return;
     }
 
-    if (matchedUser.mfaEnabled) {
-      setPendingUser(matchedUser);
-      setMfaStep(true);
-    } else {
-      onLoginSuccess(matchedUser);
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      });
+      const data = await res.json();
+      
+      if (data.requires2FASetup) {
+        // Call setup 2fa
+        const setupRes = await fetch('/api/auth/2fa/setup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+        const setupData = await setupRes.json();
+        if (setupData.success) {
+          setSetup2FAUrl(setupData.qrCodeUrl);
+          setPendingUser({ username, password });
+          setMfaStep(true);
+        } else {
+          setErrorMsg(setupData.message || 'Error setting up 2FA');
+        }
+        return;
+      }
+
+      if (data.requires2FA) {
+        setPendingUser({ username, password });
+        setMfaStep(true);
+        return;
+      }
+
+      if (!data.success) {
+        setErrorMsg(data.message || 'ชื่อผู้ใช้งานหรือรหัสผ่านไม่ถูกต้อง');
+        return;
+      }
+
+      // Login success
+      const user: UserType = {
+        id: data.user.id,
+        orgId: data.user.orgId,
+        username: data.user.username,
+        fullNameTh: data.user.fullNameTh || data.user.username,
+        fullNameEn: '',
+        email: data.user.email,
+        role: data.user.role as any,
+        roles: data.user.roles || [data.user.role],
+        department: data.user.department,
+        mfaEnabled: true
+      };
+      onLoginSuccess(user);
       onClose();
+    } catch (err) {
+      setErrorMsg('ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้');
     }
   };
 
-  const handleMfaVerify = (e: React.FormEvent) => {
+  const handleMfaVerify = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (otpCode !== '123456' && otpCode.length < 6) {
-      setErrorMsg('รหัส OTP ไม่ถูกต้อง (รหัสทดสอบ: 123456)');
+    if (!otpCode || otpCode.length < 6) {
+      setErrorMsg('รหัส OTP ไม่ถูกต้อง กรุณากรอกรหัส 6 หลัก');
       return;
     }
-    if (pendingUser) {
-      onLoginSuccess(pendingUser);
+    
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          username: pendingUser.username, 
+          password: pendingUser.password,
+          mfaCode: otpCode 
+        })
+      });
+      const data = await res.json();
+      
+      if (!data.success) {
+        setErrorMsg(data.message || 'รหัส 2FA ไม่ถูกต้อง');
+        return;
+      }
+
+      const user: UserType = {
+        id: data.user.id,
+        orgId: data.user.orgId,
+        username: data.user.username,
+        fullNameTh: data.user.fullNameTh || data.user.username,
+        fullNameEn: '',
+        email: data.user.email,
+        role: data.user.role as any,
+        roles: data.user.roles || [data.user.role],
+        department: data.user.department,
+        mfaEnabled: true
+      };
+      onLoginSuccess(user);
       onClose();
+    } catch (err) {
+      setErrorMsg('ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้');
     }
   };
 
@@ -111,100 +159,9 @@ export const StaffLoginModal: React.FC<StaffLoginModalProps> = ({
 
           {!mfaStep ? (
             <form onSubmit={handleLoginSubmit} className="space-y-4">
-              {/* Organization Search / Org Code Input with Smart Autocomplete */}
-              <div className="space-y-1 relative">
-                <label className="text-xs font-semibold text-slate-700 flex items-center justify-between">
-                  <span className="flex items-center gap-1.5">
-                    <Building2 className="h-3.5 w-3.5 text-brand-600" />
-                    <span>ค้นหาหน่วยงาน / รหัสองค์กร (Org Code)</span>
-                  </span>
-                  <span className="text-[10px] text-brand-600 font-bold">พิมพ์ค้นหาได้ทันที ⚡</span>
-                </label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    required
-                    placeholder="พิมพ์ชื่อหน่วยงาน เช่น กรมการปกครอง, สรรพากร, หรือ dopa..."
-                    value={orgInput}
-                    onChange={(e) => {
-                      setOrgInput(e.target.value);
-                      setShowOrgDropdown(true);
-                    }}
-                    onFocus={() => setShowOrgDropdown(true)}
-                    className="w-full text-xs border border-slate-300 rounded-lg p-2.5 pl-8 pr-7 outline-none focus:ring-2 focus:ring-brand-500 text-slate-900 font-semibold"
-                  />
-                  <Search className="h-4 w-4 text-slate-400 absolute left-2.5 top-2.5" />
-                  {orgInput && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setOrgInput('');
-                        setShowOrgDropdown(false);
-                      }}
-                      className="absolute right-2.5 top-2.5 text-xs text-slate-400 hover:text-slate-600 font-bold"
-                    >
-                      ✕
-                    </button>
-                  )}
-                </div>
-
-                {/* Live Autocomplete Results Dropdown Overlay */}
-                {showOrgDropdown && orgInput.trim() !== '' && (
-                  <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-brand-300 rounded-xl shadow-2xl z-30 max-h-52 overflow-y-auto divide-y divide-slate-100 animate-fadeIn">
-                    <div className="p-1.5 bg-slate-50 text-[10px] text-slate-400 font-bold uppercase tracking-wider">
-                      ผลการค้นหาหน่วยงาน ({
-                        initialOrganizations.filter(o => 
-                          o.nameTh.toLowerCase().includes(orgInput.toLowerCase()) ||
-                          o.nameEn.toLowerCase().includes(orgInput.toLowerCase()) ||
-                          o.id.toLowerCase().includes(orgInput.toLowerCase())
-                        ).length
-                      } หน่วยงาน)
-                    </div>
-
-                    {initialOrganizations.filter(o => 
-                      o.nameTh.toLowerCase().includes(orgInput.toLowerCase()) ||
-                      o.nameEn.toLowerCase().includes(orgInput.toLowerCase()) ||
-                      o.id.toLowerCase().includes(orgInput.toLowerCase())
-                    ).length === 0 ? (
-                      <div className="p-3 text-center text-xs text-slate-400">
-                        ไม่พบหน่วยงานตรงกับ "{orgInput}"
-                      </div>
-                    ) : (
-                      initialOrganizations
-                        .filter(o => 
-                          o.nameTh.toLowerCase().includes(orgInput.toLowerCase()) ||
-                          o.nameEn.toLowerCase().includes(orgInput.toLowerCase()) ||
-                          o.id.toLowerCase().includes(orgInput.toLowerCase())
-                        )
-                        .map((org) => {
-                          const displayCode = org.id === 'org_tech_th' ? 'tech' : org.id.replace(/^org_/, '');
-                          return (
-                            <button
-                              key={org.id}
-                              type="button"
-                              onClick={() => {
-                                setOrgInput(org.nameTh);
-                                setShowOrgDropdown(false);
-                              }}
-                              className="w-full text-left p-2.5 hover:bg-brand-50 transition flex items-center justify-between group"
-                            >
-                              <div>
-                                <div className="text-xs font-bold text-slate-800 group-hover:text-brand-700">
-                                  {org.nameTh}
-                                </div>
-                                <div className="text-[10px] text-slate-400">
-                                  {org.nameEn}
-                                </div>
-                              </div>
-                              <span className="text-[10px] font-mono font-bold bg-slate-100 text-slate-700 px-2 py-0.5 rounded border border-slate-200 group-hover:bg-brand-600 group-hover:text-white group-hover:border-brand-600 transition">
-                                {displayCode}
-                              </span>
-                            </button>
-                          );
-                        })
-                    )}
-                  </div>
-                )}
+              {/* Form Body */}
+              <div className="space-y-1 text-center mb-4 text-xs text-slate-500">
+                เข้าสู่ระบบด้วยอีเมลหรือชื่อผู้ใช้งานของคุณ
               </div>
 
               {/* Username */}
@@ -216,7 +173,7 @@ export const StaffLoginModal: React.FC<StaffLoginModalProps> = ({
                 <input
                   type="text"
                   required
-                  placeholder="เช่น dpo.pdpa, intake.pdpa, dpo.rd"
+                  placeholder="อีเมล หรือ Username (เช่น apichat.utopia@gmail.com)"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   className="w-full text-xs border border-slate-300 rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-brand-500 text-slate-900"
@@ -239,12 +196,7 @@ export const StaffLoginModal: React.FC<StaffLoginModalProps> = ({
                 />
               </div>
 
-              <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-[11px] text-slate-500 leading-relaxed space-y-1">
-                <span className="font-bold block text-slate-700">💡 ข้อมูลทดสอบระบบแบบแยกหน่วยงาน:</span>
-                <div>• กรมการปกครอง: รหัส <code className="bg-white px-1 border rounded font-bold text-brand-700">dopa</code> | User = <code className="bg-white px-1 border rounded">dpo.pdpa</code> / <code className="bg-white px-1 border rounded">intake.pdpa</code></div>
-                <div>• กรมสรรพากร: รหัส <code className="bg-white px-1 border rounded font-bold text-brand-700">rd</code> | User = <code className="bg-white px-1 border rounded">dpo.rd</code> / <code className="bg-white px-1 border rounded">intake.rd</code></div>
-                <div>• บริษัท ไทยเทค: รหัส <code className="bg-white px-1 border rounded font-bold text-brand-700">tech</code> | User = <code className="bg-white px-1 border rounded">intake.tech</code> / <code className="bg-white px-1 border rounded">dpo.tech</code></div>
-              </div>
+              {/* Removed mockup hint block */}
 
               <div className="flex gap-2 pt-2">
                 <button
@@ -266,13 +218,20 @@ export const StaffLoginModal: React.FC<StaffLoginModalProps> = ({
           ) : (
             /* MFA Step */
             <form onSubmit={handleMfaVerify} className="space-y-4">
-              <div className="p-3 bg-brand-50 border border-brand-200 rounded-xl text-xs text-brand-900 leading-relaxed">
-                <span className="font-bold block mb-0.5">ยืนยันตัวตน 2 ปัจจัย (MFA Required):</span>
-                ระบบส่งรหัส OTP 6 หลัก ไปที่ <span className="font-bold">{pendingUser?.email}</span> แล้ว
+              <div className="p-3 bg-brand-50 border border-brand-200 rounded-xl text-xs text-brand-900 leading-relaxed text-center">
+                <span className="font-bold block mb-1 text-sm">ยืนยันตัวตน 2 ปัจจัย (MFA Required)</span>
+                {setup2FAUrl ? (
+                  <div className="flex flex-col items-center justify-center space-y-2 mt-2">
+                    <span className="font-semibold text-rose-600">สแกน QR Code เพื่อตั้งค่า Google Authenticator</span>
+                    <img src={setup2FAUrl} alt="2FA QR Code" className="w-32 h-32 border-2 border-brand-300 rounded" />
+                  </div>
+                ) : (
+                  <span>กรุณาเปิดแอป <span className="font-bold">Google Authenticator</span> เพื่อดูรหัส 6 หลัก</span>
+                )}
               </div>
 
               <div className="space-y-1">
-                <label className="text-xs font-semibold text-slate-700 text-center block">ระบุรหัส OTP (รหัสทดสอบ: 123456)</label>
+                <label className="text-xs font-semibold text-slate-700 text-center block">ระบุรหัส 2FA (6 หลัก)</label>
                 <input
                   type="text"
                   maxLength={6}
@@ -287,7 +246,10 @@ export const StaffLoginModal: React.FC<StaffLoginModalProps> = ({
               <div className="flex gap-2 pt-2">
                 <button
                   type="button"
-                  onClick={() => setMfaStep(false)}
+                  onClick={() => {
+                    setMfaStep(false);
+                    setSetup2FAUrl(null);
+                  }}
                   className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold py-2.5 rounded-lg transition"
                 >
                   ย้อนกลับ
@@ -296,7 +258,7 @@ export const StaffLoginModal: React.FC<StaffLoginModalProps> = ({
                   type="submit"
                   className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-2.5 rounded-lg transition shadow-md"
                 >
-                  ยืนยันรหัส OTP
+                  ยืนยันรหัส 2FA
                 </button>
               </div>
             </form>

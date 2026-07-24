@@ -210,8 +210,8 @@ export interface Request {
   requesterType: RequesterType;
   requester: Requester;
   representative?: Representative;
-  contactChannel: 'web' | 'office' | 'post' | 'email';
-  refNo?: string; // Reference number from original channel if post/email
+  contactChannel: 'web' | 'office' | 'post' | 'email' | 'e-service';
+  refNo?: string; // Reference number from original channel if post/email/e-service
   status: RequestStatus;
   submissionDate: string;
   receivedDate?: string;
