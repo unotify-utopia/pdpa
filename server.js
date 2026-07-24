@@ -78,9 +78,13 @@ const initDatabase = async () => {
     try {
       await dbPool.query('ALTER TABLE users ADD COLUMN two_factor_secret VARCHAR(255)');
       console.log('✅ Added two_factor_secret column to users table');
-    } catch (e) {
-      // Column might already exist, which is fine
-    }
+    } catch (e) {}
+
+    // Migration: rename password to password_hash if it exists
+    try {
+      await dbPool.query('ALTER TABLE users RENAME COLUMN password TO password_hash');
+      console.log('✅ Renamed password to password_hash in users table');
+    } catch (e) {}
 
     // Seed initial tenants if empty
     const { rows: existingTenants } = await dbPool.query('SELECT count(*) as count FROM tenants');
@@ -691,8 +695,8 @@ app.get('/api/audit-logs', authenticateJWT, requireRole(['admin', 'auditor', 'dp
 // --- STATIC FRONTEND SERVING (PRODUCTION) ---
 app.use(express.static(path.join(__dirname, 'dist')));
 
-// SPA Fallback
-app.get('*', (req, res) => {
+// SPA Fallback (Express 5 uses /(.*) instead of *)
+app.get('/(.*)', (req, res) => {
   res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
 
