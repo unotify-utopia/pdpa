@@ -266,7 +266,7 @@ const authenticateJWT = (req, res, next) => {
 const requireRole = (allowedRoles) => {
   return (req, res, next) => {
     // Superadmin has all privileges implicitly
-    if (!req.user || (!allowedRoles.includes(req.user.role) && req.user.role !== 'superadmin')) {
+    if (!req.user || (!allowedRoles.includes(req.user.role) && !req.user.isSuperAdmin)) {
       return res.status(403).json({
         success: false,
         message: `Forbidden: Access restricted to roles [${allowedRoles.join(', ')}]`
@@ -345,7 +345,9 @@ app.post('/api/auth/login', async (req, res) => {
       username: user.username,
       fullNameTh: user.full_name_th,
       email: user.email,
-      role: user.role,
+      // For UI compatibility, superadmin pretends to be 'admin' so all menus and buttons show up
+      role: user.role === 'superadmin' ? 'admin' : user.role,
+      isSuperAdmin: user.role === 'superadmin', 
       department: user.department,
       orgId: user.org_id
     };
