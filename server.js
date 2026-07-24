@@ -695,8 +695,8 @@ app.get('/api/audit-logs', authenticateJWT, requireRole(['admin', 'auditor', 'dp
 // --- STATIC FRONTEND SERVING (PRODUCTION) ---
 app.use(express.static(path.join(__dirname, 'dist')));
 
-// SPA Fallback (Express 5 uses /(.*) instead of *)
-app.get('/(.*)', (req, res) => {
+// SPA Fallback (Express 5 safe)
+app.use((req, res) => {
   res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
 
