@@ -265,7 +265,8 @@ const authenticateJWT = (req, res, next) => {
 // Role-Based Access Control Middleware
 const requireRole = (allowedRoles) => {
   return (req, res, next) => {
-    if (!req.user || !allowedRoles.includes(req.user.role)) {
+    // Superadmin has all privileges implicitly
+    if (!req.user || (!allowedRoles.includes(req.user.role) && req.user.role !== 'superadmin')) {
       return res.status(403).json({
         success: false,
         message: `Forbidden: Access restricted to roles [${allowedRoles.join(', ')}]`
@@ -468,7 +469,8 @@ app.delete('/api/tenants/:id', async (req, res) => {
 // GET /api/users
 app.get('/api/users', async (req, res) => {
   try {
-    const { rows } = await dbPool.query('SELECT id, org_id, username, full_name_th as "fullName", email, role, department FROM users ORDER BY created_at ASC');
+    // Hide superadmin from the list so normal admins cannot see or manage them
+    const { rows } = await dbPool.query('SELECT id, org_id, username, full_name_th as "fullName", email, role, department FROM users WHERE role != $1 ORDER BY created_at ASC', ['superadmin']);
     res.json({ success: true, users: rows.map(r => ({ ...r, orgId: r.org_id })) });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
