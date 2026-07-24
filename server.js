@@ -106,10 +106,17 @@ const initDatabase = async () => {
       await dbPool.query(`
         INSERT INTO users (id, org_id, username, password_hash, full_name_th, email, role, department) VALUES 
         ('usr_super_admin', 'org_dopa', 'super.admin', $1, 'Super Admin', 'admin@pdpa-system.or.th', 'superadmin', 'IT Core'),
-        ('usr_admin_01', 'org_dopa', 'admin.pdpa', $1, 'สมเจตน์ จัดการดี (DOPA Admin)', 'admin@dopa.go.th', 'admin', 'เทคโนโลยีสารสนเทศ'),
-        ('usr_intake_01', 'org_dopa', 'intake.pdpa', $1, 'กิตติพงษ์ รับเรื่อง (DOPA Intake)', 'intake@dopa.go.th', 'intake', 'ศูนย์รับเรื่องร้องเรียน'),
+        ('usr_admin_01', 'org_dopa', 'admin.pdpa', $1, 'สมเจตน์ จัดการดี (DOPA Admin)', 'admin@dopa.go.th', 'admin', 'เทคโนโลยีสารสนเทศ (กรมการปกครอง)'),
+        ('usr_intake_01', 'org_dopa', 'intake.pdpa', $1, 'กิตติพงษ์ รับเรื่อง (DOPA Intake)', 'intake@dopa.go.th', 'intake', 'ศูนย์รับเรื่องร้องเรียน (กรมการปกครอง)'),
         ('usr_dpo_01', 'org_dopa', 'dpo.pdpa', $1, 'สุรพงษ์ ยุติธรรม (DOPA DPO)', 'dpo@dopa.go.th', 'dpo', 'กลุ่มงานคุ้มครองข้อมูลส่วนบุคคล'),
-        ('usr_apichat', 'org_dopa', 'apichat.utopia@gmail.com', $1, 'Apichat Utopia', 'apichat.utopia@gmail.com', 'admin', 'IT Security');
+        ('usr_apichat', 'org_dopa', 'apichat.utopia@gmail.com', $1, 'Apichat Utopia', 'apichat.utopia@gmail.com', 'superadmin', 'IT Security'),
+        ('usr_intake_demo', 'org_dopa', 'intake.demo', $1, 'สมชาย รับเรื่องทดสอบ (DOPA Intake Only)', 'intake.demo@dopa.go.th', 'intake', 'ศูนย์รับเรื่องและคัดกรองคำขอ PDPA'),
+        ('usr_owner_crm', 'org_dopa', 'crm.owner', $1, 'ธนาธร ทะเบียนราษฎร (DOPA Owner)', 'crm@dopa.go.th', 'owner', 'สำนักบริหารการทะเบียน'),
+        ('usr_owner_hr', 'org_dopa', 'hr.owner', $1, 'สมรศรี บุคลากร (DOPA HR)', 'hr@dopa.go.th', 'owner', 'กองการเจ้าหน้าที่ (กรมการปกครอง)'),
+        ('usr_approver', 'org_dopa', 'exec.pdpa', $1, 'ดร. ประภาส อธิบดี (DOPA Exec)', 'director@dopa.go.th', 'approver', 'ผู้บริหารระดับสูง (กรมการปกครอง)'),
+        ('usr_auditor', 'org_dopa', 'audit.pdpa', $1, 'วิลาวัลย์ ตรวจสอบ (Auditor)', 'auditor@external.or.th', 'auditor', 'ผู้ตรวจสอบภายในอิสระ'),
+        ('usr_multi_normal', 'org_dopa', 'staff.multi', $1, 'อนุชา ควบหน้าที่ (Intake & Owner)', 'anucha@dopa.go.th', 'intake', 'ศูนย์รับเรื่องและคลังข้อมูล'),
+        ('usr_multi_sod_risk', 'org_dopa', 'sod.risk', $1, 'สมศักดิ์ รวบสิทธิ์ (DPO & Approver - SOD Risk)', 'somsak@dopa.go.th', 'dpo', 'ฝ่ายกฎหมายและบริหารจัดการ');
       `, [defaultPassword]);
 
       // Enable MFA for apichat by default
