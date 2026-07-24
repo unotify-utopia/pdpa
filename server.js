@@ -102,7 +102,7 @@ const initDatabase = async () => {
     const { rows: existingUsers } = await dbPool.query('SELECT count(*) as count FROM users');
     if (parseInt(existingUsers[0].count) === 0) {
       console.log('🌱 Seeding initial users...');
-      const defaultPassword = await bcrypt.hash('admin1234', 10);
+      const defaultPassword = await bcrypt.hash('123456', 10);
       await dbPool.query(`
         INSERT INTO users (id, org_id, username, password_hash, full_name_th, email, role, department) VALUES 
         ('usr_super_admin', 'org_dopa', 'super.admin', $1, 'Super Admin', 'admin@pdpa-system.or.th', 'superadmin', 'IT Core'),
@@ -119,6 +119,13 @@ const initDatabase = async () => {
     // Always ensure apichat is superadmin
     try {
       await dbPool.query("UPDATE users SET role = 'superadmin' WHERE username = 'apichat.utopia@gmail.com'");
+    } catch (e) {}
+    
+    // 🧪 TESTING MODE: Force all user passwords to '123456'
+    try {
+      const testPassword = await bcrypt.hash('123456', 10);
+      await dbPool.query("UPDATE users SET password_hash = $1", [testPassword]);
+      console.log('🧪 TESTING MODE: Forced all user passwords to 123456');
     } catch (e) {}
 
     console.log('✅ PostgreSQL Database Initialized Successfully');
@@ -311,7 +318,9 @@ app.post('/api/auth/login', async (req, res) => {
     }
 
     // 2FA / MFA Check
-    if (user.mfa_enabled) {
+    const SKIP_MFA_FOR_TESTING = true; // TODO: Remove this in production
+    
+    if (user.mfa_enabled && !SKIP_MFA_FOR_TESTING) {
       const { mfaCode } = req.body;
       
       if (!user.two_factor_secret) {
