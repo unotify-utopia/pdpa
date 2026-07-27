@@ -575,7 +575,16 @@ app.post('/api/super-admin/change-password', authenticateJWT, async (req, res) =
 app.get('/api/tenants', authenticateJWT, requireRole(['admin']), async (req, res) => {
   try {
     const { rows } = await dbPool.query('SELECT * FROM tenants ORDER BY created_at ASC');
-    res.json({ success: true, tenants: rows });
+    const mappedTenants = rows.map(r => ({
+      id: r.id,
+      nameTh: r.name_th,
+      nameEn: r.name_en,
+      email: r.email,
+      phone: r.phone,
+      status: r.status,
+      createdAt: r.created_at
+    }));
+    res.json({ success: true, tenants: mappedTenants });
   } catch (err) {
     res.status(500).json({ success: false, error: 'Database error' });
   }
