@@ -933,16 +933,22 @@ app.get('/api/audit-logs', authenticateJWT, requireRole(['admin', 'auditor', 'dp
 });
 
 // --- SUPER ADMIN STATIC FRONTEND SERVING ---
-app.use('/super-admin', express.static(path.join(__dirname, 'super-admin-app', 'dist')));
+app.use('/super-admin', express.static(path.join(__dirname, 'super-admin-app', 'dist'), { index: false }));
 app.use('/super-admin', (req, res) => {
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
   res.sendFile(path.join(__dirname, 'super-admin-app', 'dist', 'index.html'));
 });
 
 // --- MAIN STATIC FRONTEND SERVING (PRODUCTION) ---
-app.use(express.static(path.join(__dirname, 'dist')));
+app.use(express.static(path.join(__dirname, 'dist'), { index: false }));
 
 // SPA Fallback (Express 5 safe)
 app.use((req, res) => {
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
   res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
 
