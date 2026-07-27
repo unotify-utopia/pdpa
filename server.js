@@ -301,7 +301,7 @@ const authenticateJWT = (req, res, next) => {
 const requireRole = (allowedRoles) => {
   return (req, res, next) => {
     // Superadmin has all privileges implicitly
-    if (!req.user || (!allowedRoles.includes(req.user.role) && !req.user.isSuperAdmin)) {
+    if (!req.user || (!allowedRoles.includes(req.user.role) && req.user.role !== 'superadmin')) {
       return res.status(403).json({
         success: false,
         message: `Forbidden: Access restricted to roles [${allowedRoles.join(', ')}]`

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ShieldCheck, Building2, UserCheck, Key, Lock, LogOut, Plus, Sun, Moon, CheckCircle2, Trash2, Mail, AlertCircle } from 'lucide-react';
 
 interface Tenant {
@@ -72,6 +72,15 @@ export default function App() {
     }
   };
 
+  useEffect(() => {
+    const savedToken = localStorage.getItem('adminToken');
+    if (savedToken) {
+      setToken(savedToken);
+      setLoginStep('authenticated');
+      fetchData(savedToken);
+    }
+  }, []);
+
   // Step 1: Check Credentials
   const handleStep1Submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -88,6 +97,7 @@ export default function App() {
           setLoginStep('mfa');
         } else if (data.token) {
           setToken(data.token);
+          localStorage.setItem('adminToken', data.token);
           setLoginStep('authenticated');
           fetchData(data.token);
         }
@@ -115,6 +125,7 @@ export default function App() {
       const data = await res.json();
       if (data.success && data.token) {
         setToken(data.token);
+        localStorage.setItem('adminToken', data.token);
         setLoginStep('authenticated');
         fetchData(data.token);
       } else {
@@ -583,6 +594,8 @@ export default function App() {
 
             <button
               onClick={() => {
+                localStorage.removeItem('adminToken');
+                setToken(null);
                 setLoginStep('credentials');
                 setPassword('');
                 setMfaCode('');
