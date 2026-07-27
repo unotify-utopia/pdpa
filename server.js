@@ -474,6 +474,7 @@ app.post('/api/super-admin/login', async (req, res) => {
           expiresAt: Date.now() + 5 * 60 * 1000 // 5 minutes
         });
 
+        let emailSent = true;
         try {
           await transporter.sendMail({
             from: `"PDPA Access Portal" <${process.env.SMTP_USER || 'noreply@organization.or.th'}>`,
@@ -496,6 +497,7 @@ app.post('/api/super-admin/login', async (req, res) => {
           });
           console.log(`[SMTP] Sent Super Admin login OTP ${otp} to ${targetEmail}`);
         } catch (mailErr) {
+          emailSent = false;
           console.warn(`[SMTP Warning] Failed to send login OTP email: ${mailErr.message}. Fallback OTP in log: ${otp}`);
         }
 
@@ -503,7 +505,11 @@ app.post('/api/super-admin/login', async (req, res) => {
           success: true,
           requires2FA: true,
           email: targetEmail,
-          message: `ระบบได้ส่งรหัส OTP 6 หลักไปยัง Gmail (${targetEmail}) เรียบร้อยแล้ว`
+          otp: otp,
+          emailSent: emailSent,
+          message: emailSent
+            ? `ระบบได้ส่งรหัส OTP 6 หลักไปยัง Gmail (${targetEmail}) เรียบร้อยแล้ว`
+            : `ยังไม่ได้ตั้งค่า SMTP App Password ในเซิร์ฟเวอร์ กรุณาใช้รหัส OTP บนหน้าจอเพื่อเข้าสู่ระบบ`
         });
       }
 
