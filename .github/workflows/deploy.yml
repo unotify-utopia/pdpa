@@ -22,9 +22,10 @@ jobs:
             set -e
             cd /root/pdpa
             echo "⬇️ Pulling latest code..."
+            git reset --hard HEAD
             git pull https://github.com/unotify-utopia/pdpa.git main
             echo "📦 Installing dependencies..."
-            npm install
+            npm install --legacy-peer-deps
             echo "🔨 Building frontend..."
             npm run build
             echo "♻️ Restarting server..."
