@@ -268,7 +268,7 @@ export const createRequest = (requestData: Omit<Request, 'id' | 'uuid' | 'tracki
 };
 
 // Update Request Details & Status (Section 4)
-export const updateRequest = (updatedReq: Request, actor: User, auditAction: string, auditDetail: string) => {
+export const updateRequest = async (updatedReq: Request, actor: User, auditAction: string, auditDetail: string) => {
   const requests = getRequests();
   const index = requests.findIndex((r) => r.id === updatedReq.id);
   if (index !== -1) {
@@ -277,11 +277,17 @@ export const updateRequest = (updatedReq: Request, actor: User, auditAction: str
     addAuditLog(auditAction, auditDetail, actor, updatedReq.id, updatedReq.trackingNo);
     
     // Sync to PostgreSQL Master Database via API
-    fetch('/api/public/requests', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(updatedReq)
-    }).catch((err) => console.log('PostgreSQL Background Sync Update:', err));
+    try {
+      await fetch('/api/public/requests', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updatedReq)
+      });
+      // Force UI reload immediately instead of waiting for 3s interval
+      window.dispatchEvent(new Event('focus'));
+    } catch (err) {
+      console.log('PostgreSQL Background Sync Update:', err);
+    }
   }
 };
 

@@ -60,7 +60,6 @@ import {
 } from './db';
 
 
-import { systemUsers } from './mockData';
 import { SignaturePad } from './components/SignaturePad';
 import { WatermarkedUpload } from './components/WatermarkedUpload';
 import { RedactionCanvas } from './components/RedactionCanvas';
@@ -130,6 +129,9 @@ export default function App() {
 
   // Organizations from DB
   const [organizations, setOrganizations] = useState<any[]>([]);
+  
+  // Backend Users from DB
+  const [backendUsers, setBackendUsers] = useState<UserType[]>([]);
 
   useEffect(() => {
     fetch('/api/tenants')
@@ -143,79 +145,42 @@ export default function App() {
       .catch(console.error);
   }, []);
 
-  // Reload local state from DB with Multi-tenant Filtering & Bidirectional Cross-Browser API Sync
+  // Reload local state from DB
   const reloadData = () => {
     const currentUser = getCurrentUser();
-    let localReqs = getRequests();
     const allLogs = getAuditLogs();
 
-    const applyState = (reqs: Request[]) => {
-      if (currentUser && currentUser.orgId) {
-        setRequests(reqs.filter((r) => !r.orgId || r.orgId === currentUser.orgId));
-        setAuditLogs(allLogs.filter((l) => !l.orgId || l.orgId === currentUser.orgId));
-      } else {
-        setRequests(reqs);
-        setAuditLogs(allLogs);
-      }
-    };
+    // Setup Audit Logs from LocalStorage for now
+    if (currentUser && currentUser.orgId) {
+      setAuditLogs(allLogs.filter((l) => !l.orgId || l.orgId === currentUser.orgId));
+    } else {
+      setAuditLogs(allLogs);
+    }
 
-    // Apply local state immediately
-    applyState(localReqs);
-
-    // Sync from server background API
-    fetch('/api/public/requests', { cache: 'no-store' })
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.success && Array.isArray(data.requests)) {
-          const serverReqs: Request[] = data.requests;
-          const merged = [...localReqs];
-          let updated = false;
-
-          // 1. Download missing/updated requests from server
-          for (const serverReq of serverReqs) {
-            const idx = merged.findIndex((r) => r.id === serverReq.id || r.trackingNo === serverReq.trackingNo);
-            if (idx === -1) {
-              merged.unshift(serverReq);
-              updated = true;
-            } else {
-              // Update status/messages if newer or different
-              const localMsgCount = merged[idx].messageThread?.length || 0;
-              const serverMsgCount = serverReq.messageThread?.length || 0;
-              if (
-                merged[idx].status !== serverReq.status ||
-                localMsgCount !== serverMsgCount ||
-                merged[idx].statusHistory?.length !== serverReq.statusHistory?.length
-              ) {
-                merged[idx] = { ...merged[idx], ...serverReq };
-                updated = true;
-              }
-            }
-          }
-
-          // 2. Upload local-only requests to server
-          const localOnly = localReqs.filter(
-            (l) => !serverReqs.some((s) => s.id === l.id || s.trackingNo === l.trackingNo)
-          );
-
-          if (localOnly.length > 0) {
-            localOnly.forEach((req) => {
-              fetch('/api/public/requests', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(req),
-              }).catch(() => {});
-            });
-          }
-
-          if (updated) {
-            // Ensure requests are always sorted by latest submission date first
-            merged.sort((a, b) => new Date(b.submissionDate).getTime() - new Date(a.submissionDate).getTime());
-            saveRequests(merged);
-            applyState(merged);
-          }
-        }
+    if (currentUser) {
+      // Authenticated User: Fetch from secure API
+      const token = localStorage.getItem('pdpa_token');
+      fetch('/api/requests', {
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
       })
-      .catch(() => {});
+        .then(res => res.json())
+        .then(data => {
+          if (data.success && Array.isArray(data.requests)) {
+            setRequests(data.requests);
+          }
+        })
+        .catch(console.error);
+    } else {
+      // Public User: Fetch from public API
+      fetch('/api/public/requests', { cache: 'no-store' })
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.success && Array.isArray(data.requests)) {
+            setRequests(data.requests);
+          }
+        })
+        .catch(console.error);
+    }
 
     setConfig(getComplianceConfig());
     setTemplates(getDocumentTemplates());
@@ -247,6 +212,39 @@ export default function App() {
     };
   }, [activeUser]);
 
+  // Fetch Backend Users
+  useEffect(() => {
+    if (activeUser && (activeUser.role === 'admin' || activeUser.role === 'superadmin')) {
+      const token = localStorage.getItem('pdpa_token');
+      if (token) {
+        fetch('/api/users', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        })
+          .then(res => res.json())
+          .then(data => {
+            if (data.success && data.users) {
+              const usersWithSod = data.users.map((u: any) => {
+                // Determine SOD Warnings based on roles (mock logic)
+                const userRoles = u.roles || [u.role];
+                const warnings = [];
+                if (userRoles.includes('dpo') && userRoles.includes('approver')) {
+                   warnings.push('Conflict of Interest: DPO ไม่ควรเป็นผู้อนุมัติคำขอ (Approver) เพื่อรักษาสถานะผู้ประเมินอิสระ');
+                }
+                if (userRoles.includes('intake') && userRoles.includes('owner')) {
+                   warnings.push('Data Pipeline Risk: ผู้รับเรื่อง (Intake) ไม่ควรเป็นผู้ดึงข้อมูล (Owner) เองทั้งหมดโดยไม่มีคนสอบทาน');
+                }
+                return { ...u, sodWarnings: warnings };
+              });
+              setBackendUsers(usersWithSod);
+            }
+          })
+          .catch(console.error);
+      }
+    }
+  }, [activeUser]);
+
   // Withdraw OTP Verification Modal States
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
   const [withdrawStep, setWithdrawStep] = useState<'reason' | 'otp'>('reason');
@@ -265,6 +263,39 @@ export default function App() {
   const [tenantSearchQuery, setTenantSearchQuery] = useState<string>('');
   const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
   const [isNewRequestSuccess, setIsNewRequestSuccess] = useState<Request | null>(null);
+  
+  // User Management Modal State
+  const [isUserModalOpen, setIsUserModalOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<UserType | null>(null);
+  const [userForm, setUserForm] = useState<{
+    username: string;
+    fullNameTh: string;
+    fullNameEn: string;
+    email: string;
+    department: string;
+    role: Role;
+    roles: Role[];
+  }>({
+    username: '',
+    fullNameTh: '',
+    fullNameEn: '',
+    email: '',
+    department: 'ศูนย์รับเรื่องร้องเรียน (กรมการปกครอง)',
+    role: 'intake',
+    roles: ['intake']
+  });
+
+  // SOD helper function
+  const calculateSodWarnings = (rolesList: string[]): string[] => {
+    const warnings: string[] = [];
+    if (rolesList.includes('dpo') && rolesList.includes('approver')) {
+      warnings.push('Conflict of Interest: DPO ไม่ควรเป็นผู้อนุมัติคำขอ (Approver) เพื่อรักษาสถานะผู้ประเมินอิสระ');
+    }
+    if (rolesList.includes('intake') && rolesList.includes('owner')) {
+      warnings.push('Data Pipeline Risk: ผู้รับเรื่อง (Intake) ไม่ควรเป็นผู้ดึงข้อมูล (Owner) เองทั้งหมดโดยไม่มีคนสอบทาน');
+    }
+    return warnings;
+  };
   
   // --- REAL SMTP OTP LOGIC HELPER ---
   const getContactInfo = (req: Request) => {
@@ -1556,6 +1587,290 @@ export default function App() {
           setInternalTab('dashboard');
         }}
       />
+
+      {/* User & Access Management Modal */}
+      {isUserModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl max-w-2xl w-full shadow-2xl border border-slate-200 overflow-hidden animate-in fade-in zoom-in duration-200">
+            <div className="bg-brand-900 text-white px-6 py-4 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <UserCheck className="h-5 w-5 text-brand-300" />
+                <h3 className="font-bold text-base">
+                  {editingUser ? `จัดการสิทธิ์ผู้ใช้งาน: ${editingUser.fullNameTh}` : 'เพิ่มบัญชีเจ้าหน้าที่ใหม่ (Add Staff User)'}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsUserModalOpen(false)}
+                className="text-slate-300 hover:text-white font-bold text-lg leading-none"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="p-6 space-y-5 text-xs text-slate-700">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">รหัสผู้ใช้ (Username) *</label>
+                  <input
+                    type="text"
+                    disabled={!!editingUser}
+                    value={userForm.username}
+                    onChange={(e) => setUserForm({ ...userForm, username: e.target.value })}
+                    placeholder="เช่น staff.01"
+                    className="w-full border border-slate-300 rounded-lg p-2.5 font-mono text-brand-700 disabled:bg-slate-100 disabled:text-slate-500"
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">อีเมลงาน (Email) *</label>
+                  <input
+                    type="email"
+                    value={userForm.email}
+                    onChange={(e) => setUserForm({ ...userForm, email: e.target.value })}
+                    placeholder="เช่น somchai@dopa.go.th"
+                    className="w-full border border-slate-300 rounded-lg p-2.5"
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">ชื่อ-นามสกุล (ภาษาไทย) *</label>
+                  <input
+                    type="text"
+                    value={userForm.fullNameTh}
+                    onChange={(e) => setUserForm({ ...userForm, fullNameTh: e.target.value })}
+                    placeholder="เช่น สมชาย รับเรื่อง"
+                    className="w-full border border-slate-300 rounded-lg p-2.5 font-bold"
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">ชื่อ-นามสกุล (ภาษาอังกฤษ)</label>
+                  <input
+                    type="text"
+                    value={userForm.fullNameEn}
+                    onChange={(e) => setUserForm({ ...userForm, fullNameEn: e.target.value })}
+                    placeholder="เช่น Somchai Intake"
+                    className="w-full border border-slate-300 rounded-lg p-2.5"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">หน่วยงาน / แผนก (Department)</label>
+                <input
+                  type="text"
+                  value={userForm.department}
+                  onChange={(e) => setUserForm({ ...userForm, department: e.target.value })}
+                  placeholder="เช่น ศูนย์รับเรื่องและคัดกรองคำขอ PDPA"
+                  className="w-full border border-slate-300 rounded-lg p-2.5"
+                />
+              </div>
+
+              <div className="border-t border-slate-200 pt-4">
+                <label className="block font-bold text-slate-800 text-sm mb-2">
+                  บทบาทและสิทธิ์การทำงาน (Multi-Role Access Control)
+                </label>
+                <p className="text-[11px] text-slate-500 mb-3">
+                  เจ้าหน้าที่ 1 ท่านสามารถรับผิดชอบได้หลายบทบาทตามการกำหนดโครงสร้างการปฏิบัติงานในองค์กร
+                </p>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-2.5">
+                  {(['admin', 'intake', 'owner', 'dpo', 'approver', 'auditor'] as Role[]).map((roleKey) => {
+                    const isChecked = userForm.roles.includes(roleKey);
+                    const roleLabels: Record<Role, string> = {
+                      superadmin: 'SUPERADMIN - ผู้ดูแลสูงสุด',
+                      admin: 'ADMIN - ผู้ดูแลระบบ',
+                      intake: 'INTAKE - รับเรื่อง/คัดกรอง',
+                      owner: 'OWNER - หน่วยงานครอบครอง',
+                      dpo: 'DPO - คุ้มครองข้อมูล/กฎหมาย',
+                      approver: 'APPROVER - ผู้บริหารอนุมัติ',
+                      auditor: 'AUDITOR - ตรวจสอบอิสระ'
+                    };
+                    return (
+                      <label
+                        key={roleKey}
+                        className={`flex items-center gap-2.5 p-3 rounded-xl border cursor-pointer transition select-none ${
+                          isChecked
+                            ? 'bg-brand-50/70 border-brand-500 font-bold text-brand-900 shadow-sm'
+                            : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={(e) => {
+                            let nextRoles = [...userForm.roles];
+                            if (e.target.checked) {
+                              nextRoles.push(roleKey);
+                            } else {
+                              nextRoles = nextRoles.filter((r) => r !== roleKey);
+                            }
+                            if (nextRoles.length === 0) nextRoles = ['intake'];
+                            setUserForm({ ...userForm, roles: nextRoles, role: nextRoles[0] });
+                          }}
+                          className="h-4 w-4 rounded text-brand-600 focus:ring-brand-500"
+                        />
+                        <span className="text-xs uppercase">{roleLabels[roleKey]}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Real-time SOD Warning Display */}
+              {(() => {
+                const warnings = calculateSodWarnings(userForm.roles);
+                if (warnings.length > 0) {
+                  return (
+                    <div className="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-r-xl space-y-1">
+                      <div className="flex items-center gap-2 text-amber-900 font-bold">
+                        <AlertTriangle className="h-4 w-4 text-amber-600" />
+                        <span>⚠️ แจ้งเตือนความเสี่ยงขัดแย้งทางหน้าที่ (SOD Conflict Warning)</span>
+                      </div>
+                      <ul className="list-disc list-inside text-[11px] text-amber-800 space-y-0.5">
+                        {warnings.map((w, i) => (
+                          <li key={i}>{w}</li>
+                        ))}
+                      </ul>
+                      <p className="text-[10px] text-amber-700 pt-1">
+                        * สามารถบันทึกข้อมูลได้ แต่ระบบจะทำเครื่องหมายแจ้งเตือนความเสี่ยงในรายงาน Audit
+                      </p>
+                    </div>
+                  );
+                }
+                return (
+                  <div className="bg-emerald-50 border border-emerald-200 p-3 rounded-xl flex items-center gap-2 text-emerald-800">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+                    <span>✓ Compliant: สิทธิ์ที่เลือกสอดคล้องกับหลักการคานอำนาจและมาตรฐานความปลอดภัย SOD</span>
+                  </div>
+                );
+              })()}
+            </div>
+
+            <div className="bg-slate-50 border-t border-slate-200 px-6 py-4 flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                {editingUser && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const token = localStorage.getItem('pdpa_token');
+                        if (token) {
+                          fetch(`/api/users/${editingUser.id}`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                            body: JSON.stringify({ ...userForm, resetPassword: true })
+                          })
+                            .then((res) => res.json())
+                            .then((data) => {
+                              if (data.success) {
+                                alert('รหัสผ่านถูกตั้งค่าใหม่เป็น 123456 เรียบร้อยแล้ว');
+                              }
+                            });
+                        }
+                      }}
+                      className="bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 font-bold px-3 py-2 rounded-lg text-xs transition flex items-center gap-1.5"
+                    >
+                      <Lock className="h-3.5 w-3.5 text-amber-600" />
+                      <span>รีเซ็ตรหัสผ่านเป็น 123456</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (window.confirm(`ยืนยันการลบผู้ใช้: ${editingUser.fullNameTh} ออกจากระบบ?`)) {
+                          const token = localStorage.getItem('pdpa_token');
+                          if (token) {
+                            fetch(`/api/users/${editingUser.id}`, {
+                              method: 'DELETE',
+                              headers: { 'Authorization': `Bearer ${token}` }
+                            })
+                              .then((res) => res.json())
+                              .then((data) => {
+                                if (data.success) {
+                                  alert('ลบผู้ใช้งานสำเร็จ');
+                                  window.location.reload();
+                                }
+                              });
+                          }
+                        }
+                      }}
+                      className="bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-300 font-bold px-3 py-2 rounded-lg text-xs transition flex items-center gap-1.5"
+                    >
+                      <Trash2 className="h-3.5 w-3.5 text-rose-600" />
+                      <span>ลบผู้ใช้งาน</span>
+                    </button>
+                  </>
+                )}
+              </div>
+
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setIsUserModalOpen(false)}
+                  className="bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold px-4 py-2 rounded-lg text-xs transition"
+                >
+                  ยกเลิก
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const token = localStorage.getItem('pdpa_token');
+                    if (!userForm.username || !userForm.fullNameTh) {
+                      alert('กรุณากรอกรหัสผู้ใช้ และชื่อ-นามสกุลให้ครบถ้วน');
+                      return;
+                    }
+                    if (!token) return;
+
+                    if (editingUser) {
+                      fetch(`/api/users/${editingUser.id}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                        body: JSON.stringify(userForm)
+                      })
+                        .then((res) => res.json())
+                        .then((data) => {
+                          if (data.success) {
+                            alert('บันทึกการแก้ไขสิทธิ์เรียบร้อยแล้ว');
+                            setIsUserModalOpen(false);
+                            window.location.reload();
+                          } else {
+                            alert('เกิดข้อผิดพลาด: ' + data.error);
+                          }
+                        });
+                    } else {
+                      fetch('/api/users', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                        body: JSON.stringify({
+                          id: `usr_${Date.now()}`,
+                          orgId: activeUser?.orgId || 'org_dopa',
+                          username: userForm.username,
+                          fullName: userForm.fullNameTh,
+                          fullNameEn: userForm.fullNameEn || userForm.fullNameTh,
+                          email: userForm.email || `${userForm.username}@dopa.go.th`,
+                          role: userForm.role,
+                          roles: userForm.roles,
+                          department: userForm.department
+                        })
+                      })
+                        .then((res) => res.json())
+                        .then((data) => {
+                          if (data.success) {
+                            alert('เพิ่มผู้ใช้งานสำเร็จ! รหัสผ่านเริ่มต้นคือ 123456');
+                            setIsUserModalOpen(false);
+                            window.location.reload();
+                          } else {
+                            alert('เกิดข้อผิดพลาด: ' + data.error);
+                          }
+                        });
+                    }
+                  }}
+                  className="bg-brand-600 hover:bg-brand-700 text-white font-bold px-5 py-2 rounded-lg text-xs transition shadow-sm"
+                >
+                  บันทึกข้อมูล
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* --- RENDER VIEW 1: PUBLIC REQUEST PORTAL --- */}
       {view === 'public' && (
@@ -3320,6 +3635,27 @@ export default function App() {
                       </div>
                     )}
 
+                    {/* Close Request and Delivery management */}
+                    {['intake', 'admin'].includes(activeUser.role) && activeRequestObj.status === 'Ready for Delivery' && (
+                      <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-4">
+                        <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider">จัดส่งสำเนาและปิดเรื่อง (Delivery & Archive)</span>
+                        <p className="text-xs text-slate-500">ตรวจสอบสถานะชำระค่าธรรมเนียม (ถ้ามี) เรียบร้อยแล้ว กดปุ่มเพื่อบันทึกการส่งมอบข้อมูลปลอดภัย</p>
+                        
+                        <button
+                          onClick={() => {
+                            if (window.confirm('ยืนยันการจัดส่งข้อมูลให้เจ้าของข้อมูลและปิดเรื่องคำขอนี้?')) {
+                              changeRequestStatus(activeRequestObj.id, 'Closed', activeUser, 'จัดส่งมอบลิงก์ดาวน์โหลดอย่างปลอดภัยและปิดเรื่องสำเร็จ');
+                              window.location.reload();
+                            }
+                          }}
+                          className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm px-4 py-3 rounded-xl transition flex items-center justify-center gap-2"
+                        >
+                          <CheckCircle2 className="h-5 w-5" />
+                          <span>บันทึกการจัดส่งและปิดเรื่องคำขอ (Close Request)</span>
+                        </button>
+                      </div>
+                    )}
+
                     {/* Module B: Data Gathering Tasking (Section 3.5) */}
                     {['owner', 'admin', 'intake', 'dpo'].includes(activeUser.role) && (
                       <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-4">
@@ -4156,9 +4492,22 @@ export default function App() {
                       </div>
                       <button
                         type="button"
-                        onClick={() => alert('จำลองการเปิด Modal เพิ่มเจ้าหน้าที่ใหม่ในองค์กร')}
+                        onClick={() => {
+                          setEditingUser(null);
+                          setUserForm({
+                            username: '',
+                            fullNameTh: '',
+                            fullNameEn: '',
+                            email: '',
+                            department: 'ศูนย์รับเรื่องร้องเรียน (กรมการปกครอง)',
+                            role: 'intake',
+                            roles: ['intake']
+                          });
+                          setIsUserModalOpen(true);
+                        }}
                         className="bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs px-3.5 py-2 rounded-lg transition shadow-sm flex items-center gap-1.5"
                       >
+                        <Plus className="h-4 w-4" />
                         <span>+ เพิ่มผู้ใช้งานใหม่ (Add User)</span>
                       </button>
                     </div>
@@ -4177,8 +4526,8 @@ export default function App() {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 text-slate-700">
-                          {systemUsers
-                            .filter((u: UserType) => u.orgId === activeUser.orgId)
+                          {backendUsers
+                            .filter((u: UserType) => u.orgId === activeUser.orgId || activeUser.role === 'superadmin')
                             .map((user: UserType) => (
                               <tr key={user.id} className="hover:bg-slate-50/80 transition">
                                 <td className="p-3 font-bold text-slate-900">
@@ -4217,8 +4566,20 @@ export default function App() {
                                 <td className="p-3 text-center">
                                   <button
                                     type="button"
-                                    onClick={() => alert(`จำลองแก้ไขสิทธิ์ของ: ${user.fullNameTh}`)}
-                                    className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-2.5 py-1 rounded text-[11px] font-semibold transition"
+                                    onClick={() => {
+                                      setEditingUser(user);
+                                      setUserForm({
+                                        username: user.username,
+                                        fullNameTh: user.fullNameTh || '',
+                                        fullNameEn: user.fullNameEn || '',
+                                        email: user.email || '',
+                                        department: user.department || '',
+                                        role: user.role,
+                                        roles: (user.roles && user.roles.length > 0) ? user.roles : [user.role]
+                                      });
+                                      setIsUserModalOpen(true);
+                                    }}
+                                    className="bg-slate-100 hover:bg-brand-50 text-slate-700 hover:text-brand-700 border border-slate-200 hover:border-brand-300 px-2.5 py-1 rounded text-[11px] font-semibold transition"
                                   >
                                     แก้ไขสิทธิ์
                                   </button>

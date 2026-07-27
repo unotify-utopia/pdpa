@@ -14,19 +14,23 @@ import QRCode from 'qrcode';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const DB_FILE = path.join(__dirname, 'server_requests_db.json');
+// Legacy JSON file path removed
 
 // Set Server Process Timezone to Asia/Bangkok (GMT+7)
 process.env.TZ = 'Asia/Bangkok';
 
 const { Pool } = pg;
 
+if (!process.env.DB_PASSWORD) {
+  console.warn('⚠️ WARNING: DB_PASSWORD environment variable is missing. Database connection might fail.');
+}
+
 // PostgreSQL Connection Pool Configuration (Configured for Asia/Bangkok Timezone)
 const dbPool = new Pool({
   user: process.env.DB_USER || 'pdpa_admin',
   host: process.env.DB_HOST || 'localhost',
   database: process.env.DB_NAME || 'pdpa_prod_db',
-  password: process.env.DB_PASSWORD || 'PdpaSecure_Prod2026',
+  password: process.env.DB_PASSWORD, // Strict: Must be provided via .env
   port: parseInt(process.env.DB_PORT || '5432'),
 });
 
@@ -71,7 +75,24 @@ const initDatabase = async () => {
         tracking_no VARCHAR(100) UNIQUE,
         requester_type VARCHAR(50),
         status VARCHAR(50),
+        data JSONB,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE TABLE IF NOT EXISTS audit_logs (
+        id VARCHAR(100) PRIMARY KEY,
+        org_id VARCHAR(50),
+        timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        actor_id VARCHAR(50),
+        actor_name VARCHAR(255),
+        actor_role VARCHAR(50),
+        action VARCHAR(100),
+        request_id VARCHAR(100),
+        request_tracking_no VARCHAR(100),
+        ip_address VARCHAR(50),
+        user_agent TEXT,
+        details TEXT,
+        checksum VARCHAR(100)
       );
     `);
     
@@ -80,10 +101,21 @@ const initDatabase = async () => {
       console.log('✅ Added two_factor_secret column to users table');
     } catch (e) {}
 
+    try {
+      await dbPool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS roles JSONB DEFAULT '[]'::jsonb");
+      console.log('✅ Added roles JSONB column to users table');
+    } catch (e) {}
+
     // Migration: rename password to password_hash if it exists
     try {
       await dbPool.query('ALTER TABLE users RENAME COLUMN password TO password_hash');
       console.log('✅ Renamed password to password_hash in users table');
+    } catch (e) {}
+
+    // Migration: Add data JSONB column to requests if it doesn't exist
+    try {
+      await dbPool.query('ALTER TABLE requests ADD COLUMN data JSONB');
+      console.log('✅ Added data column to requests table');
     } catch (e) {}
 
     // Seed initial tenants if empty
@@ -145,9 +177,18 @@ initDatabase();
 
 const app = express();
 const PORT = process.env.PORT || 3001;
-const JWT_SECRET = process.env.JWT_SECRET || 'pdpa-super-secret-jwt-key-2026';
 
-app.use(cors());
+if (!process.env.JWT_SECRET) {
+  console.warn('⚠️ WARNING: JWT_SECRET environment variable is missing. Using a volatile secret for this session, which means all logged-in users will be kicked out upon restart.');
+}
+const JWT_SECRET = process.env.JWT_SECRET || require('crypto').randomBytes(64).toString('hex');
+
+// Restrict CORS to specific origins
+const corsOptions = {
+  origin: process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',') : ['https://pdpa.numcomputer.com', 'http://localhost:3000'],
+  optionsSuccessStatus: 200
+};
+app.use(cors(corsOptions));
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
@@ -235,22 +276,9 @@ const users = [
   }
 ];
 
-let auditLogs = [
-  {
-    id: 'log_seed_01',
-    timestamp: new Date().toISOString(),
-    actorId: 'system',
-    actorName: 'System Core',
-    actorRole: 'system',
-    action: 'SYSTEM_BOOT',
-    ipAddress: '127.0.0.1',
-    userAgent: 'Node.js Backend Server Engine',
-    details: 'เริ่มต้นระบบงานบริหารคำขอ PDPA Access Request Backend Service สำเร็จ',
-    checksum: 'a8f9c102'
-  }
-];
+// In-memory audit logs have been migrated to PostgreSQL.
 
-let requests = [];
+// In-memory requests array has been migrated to PostgreSQL.
 
 // JWT Authentication Middleware
 const authenticateJWT = (req, res, next) => {
@@ -284,23 +312,25 @@ const requireRole = (allowedRoles) => {
 };
 
 // Helper: Add Audit Log
-const addServerAuditLog = (action, details, actor, requestId, trackingNo) => {
-  const log = {
-    id: `log_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
-    timestamp: new Date().toISOString(),
-    actorId: actor?.id || 'system',
-    actorName: actor?.fullNameTh || 'System Server',
-    actorRole: actor?.role || 'system',
-    action,
-    requestId,
-    requestTrackingNo: trackingNo,
-    ipAddress: '127.0.0.1',
-    userAgent: 'Express Backend API',
-    details,
-    checksum: Math.abs(Date.now() % 1000000).toString(16)
-  };
-  auditLogs.unshift(log);
-  return log;
+const addServerAuditLog = async (action, details, actor, requestId, trackingNo, reqObj = null) => {
+  const logId = `log_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+  const timestamp = new Date().toISOString();
+  const actorId = actor?.id || 'system';
+  const actorName = actor?.fullNameTh || 'System Server';
+  const actorRole = actor?.role || 'system';
+  const ipAddress = reqObj ? (reqObj.headers['x-forwarded-for'] || reqObj.socket.remoteAddress) : '127.0.0.1';
+  const userAgent = reqObj ? reqObj.headers['user-agent'] : 'Express Backend API';
+  const checksum = Math.abs(Date.now() % 1000000).toString(16);
+
+  try {
+    await dbPool.query(
+      `INSERT INTO audit_logs (id, org_id, timestamp, actor_id, actor_name, actor_role, action, request_id, request_tracking_no, ip_address, user_agent, details, checksum) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
+      [logId, actor?.orgId || 'system', timestamp, actorId, actorName, actorRole, action, requestId, trackingNo, ipAddress, userAgent, details, checksum]
+    );
+  } catch (err) {
+    console.error('Failed to insert audit log to DB:', err);
+  }
 };
 
 // --- AUTHENTICATION ROUTES ---
@@ -361,7 +391,8 @@ app.post('/api/auth/login', async (req, res) => {
 
     const token = jwt.sign(tokenPayload, JWT_SECRET, { expiresIn: '10h' });
 
-    addServerAuditLog('AUTH_LOGIN_SUCCESS', `เข้าสู่ระบบสำเร็จในบทบาท ${user.role.toUpperCase()}`, user);
+    // Note: Passed req as the last argument to capture real IP & User-Agent
+    await addServerAuditLog('AUTH_LOGIN_SUCCESS', `เข้าสู่ระบบสำเร็จในบทบาท ${user.role.toUpperCase()}`, user, null, null, req);
 
     return res.json({
       success: true,
@@ -428,17 +459,18 @@ app.post('/api/super-admin/login', async (req, res) => {
 });
 
 // GET /api/tenants
-app.get('/api/tenants', async (req, res) => {
+app.get('/api/tenants', authenticateJWT, requireRole(['admin']), async (req, res) => {
   try {
     const { rows } = await dbPool.query('SELECT * FROM tenants ORDER BY created_at ASC');
     res.json({ success: true, tenants: rows });
   } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
+    res.status(500).json({ success: false, error: 'Database error' });
   }
 });
 
 // POST /api/tenants
-app.post('/api/tenants', async (req, res) => {
+app.post('/api/tenants', authenticateJWT, requireRole([]), async (req, res) => {
+  // Only superadmin can create tenants, requireRole([]) allows ONLY superadmin because of the implicit override
   const { id, nameTh, nameEn, email, phone, status } = req.body;
   try {
     await dbPool.query(
@@ -447,12 +479,12 @@ app.post('/api/tenants', async (req, res) => {
     );
     res.json({ success: true, tenant: req.body });
   } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
+    res.status(500).json({ success: false, error: 'Database error' });
   }
 });
 
 // PUT /api/tenants/:id
-app.put('/api/tenants/:id', async (req, res) => {
+app.put('/api/tenants/:id', authenticateJWT, requireRole([]), async (req, res) => {
   const { nameTh, nameEn, email, phone, status } = req.body;
   try {
     await dbPool.query(
@@ -461,82 +493,112 @@ app.put('/api/tenants/:id', async (req, res) => {
     );
     res.json({ success: true });
   } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
+    res.status(500).json({ success: false, error: 'Database error' });
   }
 });
 
 // DELETE /api/tenants/:id
-app.delete('/api/tenants/:id', async (req, res) => {
+app.delete('/api/tenants/:id', authenticateJWT, requireRole([]), async (req, res) => {
   try {
     await dbPool.query('DELETE FROM tenants WHERE id = $1', [req.params.id]);
     res.json({ success: true });
   } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
+    res.status(500).json({ success: false, error: 'Database error' });
   }
 });
 
 // GET /api/users
-app.get('/api/users', async (req, res) => {
+app.get('/api/users', authenticateJWT, requireRole(['admin']), async (req, res) => {
   try {
     // Hide superadmin from the list so normal admins cannot see or manage them
-    const { rows } = await dbPool.query('SELECT id, org_id, username, full_name_th as "fullName", email, role, department FROM users WHERE role != $1 ORDER BY created_at ASC', ['superadmin']);
-    res.json({ success: true, users: rows.map(r => ({ ...r, orgId: r.org_id })) });
+    const { rows } = await dbPool.query('SELECT id, org_id, username, full_name_th as "fullName", full_name_th as "fullNameTh", full_name_en as "fullNameEn", email, role, roles, department FROM users WHERE role != $1 ORDER BY created_at ASC', ['superadmin']);
+    res.json({
+      success: true,
+      users: rows.map(r => ({
+        ...r,
+        orgId: r.org_id,
+        roles: (r.roles && Array.isArray(r.roles) && r.roles.length > 0) ? r.roles : [r.role]
+      }))
+    });
   } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
+    console.error('Error fetching users:', err);
+    res.status(500).json({ success: false, error: 'Database error' });
   }
 });
 
 // POST /api/users
-app.post('/api/users', async (req, res) => {
-  const { id, orgId, username, fullName, email, role, department, password } = req.body;
+app.post('/api/users', authenticateJWT, requireRole(['admin']), async (req, res) => {
+  const { id, orgId, username, fullName, fullNameEn, email, role, roles, department, password } = req.body;
   try {
     const pwdHash = await bcrypt.hash(password || '123456', 10);
+    const assignedRoles = (roles && Array.isArray(roles) && roles.length > 0) ? roles : [role || 'intake'];
+    const primaryRole = role || assignedRoles[0] || 'intake';
     await dbPool.query(
-      'INSERT INTO users (id, org_id, username, full_name_th, email, role, department, password_hash) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)',
-      [id, orgId, username, fullName, email, role, department, pwdHash]
+      'INSERT INTO users (id, org_id, username, full_name_th, full_name_en, email, role, roles, department, password_hash) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)',
+      [id, orgId, username, fullName, fullNameEn || fullName, email, primaryRole, JSON.stringify(assignedRoles), department, pwdHash]
     );
     res.json({ success: true });
   } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
+    console.error('Error creating user:', err);
+    res.status(500).json({ success: false, error: 'Database error' });
   }
 });
 
-// Filesystem DB logic
-function loadServerRequests() {
+// PUT /api/users/:id
+app.put('/api/users/:id', authenticateJWT, requireRole(['admin']), async (req, res) => {
+  const { id } = req.params;
+  const { fullNameTh, fullNameEn, email, role, roles, department, resetPassword } = req.body;
   try {
-    if (fs.existsSync(DB_FILE)) {
-      const data = fs.readFileSync(DB_FILE, 'utf-8');
-      const parsed = JSON.parse(data);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed;
-      }
+    const assignedRoles = (roles && Array.isArray(roles) && roles.length > 0) ? roles : [role || 'intake'];
+    const primaryRole = role || assignedRoles[0] || 'intake';
+
+    if (resetPassword) {
+      const pwdHash = await bcrypt.hash('123456', 10);
+      await dbPool.query(
+        'UPDATE users SET full_name_th = $1, full_name_en = $2, email = $3, role = $4, roles = $5, department = $6, password_hash = $7 WHERE id = $8',
+        [fullNameTh, fullNameEn || fullNameTh, email, primaryRole, JSON.stringify(assignedRoles), department, pwdHash, id]
+      );
+    } else {
+      await dbPool.query(
+        'UPDATE users SET full_name_th = $1, full_name_en = $2, email = $3, role = $4, roles = $5, department = $6 WHERE id = $7',
+        [fullNameTh, fullNameEn || fullNameTh, email, primaryRole, JSON.stringify(assignedRoles), department, id]
+      );
     }
+    res.json({ success: true });
   } catch (err) {
-    console.error('Error reading server_requests_db.json:', err);
+    console.error('Error updating user:', err);
+    res.status(500).json({ success: false, error: 'Database error' });
   }
-  return [];
-}
+});
 
-function saveServerRequests(reqs) {
+// DELETE /api/users/:id
+app.delete('/api/users/:id', authenticateJWT, requireRole(['admin']), async (req, res) => {
+  const { id } = req.params;
   try {
-    fs.writeFileSync(DB_FILE, JSON.stringify(reqs, null, 2), 'utf-8');
+    await dbPool.query('DELETE FROM users WHERE id = $1', [id]);
+    res.json({ success: true });
   } catch (err) {
-    console.error('Error writing server_requests_db.json:', err);
+    console.error('Error deleting user:', err);
+    res.status(500).json({ success: false, error: 'Database error' });
   }
-}
-
-let serverRequests = loadServerRequests();
+});
 
 // GET /api/public/requests (Cross-Browser Public Request Sync API)
 app.get('/api/public/requests', async (req, res) => {
-  return res.json({
-    success: true,
-    count: serverRequests.length,
-    requests: serverRequests
-  });
+  try {
+    const { rows } = await dbPool.query('SELECT data FROM requests ORDER BY created_at DESC');
+    const allRequests = rows.map(r => r.data);
+    return res.json({
+      success: true,
+      count: allRequests.length,
+      requests: allRequests
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: 'Database error' });
+  }
 });
 
-// POST /api/public/requests (Submit new request to PostgreSQL & Master Sync Engine)
+// POST /api/public/requests (Submit new request to PostgreSQL)
 app.post('/api/public/requests', async (req, res) => {
   try {
     const requestData = req.body;
@@ -546,32 +608,15 @@ app.post('/api/public/requests', async (req, res) => {
     // Extract clean org code prefix (e.g. org_dopa -> DOPA, org_rd -> RD, org_tech_th -> TECH)
     const orgCodePrefix = orgId.replace(/^org_/, '').toUpperCase().replace('_TH', '');
     
-    let currentReqs = loadServerRequests();
-    let tenantCount = currentReqs.filter(r => r.orgId === orgId).length + 1;
-    try {
-      const countRes = await dbPool.query('SELECT COUNT(*) FROM requests WHERE org_id = $1', [orgId]);
-      tenantCount = Math.max(tenantCount, parseInt(countRes.rows[0].count) + 1);
-    } catch {}
+    // Get tenant count safely from DB
+    const countRes = await dbPool.query('SELECT COUNT(*) FROM requests WHERE org_id = $1', [orgId]);
+    const tenantCount = parseInt(countRes.rows[0].count) + 1;
     
     // Format: REQ-[TENANT_CODE]-[YEAR]-[0001]
-    let trackingNo = requestData.trackingNo || `REQ-${orgCodePrefix}-${year}-${tenantCount.toString().padStart(4, '0')}`;
+    const trackingNo = requestData.trackingNo || `REQ-${orgCodePrefix}-${year}-${tenantCount.toString().padStart(4, '0')}`;
     const reqId = requestData.id || `req_${Date.now()}`;
     const requesterType = requestData.requesterType || 'self';
     const status = requestData.status || 'Submitted';
-
-    // Prevent cross-tab race conditions causing tracking number collisions and overwriting
-    const collisionIdx = currentReqs.findIndex(r => r.trackingNo === trackingNo && r.id !== reqId);
-    if (collisionIdx !== -1) {
-      trackingNo = `${trackingNo}-${Math.floor(1000 + Math.random() * 9000)}`;
-    }
-
-    // Insert into PostgreSQL Master Database (if available)
-    try {
-      await dbPool.query(
-        'INSERT INTO requests (id, org_id, tracking_no, requester_type, status) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (id) DO NOTHING',
-        [reqId, orgId, trackingNo, requesterType, status]
-      );
-    } catch {}
 
     const newRequest = {
       ...requestData,
@@ -584,24 +629,19 @@ app.post('/api/public/requests', async (req, res) => {
       slaDaysUsed: requestData.slaDaysUsed || 0
     };
 
-    // Store in Master Server Requests array & Persist to server_requests_db.json
-    const existingIdx = currentReqs.findIndex(r => r.id === reqId);
-    if (existingIdx !== -1) {
-      currentReqs[existingIdx] = { ...currentReqs[existingIdx], ...newRequest };
-    } else {
-      currentReqs.unshift(newRequest);
-    }
-
-    saveServerRequests(currentReqs);
-    serverRequests = currentReqs;
+    // Insert into PostgreSQL Master Database
+    await dbPool.query(
+      'INSERT INTO requests (id, org_id, tracking_no, requester_type, status, data) VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT (id) DO UPDATE SET data = $6, status = $5',
+      [reqId, orgId, trackingNo, requesterType, status, JSON.stringify(newRequest)]
+    );
 
     return res.status(201).json({
       success: true,
-      message: 'ยื่นแบบคำขอเข้าถึงข้อมูลส่วนบุคคลสำเร็จ ซิงก์ข้อมูลข้ามเบราว์เซอร์เรียบร้อยแล้ว',
+      message: 'ยื่นแบบคำขอเข้าถึงข้อมูลส่วนบุคคลสำเร็จ',
       request: newRequest
     });
   } catch (error) {
-    console.error('Error inserting request to PostgreSQL/Server:', error);
+    console.error('Error inserting request to PostgreSQL:', error);
     return res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดในการบันทึกข้อมูล' });
   }
 });
@@ -684,37 +724,88 @@ app.post('/api/public/verify-otp', (req, res) => {
 });
 
 // GET /api/public/track/:trackingNo
-app.get('/api/public/track/:trackingNo', (req, res) => {
-  const reqObj = requests.find((r) => r.trackingNo.toUpperCase() === req.params.trackingNo.trim().toUpperCase());
-  if (!reqObj) {
-    return res.status(404).json({ success: false, message: 'ไม่พบคำร้องขอข้อมูลหมายเลขนี้' });
-  }
-
-  // Return public subset of request details
-  res.json({
-    success: true,
-    request: {
-      id: reqObj.id,
-      trackingNo: reqObj.trackingNo,
-      status: reqObj.status,
-      submissionDate: reqObj.submissionDate,
-      slaRemainingDays: reqObj.slaRemainingDays,
-      statusHistory: reqObj.statusHistory,
-      messageThread: reqObj.messageThread
+app.get('/api/public/track/:trackingNo', async (req, res) => {
+  try {
+    const { rows } = await dbPool.query('SELECT data FROM requests WHERE tracking_no = $1', [req.params.trackingNo.trim().toUpperCase()]);
+    
+    if (rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'ไม่พบคำร้องขอข้อมูลหมายเลขนี้' });
     }
-  });
+
+    const reqObj = rows[0].data;
+
+    // Return public subset of request details
+    res.json({
+      success: true,
+      request: {
+        id: reqObj.id,
+        trackingNo: reqObj.trackingNo,
+        status: reqObj.status,
+        submissionDate: reqObj.submissionDate,
+        slaRemainingDays: reqObj.slaRemainingDays,
+        statusHistory: reqObj.statusHistory,
+        messageThread: reqObj.messageThread
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Database error' });
+  }
 });
 
 // --- PROTECTED INTERNAL ROUTES ---
 
 // GET /api/requests (List requests - protected)
-app.get('/api/requests', authenticateJWT, (req, res) => {
-  res.json({ success: true, requests });
+app.get('/api/requests', authenticateJWT, async (req, res) => {
+  try {
+    let query = 'SELECT data FROM requests ORDER BY created_at DESC';
+    let params = [];
+    
+    if (!req.user.isSuperAdmin) {
+      query = 'SELECT data FROM requests WHERE org_id = $1 ORDER BY created_at DESC';
+      params = [req.user.orgId];
+    }
+    
+    const { rows } = await dbPool.query(query, params);
+    res.json({ success: true, requests: rows.map(r => r.data) });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Database error' });
+  }
 });
 
 // GET /api/audit-logs (View audit logs - protected)
-app.get('/api/audit-logs', authenticateJWT, requireRole(['admin', 'auditor', 'dpo']), (req, res) => {
-  res.json({ success: true, auditLogs });
+app.get('/api/audit-logs', authenticateJWT, requireRole(['admin', 'auditor', 'dpo']), async (req, res) => {
+  try {
+    let query = 'SELECT * FROM audit_logs ORDER BY timestamp DESC LIMIT 500';
+    let params = [];
+    
+    // Non-superadmins only see logs for their org
+    if (!req.user.isSuperAdmin) {
+      query = 'SELECT * FROM audit_logs WHERE org_id = $1 ORDER BY timestamp DESC LIMIT 500';
+      params = [req.user.orgId];
+    }
+    
+    const { rows } = await dbPool.query(query, params);
+    
+    // Map db columns back to camelCase for frontend
+    const mappedLogs = rows.map(r => ({
+      id: r.id,
+      timestamp: r.timestamp,
+      actorId: r.actor_id,
+      actorName: r.actor_name,
+      actorRole: r.actor_role,
+      action: r.action,
+      requestId: r.request_id,
+      requestTrackingNo: r.request_tracking_no,
+      ipAddress: r.ip_address,
+      userAgent: r.user_agent,
+      details: r.details,
+      checksum: r.checksum
+    }));
+    
+    res.json({ success: true, auditLogs: mappedLogs });
+  } catch (err) {
+    res.status(500).json({ success: false, error: 'Database error fetching audit logs' });
+  }
 });
 
 // --- STATIC FRONTEND SERVING (PRODUCTION) ---

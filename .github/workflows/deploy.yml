@@ -1,0 +1,52 @@
+name: 🚀 Auto Deploy to Production
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    name: Deploy to pdpa.numcomputer.com
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: 📦 Install Dependencies
+        run: npm ci
+
+      - name: 🔨 Build Frontend (Vite + TypeScript)
+        run: npm run build
+
+      - name: 🚀 Deploy to Server via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          password: ${{ secrets.SSH_PASSWORD }}
+          port: 22
+          script: |
+            echo "📂 Moving to project directory..."
+            cd ${{ secrets.APP_PATH }}
+
+            echo "⬇️ Pulling latest code from GitHub..."
+            git pull origin main
+
+            echo "📦 Installing server dependencies..."
+            npm install --omit=dev
+
+            echo "🔨 Building frontend on server..."
+            npm run build
+
+            echo "♻️ Restarting application with PM2..."
+            pm2 restart all || pm2 start ecosystem.config.cjs
+
+            echo "✅ Deployment completed successfully!"

@@ -10,7 +10,7 @@ export interface Organization {
   contactPhone?: string;
 }
 
-export type Role = 'admin' | 'intake' | 'owner' | 'dpo' | 'approver' | 'auditor';
+export type Role = 'superadmin' | 'admin' | 'intake' | 'owner' | 'dpo' | 'approver' | 'auditor';
 
 export interface User {
   id: string;
