@@ -1053,9 +1053,9 @@ export default function App() {
                   type="text"
                   maxLength={6}
                   value={tenantOtpInput}
-                  onChange={(e) => setTenantOtpInput(e.target.value)}
-                  placeholder="1 2 3 4 5 6"
-                  className={`w-full text-center tracking-[0.5em] font-mono text-lg font-bold py-2 border rounded-xl focus:outline-none focus:border-emerald-500 ${inputBgClass}`}
+                  onChange={(e) => setTenantOtpInput(e.target.value.replace(/[^0-9]/g, ''))}
+                  placeholder="• • • • • •"
+                  className="w-full text-center tracking-[0.6em] font-mono text-2xl font-extrabold py-3 px-4 bg-slate-900/90 border-2 border-emerald-500/50 hover:border-emerald-500 rounded-2xl text-emerald-400 placeholder:text-slate-600 focus:outline-none focus:border-emerald-400 focus:ring-4 focus:ring-emerald-500/20 transition shadow-inner"
                   required
                   autoFocus
                 />

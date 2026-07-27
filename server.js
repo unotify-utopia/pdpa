@@ -79,6 +79,12 @@ const initDatabase = async () => {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
 
+      CREATE TABLE IF NOT EXISTS public_otps (
+        key VARCHAR(255) PRIMARY KEY,
+        otp VARCHAR(10) NOT NULL,
+        expires_at BIGINT NOT NULL
+      );
+
       CREATE TABLE IF NOT EXISTS audit_logs (
         id VARCHAR(100) PRIMARY KEY,
         org_id VARCHAR(50),
@@ -761,16 +767,18 @@ app.post('/api/public/send-otp', async (req, res) => {
   // Generate 6-digit OTP
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
   const key = reference || email || phone;
+  const expiresAt = Date.now() + 5 * 60 * 1000; // 5 minutes
   
-  // Store OTP with 5 minutes expiration
-  otpCache.set(key, {
-    otp,
-    expiresAt: Date.now() + 5 * 60 * 1000 // 5 minutes
-  });
+  try {
+    // Store OTP in DB
+    await dbPool.query(
+      `INSERT INTO public_otps (key, otp, expires_at) VALUES ($1, $2, $3)
+       ON CONFLICT (key) DO UPDATE SET otp = EXCLUDED.otp, expires_at = EXCLUDED.expires_at`,
+      [key, otp, expiresAt]
+    );
 
-  // If email is provided, send via SMTP
-  if (email) {
-    try {
+    // If email is provided, send via SMTP
+    if (email) {
       await transporter.sendMail({
         from: `"PDPA Access Portal" <${process.env.SMTP_USER || 'pdpa.utopia@gmail.com'}>`,
         to: email,
@@ -791,42 +799,52 @@ app.post('/api/public/send-otp', async (req, res) => {
         `
       });
       console.log(`[SMTP] Sent OTP ${otp} to ${email}`);
-    } catch (error) {
-      console.error('[SMTP] Error sending email:', error);
-      // Fallback for development if SMTP is not configured
-      if (!process.env.SMTP_PASS) {
-        console.log('[SMTP] Development Mode: Pretending email was sent.');
-      } else {
-        return res.status(500).json({ success: false, message: 'ไม่สามารถส่งอีเมลได้ กรุณาลองใหม่อีกครั้ง' });
-      }
+    }
+
+    return res.json({ success: true, message: 'ส่งรหัส OTP เรียบร้อยแล้ว' });
+  } catch (error) {
+    console.error('[SMTP or DB] Error sending OTP:', error);
+    // Fallback for development if SMTP is not configured
+    if (!process.env.SMTP_PASS) {
+      console.log('[SMTP] Development Mode: Pretending email was sent.');
+      return res.json({ success: true, message: 'ส่งรหัส OTP เรียบร้อยแล้ว (Dev Mode)' });
+    } else {
+      return res.status(500).json({ success: false, message: 'ไม่สามารถส่งอีเมลได้ กรุณาลองใหม่อีกครั้ง' });
     }
   }
-
-  return res.json({ success: true, message: 'ส่งรหัส OTP เรียบร้อยแล้ว' });
 });
 
 // POST /api/public/verify-otp
-app.post('/api/public/verify-otp', (req, res) => {
+app.post('/api/public/verify-otp', async (req, res) => {
   const { reference, email, phone, otp } = req.body;
   const key = reference || email || phone;
   
   if (!key || !otp) return res.status(400).json({ success: false, message: 'ข้อมูลไม่ครบถ้วน' });
 
-  const record = otpCache.get(key);
-  if (!record) {
-    return res.status(400).json({ success: false, message: 'ไม่พบรหัส OTP หรือรหัสอาจหมดอายุแล้ว กรุณาขอใหม่' });
-  }
+  try {
+    const result = await dbPool.query('SELECT * FROM public_otps WHERE key = $1', [key]);
+    
+    if (result.rows.length === 0) {
+      return res.status(400).json({ success: false, message: 'ไม่พบรหัส OTP หรือรหัสอาจหมดอายุแล้ว กรุณาขอใหม่' });
+    }
 
-  if (Date.now() > record.expiresAt) {
-    otpCache.delete(key);
-    return res.status(400).json({ success: false, message: 'รหัส OTP หมดอายุแล้ว กรุณาขอใหม่' });
-  }
+    const record = result.rows[0];
 
-  if (record.otp === otp) {
-    otpCache.delete(key); // clear after success
-    return res.json({ success: true, message: 'ยืนยันรหัส OTP สำเร็จ' });
-  } else {
-    return res.status(400).json({ success: false, message: 'รหัส OTP ไม่ถูกต้อง' });
+    if (Date.now() > Number(record.expires_at)) {
+      await dbPool.query('DELETE FROM public_otps WHERE key = $1', [key]);
+      return res.status(400).json({ success: false, message: 'รหัส OTP หมดอายุแล้ว กรุณาขอใหม่' });
+    }
+
+    if (record.otp === otp) {
+      await dbPool.query('DELETE FROM public_otps WHERE key = $1', [key]); // clear after success
+      return res.json({ success: true, message: 'ยืนยันรหัส OTP สำเร็จ' });
+    } else {
+      return res.status(400).json({ success: false, message: 'รหัส OTP ไม่ถูกต้อง' });
+    }
+  } catch (error) {
+    console.error('Error verifying OTP:', error);
+    return res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดในการตรวจสอบรหัส OTP' });
+  }
   }
 });
 
