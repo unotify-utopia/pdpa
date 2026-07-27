@@ -19,7 +19,6 @@ export const StaffLoginModal: React.FC<StaffLoginModalProps> = ({
   const [mfaStep, setMfaStep] = useState(false);
   const [otpCode, setOtpCode] = useState('');
   const [pendingUser, setPendingUser] = useState<any | null>(null);
-  const [setup2FAUrl, setSetup2FAUrl] = useState<string | null>(null);
   
   if (!isOpen) return null;
 
@@ -40,23 +39,6 @@ export const StaffLoginModal: React.FC<StaffLoginModalProps> = ({
       });
       const data = await res.json();
       
-      if (data.requires2FASetup) {
-        // Call setup 2fa
-        const setupRes = await fetch('/api/auth/2fa/setup', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username, password })
-        });
-        const setupData = await setupRes.json();
-        if (setupData.success) {
-          setSetup2FAUrl(setupData.qrCodeUrl);
-          setPendingUser({ username, password });
-          setMfaStep(true);
-        } else {
-          setErrorMsg(setupData.message || 'Error setting up 2FA');
-        }
-        return;
-      }
 
       if (data.requires2FA) {
         setPendingUser({ username, password });
@@ -205,8 +187,6 @@ export const StaffLoginModal: React.FC<StaffLoginModalProps> = ({
                 />
               </div>
 
-              {/* Removed mockup hint block */}
-
               <div className="flex gap-2 pt-2">
                 <button
                   type="button"
@@ -229,18 +209,11 @@ export const StaffLoginModal: React.FC<StaffLoginModalProps> = ({
             <form onSubmit={handleMfaVerify} className="space-y-4">
               <div className="p-3 bg-brand-50 border border-brand-200 rounded-xl text-xs text-brand-900 leading-relaxed text-center">
                 <span className="font-bold block mb-1 text-sm">ยืนยันตัวตน 2 ปัจจัย (MFA Required)</span>
-                {setup2FAUrl ? (
-                  <div className="flex flex-col items-center justify-center space-y-2 mt-2">
-                    <span className="font-semibold text-rose-600">สแกน QR Code เพื่อตั้งค่า Google Authenticator</span>
-                    <img src={setup2FAUrl} alt="2FA QR Code" className="w-32 h-32 border-2 border-brand-300 rounded" />
-                  </div>
-                ) : (
-                  <span>กรุณาเปิดแอป <span className="font-bold">Google Authenticator</span> เพื่อดูรหัส 6 หลัก</span>
-                )}
+                <span>ระบบได้ส่งรหัส OTP ไปยัง <span className="font-bold">อีเมลของท่าน</span> แล้ว กรุณาตรวจสอบอีเมลและนำรหัส 6 หลักมากรอกที่นี่</span>
               </div>
 
               <div className="space-y-1">
-                <label className="text-xs font-semibold text-slate-700 text-center block">ระบุรหัส 2FA (6 หลัก)</label>
+                <label className="text-xs font-semibold text-slate-700 text-center block">ระบุรหัส OTP (6 หลัก)</label>
                 <input
                   type="text"
                   maxLength={6}
@@ -257,7 +230,6 @@ export const StaffLoginModal: React.FC<StaffLoginModalProps> = ({
                   type="button"
                   onClick={() => {
                     setMfaStep(false);
-                    setSetup2FAUrl(null);
                   }}
                   className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold py-2.5 rounded-lg transition"
                 >
@@ -265,9 +237,10 @@ export const StaffLoginModal: React.FC<StaffLoginModalProps> = ({
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-2.5 rounded-lg transition shadow-md"
+                  disabled={otpCode.length !== 6}
+                  className="flex-1 bg-brand-600 hover:bg-brand-700 disabled:bg-slate-300 text-white text-xs font-bold py-2.5 rounded-lg transition shadow-md"
                 >
-                  ยืนยันรหัส 2FA
+                  ยืนยันรหัส OTP
                 </button>
               </div>
             </form>

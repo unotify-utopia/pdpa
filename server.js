@@ -370,23 +370,60 @@ app.post('/api/auth/login', async (req, res) => {
     
     if (!SKIP_MFA_FOR_TESTING) {
       const { mfaCode } = req.body;
-      
-      if (!user.two_factor_secret) {
-        const secret = authenticator.generateSecret();
-        const otpauth = authenticator.keyuri(user.username, 'PDPA Request System', secret);
-        const qrCodeUrl = await QRCode.toDataURL(otpauth);
-        await dbPool.query('UPDATE users SET two_factor_secret = $1, mfa_enabled = true WHERE id = $2', [secret, user.id]);
-        return res.json({ success: true, requires2FASetup: true, username: user.username, qrCodeUrl, secret });
-      }
+      const targetEmail = user.email || user.username;
 
       if (!mfaCode) {
-        return res.json({ success: true, requires2FA: true, message: 'กรุณากรอกรหัส 2FA จาก Google Authenticator' });
+        // Generate and send OTP
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        otpCache.set(`staff_login_${user.username}`, {
+          otp,
+          expiresAt: Date.now() + 5 * 60 * 1000 // 5 minutes
+        });
+
+        let emailSent = true;
+        try {
+          await transporter.sendMail({
+            from: `"PDPA Access Portal" <${process.env.SMTP_USER || 'pdpa.utopia@gmail.com'}>`,
+            to: targetEmail,
+            subject: 'รหัส OTP สำหรับเข้าสู่ระบบเจ้าหน้าที่ (PDPA System)',
+            html: `
+              <div style="font-family: sans-serif; max-width: 500px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
+                <div style="background-color: #0284c7; padding: 20px; text-align: center;">
+                  <h2 style="color: #ffffff; margin: 0;">รหัส OTP เข้าสู่ระบบเจ้าหน้าที่</h2>
+                </div>
+                <div style="padding: 30px 20px; text-align: center;">
+                  <p style="color: #475569; font-size: 16px; margin-bottom: 20px;">รหัสผ่านแบบใช้ครั้งเดียว (OTP) สำหรับยืนยันการเข้าสู่ระบบของคุณ:</p>
+                  <div style="background-color: #f0f9ff; border: 2px dashed #0284c7; border-radius: 8px; padding: 15px; font-size: 32px; font-weight: bold; letter-spacing: 4px; color: #0284c7; margin-bottom: 20px;">
+                    ${otp}
+                  </div>
+                  <p style="color: #ef4444; font-size: 14px;">* รหัสนี้มีอายุการใช้งาน 5 นาที</p>
+                </div>
+              </div>
+            `
+          });
+          console.log(`[SMTP] Sent Staff login OTP ${otp} to ${targetEmail}`);
+        } catch (mailErr) {
+          emailSent = false;
+          console.warn(`[SMTP Warning] Failed to send login OTP email: ${mailErr.message}`);
+        }
+
+        return res.json({ 
+          success: true, 
+          requires2FA: true, 
+          email: targetEmail,
+          emailSent: emailSent,
+          message: `ระบบได้ส่งรหัส OTP 6 หลักไปยังอีเมล (${targetEmail}) เรียบร้อยแล้ว` 
+        });
       }
 
-      const isValid = authenticator.verify({ token: mfaCode, secret: user.two_factor_secret });
-      if (!isValid) {
-        return res.status(401).json({ success: false, message: 'รหัส 2FA ไม่ถูกต้อง' });
+      // Verify OTP
+      const cached = otpCache.get(`staff_login_${user.username}`);
+      if (!cached || cached.otp !== mfaCode || Date.now() > cached.expiresAt) {
+        return res.status(401).json({ success: false, message: 'รหัส OTP ไม่ถูกต้องหรือหมดอายุ' });
       }
+      
+      // Clear OTP after successful use
+      otpCache.delete(`staff_login_${user.username}`);
     }
 
     // Generate JWT token
