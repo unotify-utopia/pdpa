@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { ShieldCheck, Building2, UserCheck, Key, Lock, LogOut, Plus, Sun, Moon, QrCode, Smartphone, CheckCircle2, Trash2 } from 'lucide-react';
 
 interface Tenant {
@@ -45,8 +45,8 @@ export default function App() {
     try {
       const headers = { 'Authorization': `Bearer ${authToken}` };
       const [tenantsRes, usersRes] = await Promise.all([
-        fetch('http://localhost:3001/api/tenants', { headers }),
-        fetch('http://localhost:3001/api/users', { headers })
+        fetch('/api/tenants', { headers }),
+        fetch('/api/users', { headers })
       ]);
       const tenantsData = await tenantsRes.json();
       const usersData = await usersRes.json();
@@ -61,7 +61,7 @@ export default function App() {
   const handleStep1Submit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const res = await fetch('http://localhost:3001/api/super-admin/login', {
+      const res = await fetch('/api/super-admin/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password })
@@ -171,7 +171,7 @@ export default function App() {
       const headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` };
       if (editingTenantId) {
         // Update existing
-        await fetch(`http://localhost:3001/api/tenants/${editingTenantId}`, {
+        await fetch(`/api/tenants/${editingTenantId}`, {
           method: 'PUT',
           headers,
           body: JSON.stringify(tenantFormData)
@@ -179,12 +179,12 @@ export default function App() {
         alert(`อัปเดตข้อมูลหน่วยงาน "${tenantFormData.nameTh}" เรียบร้อยแล้ว`);
       } else {
         // Create new
-        const checkRes = await fetch('http://localhost:3001/api/tenants', { headers });
+        const checkRes = await fetch('/api/tenants', { headers });
         const checkData = await checkRes.json();
         if (checkData.success && checkData.tenants.some((t: Tenant) => t.id === tenantFormData.id.trim())) {
           return alert('รหัสหน่วยงาน (Tenant ID) นี้มีอยู่ในระบบแล้ว กรุณาใช้รหัสอื่น');
         }
-        await fetch('http://localhost:3001/api/tenants', {
+        await fetch('/api/tenants', {
           method: 'POST',
           headers,
           body: JSON.stringify(tenantFormData)
@@ -213,7 +213,7 @@ export default function App() {
     }
 
     try {
-      await fetch(`http://localhost:3001/api/tenants/${deletingTenant.id}`, {
+      await fetch(`/api/tenants/${deletingTenant.id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -269,7 +269,7 @@ export default function App() {
     };
 
     try {
-      await fetch('http://localhost:3001/api/users', {
+      await fetch('/api/users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify(newUser)

@@ -808,7 +808,13 @@ app.get('/api/audit-logs', authenticateJWT, requireRole(['admin', 'auditor', 'dp
   }
 });
 
-// --- STATIC FRONTEND SERVING (PRODUCTION) ---
+// --- SUPER ADMIN STATIC FRONTEND SERVING ---
+app.use('/super-admin', express.static(path.join(__dirname, 'super-admin-app', 'dist')));
+app.get('/super-admin*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'super-admin-app', 'dist', 'index.html'));
+});
+
+// --- MAIN STATIC FRONTEND SERVING (PRODUCTION) ---
 app.use(express.static(path.join(__dirname, 'dist')));
 
 // SPA Fallback (Express 5 safe)
