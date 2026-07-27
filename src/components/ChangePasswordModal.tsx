@@ -26,8 +26,10 @@ export function ChangePasswordModal({ isOpen, onClose }: ChangePasswordModalProp
       return;
     }
     
-    if (newPassword.length < 6) {
-      setErrorMsg('รหัสผ่านใหม่ต้องมีความยาวอย่างน้อย 6 ตัวอักษร');
+    // Strong password validation
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+    if (!passwordRegex.test(newPassword)) {
+      setErrorMsg('รหัสผ่านต้องมีความยาวอย่างน้อย 8 ตัวอักษร, ประกอบด้วยพิมพ์เล็ก พิมพ์ใหญ่ ตัวเลข และอักขระพิเศษ');
       return;
     }
 
@@ -117,6 +119,7 @@ export function ChangePasswordModal({ isOpen, onClose }: ChangePasswordModalProp
                 onChange={(e) => setNewPassword(e.target.value)}
                 className="w-full border border-slate-300 rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-brand-500 text-sm text-slate-900 transition shadow-sm"
               />
+              <p className="text-[10px] text-slate-500 mt-1">ต้องมีอย่างน้อย 8 ตัวอักษร, พิมพ์เล็ก, พิมพ์ใหญ่, ตัวเลข, อักขระพิเศษ</p>
             </div>
             <div className="space-y-1">
               <label className="text-xs font-semibold text-slate-700 block">ยืนยันรหัสผ่านใหม่</label>

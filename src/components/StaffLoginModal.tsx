@@ -149,7 +149,7 @@ export const StaffLoginModal: React.FC<StaffLoginModalProps> = ({
           )}
 
           {!mfaStep ? (
-            <form onSubmit={handleLoginSubmit} className="space-y-4">
+            <form onSubmit={handleLoginSubmit} className="space-y-4" autoComplete="off">
               {/* Form Body */}
               <div className="space-y-1 text-center mb-4 text-xs text-slate-500">
                 เข้าสู่ระบบด้วยอีเมลหรือชื่อผู้ใช้งานของคุณ
@@ -164,6 +164,7 @@ export const StaffLoginModal: React.FC<StaffLoginModalProps> = ({
                 <input
                   type="text"
                   required
+                  autoComplete="new-password"
                   placeholder="อีเมล หรือ Username (เช่น apichat.utopia@gmail.com)"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
@@ -180,6 +181,7 @@ export const StaffLoginModal: React.FC<StaffLoginModalProps> = ({
                 <input
                   type="password"
                   required
+                  autoComplete="new-password"
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}

@@ -25,7 +25,7 @@ export default function App() {
   const [loginStep, setLoginStep] = useState<'credentials' | 'mfa' | 'authenticated'>('credentials');
   
   // Credentials
-  const [username, setUsername] = useState('super.admin');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [mfaCode, setMfaCode] = useState('');
 
@@ -185,6 +185,12 @@ export default function App() {
     }
     if (newPasswordInput !== confirmPasswordInput) {
       showNotify('รหัสผ่านใหม่กับยืนยันรหัสผ่านไม่ตรงกัน', 'warning', 'รหัสผ่านไม่ตรงกัน');
+      return;
+    }
+
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+    if (!passwordRegex.test(newPasswordInput)) {
+      showNotify('รหัสผ่านต้องมีความยาวอย่างน้อย 8 ตัวอักษร, ประกอบด้วยพิมพ์เล็ก พิมพ์ใหญ่ ตัวเลข และอักขระพิเศษ', 'warning', 'รหัสผ่านไม่ผ่านเกณฑ์มาตรฐาน');
       return;
     }
     if (!token) return;
@@ -489,7 +495,7 @@ export default function App() {
 
           {/* STEP 1: Username & Password */}
           {loginStep === 'credentials' && (
-            <form onSubmit={handleStep1Submit} className="space-y-4">
+            <form onSubmit={handleStep1Submit} className="space-y-4" autoComplete="off">
               <div>
                 <label className="block text-xs font-semibold mb-1.5">Username ผู้ดูแลระบบกลาง</label>
                 <input
@@ -497,6 +503,7 @@ export default function App() {
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   placeholder="super.admin"
+                  autoComplete="new-password"
                   className={`w-full px-4 py-2.5 border rounded-xl text-xs focus:outline-none focus:border-emerald-500 ${inputBgClass}`}
                   required
                 />
@@ -510,7 +517,8 @@ export default function App() {
                     type="password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder="กรอกรหัสผ่าน (เช่น 123456)"
+                    placeholder="กรอกรหัสผ่าน"
+                    autoComplete="new-password"
                     className={`w-full pl-9 pr-4 py-2.5 border rounded-xl text-xs focus:outline-none focus:border-emerald-500 ${inputBgClass}`}
                     required
                   />
@@ -1274,10 +1282,11 @@ export default function App() {
                   type="password"
                   value={newPasswordInput}
                   onChange={(e) => setNewPasswordInput(e.target.value)}
-                  placeholder="รหัสผ่านใหม่ (อย่างน้อย 6 ตัวอักษร)"
+                  placeholder="รหัสผ่านใหม่"
                   className={`w-full text-xs py-2 px-3 border rounded-xl focus:outline-none focus:border-emerald-500 ${inputBgClass}`}
                   required
                 />
+                <p className="text-[10px] text-slate-500 mt-1">ต้องมีอย่างน้อย 8 ตัวอักษร, พิมพ์เล็ก, พิมพ์ใหญ่, ตัวเลข, อักขระพิเศษ</p>
               </div>
 
               <div>
