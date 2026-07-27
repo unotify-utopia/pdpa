@@ -113,7 +113,10 @@ export const formatThaiTimeString = (dateStr: string): string => {
 
 export default function App() {
   // App context navigation states
-  const [view, setView] = useState<'public' | 'internal' | 'tracking' | 'download' | 'superadmin'>('public');
+  const initialUser = getCurrentUser();
+  const [view, setView] = useState<'public' | 'internal' | 'tracking' | 'download' | 'superadmin'>(
+    initialUser ? 'internal' : 'public'
+  );
   const [publicTab, setPublicTab] = useState<'landing' | 'submit' | 'submitted_success'>('landing');
   const [internalTab, setInternalTab] = useState<'dashboard' | 'requests' | 'kanban' | 'users' | 'compliance' | 'templates' | 'retention' | 'audit' | 'manual_entry'>('dashboard');
 
@@ -122,7 +125,7 @@ export default function App() {
   const [config, setConfig] = useState<ComplianceConfig | null>(null);
   const [templates, setTemplates] = useState<DocumentTemplate[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
-  const [activeUser, setActiveUser] = useState<UserType | null>(null);
+  const [activeUser, setActiveUser] = useState<UserType | null>(initialUser);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [isChangePasswordModalOpen, setIsChangePasswordModalOpen] = useState(false);
   const [manualChannel, setManualChannel] = useState<'office' | 'post' | 'email' | 'e-service'>('office');
