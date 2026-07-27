@@ -133,6 +133,40 @@ export default function App() {
   // Backend Users from DB
   const [backendUsers, setBackendUsers] = useState<UserType[]>([]);
 
+  // Idle Timeout System for Main App (10 minutes)
+  useEffect(() => {
+    let timeoutId: ReturnType<typeof setTimeout>;
+
+    const resetTimer = () => {
+      clearTimeout(timeoutId);
+      // Set timeout for 10 minutes (600,000 ms)
+      timeoutId = setTimeout(() => {
+        if (activeUser) {
+          sessionStorage.clear();
+          setActiveUser(null);
+          setView('public');
+          setPublicTab('landing');
+          alert('ท่านไม่ได้ใช้งานระบบเกิน 10 นาที ระบบจึงทำการออกจากระบบอัตโนมัติเพื่อความปลอดภัย');
+          window.location.reload();
+        }
+      }, 10 * 60 * 1000);
+    };
+
+    if (activeUser) {
+      // Start timer
+      resetTimer();
+      // Listen for user activity
+      const events = ['mousemove', 'mousedown', 'keydown', 'scroll', 'touchstart'];
+      events.forEach(event => window.addEventListener(event, resetTimer));
+
+      // Cleanup
+      return () => {
+        clearTimeout(timeoutId);
+        events.forEach(event => window.removeEventListener(event, resetTimer));
+      };
+    }
+  }, [activeUser]);
+
   useEffect(() => {
     fetch('/api/tenants')
       .then(res => res.json())
