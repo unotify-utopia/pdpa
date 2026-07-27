@@ -66,6 +66,7 @@ import { RedactionCanvas } from './components/RedactionCanvas';
 import { ThaiLetterView, convertToThaiDate } from './components/ThaiLetterView';
 import { DashboardCharts } from './components/DashboardCharts';
 import { StaffLoginModal } from './components/StaffLoginModal';
+import { ChangePasswordModal } from './components/ChangePasswordModal';
 
 // Helper: Thai Citizen ID Modulus 11 Checksum Validator
 export const validateThaiCitizenId = (id: string): boolean => {
@@ -123,6 +124,7 @@ export default function App() {
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [activeUser, setActiveUser] = useState<UserType | null>(null);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [isChangePasswordModalOpen, setIsChangePasswordModalOpen] = useState(false);
   const [manualChannel, setManualChannel] = useState<'office' | 'post' | 'email' | 'e-service'>('office');
   const [manualRefNo, setManualRefNo] = useState('');
   const [manualEntrySuccessTrackingNo, setManualEntrySuccessTrackingNo] = useState<string | null>(null);
@@ -1589,6 +1591,13 @@ export default function App() {
               )}
 
               <button
+                onClick={() => setIsChangePasswordModalOpen(true)}
+                className="bg-slate-700 hover:bg-slate-600 border border-slate-600 text-slate-200 font-bold px-2.5 py-1 rounded transition text-xs shadow-sm cursor-pointer"
+              >
+                เปลี่ยนรหัสผ่าน
+              </button>
+
+              <button
                 onClick={() => {
                   sessionStorage.clear();
                   setCurrentUser(null);
@@ -1627,6 +1636,12 @@ export default function App() {
           setView('internal');
           setInternalTab('dashboard');
         }}
+      />
+
+      {/* Change Password Modal */}
+      <ChangePasswordModal
+        isOpen={isChangePasswordModalOpen}
+        onClose={() => setIsChangePasswordModalOpen(false)}
       />
 
       {/* User & Access Management Modal */}

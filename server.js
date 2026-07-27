@@ -460,6 +460,34 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
+// POST /api/auth/change-password
+app.post('/api/auth/change-password', authenticateJWT, async (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+  if (!currentPassword || !newPassword) {
+    return res.status(400).json({ success: false, message: 'กรุณากรอกรหัสผ่านปัจจุบันและรหัสผ่านใหม่' });
+  }
+
+  try {
+    const { rows } = await dbPool.query('SELECT * FROM users WHERE id = $1', [req.user.id]);
+    if (rows.length === 0) return res.status(404).json({ success: false, message: 'ไม่พบผู้ใช้' });
+
+    const user = rows[0];
+    const valid = await bcrypt.compare(currentPassword, user.password_hash);
+    if (!valid) {
+      return res.status(401).json({ success: false, message: 'รหัสผ่านปัจจุบันไม่ถูกต้อง' });
+    }
+
+    const hashedNew = await bcrypt.hash(newPassword, 10);
+    await dbPool.query('UPDATE users SET password_hash = $1 WHERE id = $2', [hashedNew, req.user.id]);
+
+    await addServerAuditLog('CHANGE_PASSWORD', `ผู้ใช้ ${user.username} เปลี่ยนรหัสผ่าน`, user, null, null, req);
+
+    res.json({ success: true, message: 'เปลี่ยนรหัสผ่านสำเร็จเรียบร้อยแล้ว' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 // POST /api/auth/2fa/setup
 app.post('/api/auth/2fa/setup', async (req, res) => {
   const { username, password } = req.body;
