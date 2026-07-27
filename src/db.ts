@@ -112,6 +112,11 @@ export const saveDocumentTemplates = (templates: DocumentTemplate[]) => {
   localStorage.setItem(KEYS.TEMPLATES, JSON.stringify(templates));
 };
 
+export const resetDocumentTemplates = (): DocumentTemplate[] => {
+  localStorage.setItem(KEYS.TEMPLATES, JSON.stringify(initialDocumentTemplates));
+  return initialDocumentTemplates;
+};
+
 export const getAuditLogs = (): AuditLog[] => {
   initializeDB();
   return JSON.parse(localStorage.getItem(KEYS.AUDIT_LOGS) || '[]').reverse(); // Newest first

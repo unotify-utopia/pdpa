@@ -56,7 +56,9 @@ import {
   getRequestById,
   saveComplianceConfig,
   saveRequests,
-  generateTrackingNumber
+  generateTrackingNumber,
+  saveDocumentTemplates,
+  resetDocumentTemplates
 } from './db';
 
 
@@ -156,6 +158,7 @@ export default function App() {
   const [requests, setRequests] = useState<Request[]>([]);
   const [config, setConfig] = useState<ComplianceConfig | null>(null);
   const [templates, setTemplates] = useState<DocumentTemplate[]>([]);
+  const [editingTemplate, setEditingTemplate] = useState<DocumentTemplate | null>(null);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [activeUser, setActiveUser] = useState<UserType | null>(initialUser);
   const [impersonatedOrgId, setImpersonatedOrgId] = useState<string | null>(null);
@@ -1713,6 +1716,197 @@ export default function App() {
         isOpen={isChangePasswordModalOpen}
         onClose={() => setIsChangePasswordModalOpen(false)}
       />
+
+      {/* Document Template Edit Modal */}
+      {editingTemplate && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl max-w-2xl w-full shadow-2xl border border-slate-200 overflow-hidden animate-in fade-in zoom-in duration-200 my-8">
+            <div className="bg-brand-900 text-white px-6 py-4 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <FileCheck2 className="h-5 w-5 text-brand-300" />
+                <h3 className="font-bold text-base">
+                  แก้ไขแม่แบบหนังสือราชการ: {editingTemplate.nameTh}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditingTemplate(null)}
+                className="text-slate-400 hover:text-white transition"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                const updated = templates.map((t) =>
+                  t.id === editingTemplate.id ? editingTemplate : t
+                );
+                setTemplates(updated);
+                saveDocumentTemplates(updated);
+                addAuditLog(
+                  'UPDATE_TEMPLATE',
+                  `แก้ไขแม่แบบหนังสือราชการ: ${editingTemplate.nameTh} (${editingTemplate.id})`,
+                  (activeUser || initialUser) as any
+                );
+                setAuditLogs(getAuditLogs());
+                setEditingTemplate(null);
+                showNotify(
+                  `บันทึกการแก้ไขแม่แบบ "${editingTemplate.nameTh}" เรียบร้อยแล้ว`,
+                  'success',
+                  'บันทึกแม่แบบสำเร็จ'
+                );
+              }}
+              className="p-6 space-y-4 text-xs"
+            >
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-slate-700 font-bold mb-1">
+                    รหัสแม่แบบ (Template ID)
+                  </label>
+                  <input
+                    type="text"
+                    disabled
+                    value={editingTemplate.id}
+                    className="w-full bg-slate-100 border border-slate-200 rounded-lg px-3 py-2 font-mono text-slate-500 cursor-not-allowed"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-slate-700 font-bold mb-1">
+                    ระดับความลับ (Level)
+                  </label>
+                  <select
+                    value={editingTemplate.confidentialityLevel}
+                    onChange={(e) =>
+                      setEditingTemplate({
+                        ...editingTemplate,
+                        confidentialityLevel: e.target.value as 'SECRET' | 'CONFIDENTIAL' | 'NORMAL',
+                      })
+                    }
+                    className="w-full border border-slate-300 rounded-lg px-3 py-2 bg-white font-semibold focus:outline-none focus:border-brand-500"
+                  >
+                    <option value="NORMAL">NORMAL (ปกติ)</option>
+                    <option value="CONFIDENTIAL">CONFIDENTIAL (ลับ)</option>
+                    <option value="SECRET">SECRET (ลับมาก)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-slate-700 font-bold mb-1">
+                    เวอร์ชัน (Version)
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={editingTemplate.version}
+                    onChange={(e) =>
+                      setEditingTemplate({
+                        ...editingTemplate,
+                        version: e.target.value,
+                      })
+                    }
+                    className="w-full border border-slate-300 rounded-lg px-3 py-2 font-semibold focus:outline-none focus:border-brand-500"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-slate-700 font-bold mb-1">
+                    ชื่อแม่แบบ (ภาษาไทย)
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={editingTemplate.nameTh}
+                    onChange={(e) =>
+                      setEditingTemplate({
+                        ...editingTemplate,
+                        nameTh: e.target.value,
+                      })
+                    }
+                    className="w-full border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:border-brand-500 font-semibold"
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-700 font-bold mb-1">
+                    ชื่อแม่แบบ (English / Reference)
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={editingTemplate.nameEn}
+                    onChange={(e) =>
+                      setEditingTemplate({
+                        ...editingTemplate,
+                        nameEn: e.target.value,
+                      })
+                    }
+                    className="w-full border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:border-brand-500 font-semibold"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-slate-700 font-bold mb-1">
+                  ชื่อเรื่องหนังสือราชการ (Subject Template)
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={editingTemplate.subjectTemplate}
+                  onChange={(e) =>
+                    setEditingTemplate({
+                      ...editingTemplate,
+                      subjectTemplate: e.target.value,
+                    })
+                  }
+                  className="w-full border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:border-brand-500 font-semibold"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-700 font-bold mb-1">
+                  ข้อความแม่แบบหนังสือราชการ (Body Template)
+                </label>
+                <textarea
+                  rows={8}
+                  required
+                  value={editingTemplate.bodyTemplate}
+                  onChange={(e) =>
+                    setEditingTemplate({
+                      ...editingTemplate,
+                      bodyTemplate: e.target.value,
+                    })
+                  }
+                  className="w-full border border-slate-300 rounded-lg p-3 font-mono text-[11px] leading-relaxed focus:outline-none focus:border-brand-500"
+                />
+                <p className="text-[10px] text-slate-400 mt-1">
+                  * สามารถใช้ตัวแปรอัตโนมัติของระบบ เช่น <code className="bg-slate-100 px-1 rounded font-mono">{'{{trackingNo}}'}</code>, <code className="bg-slate-100 px-1 rounded font-mono">{'{{requesterName}}'}</code>, <code className="bg-slate-100 px-1 rounded font-mono">{'{{receivedDate}}'}</code>, <code className="bg-slate-100 px-1 rounded font-mono">{'{{channel}}'}</code>
+                </p>
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setEditingTemplate(null)}
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-lg transition"
+                >
+                  ยกเลิก (Cancel)
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 bg-brand-600 hover:bg-brand-700 text-white font-bold rounded-lg transition shadow-sm"
+                >
+                  บันทึกการแก้ไขแม่แบบ (Save Template)
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* User & Access Management Modal */}
       {isUserModalOpen && (
@@ -4991,7 +5185,22 @@ export default function App() {
                 {/* 4.5 Document Templates Tab */}
                 {internalTab === 'templates' && (
                   <div className="space-y-4">
-                    <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider">แม่แบบหนังสือราชการคุ้มครองข้อมูลส่วนบุคคล (PDPA Document Templates)</span>
+                    <div className="flex items-center justify-between">
+                      <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider">แม่แบบหนังสือราชการคุ้มครองข้อมูลส่วนบุคคล (PDPA Document Templates)</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (confirm('ยืนยันการรีเซ็ตข้อความแม่แบบทั้งหมดกลับเป็นค่าเริ่มต้นมาตรฐานของระบบหรือไม่?')) {
+                            const defaults = resetDocumentTemplates();
+                            setTemplates(defaults);
+                            showNotify('รีเซ็ตข้อความแม่แบบหนังสือราชการทั้งหมดกลับเป็นค่าเริ่มต้นเรียบร้อยแล้ว', 'success', 'รีเซ็ตสำเร็จ');
+                          }
+                        }}
+                        className="text-[11px] bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded font-semibold transition"
+                      >
+                        🔄 รีเซ็ตแม่แบบเริ่มต้น (Reset Defaults)
+                      </button>
+                    </div>
                     
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {templates.map((temp) => (
@@ -5017,8 +5226,8 @@ export default function App() {
 
                           <button
                             type="button"
-                            onClick={() => showNotify('จำลองการแก้ไขหนังสือราชการเรียบร้อย')}
-                            className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-1.5 rounded transition text-center"
+                            onClick={() => setEditingTemplate({ ...temp })}
+                            className="w-full bg-brand-50 hover:bg-brand-100 text-brand-700 font-semibold py-1.5 rounded transition text-center"
                           >
                             แก้ไขข้อความแม่แบบ (Edit Template)
                           </button>
