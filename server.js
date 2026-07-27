@@ -11,6 +11,7 @@ import nodemailer from 'nodemailer';
 import * as otplib from 'otplib';
 const { authenticator } = otplib;
 import QRCode from 'qrcode';
+import crypto from 'crypto';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -365,6 +366,21 @@ app.post('/api/auth/login', async (req, res) => {
       return res.status(401).json({ success: false, message: 'ชื่อผู้ใช้งานหรือรหัสผ่านไม่ถูกต้อง' });
     }
 
+    // Verify tenant contract status (only allow active tenants, except superadmin who is standalone)
+    if (user.role !== 'superadmin' && user.org_id) {
+      const tenantCheck = await dbPool.query('SELECT name_th, status FROM tenants WHERE id = $1', [user.org_id]);
+      if (tenantCheck.rows.length > 0) {
+        const tenantStatus = tenantCheck.rows[0].status;
+        if (tenantStatus === 'expired' || tenantStatus === 'suspended' || tenantStatus === 'archived') {
+          addServerAuditLog('LOGIN_BLOCKED_TENANT_EXPIRED', `พยายามเข้าสู่ระบบแต่หน่วยงานหมดสัญญา/ถูกระงับ (${user.username})`, user, req);
+          return res.status(403).json({
+            success: false,
+            message: `หน่วยงาน "${tenantCheck.rows[0].name_th}" สิ้นสุดสัญญาการใช้บริการหรือถูกระงับชั่วคราว กรุณาติดต่อ Super Admin หรือผู้ดูแลระบบกลาง`
+          });
+        }
+      }
+    }
+
     // 2FA / MFA Check
     const SKIP_MFA_FOR_TESTING = false;
     
@@ -701,6 +717,111 @@ app.delete('/api/tenants/:id', authenticateJWT, requireRole([]), async (req, res
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ success: false, error: 'Database error' });
+  }
+});
+
+// PUT /api/super-admin/tenants/:id/status (Super Admin only - contract lifecycle)
+app.put('/api/super-admin/tenants/:id/status', authenticateJWT, requireRole([]), async (req, res) => {
+  const { status } = req.body;
+  const tenantId = req.params.id;
+  if (!status) return res.status(400).json({ success: false, message: 'ระบุสถานะสัญญา' });
+
+  try {
+    const tenantRes = await dbPool.query('SELECT name_th FROM tenants WHERE id = $1', [tenantId]);
+    if (tenantRes.rows.length === 0) return res.status(404).json({ success: false, message: 'ไม่พบหน่วยงาน' });
+    const tenantName = tenantRes.rows[0].name_th;
+
+    await dbPool.query('UPDATE tenants SET status = $1 WHERE id = $2', [status, tenantId]);
+
+    addServerAuditLog(
+      'UPDATE_TENANT_CONTRACT_STATUS',
+      `เปลี่ยนสถานะสัญญาหน่วยงาน ${tenantName} (${tenantId}) เป็น: ${status.toUpperCase()}`,
+      req.user,
+      req
+    );
+
+    res.json({ success: true, message: `เปลี่ยนสถานะหน่วยงานเป็น ${status} เรียบร้อยแล้ว` });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// POST /api/super-admin/tenants/:id/offboard-export (Super Admin ONLY)
+app.post('/api/super-admin/tenants/:id/offboard-export', authenticateJWT, requireRole([]), async (req, res) => {
+  const tenantId = req.params.id;
+  try {
+    const tenantRes = await dbPool.query('SELECT * FROM tenants WHERE id = $1', [tenantId]);
+    if (tenantRes.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'ไม่พบหน่วยงานนี้ในระบบ' });
+    }
+    const tenant = tenantRes.rows[0];
+
+    // Query staff users (without password hashes)
+    const usersRes = await dbPool.query(
+      'SELECT id, username, email, full_name_th, full_name_en, role, department, created_at FROM users WHERE org_id = $1',
+      [tenantId]
+    );
+
+    // Query PDPA requests
+    const requestsRes = await dbPool.query(
+      'SELECT * FROM requests WHERE tenant_id = $1 ORDER BY submitted_at DESC',
+      [tenantId]
+    );
+
+    // Query Audit Logs
+    const logsRes = await dbPool.query(
+      "SELECT * FROM audit_logs WHERE org_id = $1 OR details LIKE '%' || $2 || '%' ORDER BY timestamp DESC LIMIT 5000",
+      [tenantId, tenant.name_th]
+    );
+
+    const generatedAt = new Date().toISOString();
+
+    const archivePayload = {
+      meta: {
+        exportVersion: "2.5.0-ENTERPRISE-OFFBOARDING",
+        exportType: "PDPA_COMPLETE_TENANT_SNAPSHOT_ARCHIVE",
+        tenantId: tenant.id,
+        tenantNameTh: tenant.name_th,
+        tenantNameEn: tenant.name_en,
+        contractStatusAtExport: tenant.status,
+        generatedBy: req.user.username,
+        generatedAt: generatedAt,
+        legalNotice: "ชุดข้อมูลนี้ถูกนำออกและลงนามรับรองความถูกต้องด้วย SHA-256 Checksum ตามพระราชบัญญัติคุ้มครองข้อมูลส่วนบุคคล พ.ศ. 2562 สำหรับกรณีสิ้นสุดสัญญาการให้บริการ"
+      },
+      tenantProfile: tenant,
+      staffAccounts: usersRes.rows,
+      pdpaRequests: requestsRes.rows,
+      auditTrail: logsRes.rows
+    };
+
+    const jsonString = JSON.stringify(archivePayload, null, 2);
+    const checksum = crypto.createHash('sha256').update(jsonString).digest('hex');
+
+    archivePayload.meta.sha256Checksum = checksum;
+
+    // Log this offboarding export to audit logs
+    addServerAuditLog(
+      'TENANT_OFFBOARD_EXPORT',
+      `ส่งมอบและนำออกข้อมูลหน่วยงานหมดสัญญา: ${tenant.name_th} (${tenantId}) - SHA-256: ${checksum.substring(0, 16)}...`,
+      req.user,
+      req
+    );
+
+    res.json({
+      success: true,
+      checksum: checksum,
+      exportedAt: generatedAt,
+      stats: {
+        totalUsers: usersRes.rows.length,
+        totalRequests: requestsRes.rows.length,
+        totalAuditLogs: logsRes.rows.length,
+        packageSizeBytes: Buffer.byteLength(jsonString, 'utf8')
+      },
+      packageData: archivePayload
+    });
+  } catch (err) {
+    console.error('Error in offboard export:', err);
+    res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดในการนำออกข้อมูลหน่วยงาน: ' + err.message });
   }
 });
 

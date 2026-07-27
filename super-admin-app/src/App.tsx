@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ShieldCheck, Building2, UserCheck, Key, Lock, LogOut, Plus, Sun, Moon, CheckCircle2, Trash2, Mail, AlertCircle, Eye, EyeOff, Check } from 'lucide-react';
+import { ShieldCheck, Building2, UserCheck, Key, Lock, LogOut, Plus, Sun, Moon, CheckCircle2, Trash2, Mail, AlertCircle, Eye, EyeOff, Check, Archive, Download, FileText, CheckCircle, ShieldAlert } from 'lucide-react';
 
 interface Tenant {
   id: string;
@@ -7,7 +7,7 @@ interface Tenant {
   nameEn: string;
   email: string;
   phone: string;
-  status: 'active' | 'inactive';
+  status: 'active' | 'inactive' | 'expired' | 'suspended' | 'archived';
 }
 
 interface User {
@@ -29,8 +29,13 @@ export default function App() {
   const [password, setPassword] = useState('');
   const [mfaCode, setMfaCode] = useState('');
 
-  const [activeTab, setActiveTab] = useState<'tenants' | 'users'>('tenants');
+  const [activeTab, setActiveTab] = useState<'tenants' | 'users' | 'export'>('tenants');
   const [selectedTenantForUsers, setSelectedTenantForUsers] = useState<string>('');
+  const [exportTenantModal, setExportTenantModal] = useState<Tenant | null>(null);
+  const [exportFormat, setExportFormat] = useState<'json' | 'csv'>('json');
+  const [masterConfirmText, setMasterConfirmText] = useState('');
+  const [exportingLoading, setExportingLoading] = useState(false);
+  const [offboardCertModal, setOffboardCertModal] = useState<{ open: boolean; tenant: Tenant; checksum: string; exportedAt: string; stats: { totalUsers: number; totalRequests: number; totalAuditLogs: number; packageSizeBytes: number }; payload: any } | null>(null);
 
   // Token and OTP email state
   const [token, setToken] = useState<string | null>(null);
@@ -469,6 +474,106 @@ export default function App() {
     }
   };
 
+  const handleUpdateTenantContractStatus = async (tenantId: string, newStatus: string) => {
+    if (!token) return;
+    try {
+      const res = await fetch(`/api/super-admin/tenants/${tenantId}/status`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ status: newStatus })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setTenants(prev => prev.map(t => t.id === tenantId ? { ...t, status: newStatus as any } : t));
+        showNotify(`เปลี่ยนสถานะสัญญาเป็น "${newStatus.toUpperCase()}" เรียบร้อยแล้ว (ระบบจะระงับ/อนุญาตการเข้าใช้ระบบของเจ้าหน้าที่สังกัดหน่วยงานนี้ทันที)`, 'success', 'อัปเดตสถานะสัญญาสำเร็จ');
+      } else {
+        throw new Error(data.message);
+      }
+    } catch (err: any) {
+      showNotify(err.message || 'เปลี่ยนสถานะสัญญาไม่สำเร็จ', 'error', 'เกิดข้อผิดพลาด');
+    }
+  };
+
+  const handleConfirmOffboardExport = async () => {
+    if (masterConfirmText !== 'EXPORT-' + exportTenantModal?.id.toUpperCase() && masterConfirmText !== 'EXPORT') {
+      showNotify(`กรุณาพิมพ์ "EXPORT-${exportTenantModal?.id.toUpperCase()}" หรือ "EXPORT" เพื่อยืนยันความปลอดภัยระดับสูงก่อนนำออกข้อมูล`, 'error', 'ยืนยันไม่ถูกต้อง');
+      return;
+    }
+    if (!token || !exportTenantModal) return;
+
+    setExportingLoading(true);
+    try {
+      const res = await fetch(`/api/super-admin/tenants/${exportTenantModal.id}/offboard-export`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      const data = await res.json();
+      if (!data.success) {
+        throw new Error(data.message || 'สร้างแพ็กเกจส่งมอบไม่สำเร็จ');
+      }
+
+      // Download file to browser
+      if (exportFormat === 'json') {
+        const jsonStr = JSON.stringify(data.packageData, null, 2);
+        const blob = new Blob([jsonStr], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${exportTenantModal.id}_PDPA_OFFBOARDING_ARCHIVE_${new Date().toISOString().split('T')[0]}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      } else {
+        // Convert to CSV summary
+        let csvContent = `PDPA OFFBOARDING SUMMARY MANIFEST\n`;
+        csvContent += `Tenant ID,${data.packageData.meta.tenantId}\n`;
+        csvContent += `Tenant Name (TH),${data.packageData.meta.tenantNameTh}\n`;
+        csvContent += `Export Timestamp,${data.packageData.meta.generatedAt}\n`;
+        csvContent += `SHA-256 Checksum,${data.checksum}\n\n`;
+        csvContent += `SUMMARY STATS\n`;
+        csvContent += `Total Staff Accounts,${data.stats.totalUsers}\n`;
+        csvContent += `Total PDPA Requests,${data.stats.totalRequests}\n`;
+        csvContent += `Total Audit Logs,${data.stats.totalAuditLogs}\n`;
+
+        const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${exportTenantModal.id}_PDPA_OFFBOARDING_MANIFEST_${new Date().toISOString().split('T')[0]}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }
+
+      const certPayload = {
+        open: true,
+        tenant: exportTenantModal,
+        checksum: data.checksum,
+        exportedAt: data.exportedAt,
+        stats: data.stats,
+        payload: data.packageData
+      };
+
+      setExportTenantModal(null);
+      setMasterConfirmText('');
+      setOffboardCertModal(certPayload);
+      showNotify(`สร้างแพ็กเกจส่งมอบข้อมูลสำหรับหน่วยงาน "${exportTenantModal.nameTh}" พร้อม SHA-256 Checksum สำเร็จเรียบร้อยแล้ว`, 'success', 'นำออกข้อมูลสำเร็จ');
+
+    } catch (err: any) {
+      showNotify(err.message || 'เกิดข้อผิดพลาดในการนำออกข้อมูลหน่วยงาน', 'error', 'การส่งมอบข้อมูลล้มเหลว');
+    } finally {
+      setExportingLoading(false);
+    }
+  };
+
   // Theme Styling Helper
   const isDark = theme === 'dark';
   const bgClass = isDark ? 'bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900';
@@ -690,6 +795,16 @@ export default function App() {
               <UserCheck className="h-4 w-4" />
               <span>2. จัดการผู้ใช้ & รหัสผ่าน (Users - {users.length})</span>
             </button>
+
+            <button
+              onClick={() => setActiveTab('export')}
+              className={`px-4 py-2 rounded-lg text-xs font-bold transition flex items-center gap-2 ${
+                activeTab === 'export' ? 'bg-amber-600 text-white shadow-md' : 'bg-slate-800/40 text-slate-400 hover:bg-slate-800'
+              }`}
+            >
+              <Archive className="h-4 w-4" />
+              <span>3. ส่งมอบข้อมูลหมดสัญญา (Offboarding - {tenants.length})</span>
+            </button>
           </div>
 
           {activeTab === 'tenants' ? (
@@ -700,7 +815,7 @@ export default function App() {
               <Plus className="h-4 w-4" />
               <span>+ เพิ่มหน่วยงานใหม่ (Add Tenant)</span>
             </button>
-          ) : (
+          ) : activeTab === 'users' ? (
             <button
               onClick={handleOpenAddUserModal}
               className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-4 py-2 rounded-lg transition shadow-sm flex items-center gap-1.5"
@@ -708,7 +823,7 @@ export default function App() {
               <Plus className="h-4 w-4" />
               <span>+ สร้างผู้ใช้ใหม่ (Add User)</span>
             </button>
-          )}
+          ) : null}
         </div>
 
         {/* TAB 1: Tenants */}
@@ -846,6 +961,107 @@ export default function App() {
               </table>
             </div>
             )}
+          </div>
+        )}
+
+        {/* TAB 3: DATA EXPORT / OFFBOARDING (NON-RENEWING TENANTS) */}
+        {activeTab === 'export' && (
+          <div className="space-y-6 animate-fade-in">
+            {/* Security Banner */}
+            <div className="bg-gradient-to-r from-amber-950/40 via-slate-900 to-emerald-950/30 border border-amber-500/30 rounded-2xl p-5 shadow-lg flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+              <div className="flex items-start gap-4">
+                <div className="p-3 bg-amber-500/20 border border-amber-500/30 rounded-xl text-amber-400 shrink-0">
+                  <ShieldAlert className="h-7 w-7" />
+                </div>
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h2 className="font-bold text-sm text-white">ระบบนำออกข้อมูลกรณีไม่ต่ออายุสัญญา/สิ้นสุดสัญญา (Contract Offboarding & Data Takeout)</h2>
+                    <span className="bg-amber-500/20 text-amber-400 border border-amber-500/30 text-[10px] px-2 py-0.5 rounded-full font-mono font-bold">
+                      SUPER ADMIN EXCLUSIVE
+                    </span>
+                    <span className="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[10px] px-2 py-0.5 rounded-full font-mono font-bold">
+                      SHA-256 CHECKED
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-300 leading-relaxed">
+                    เครื่องมือสำหรับ Super Admin ในการส่งมอบและสกัดข้อมูล PDPA ของหน่วยงาน (คำขอสิทธิ์, บัญชีเจ้าหน้าที่, ทะเบียน, Audit Trail) พร้อมสร้าง <b>SHA-256 Digital Signature</b> เพื่อรับรองความถูกต้องของข้อมูลตามกฎหมาย และเปลี่ยนสถานะสัญญาเพื่อระงับการเข้าสู่ระบบ
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Tenants Table with Offboarding Controls */}
+            <div className={`border rounded-2xl overflow-hidden shadow-lg ${cardBgClass}`}>
+              <div className="px-5 py-3.5 border-b border-slate-800 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Archive className="h-4 w-4 text-amber-400" />
+                  <span className="font-bold text-xs">รายการหน่วยงานทั้งหมดและการจัดการสถานะสัญญา (Tenant Contract Lifecycle)</span>
+                </div>
+                <span className="text-[11px] text-slate-400">หน่วยงานทั้งหมด {tenants.length} แห่ง</span>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead>
+                    <tr className="border-b border-slate-800 bg-slate-900/50 text-slate-400 font-semibold">
+                      <th className="py-3 px-4">รหัส (ID)</th>
+                      <th className="py-3 px-4">ชื่อหน่วยงาน (Tenant Name)</th>
+                      <th className="py-3 px-4">อีเมล/โทรศัพท์</th>
+                      <th className="py-3 px-4">สถานะสัญญา (Contract Status)</th>
+                      <th className="py-3 px-4 text-right">การจัดการและนำออกข้อมูล (Offboarding Action)</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800/40">
+                    {tenants.map((t) => {
+                      const userCount = users.filter(u => u.orgId === t.id).length;
+                      const statusColor =
+                        t.status === 'expired' ? 'bg-red-500/20 text-red-400 border-red-500/30' :
+                        t.status === 'suspended' ? 'bg-amber-500/20 text-amber-400 border-amber-500/30' :
+                        t.status === 'archived' ? 'bg-purple-500/20 text-purple-400 border-purple-500/30' :
+                        'bg-emerald-500/20 text-emerald-400 border-emerald-500/30';
+
+                      return (
+                        <tr key={t.id} className="hover:bg-slate-800/30 transition">
+                          <td className="py-3.5 px-4 font-mono font-bold text-emerald-400">{t.id}</td>
+                          <td className="py-3.5 px-4">
+                            <div className="font-bold text-slate-200">{t.nameTh}</div>
+                            <div className="text-[11px] text-slate-400">{t.nameEn} ({userCount} บัญชีเจ้าหน้าที่)</div>
+                          </td>
+                          <td className="py-3.5 px-4 text-[11px] text-slate-300">
+                            <div>{t.email || '-'}</div>
+                            <div className="text-slate-500">{t.phone || '-'}</div>
+                          </td>
+                          <td className="py-3.5 px-4">
+                            <select
+                              value={t.status || 'active'}
+                              onChange={(e) => handleUpdateTenantContractStatus(t.id, e.target.value)}
+                              className={`text-[11px] font-bold px-2.5 py-1 rounded-lg border focus:outline-none cursor-pointer ${statusColor} bg-slate-900`}
+                            >
+                              <option value="active" className="bg-slate-900 text-emerald-400">ACTIVE (ใช้งานปกติ)</option>
+                              <option value="expired" className="bg-slate-900 text-red-400">EXPIRED (ไม่ต่ออายุสัญญา)</option>
+                              <option value="suspended" className="bg-slate-900 text-amber-400">SUSPENDED (ระงับชั่วคราว)</option>
+                              <option value="archived" className="bg-slate-900 text-purple-400">ARCHIVED (ส่งมอบข้อมูลแล้ว)</option>
+                            </select>
+                          </td>
+                          <td className="py-3.5 px-4 text-right">
+                            <button
+                              onClick={() => {
+                                setExportTenantModal(t);
+                                setMasterConfirmText('');
+                              }}
+                              className="bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 border border-amber-500/30 text-[11px] font-bold px-3 py-1.5 rounded-lg transition inline-flex items-center gap-1.5 shadow-sm"
+                            >
+                              <Download className="h-3.5 w-3.5" />
+                              <span>📦 นำออกข้อมูลส่งมอบ (SHA-256 Takeout)</span>
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
         )}
 
@@ -1427,6 +1643,183 @@ export default function App() {
             >
               รับทราบ / ตกลง
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Master Security Confirmation Modal for Offboarding Takeout */}
+      {exportTenantModal && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className={`border rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-5 ${cardBgClass} animate-fade-in`}>
+            <div className="flex items-center gap-3 border-b border-slate-800 pb-3">
+              <div className="p-2.5 bg-amber-500/20 border border-amber-500/30 rounded-xl text-amber-400">
+                <ShieldAlert className="h-6 w-6" />
+              </div>
+              <div>
+                <h3 className="font-bold text-base text-white">ยืนยันการนำออกข้อมูลส่งมอบ (Data Offboarding Takeout)</h3>
+                <p className="text-xs text-slate-400">สร้างชุดข้อมูลพร้อม SHA-256 Checksum สำหรับสิ้นสุดสัญญา</p>
+              </div>
+            </div>
+
+            <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 text-xs space-y-2 text-amber-200">
+              <div className="font-bold">⚠️ รายละเอียดหน่วยงานที่จะนำออกข้อมูล:</div>
+              <div>• ชื่อหน่วยงาน: <b>{exportTenantModal.nameTh}</b> ({exportTenantModal.nameEn})</div>
+              <div>• รหัสหน่วยงาน (ID): <b>{exportTenantModal.id}</b></div>
+              <div className="text-[11px] text-amber-300/80 mt-1">
+                การดำเนินการนี้จะรวมข้อมูลคำขอสิทธิ์ PDPA ทั้งหมด, บัญชีผู้ใช้, และ Audit Trail พร้อมลงนามด้วยรหัสแฮช SHA-256
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold mb-1.5 text-slate-300">เลือกรูปแบบไฟล์ส่งมอบ (Export Format)</label>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setExportFormat('json')}
+                  className={`py-2 px-3 rounded-xl border text-xs font-bold transition flex items-center justify-center gap-1.5 ${
+                    exportFormat === 'json' ? 'bg-emerald-600 border-emerald-500 text-white' : 'bg-slate-900 border-slate-800 text-slate-400'
+                  }`}
+                >
+                  <FileText className="h-4 w-4" />
+                  <span>JSON Snapshot Archive (แนะนำ)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setExportFormat('csv')}
+                  className={`py-2 px-3 rounded-xl border text-xs font-bold transition flex items-center justify-center gap-1.5 ${
+                    exportFormat === 'csv' ? 'bg-emerald-600 border-emerald-500 text-white' : 'bg-slate-900 border-slate-800 text-slate-400'
+                  }`}
+                >
+                  <FileText className="h-4 w-4" />
+                  <span>CSV Summary Manifest</span>
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold mb-1 text-slate-300">
+                พิมพ์คำว่า <span className="text-amber-400 font-mono font-bold">EXPORT-{exportTenantModal.id.toUpperCase()}</span> หรือ <span className="text-amber-400 font-mono font-bold">EXPORT</span> เพื่อยืนยัน
+              </label>
+              <input
+                type="text"
+                value={masterConfirmText}
+                onChange={(e) => setMasterConfirmText(e.target.value)}
+                placeholder={`EXPORT-${exportTenantModal.id.toUpperCase()}`}
+                className={`w-full px-3.5 py-2.5 border rounded-xl text-xs font-mono font-bold focus:outline-none focus:border-amber-500 ${inputBgClass}`}
+              />
+            </div>
+
+            <div className="flex gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setExportTenantModal(null);
+                  setMasterConfirmText('');
+                }}
+                className="w-1/3 py-2.5 rounded-xl border border-slate-700 hover:bg-slate-800 text-xs font-semibold transition"
+              >
+                ยกเลิก
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmOffboardExport}
+                disabled={exportingLoading}
+                className="w-2/3 py-2.5 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white text-xs font-bold transition shadow-lg flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                {exportingLoading ? (
+                  <span>⏳ กำลังสร้างไฟล์แพ็กเกจ SHA-256...</span>
+                ) : (
+                  <>
+                    <Download className="h-4 w-4" />
+                    <span>ยืนยันดาวน์โหลดชุดข้อมูลส่งมอบ</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Certificate of Data Offboarding Modal */}
+      {offboardCertModal && offboardCertModal.open && (
+        <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-md z-50 flex items-center justify-center p-4">
+          <div className={`border border-emerald-500/40 rounded-2xl p-6 max-w-xl w-full shadow-2xl space-y-5 ${cardBgClass} animate-fade-in`}>
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-emerald-500/20 border border-emerald-500/30 rounded-xl text-emerald-400">
+                  <CheckCircle className="h-7 w-7" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-base text-emerald-400">ใบรับรองการส่งมอบข้อมูล PDPA (Data Offboarding Certificate)</h3>
+                  <p className="text-xs text-slate-400">ระบบตรวจสอบและลงนามรับรองความถูกต้องด้วย SHA-256 Checksum</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setOffboardCertModal(null)}
+                className="text-slate-400 hover:text-white text-lg font-bold px-2"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <div className="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-2">
+                <div className="flex justify-between border-b border-slate-800/60 pb-2">
+                  <span className="text-slate-400">หน่วยงาน (Tenant Name):</span>
+                  <span className="font-bold text-white">{offboardCertModal.tenant.nameTh} ({offboardCertModal.tenant.id})</span>
+                </div>
+                <div className="flex justify-between border-b border-slate-800/60 pb-2">
+                  <span className="text-slate-400">วันที่สร้างและนำออกข้อมูล:</span>
+                  <span className="font-mono text-emerald-400 font-bold">{new Date(offboardCertModal.exportedAt).toLocaleString('th-TH')}</span>
+                </div>
+                <div className="flex justify-between border-b border-slate-800/60 pb-2">
+                  <span className="text-slate-400">สถิติข้อมูลที่นำออก:</span>
+                  <span className="text-slate-200">
+                    {offboardCertModal.stats.totalUsers} บัญชี | {offboardCertModal.stats.totalRequests} คำขอ PDPA | {offboardCertModal.stats.totalAuditLogs} Audit Logs
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400">ขนาดไฟล์แพ็กเกจ (Size):</span>
+                  <span className="font-mono text-slate-300 font-semibold">{(offboardCertModal.stats.packageSizeBytes / 1024).toFixed(2)} KB</span>
+                </div>
+              </div>
+
+              <div className="bg-emerald-950/30 border border-emerald-500/30 rounded-xl p-4 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-emerald-400 flex items-center gap-1.5">
+                    <ShieldCheck className="h-4 w-4" />
+                    <span>SHA-256 Cryptographic Checksum (Digital Hash):</span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText(offboardCertModal.checksum);
+                      showNotify('คัดลอกค่า SHA-256 Checksum ไปยังคลิปบอร์ดแล้ว', 'success', 'คัดลอกสำเร็จ');
+                    }}
+                    className="text-[11px] bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 px-2 py-0.5 rounded border border-emerald-500/30 font-semibold"
+                  >
+                    📋 คัดลอก Hash
+                  </button>
+                </div>
+                <div className="font-mono text-[11px] bg-slate-950 p-2.5 rounded-lg border border-slate-800 text-emerald-300 break-all select-all font-bold">
+                  {offboardCertModal.checksum}
+                </div>
+                <div className="text-[11px] text-slate-300 pt-1">
+                  💡 ใช้รหัสแฮชนี้ในบันทึกข้อตกลงสิ้นสุดสัญญา (Contract Expiry & Data Offboarding Memo) เพื่อยืนยันว่าชุดข้อมูลไม่ได้ถูกแก้ไข
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-2 border-t border-slate-800">
+              <button
+                type="button"
+                onClick={() => setOffboardCertModal(null)}
+                className="py-2.5 px-6 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition shadow-lg"
+              >
+                เสร็จสิ้น / ปิดหน้าต่าง
+              </button>
+            </div>
           </div>
         </div>
       )}
