@@ -85,14 +85,7 @@ export default function App() {
       if (data.success) {
         if (data.requires2FA || data.requires2FASetup) {
           setOtpEmail(data.email || 'apichat.utopia@gmail.com');
-          showNotify(
-            data.message || `ระบบได้ส่งรหัส OTP 6 หลักไปยัง Gmail (${data.email || 'apichat.utopia@gmail.com'}) เรียบร้อยแล้ว`,
-            'success',
-            'ส่งรหัส OTP สำเร็จ',
-            () => {
-              setLoginStep('mfa');
-            }
-          );
+          setLoginStep('mfa');
         } else if (data.token) {
           setToken(data.token);
           setLoginStep('authenticated');
@@ -513,9 +506,9 @@ export default function App() {
                     value={mfaCode}
                     onChange={(e) => setMfaCode(e.target.value.replace(/[^0-9]/g, ''))}
                     placeholder="• • • • • •"
+                    autoFocus
                     className="w-full text-center tracking-[0.6em] font-mono text-2xl font-extrabold py-3 px-4 bg-slate-900/90 border-2 border-emerald-500/50 hover:border-emerald-500 rounded-2xl text-emerald-400 placeholder:text-slate-600 focus:outline-none focus:border-emerald-400 focus:ring-4 focus:ring-emerald-500/20 transition shadow-inner"
                     required
-                    autoFocus
                   />
                 </div>
                 <span className="block text-[11px] text-emerald-400/90 text-center mt-2 font-medium">
