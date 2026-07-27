@@ -810,7 +810,7 @@ app.get('/api/audit-logs', authenticateJWT, requireRole(['admin', 'auditor', 'dp
 
 // --- SUPER ADMIN STATIC FRONTEND SERVING ---
 app.use('/super-admin', express.static(path.join(__dirname, 'super-admin-app', 'dist')));
-app.get('/super-admin*', (req, res) => {
+app.use('/super-admin', (req, res) => {
   res.sendFile(path.join(__dirname, 'super-admin-app', 'dist', 'index.html'));
 });
 

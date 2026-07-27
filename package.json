@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "server": "node server.js",
-    "build": "tsc -b && vite build && npm run build --prefix super-admin-app",
+    "build": "tsc -b && vite build && npm --prefix super-admin-app install && npm run build --prefix super-admin-app",
     "lint": "eslint .",
     "preview": "vite preview"
   },
