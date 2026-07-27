@@ -845,7 +845,6 @@ app.post('/api/public/verify-otp', async (req, res) => {
     console.error('Error verifying OTP:', error);
     return res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดในการตรวจสอบรหัส OTP' });
   }
-  }
 });
 
 // GET /api/public/track/:trackingNo
