@@ -34,8 +34,6 @@ export default function App() {
   // Token and OTP email state
   const [token, setToken] = useState<string | null>(null);
   const [otpEmail, setOtpEmail] = useState<string>('');
-  const [devOtp, setDevOtp] = useState<string>('');
-  const [emailSentStatus, setEmailSentStatus] = useState<boolean>(true);
 
   // Change Password Modal State
   const [isChangePasswordOpen, setIsChangePasswordOpen] = useState<boolean>(false);
@@ -79,14 +77,8 @@ export default function App() {
       if (data.success) {
         if (data.requires2FA || data.requires2FASetup) {
           setOtpEmail(data.email || 'apichat.utopia@gmail.com');
-          setDevOtp(data.otp || '');
-          setEmailSentStatus(data.emailSent !== false);
           setLoginStep('mfa');
-          if (data.emailSent === false) {
-            alert('⚠️ หมายเหตุ: เซิร์ฟเวอร์ยังไม่ได้ตั้งค่า SMTP Password ในระบบจริง\nแต่คุณสามารถใช้รหัส OTP ด้านล่างเพื่อเข้าสู่ระบบได้ทันทีครับ');
-          } else {
-            alert(data.message || `ระบบได้ส่งรหัส OTP 6 หลักไปยัง Gmail (${data.email || 'apichat.utopia@gmail.com'}) เรียบร้อยแล้ว`);
-          }
+          alert(data.message || `ระบบได้ส่งรหัส OTP 6 หลักไปยัง Gmail (${data.email || 'apichat.utopia@gmail.com'}) เรียบร้อยแล้ว`);
         } else if (data.token) {
           setToken(data.token);
           setLoginStep('authenticated');
@@ -488,28 +480,6 @@ export default function App() {
                 <p className="text-[11px] text-slate-400">
                   <span>นำรหัสตัวเลข 6 หลักที่ได้รับในกล่องจดหมายมากรอกเพื่อยืนยันเข้าสู่ระบบ</span>
                 </p>
-
-                {devOtp && (
-                  <div className="mt-3 p-3 bg-amber-500/15 border border-amber-500/40 rounded-xl text-center space-y-1.5">
-                    <div className="flex items-center justify-center gap-1.5 text-amber-300 text-xs font-bold">
-                      <span>⚡ รหัส OTP ของคุณในรอบนี้ (คลิกเพื่อกรอกทันที):</span>
-                    </div>
-                    <div
-                      onClick={() => {
-                        setMfaCode(devOtp);
-                      }}
-                      title="คลิกเพื่อกรอกอัตโนมัติ"
-                      className="inline-block px-4 py-1.5 bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/50 rounded-lg font-mono text-2xl font-black tracking-[0.3em] text-amber-400 cursor-pointer transition select-all shadow-sm"
-                    >
-                      {devOtp}
-                    </div>
-                    <p className="text-[10px] text-slate-300">
-                      {!emailSentStatus
-                        ? 'ℹ️ เซิร์ฟเวอร์ยังไม่ได้ตั้งค่ารหัสผ่าน SMTP ในระบบจริง ระบบจึงแสดง OTP ให้คุณเข้าใช้งานได้ทันที'
-                        : '💡 คลิกที่ตัวเลขด้านบนเพื่อกรอกรหัสอัตโนมัติได้ทันที'}
-                    </p>
-                  </div>
-                )}
               </div>
 
               <div>

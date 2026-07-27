@@ -471,6 +471,8 @@ app.post('/api/super-admin/login', async (req, res) => {
 
       if (!mfaCode) {
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        const otpData = JSON.stringify({ otp, expiresAt: Date.now() + 5 * 60 * 1000 });
+        await dbPool.query('UPDATE users SET two_factor_secret = $1 WHERE id = $2', [otpData, user.id]);
         otpCache.set(`superadmin_login_${user.username}`, {
           otp,
           expiresAt: Date.now() + 5 * 60 * 1000 // 5 minutes
@@ -500,26 +502,33 @@ app.post('/api/super-admin/login', async (req, res) => {
           console.log(`[SMTP] Sent Super Admin login OTP ${otp} to ${targetEmail}`);
         } catch (mailErr) {
           emailSent = false;
-          console.warn(`[SMTP Warning] Failed to send login OTP email: ${mailErr.message}. Fallback OTP in log: ${otp}`);
+          console.warn(`[SMTP Warning] Failed to send login OTP email: ${mailErr.message}`);
         }
 
         return res.json({
           success: true,
           requires2FA: true,
           email: targetEmail,
-          otp: otp,
           emailSent: emailSent,
-          message: emailSent
-            ? `ระบบได้ส่งรหัส OTP 6 หลักไปยัง Gmail (${targetEmail}) เรียบร้อยแล้ว`
-            : `ยังไม่ได้ตั้งค่า SMTP App Password ในเซิร์ฟเวอร์ กรุณาใช้รหัส OTP บนหน้าจอเพื่อเข้าสู่ระบบ`
+          message: `ระบบได้ส่งรหัส OTP 6 หลักไปยัง Gmail (${targetEmail}) เรียบร้อยแล้ว`
         });
       }
 
-      // Verify OTP Code
-      const cached = otpCache.get(`superadmin_login_${user.username}`);
+      // Verify OTP Code across PM2 cluster (DB first, fallback to memory)
+      let cached = null;
+      try {
+        if (user.two_factor_secret && user.two_factor_secret.startsWith('{')) {
+          cached = JSON.parse(user.two_factor_secret);
+        }
+      } catch (e) {}
+      if (!cached) {
+        cached = otpCache.get(`superadmin_login_${user.username}`);
+      }
+
       if (!cached || Date.now() > cached.expiresAt || cached.otp !== mfaCode.trim()) {
         return res.status(401).json({ success: false, message: 'รหัส OTP ไม่ถูกต้องหรือหมดอายุแล้ว กรุณาตรวจสอบ Gmail ของท่านอีกครั้ง' });
       }
+      await dbPool.query('UPDATE users SET two_factor_secret = NULL WHERE id = $1', [user.id]);
       otpCache.delete(`superadmin_login_${user.username}`);
     }
 
