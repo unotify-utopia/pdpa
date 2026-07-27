@@ -108,6 +108,11 @@ const initDatabase = async () => {
     } catch (e) {}
 
     try {
+      await dbPool.query('ALTER TABLE users ADD COLUMN mfa_enabled BOOLEAN DEFAULT false');
+      console.log('✅ Added mfa_enabled column to users table');
+    } catch (e) {}
+
+    try {
       await dbPool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS roles JSONB DEFAULT '[]'::jsonb");
       console.log('✅ Added roles JSONB column to users table');
     } catch (e) {}
