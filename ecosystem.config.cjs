@@ -8,7 +8,10 @@ module.exports = {
       env: {
         NODE_ENV: 'production',
         PORT: 3001,
-        // Environment variables will be loaded from .env automatically by dotenv
+        SMTP_HOST: 'smtp.gmail.com',
+        SMTP_PORT: 465,
+        SMTP_USER: 'pdpa.utopia@gmail.com',
+        SMTP_PASS: 'bxabpsctfsoqihrh',
       }
     }
   ]

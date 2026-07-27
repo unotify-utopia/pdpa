@@ -201,8 +201,8 @@ const transporter = nodemailer.createTransport({
   port: parseInt(process.env.SMTP_PORT || '465'),
   secure: true,
   auth: {
-    user: process.env.SMTP_USER || 'your-org-email@gmail.com',
-    pass: process.env.SMTP_PASS || 'your-app-password',
+    user: process.env.SMTP_USER || 'pdpa.utopia@gmail.com',
+    pass: process.env.SMTP_PASS || 'bxabpsctfsoqihrh',
   },
 });
 
@@ -477,7 +477,7 @@ app.post('/api/super-admin/login', async (req, res) => {
         let emailSent = true;
         try {
           await transporter.sendMail({
-            from: `"PDPA Access Portal" <${process.env.SMTP_USER || 'noreply@organization.or.th'}>`,
+            from: `"PDPA Access Portal" <${process.env.SMTP_USER || 'pdpa.utopia@gmail.com'}>`,
             to: targetEmail,
             subject: 'รหัส OTP สำหรับเข้าสู่ระบบ Super Admin (PDPA System)',
             html: `
@@ -761,7 +761,7 @@ app.post('/api/public/send-otp', async (req, res) => {
   if (email) {
     try {
       await transporter.sendMail({
-        from: `"PDPA Access Portal" <${process.env.SMTP_USER || 'noreply@organization.or.th'}>`,
+        from: `"PDPA Access Portal" <${process.env.SMTP_USER || 'pdpa.utopia@gmail.com'}>`,
         to: email,
         subject: 'รหัส OTP สำหรับยืนยันตัวตน (PDPA Portal)',
         html: `
