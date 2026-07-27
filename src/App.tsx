@@ -1810,56 +1810,59 @@ export default function App() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => {
+                  onClick={async () => {
                     const token = localStorage.getItem('pdpa_token');
                     if (!userForm.username || !userForm.fullNameTh) {
                       alert('กรุณากรอกรหัสผู้ใช้ และชื่อ-นามสกุลให้ครบถ้วน');
                       return;
                     }
-                    if (!token) return;
+                    if (!token) {
+                      alert('เซสชั่นหมดอายุ กรุณาออกจากระบบและเข้าสู่ระบบใหม่');
+                      return;
+                    }
 
-                    if (editingUser) {
-                      fetch(`/api/users/${editingUser.id}`, {
-                        method: 'PUT',
-                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                        body: JSON.stringify(userForm)
-                      })
-                        .then((res) => res.json())
-                        .then((data) => {
-                          if (data.success) {
-                            alert('บันทึกการแก้ไขสิทธิ์เรียบร้อยแล้ว');
-                            setIsUserModalOpen(false);
-                            window.location.reload();
-                          } else {
-                            alert('เกิดข้อผิดพลาด: ' + data.error);
-                          }
+                    try {
+                      let res: Response;
+                      if (editingUser) {
+                        res = await fetch(`/api/users/${editingUser.id}`, {
+                          method: 'PUT',
+                          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                          body: JSON.stringify(userForm)
                         });
-                    } else {
-                      fetch('/api/users', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                        body: JSON.stringify({
-                          id: `usr_${Date.now()}`,
-                          orgId: activeUser?.orgId || 'org_dopa',
-                          username: userForm.username,
-                          fullName: userForm.fullNameTh,
-                          fullNameEn: userForm.fullNameEn || userForm.fullNameTh,
-                          email: userForm.email || `${userForm.username}@dopa.go.th`,
-                          role: userForm.role,
-                          roles: userForm.roles,
-                          department: userForm.department
-                        })
-                      })
-                        .then((res) => res.json())
-                        .then((data) => {
-                          if (data.success) {
-                            alert('เพิ่มผู้ใช้งานสำเร็จ! รหัสผ่านเริ่มต้นคือ 123456');
-                            setIsUserModalOpen(false);
-                            window.location.reload();
-                          } else {
-                            alert('เกิดข้อผิดพลาด: ' + data.error);
-                          }
+                      } else {
+                        res = await fetch('/api/users', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                          body: JSON.stringify({
+                            id: `usr_${Date.now()}`,
+                            orgId: activeUser?.orgId || 'org_dopa',
+                            username: userForm.username,
+                            fullName: userForm.fullNameTh,
+                            fullNameEn: userForm.fullNameEn || userForm.fullNameTh,
+                            email: userForm.email || `${userForm.username}@dopa.go.th`,
+                            role: userForm.role,
+                            roles: userForm.roles,
+                            department: userForm.department
+                          })
                         });
+                      }
+
+                      if (!res.ok) {
+                        const errData = await res.json().catch(() => ({}));
+                        alert(`เกิดข้อผิดพลาด (${res.status}): ${errData.message || errData.error || 'ไม่ได้รับอนุญาต กรุณาตรวจสอบสิทธิ์ผู้ใช้'}`);
+                        return;
+                      }
+
+                      const data = await res.json();
+                      if (data.success) {
+                        alert(editingUser ? 'บันทึกการแก้ไขสิทธิ์เรียบร้อยแล้ว' : 'เพิ่มผู้ใช้งานสำเร็จ! รหัสผ่านเริ่มต้นคือ 123456');
+                        setIsUserModalOpen(false);
+                        window.location.reload();
+                      } else {
+                        alert('เกิดข้อผิดพลาด: ' + (data.error || data.message || 'ไม่ทราบสาเหตุ'));
+                      }
+                    } catch (err) {
+                      alert('ไม่สามารถติดต่อ Server ได้: ' + String(err));
                     }
                   }}
                   className="bg-brand-600 hover:bg-brand-700 text-white font-bold px-5 py-2 rounded-lg text-xs transition shadow-sm"
