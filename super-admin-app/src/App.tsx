@@ -36,11 +36,11 @@ export default function App() {
   const [otpEmail, setOtpEmail] = useState<string>('');
 
   // Custom Professional Notification Dialog Modal State
-  const [notifyModal, setNotifyModal] = useState<{ open: boolean; title: string; message: string; type: 'success' | 'warning' | 'error' } | null>(null);
+  const [notifyModal, setNotifyModal] = useState<{ open: boolean; title: string; message: string; type: 'success' | 'warning' | 'error'; onConfirm?: () => void } | null>(null);
 
-  const showNotify = (message: string, type: 'success' | 'warning' | 'error' = 'success', title?: string) => {
+  const showNotify = (message: string, type: 'success' | 'warning' | 'error' = 'success', title?: string, onConfirm?: () => void) => {
     const defaultTitle = type === 'success' ? 'การแจ้งเตือนจากระบบ' : type === 'warning' ? 'ข้อความแจ้งเตือน' : 'เกิดข้อผิดพลาด';
-    setNotifyModal({ open: true, title: title || defaultTitle, message, type });
+    setNotifyModal({ open: true, title: title || defaultTitle, message, type, onConfirm });
   };
 
   // Change Password Modal State
@@ -85,11 +85,13 @@ export default function App() {
       if (data.success) {
         if (data.requires2FA || data.requires2FASetup) {
           setOtpEmail(data.email || 'apichat.utopia@gmail.com');
-          setLoginStep('mfa');
           showNotify(
             data.message || `ระบบได้ส่งรหัส OTP 6 หลักไปยัง Gmail (${data.email || 'apichat.utopia@gmail.com'}) เรียบร้อยแล้ว`,
             'success',
-            'ส่งรหัส OTP สำเร็จ'
+            'ส่งรหัส OTP สำเร็จ',
+            () => {
+              setLoginStep('mfa');
+            }
           );
         } else if (data.token) {
           setToken(data.token);
@@ -225,8 +227,14 @@ export default function App() {
       const data = await res.json();
       if (data.success) {
         setTenantOtpInput('');
-        setShowOtpVerificationModal(true);
-        showNotify(`ส่งรหัส OTP ยืนยันไปยังอีเมล ${tenantFormData.email.trim()} เรียบร้อยแล้ว (มีอายุ 5 นาที)`, 'success', 'ส่ง OTP เรียบร้อย');
+        showNotify(
+          `ส่งรหัส OTP ยืนยันไปยังอีเมล ${tenantFormData.email.trim()} เรียบร้อยแล้ว (มีอายุ 5 นาที)`,
+          'success',
+          'ส่ง OTP เรียบร้อย',
+          () => {
+            setShowOtpVerificationModal(true);
+          }
+        );
       } else {
         showNotify(data.message || 'ไม่สามารถส่งรหัส OTP ได้ กรุณาลองใหม่อีกครั้ง', 'error', 'ส่ง OTP ไม่สำเร็จ');
       }
@@ -1254,7 +1262,11 @@ export default function App() {
             {/* Action Button */}
             <button
               type="button"
-              onClick={() => setNotifyModal(null)}
+              onClick={() => {
+                const cb = notifyModal.onConfirm;
+                setNotifyModal(null);
+                if (cb) cb();
+              }}
               className={`w-full py-3 px-6 rounded-xl font-bold text-sm text-white shadow-lg transition duration-200 transform hover:-translate-y-0.5 ${
                 notifyModal.type === 'success' ? 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 shadow-emerald-900/40' :
                 notifyModal.type === 'warning' ? 'bg-gradient-to-r from-amber-600 to-yellow-600 hover:from-amber-500 hover:to-yellow-500 shadow-amber-900/40' :
