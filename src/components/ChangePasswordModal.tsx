@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Lock, Key } from 'lucide-react';
+import { X, Lock, Key, Eye, EyeOff, Check } from 'lucide-react';
 
 interface ChangePasswordModalProps {
   isOpen: boolean;
@@ -10,11 +10,20 @@ export function ChangePasswordModal({ isOpen, onClose }: ChangePasswordModalProp
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const [loading, setLoading] = useState(false);
 
   if (!isOpen) return null;
+
+  // Real-time validation
+  const isLengthValid = newPassword.length >= 8;
+  const hasLowerCase = /[a-z]/.test(newPassword);
+  const hasUpperCase = /[A-Z]/.test(newPassword);
+  const hasNumber = /\d/.test(newPassword);
+  const hasSpecialChar = /[@$!%*?&]/.test(newPassword);
+  const isAllValid = isLengthValid && hasLowerCase && hasUpperCase && hasNumber && hasSpecialChar;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,10 +35,8 @@ export function ChangePasswordModal({ isOpen, onClose }: ChangePasswordModalProp
       return;
     }
     
-    // Strong password validation
-    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
-    if (!passwordRegex.test(newPassword)) {
-      setErrorMsg('รหัสผ่านต้องมีความยาวอย่างน้อย 8 ตัวอักษร, ประกอบด้วยพิมพ์เล็ก พิมพ์ใหญ่ ตัวเลข และอักขระพิเศษ');
+    if (!isAllValid) {
+      setErrorMsg('กรุณาตั้งรหัสผ่านให้ตรงตามเงื่อนไขที่กำหนด');
       return;
     }
 
@@ -102,34 +109,84 @@ export function ChangePasswordModal({ isOpen, onClose }: ChangePasswordModalProp
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-1">
               <label className="text-xs font-semibold text-slate-700 block">รหัสผ่านปัจจุบัน</label>
-              <input
-                type="password"
-                required
-                value={currentPassword}
-                onChange={(e) => setCurrentPassword(e.target.value)}
-                className="w-full border border-slate-300 rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-brand-500 text-sm text-slate-900 transition shadow-sm"
-              />
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  required
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  className="w-full border border-slate-300 rounded-lg p-2.5 pr-10 outline-none focus:ring-2 focus:ring-brand-500 text-sm text-slate-900 transition shadow-sm"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600"
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
             </div>
+            
             <div className="space-y-1">
               <label className="text-xs font-semibold text-slate-700 block">รหัสผ่านใหม่</label>
-              <input
-                type="password"
-                required
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                className="w-full border border-slate-300 rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-brand-500 text-sm text-slate-900 transition shadow-sm"
-              />
-              <p className="text-[10px] text-slate-500 mt-1">ต้องมีอย่างน้อย 8 ตัวอักษร, พิมพ์เล็ก, พิมพ์ใหญ่, ตัวเลข, อักขระพิเศษ</p>
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  required
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  className="w-full border border-slate-300 rounded-lg p-2.5 pr-10 outline-none focus:ring-2 focus:ring-brand-500 text-sm text-slate-900 transition shadow-sm"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600"
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+              
+              {/* Validation Checklist */}
+              {newPassword && (
+                <div className="mt-2 space-y-1 bg-slate-50 p-2.5 rounded-lg border border-slate-100">
+                  <p className="text-[10px] font-semibold text-slate-600 mb-1.5">รหัสผ่านต้องประกอบด้วย:</p>
+                  <div className="grid grid-cols-2 gap-x-2 gap-y-1">
+                    <div className={`flex items-center gap-1.5 text-[10px] ${isLengthValid ? 'text-emerald-600 font-semibold' : 'text-slate-400'}`}>
+                      <Check className={`h-3 w-3 ${isLengthValid ? 'opacity-100' : 'opacity-0'}`} />
+                      ความยาว 8+ ตัว
+                    </div>
+                    <div className={`flex items-center gap-1.5 text-[10px] ${hasLowerCase ? 'text-emerald-600 font-semibold' : 'text-slate-400'}`}>
+                      <Check className={`h-3 w-3 ${hasLowerCase ? 'opacity-100' : 'opacity-0'}`} />
+                      พิมพ์เล็ก (a-z)
+                    </div>
+                    <div className={`flex items-center gap-1.5 text-[10px] ${hasUpperCase ? 'text-emerald-600 font-semibold' : 'text-slate-400'}`}>
+                      <Check className={`h-3 w-3 ${hasUpperCase ? 'opacity-100' : 'opacity-0'}`} />
+                      พิมพ์ใหญ่ (A-Z)
+                    </div>
+                    <div className={`flex items-center gap-1.5 text-[10px] ${hasNumber ? 'text-emerald-600 font-semibold' : 'text-slate-400'}`}>
+                      <Check className={`h-3 w-3 ${hasNumber ? 'opacity-100' : 'opacity-0'}`} />
+                      ตัวเลข (0-9)
+                    </div>
+                    <div className={`flex items-center gap-1.5 text-[10px] ${hasSpecialChar ? 'text-emerald-600 font-semibold' : 'text-slate-400'} col-span-2`}>
+                      <Check className={`h-3 w-3 ${hasSpecialChar ? 'opacity-100' : 'opacity-0'}`} />
+                      อักขระพิเศษ (เช่น @, $, !, %)
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
+
             <div className="space-y-1">
               <label className="text-xs font-semibold text-slate-700 block">ยืนยันรหัสผ่านใหม่</label>
-              <input
-                type="password"
-                required
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                className="w-full border border-slate-300 rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-brand-500 text-sm text-slate-900 transition shadow-sm"
-              />
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  required
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className="w-full border border-slate-300 rounded-lg p-2.5 pr-10 outline-none focus:ring-2 focus:ring-brand-500 text-sm text-slate-900 transition shadow-sm"
+                />
+              </div>
             </div>
 
             <div className="flex gap-2 pt-2">
