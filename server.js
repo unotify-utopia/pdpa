@@ -560,31 +560,31 @@ app.post('/api/super-admin/login', async (req, res) => {
         });
 
         let emailSent = true;
-        try {
-          await transporter.sendMail({
-            from: `"PDPA Access Portal" <${process.env.SMTP_USER || 'pdpa.utopia@gmail.com'}>`,
-            to: targetEmail,
-            subject: 'รหัส OTP สำหรับเข้าสู่ระบบ Super Admin (PDPA System)',
-            html: `
-              <div style="font-family: sans-serif; max-width: 500px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
-                <div style="background-color: #059669; padding: 20px; text-align: center;">
-                  <h2 style="color: #ffffff; margin: 0;">รหัส OTP เข้าสู่ระบบ Super Admin</h2>
-                </div>
-                <div style="padding: 30px 20px; text-align: center;">
-                  <p style="color: #475569; font-size: 16px; margin-bottom: 20px;">รหัสผ่านแบบใช้ครั้งเดียว (OTP) สำหรับยืนยันการเข้าสู่ระบบ Gmail ของท่าน:</p>
-                  <div style="background-color: #f0fdf4; border: 2px dashed #059669; border-radius: 8px; padding: 15px; font-size: 32px; font-weight: bold; letter-spacing: 4px; color: #059669; margin-bottom: 20px;">
-                    ${otp}
-                  </div>
-                  <p style="color: #ef4444; font-size: 14px;">* รหัสนี้มีอายุการใช้งาน 5 นาที</p>
-                </div>
+        
+        // Fire and forget email sending to avoid blocking the login request
+        transporter.sendMail({
+          from: `"PDPA Access Portal" <${process.env.SMTP_USER || 'pdpa.utopia@gmail.com'}>`,
+          to: targetEmail,
+          subject: 'รหัส OTP สำหรับเข้าสู่ระบบ Super Admin (PDPA System)',
+          html: `
+            <div style="font-family: sans-serif; max-width: 500px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
+              <div style="background-color: #059669; padding: 20px; text-align: center;">
+                <h2 style="color: #ffffff; margin: 0;">รหัส OTP เข้าสู่ระบบ Super Admin</h2>
               </div>
-            `
-          });
+              <div style="padding: 30px 20px; text-align: center;">
+                <p style="color: #475569; font-size: 16px; margin-bottom: 20px;">รหัสผ่านแบบใช้ครั้งเดียว (OTP) สำหรับยืนยันการเข้าสู่ระบบ Gmail ของท่าน:</p>
+                <div style="background-color: #f0fdf4; border: 2px dashed #059669; border-radius: 8px; padding: 15px; font-size: 32px; font-weight: bold; letter-spacing: 4px; color: #059669; margin-bottom: 20px;">
+                  ${otp}
+                </div>
+                <p style="color: #ef4444; font-size: 14px;">* รหัสนี้มีอายุการใช้งาน 5 นาที</p>
+              </div>
+            </div>
+          `
+        }).then(() => {
           console.log(`[SMTP] Sent Super Admin login OTP ${otp} to ${targetEmail}`);
-        } catch (mailErr) {
-          emailSent = false;
+        }).catch(mailErr => {
           console.warn(`[SMTP Warning] Failed to send login OTP email: ${mailErr.message}`);
-        }
+        });
 
         return res.json({
           success: true,
