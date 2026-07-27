@@ -11,51 +11,24 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: 📥 Checkout Code
-        uses: actions/checkout@v4
-
-      - name: 🟢 Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-
-      - name: 📦 Install Dependencies
-        run: npm ci
-
-      - name: 🔨 Build Frontend
-        run: npm run build
-
-      - name: 📦 Package files for deployment
-        run: |
-          tar -czf deploy.tar.gz dist/ server.js package.json package-lock.json ecosystem.config.cjs
-
-      - name: 📤 Upload package to server
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USERNAME }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          port: 22
-          source: "deploy.tar.gz"
-          target: "/tmp/"
-
-      - name: ♻️ Extract and restart on server
+      - name: 🚀 SSH Deploy
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USERNAME }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          password: ${{ secrets.SSH_PASSWORD }}
           port: 22
           script: |
             set -e
-            echo "📂 Extracting deployment package..."
-            cd ${{ secrets.APP_PATH }}
-            tar -xzf /tmp/deploy.tar.gz
-            rm /tmp/deploy.tar.gz
-            echo "📦 Installing production dependencies..."
-            npm install --omit=dev
-            echo "♻️ Restarting PM2..."
+            cd /root/pdpa
+            echo "⬇️ Pulling latest code..."
+            git pull https://github.com/unotify-utopia/pdpa.git main
+            echo "📦 Installing dependencies..."
+            npm install
+            echo "🔨 Building frontend..."
+            npm run build
+            echo "♻️ Restarting server..."
             pm2 restart pdpa-req-system
-            echo "✅ Deploy complete! Site is live."
+            echo "✅ Deploy complete!"
+
 
