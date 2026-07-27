@@ -23,8 +23,8 @@ jobs:
       - name: 📦 Install Dependencies
         run: npm ci
 
-      - name: 🔨 Build Frontend (Vite + TypeScript)
-        run: npm run build
+      - name: ✅ TypeScript Check (Validate Code)
+        run: npx tsc --noEmit
 
       - name: 🚀 Deploy to Server via SSH
         uses: appleboy/ssh-action@v1.0.3
@@ -40,13 +40,14 @@ jobs:
             echo "⬇️ Pulling latest code from GitHub..."
             git pull origin main
 
-            echo "📦 Installing server dependencies..."
-            npm install --omit=dev
+            echo "📦 Installing all dependencies (including devDeps for build)..."
+            npm install
 
             echo "🔨 Building frontend on server..."
             npm run build
 
             echo "♻️ Restarting application with PM2..."
-            pm2 restart all || pm2 start ecosystem.config.cjs
+            pm2 restart pdpa-req-system
 
             echo "✅ Deployment completed successfully!"
+
