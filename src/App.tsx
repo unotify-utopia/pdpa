@@ -205,7 +205,14 @@ export default function App() {
   }, [activeUser]);
 
   useEffect(() => {
-    fetch('/api/tenants')
+    const token = sessionStorage.getItem('pdpa_token') || sessionStorage.getItem('pdpa_jwt_token');
+    if (!token) return;
+    
+    fetch('/api/tenants', {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    })
       .then(res => res.json())
       .then(data => {
         if (data.success) {
@@ -214,7 +221,7 @@ export default function App() {
         }
       })
       .catch(console.error);
-  }, []);
+  }, [activeUser]);
 
   // Fetch backend users
   const reloadUsers = () => {

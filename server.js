@@ -647,7 +647,7 @@ app.post('/api/super-admin/change-password', authenticateJWT, async (req, res) =
 });
 
 // GET /api/tenants
-app.get('/api/tenants', authenticateJWT, requireRole(['admin']), async (req, res) => {
+app.get('/api/tenants', authenticateJWT, requireRole([]), async (req, res) => {
   try {
     const { rows } = await dbPool.query('SELECT * FROM tenants ORDER BY created_at ASC');
     const mappedTenants = rows.map(r => ({
