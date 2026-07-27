@@ -216,7 +216,7 @@ export default function App() {
       .then(res => res.json())
       .then(data => {
         if (data.success) {
-           const formatted = data.tenants.map((t: any) => ({ id: t.id, nameTh: t.name_th, nameEn: t.name_en, code: t.id.replace('org_', '') }));
+           const formatted = data.tenants.map((t: any) => ({ id: t.id, nameTh: t.nameTh || t.name_th, nameEn: t.nameEn || t.name_en, code: t.id.replace('org_', '') }));
            setOrganizations(formatted);
         }
       })
