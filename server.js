@@ -361,9 +361,9 @@ app.post('/api/auth/login', async (req, res) => {
     }
 
     // 2FA / MFA Check
-    const SKIP_MFA_FOR_TESTING = true; // TODO: Remove this in production
+    const SKIP_MFA_FOR_TESTING = false;
     
-    if (user.mfa_enabled && !SKIP_MFA_FOR_TESTING) {
+    if (!SKIP_MFA_FOR_TESTING) {
       const { mfaCode } = req.body;
       
       if (!user.two_factor_secret) {
