@@ -66,6 +66,8 @@ import { RedactionCanvas } from './components/RedactionCanvas';
 import { ThaiLetterView, convertToThaiDate } from './components/ThaiLetterView';
 import { DashboardCharts } from './components/DashboardCharts';
 import { StaffLoginModal } from './components/StaffLoginModal';
+import { NotifyModal } from './components/NotifyModal';
+import type { NotifyType } from './components/NotifyModal';
 import { ChangePasswordModal } from './components/ChangePasswordModal';
 
 // Helper: Thai Citizen ID Modulus 11 Checksum Validator
@@ -112,6 +114,36 @@ export const formatThaiTimeString = (dateStr: string): string => {
 };
 
 export default function App() {
+
+  // Notify Modal State
+  const [notifyState, setNotifyState] = useState<{ open: boolean; title: string; message: string; type: NotifyType; onConfirm?: () => void; onCancel?: () => void }>({
+    open: false, title: '', message: '', type: 'success'
+  });
+
+  const showNotify = (message: string, type: NotifyType = 'success', title?: string, onConfirm?: () => void, onCancel?: () => void) => {
+    let defaultTitle = 'การแจ้งเตือนจากระบบ';
+    if (type === 'error') defaultTitle = 'เกิดข้อผิดพลาด';
+    if (type === 'warning') defaultTitle = 'ข้อความแจ้งเตือน';
+    if (type === 'confirm') defaultTitle = 'ยืนยันการดำเนินการ';
+    
+    // Auto-detect type if it's default
+    if (message.includes('❌') || message.includes('เกิดข้อผิดพลาด') || message.includes('ไม่สามารถ')) {
+      type = 'error';
+      defaultTitle = 'เกิดข้อผิดพลาด';
+    } else if (message.includes('⚠️') || message.includes('กรุณา')) {
+      type = 'warning';
+      defaultTitle = 'ข้อความแจ้งเตือน';
+    } else if (message.includes('✅') || message.includes('สำเร็จ') || message.includes('เรียบร้อย')) {
+      type = 'success';
+      defaultTitle = 'การแจ้งเตือนจากระบบ';
+    }
+    
+    // Remove emojis from message for cleaner UI
+    const cleanMessage = message.replace(/^[❌⚠️✅]\s*/, '');
+    
+    setNotifyState({ open: true, title: title || defaultTitle, message: cleanMessage, type, onConfirm, onCancel });
+  };
+
   // App context navigation states
   const initialUser = getCurrentUser();
   const [view, setView] = useState<'public' | 'internal' | 'tracking' | 'download' | 'superadmin'>(
@@ -151,7 +183,7 @@ export default function App() {
           setActiveUser(null);
           setView('public');
           setPublicTab('landing');
-          alert('ท่านไม่ได้ใช้งานระบบเกิน 10 นาที ระบบจึงทำการออกจากระบบอัตโนมัติเพื่อความปลอดภัย');
+          showNotify('ท่านไม่ได้ใช้งานระบบเกิน 10 นาที ระบบจึงทำการออกจากระบบอัตโนมัติเพื่อความปลอดภัย');
           window.location.reload();
         }
       }, 10 * 60 * 1000);
@@ -371,12 +403,12 @@ export default function App() {
       });
       const data = await res.json();
       if (!data.success) {
-        alert(`❌ ${data.message}`);
+        showNotify(`❌ ${data.message}`);
         return false;
       }
       return true;
     } catch (err) {
-      alert('❌ ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์เพื่อยืนยัน OTP ได้');
+      showNotify('❌ ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์เพื่อยืนยัน OTP ได้');
       return false;
     }
   };
@@ -419,7 +451,7 @@ export default function App() {
     const resetTimer = () => {
       clearTimeout(inactivityTimer);
       inactivityTimer = setTimeout(() => {
-        alert('เซสชันหมดอายุเนื่องจากไม่มีการใช้งานเกิน 10 นาที ระบบได้ทำการล็อกเอาต์อัตโนมัติเพื่อความปลอดภัยตามมาตรฐาน PDPA');
+        showNotify('เซสชันหมดอายุเนื่องจากไม่มีการใช้งานเกิน 10 นาที ระบบได้ทำการล็อกเอาต์อัตโนมัติเพื่อความปลอดภัยตามมาตรฐาน PDPA');
         setActiveUser(null);
         setView('public');
       }, TIMEOUT_DURATION);
@@ -523,14 +555,14 @@ export default function App() {
 
     // 1. Check mandatory consent checkboxes
     if (!consentAccepted || !accuracyCertified) {
-      alert('⚠️ กรุณาคลิกยอมรับนโยบายความเป็นส่วนตัวและคำรับรองความถูกต้องก่อนยื่นคำขอ');
+      showNotify('⚠️ กรุณาคลิกยอมรับนโยบายความเป็นส่วนตัวและคำรับรองความถูกต้องก่อนยื่นคำขอ');
       return;
     }
 
     // 2. Mandatory File Upload Verification
     if (reqType === 'self') {
       if (uploadedAttachments.length === 0) {
-        alert('⚠️ กรุณาอัปโหลดสำเนาบัตรประจำตัวประชาชนหรือเอกสารยืนยันตัวตนเจ้าของข้อมูลส่วนบุคคลก่อนยื่นคำขอ');
+        showNotify('⚠️ กรุณาอัปโหลดสำเนาบัตรประจำตัวประชาชนหรือเอกสารยืนยันตัวตนเจ้าของข้อมูลส่วนบุคคลก่อนยื่นคำขอ');
         return;
       }
     } else if (reqType === 'representative') {
@@ -539,7 +571,7 @@ export default function App() {
       const hasPoa = uploadedAttachments.some(f => f.name.includes('[หนังสือมอบอำนาจ]'));
 
       if (!hasDelegatorId || !hasRepId || !hasPoa) {
-        alert('⚠️ กรุณาอัปโหลดเอกสารหลักฐานให้ครบถ้วนทั้ง 3 รายการก่อนยื่นคำขอ:\n1. บัตรประจำตัวประชาชนผู้มอบอำนาจ (เจ้าของข้อมูลส่วนบุคคล)\n2. บัตรประจำตัวประชาชนผู้รับมอบอำนาจ\n3. เอกสารหนังสือมอบอำนาจ (Power of Attorney)');
+        showNotify('⚠️ กรุณาอัปโหลดเอกสารหลักฐานให้ครบถ้วนทั้ง 3 รายการก่อนยื่นคำขอ:\n1. บัตรประจำตัวประชาชนผู้มอบอำนาจ (เจ้าของข้อมูลส่วนบุคคล)\n2. บัตรประจำตัวประชาชนผู้รับมอบอำนาจ\n3. เอกสารหนังสือมอบอำนาจ (Power of Attorney)');
         return;
       }
     }
@@ -573,11 +605,11 @@ export default function App() {
       const data = await res.json();
       
       if (!data.success) {
-        alert(`❌ ${data.message}`);
+        showNotify(`❌ ${data.message}`);
         return;
       }
     } catch (err) {
-      alert('❌ ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์เพื่อยืนยัน OTP ได้');
+      showNotify('❌ ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์เพื่อยืนยัน OTP ได้');
       return;
     }
 
@@ -905,7 +937,7 @@ export default function App() {
     }
     
     reloadData();
-    alert('✅ อัปโหลดรูปภาพบัตรประชาชน / เอกสารเพิ่มเติมเรียบร้อยแล้ว!\n\nระบบทำการปลดล็อกนับเวลา SLA และส่งเรื่องกลับหาเจ้าหน้าที่คัดกรองเรียบร้อยแล้ว');
+    showNotify('✅ อัปโหลดรูปภาพบัตรประชาชน / เอกสารเพิ่มเติมเรียบร้อยแล้ว!\n\nระบบทำการปลดล็อกนับเวลา SLA และส่งเรื่องกลับหาเจ้าหน้าที่คัดกรองเรียบร้อยแล้ว');
   };
 
   // --- SECURE DOWNLOAD VERIFICATION (Section 3.9) ---
@@ -1239,7 +1271,7 @@ export default function App() {
 
     updateRequest(req, activeUser, 'CALCULATE_FEE', `คำนวณอัตราค่าธรรมเนียมสำเร็จ ยอดสุทธิ: ${subtotal} บาท (สถานะ: ${subtotal > 0 ? 'รอนัดชำระ' : 'ยกเว้น'})`);
     reloadData();
-    alert('คำนวณและบันทึกอัตราค่าธรรมเนียมเรียบร้อยแล้ว');
+    showNotify('คำนวณและบันทึกอัตราค่าธรรมเนียมเรียบร้อยแล้ว');
   };
 
   // Simulating Payment Upload / Verification
@@ -1363,7 +1395,7 @@ export default function App() {
     if (!req) return;
 
     if (req.legalHold) {
-      alert('ไม่สามารถทำลายข้อมูลที่อยู่ภายใต้ Legal Hold คดีความได้');
+      showNotify('ไม่สามารถทำลายข้อมูลที่อยู่ภายใต้ Legal Hold คดีความได้');
       return;
     }
 
@@ -1385,7 +1417,7 @@ export default function App() {
 
     updateRequest(req, activeUser, 'DESTROY_EXPIRED_DATA', `ลบทำลายไฟล์และเอกสารหลักฐานระบุตัวตนถาวรตาม Retention Policy พยานร่วมตรวจสอบ: ${req.destroyedWitness}`);
     reloadData();
-    alert('ทำลายเอกสารหลักฐานและปิดประวัติเรียบร้อยแล้ว');
+    showNotify('ทำลายเอกสารหลักฐานและปิดประวัติเรียบร้อยแล้ว');
   };
 
   // Compliance Config Edit Panel (Section 1)
@@ -1420,7 +1452,7 @@ export default function App() {
     if (!activeUser || !config) return;
 
     if (!configForm.changeReason) {
-      alert('กรุณากรอกเหตุผลในการแก้ไขกฎเกณฑ์นโยบายความสอดคล้อง');
+      showNotify('กรุณากรอกเหตุผลในการแก้ไขกฎเกณฑ์นโยบายความสอดคล้อง');
       return;
     }
 
@@ -1447,7 +1479,7 @@ export default function App() {
 
     saveComplianceConfig(updatedConfig, activeUser, configForm.changeReason);
     reloadData();
-    alert('บันทึกค่ากำหนดความสอดคล้องทางกฎหมายเรียบร้อยแล้ว');
+    showNotify('บันทึกค่ากำหนดความสอดคล้องทางกฎหมายเรียบร้อยแล้ว');
   };
 
   // SLA extension (Section 5)
@@ -1478,7 +1510,7 @@ export default function App() {
 
     updateRequest(req, activeUser, 'EXTEND_SLA_TIMELINE', `ขยายระยะเวลารับสิทธิเพิ่ม ${config?.sla.extensionDays || 30} วันด้วยเหตุจำเป็น`);
     reloadData();
-    alert('ขยายเวลา SLA สำเร็จ');
+    showNotify('ขยายเวลา SLA สำเร็จ');
   };
 
   // Staff manual message post
@@ -1820,7 +1852,7 @@ export default function App() {
                             .then((res) => res.json())
                             .then((data) => {
                               if (data.success) {
-                                alert('รหัสผ่านถูกตั้งค่าใหม่เป็น 123456 เรียบร้อยแล้ว');
+                                showNotify('รหัสผ่านถูกตั้งค่าใหม่เป็น 123456 เรียบร้อยแล้ว');
                               }
                             });
                         }
@@ -1843,7 +1875,7 @@ export default function App() {
                               .then((res) => res.json())
                               .then((data) => {
                                 if (data.success) {
-                                  alert('ลบผู้ใช้งานสำเร็จ');
+                                  showNotify('ลบผู้ใช้งานสำเร็จ');
                                   reloadUsers();
                                 }
                               });
@@ -1872,11 +1904,11 @@ export default function App() {
                   onClick={async () => {
                     const token = sessionStorage.getItem('pdpa_token') || sessionStorage.getItem('pdpa_jwt_token');
                     if (!userForm.username || !userForm.fullNameTh) {
-                      alert('กรุณากรอกรหัสผู้ใช้ และชื่อ-นามสกุลให้ครบถ้วน');
+                      showNotify('กรุณากรอกรหัสผู้ใช้ และชื่อ-นามสกุลให้ครบถ้วน');
                       return;
                     }
                     if (!token) {
-                      alert('เซสชั่นหมดอายุ กรุณาออกจากระบบและเข้าสู่ระบบใหม่');
+                      showNotify('เซสชั่นหมดอายุ กรุณาออกจากระบบและเข้าสู่ระบบใหม่');
                       return;
                     }
 
@@ -1908,20 +1940,20 @@ export default function App() {
 
                       if (!res.ok) {
                         const errData = await res.json().catch(() => ({}));
-                        alert(`เกิดข้อผิดพลาด (${res.status}): ${errData.message || errData.error || 'ไม่ได้รับอนุญาต กรุณาตรวจสอบสิทธิ์ผู้ใช้'}`);
+                        showNotify(`เกิดข้อผิดพลาด (${res.status}): ${errData.message || errData.error || 'ไม่ได้รับอนุญาต กรุณาตรวจสอบสิทธิ์ผู้ใช้'}`);
                         return;
                       }
 
                       const data = await res.json();
                       if (data.success) {
-                        alert(editingUser ? 'บันทึกการแก้ไขสิทธิ์เรียบร้อยแล้ว' : 'เพิ่มผู้ใช้งานสำเร็จ! รหัสผ่านเริ่มต้นคือ 123456');
+                        showNotify(editingUser ? 'บันทึกการแก้ไขสิทธิ์เรียบร้อยแล้ว' : 'เพิ่มผู้ใช้งานสำเร็จ! รหัสผ่านเริ่มต้นคือ 123456');
                         setIsUserModalOpen(false);
                         reloadUsers();
                       } else {
-                        alert('เกิดข้อผิดพลาด: ' + (data.error || data.message || 'ไม่ทราบสาเหตุ'));
+                        showNotify('เกิดข้อผิดพลาด: ' + (data.error || data.message || 'ไม่ทราบสาเหตุ'));
                       }
                     } catch (err) {
-                      alert('ไม่สามารถติดต่อ Server ได้: ' + String(err));
+                      showNotify('ไม่สามารถติดต่อ Server ได้: ' + String(err));
                     }
                   }}
                   className="bg-brand-600 hover:bg-brand-700 text-white font-bold px-5 py-2 rounded-lg text-xs transition shadow-sm"
@@ -2460,27 +2492,27 @@ export default function App() {
                           type="button"
                           onClick={() => {
                             if (!selectedTargetOrgId) {
-                              alert('⚠️ กรุณาค้นหาและคลิกเลือก "หน่วยงานรับเรื่อง" ก่อนกดขั้นตอนถัดไป');
+                              showNotify('⚠️ กรุณาค้นหาและคลิกเลือก "หน่วยงานรับเรื่อง" ก่อนกดขั้นตอนถัดไป');
                               return;
                             }
 
                             // 1. Validate Requester (Data Subject) First & Last Name
                             if (!requesterForm.firstName.trim() || !requesterForm.lastName.trim()) {
-                              alert('⚠️ กรุณากรอก "ชื่อจริง" และ "นามสกุล" ของเจ้าของข้อมูลให้ครบถ้วน');
+                              showNotify('⚠️ กรุณากรอก "ชื่อจริง" และ "นามสกุล" ของเจ้าของข้อมูลให้ครบถ้วน');
                               return;
                             }
 
                             // 2. Validate Requester ID / Passport Number
                             const cleanId = requesterForm.idNumber.replace(/[^a-zA-Z0-9]/g, '');
                             if (!cleanId || cleanId.length < 7) {
-                              alert('⚠️ กรุณากรอก "เลขประจำตัวประชาชน (13 หลัก)" หรือ "เลขพาสปอร์ต" ของเจ้าของข้อมูลให้ถูกต้อง');
+                              showNotify('⚠️ กรุณากรอก "เลขประจำตัวประชาชน (13 หลัก)" หรือ "เลขพาสปอร์ต" ของเจ้าของข้อมูลให้ถูกต้อง');
                               return;
                             }
 
                             // Enforce Thai Citizen ID Modulus 11 Checksum Algorithm for Requester
                             if (/^\d{13}$/.test(cleanId)) {
                               if (!validateThaiCitizenId(cleanId)) {
-                                alert('❌ เลขประจำตัวประชาชน 13 หลักของเจ้าของข้อมูลไม่ถูกต้องตามสูตรคำนวณของกรมการปกครอง (Check Digit Mismatch)\n\nกรุณาตรวจสอบตัวเลข 13 หลักอีกครั้ง');
+                                showNotify('❌ เลขประจำตัวประชาชน 13 หลักของเจ้าของข้อมูลไม่ถูกต้องตามสูตรคำนวณของกรมการปกครอง (Check Digit Mismatch)\n\nกรุณาตรวจสอบตัวเลข 13 หลักอีกครั้ง');
                                 return;
                               }
                             }
@@ -2488,50 +2520,50 @@ export default function App() {
                             // 3. Validate Requester Phone Number
                             const cleanPhone = requesterForm.phone.replace(/[^0-9]/g, '');
                             if (!cleanPhone || cleanPhone.length < 9 || cleanPhone.length > 10) {
-                              alert('⚠️ กรุณากรอก "เบอร์โทรศัพท์ติดต่อ" ของเจ้าของข้อมูลให้ถูกต้อง (เบอร์มือถือ 10 หลัก เช่น 0812345678 หรือ เบอร์สายตรง 9 หลัก เช่น 022218150)');
+                              showNotify('⚠️ กรุณากรอก "เบอร์โทรศัพท์ติดต่อ" ของเจ้าของข้อมูลให้ถูกต้อง (เบอร์มือถือ 10 หลัก เช่น 0812345678 หรือ เบอร์สายตรง 9 หลัก เช่น 022218150)');
                               return;
                             }
 
                             // 4. Validate Requester Email Address
                             const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
                             if (!requesterForm.email.trim() || !emailRegex.test(requesterForm.email.trim())) {
-                              alert('⚠️ กรุณากรอก "อีเมลติดต่อ" ของเจ้าของข้อมูลให้ถูกต้องในรูปแบบที่ใช้งานได้จริง (เช่น name@example.com)');
+                              showNotify('⚠️ กรุณากรอก "อีเมลติดต่อ" ของเจ้าของข้อมูลให้ถูกต้องในรูปแบบที่ใช้งานได้จริง (เช่น name@example.com)');
                               return;
                             }
 
                             // 5. If Representative option is checked, validate Rep details with SAME STRICT CONDITIONS
                             if (reqType === 'representative') {
                               if (!repForm.firstName.trim() || !repForm.lastName.trim()) {
-                                alert('⚠️ กรุณากรอก "ชื่อจริง" และ "นามสกุล" ของผู้รับมอบอำนาจให้ครบถ้วน');
+                                showNotify('⚠️ กรุณากรอก "ชื่อจริง" และ "นามสกุล" ของผู้รับมอบอำนาจให้ครบถ้วน');
                                 return;
                               }
 
                               const cleanRepId = repForm.idNumber.replace(/[^a-zA-Z0-9]/g, '');
                               if (!cleanRepId || cleanRepId.length < 7) {
-                                alert('⚠️ กรุณากรอก "เลขบัตรผู้แทนสิทธิ / พาสปอร์ต (13 หลัก)" ของผู้รับมอบอำนาจให้ถูกต้อง');
+                                showNotify('⚠️ กรุณากรอก "เลขบัตรผู้แทนสิทธิ / พาสปอร์ต (13 หลัก)" ของผู้รับมอบอำนาจให้ถูกต้อง');
                                 return;
                               }
 
                               if (/^\d{13}$/.test(cleanRepId)) {
                                 if (!validateThaiCitizenId(cleanRepId)) {
-                                  alert('❌ เลขบัตรประจำตัว 13 หลักของผู้รับมอบอำนาจไม่ถูกต้องตามสูตรคำนวณของกรมการปกครอง (Check Digit Mismatch)\n\nกรุณาตรวจสอบเลข 13 หลักของผู้แทนสิทธิอีกครั้ง');
+                                  showNotify('❌ เลขบัตรประจำตัว 13 หลักของผู้รับมอบอำนาจไม่ถูกต้องตามสูตรคำนวณของกรมการปกครอง (Check Digit Mismatch)\n\nกรุณาตรวจสอบเลข 13 หลักของผู้แทนสิทธิอีกครั้ง');
                                   return;
                                 }
                               }
 
                               const cleanRepPhone = repForm.phone.replace(/[^0-9]/g, '');
                               if (!cleanRepPhone || cleanRepPhone.length < 9 || cleanRepPhone.length > 10) {
-                                alert('⚠️ กรุณากรอก "เบอร์โทรผู้แทน" ให้ถูกต้อง (เบอร์มือถือ 10 หลัก หรือ เบอร์สายตรง 9 หลัก)');
+                                showNotify('⚠️ กรุณากรอก "เบอร์โทรผู้แทน" ให้ถูกต้อง (เบอร์มือถือ 10 หลัก หรือ เบอร์สายตรง 9 หลัก)');
                                 return;
                               }
 
                               if (!repForm.email.trim() || !emailRegex.test(repForm.email.trim())) {
-                                alert('⚠️ กรุณากรอก "อีเมลติดต่อผู้แทน" ให้ถูกต้องในรูปแบบที่ใช้งานได้จริง (เช่น rep.name@example.com)');
+                                showNotify('⚠️ กรุณากรอก "อีเมลติดต่อผู้แทน" ให้ถูกต้องในรูปแบบที่ใช้งานได้จริง (เช่น rep.name@example.com)');
                                 return;
                               }
 
                               if (!repForm.scope.trim()) {
-                                alert('⚠️ กรุณาระบุ "ขอบเขตอำนาจกระทำการแทนตามใบมอบอำนาจ" ให้ชัดเจน');
+                                showNotify('⚠️ กรุณาระบุ "ขอบเขตอำนาจกระทำการแทนตามใบมอบอำนาจ" ให้ชัดเจน');
                                 return;
                               }
                             }
@@ -2622,7 +2654,7 @@ export default function App() {
                               const selected = e.target.value;
                               const today = new Date().toLocaleDateString('sv-SE');
                               if (selected > today) {
-                                alert('⚠️ ไม่สามารถเลือกวันที่เริ่มต้นเกิน "วันที่ปัจจุบัน" ได้');
+                                showNotify('⚠️ ไม่สามารถเลือกวันที่เริ่มต้นเกิน "วันที่ปัจจุบัน" ได้');
                                 return;
                               }
                               setScopeForm({...scopeForm, timeframeStart: selected});
@@ -2643,7 +2675,7 @@ export default function App() {
                               const selected = e.target.value;
                               const today = new Date().toLocaleDateString('sv-SE');
                               if (selected > today) {
-                                alert('⚠️ ไม่สามารถเลือกวันที่สิ้นสุดเกิน "วันที่ปัจจุบัน" ได้');
+                                showNotify('⚠️ ไม่สามารถเลือกวันที่สิ้นสุดเกิน "วันที่ปัจจุบัน" ได้');
                                 return;
                               }
                               setScopeForm({...scopeForm, timeframeEnd: selected});
@@ -2696,13 +2728,13 @@ export default function App() {
                           onClick={() => {
                             // 1. Mandatory Description Check
                             if (!scopeForm.description.trim()) {
-                              alert('⚠️ กรุณากรอก "ข้อ 3. รายละเอียดระบุข้อมูลส่วนบุคคลที่ต้องการเข้าถึงโดยละเอียด"');
+                              showNotify('⚠️ กรุณากรอก "ข้อ 3. รายละเอียดระบุข้อมูลส่วนบุคคลที่ต้องการเข้าถึงโดยละเอียด"');
                               return;
                             }
 
                             // 2. Mandatory Target Database Checklist Check
                             if (scopeForm.systems.length === 0) {
-                              alert('⚠️ กรุณาคลิกเลือกหมวดหมู่ "ระบบหรือฐานข้อมูลที่เกี่ยวข้องเท่าที่ทราบ" อย่างน้อย 1 รายการ');
+                              showNotify('⚠️ กรุณาคลิกเลือกหมวดหมู่ "ระบบหรือฐานข้อมูลที่เกี่ยวข้องเท่าที่ทราบ" อย่างน้อย 1 รายการ');
                               return;
                             }
 
@@ -2710,17 +2742,17 @@ export default function App() {
                             const todayStr = new Date().toISOString().split('T')[0];
 
                             if (scopeForm.timeframeStart && scopeForm.timeframeStart > todayStr) {
-                              alert('⚠️ "ขอบเขตวันที่เริ่มต้นข้อมูล" ต้องไม่เกินวันที่ปัจจุบัน');
+                              showNotify('⚠️ "ขอบเขตวันที่เริ่มต้นข้อมูล" ต้องไม่เกินวันที่ปัจจุบัน');
                               return;
                             }
 
                             if (scopeForm.timeframeEnd && scopeForm.timeframeEnd > todayStr) {
-                              alert('⚠️ "ขอบเขตวันที่สิ้นสุดข้อมูล" ต้องไม่เกินวันที่ปัจจุบัน');
+                              showNotify('⚠️ "ขอบเขตวันที่สิ้นสุดข้อมูล" ต้องไม่เกินวันที่ปัจจุบัน');
                               return;
                             }
 
                             if (scopeForm.timeframeStart && scopeForm.timeframeEnd && scopeForm.timeframeStart > scopeForm.timeframeEnd) {
-                              alert('⚠️ "ขอบเขตวันที่เริ่มต้นข้อมูล" ต้องไม่มากกว่า "ขอบเขตวันที่สิ้นสุดข้อมูล"');
+                              showNotify('⚠️ "ขอบเขตวันที่เริ่มต้นข้อมูล" ต้องไม่มากกว่า "ขอบเขตวันที่สิ้นสุดข้อมูล"');
                               return;
                             }
 
@@ -4112,7 +4144,7 @@ export default function App() {
                               request={activeRequestObj}
                               template={temp}
                               signer={activeUser}
-                              onPrintMock={() => alert('จำลองการสั่งพิมพ์เอกสารนำส่งราชการเรียบร้อย')}
+                              onPrintMock={() => showNotify('จำลองการสั่งพิมพ์เอกสารนำส่งราชการเรียบร้อย')}
                             />
                           );
                         })}
@@ -4950,7 +4982,7 @@ export default function App() {
 
                           <button
                             type="button"
-                            onClick={() => alert('จำลองการแก้ไขหนังสือราชการเรียบร้อย')}
+                            onClick={() => showNotify('จำลองการแก้ไขหนังสือราชการเรียบร้อย')}
                             className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-1.5 rounded transition text-center"
                           >
                             แก้ไขข้อความแม่แบบ (Edit Template)
@@ -5037,7 +5069,7 @@ export default function App() {
                       
                       <button
                         type="button"
-                        onClick={() => alert('จำลองการดาวน์โหลดรายงานบันทึกประวัติความปลอดภัยในรูปแบบ CSV เรียบร้อย')}
+                        onClick={() => showNotify('จำลองการดาวน์โหลดรายงานบันทึกประวัติความปลอดภัยในรูปแบบ CSV เรียบร้อย')}
                         className="bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold py-1.5 px-3 rounded flex items-center gap-1.5 transition"
                       >
                         <FileSpreadsheet className="h-3.5 w-3.5" />
@@ -5185,7 +5217,7 @@ export default function App() {
                 onSubmit={(e) => {
                   e.preventDefault();
                   if (!withdrawReasonText.trim()) {
-                    alert('⚠️ กรุณากรอกเหตุผลความจำเป็นในการขอถอนสิทธิยื่นคำขอนี้');
+                    showNotify('⚠️ กรุณากรอกเหตุผลความจำเป็นในการขอถอนสิทธิยื่นคำขอนี้');
                     return;
                   }
                   const contact = getContactInfo(trackedRequest);
@@ -5237,7 +5269,7 @@ export default function App() {
                   
                   handleWithdrawRequest(trackedRequest.id, withdrawReasonText);
                   setShowWithdrawModal(false);
-                  alert('✅ ระบบทำการถอนคำร้องขอเรียบร้อยแล้ว');
+                  showNotify('✅ ระบบทำการถอนคำร้องขอเรียบร้อยแล้ว');
                 }}
                 className="space-y-4"
               >
@@ -5558,6 +5590,11 @@ export default function App() {
           </div>
         </div>
       )}
+      {/* Added NotifyModal to replace alerts */}
+      <NotifyModal 
+        {...notifyState} 
+        onClose={() => setNotifyState(prev => ({ ...prev, open: false }))} 
+      />
     </div>
   );
 }
