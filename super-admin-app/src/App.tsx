@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ShieldCheck, Building2, UserCheck, Key, Lock, LogOut, Plus, Sun, Moon, CheckCircle2, Trash2, Mail } from 'lucide-react';
+import { ShieldCheck, Building2, UserCheck, Key, Lock, LogOut, Plus, Sun, Moon, CheckCircle2, Trash2, Mail, AlertCircle } from 'lucide-react';
 
 interface Tenant {
   id: string;
@@ -34,6 +34,14 @@ export default function App() {
   // Token and OTP email state
   const [token, setToken] = useState<string | null>(null);
   const [otpEmail, setOtpEmail] = useState<string>('');
+
+  // Custom Professional Notification Dialog Modal State
+  const [notifyModal, setNotifyModal] = useState<{ open: boolean; title: string; message: string; type: 'success' | 'warning' | 'error' } | null>(null);
+
+  const showNotify = (message: string, type: 'success' | 'warning' | 'error' = 'success', title?: string) => {
+    const defaultTitle = type === 'success' ? 'การแจ้งเตือนจากระบบ' : type === 'warning' ? 'ข้อความแจ้งเตือน' : 'เกิดข้อผิดพลาด';
+    setNotifyModal({ open: true, title: title || defaultTitle, message, type });
+  };
 
   // Change Password Modal State
   const [isChangePasswordOpen, setIsChangePasswordOpen] = useState<boolean>(false);
@@ -78,17 +86,21 @@ export default function App() {
         if (data.requires2FA || data.requires2FASetup) {
           setOtpEmail(data.email || 'apichat.utopia@gmail.com');
           setLoginStep('mfa');
-          alert(data.message || `ระบบได้ส่งรหัส OTP 6 หลักไปยัง Gmail (${data.email || 'apichat.utopia@gmail.com'}) เรียบร้อยแล้ว`);
+          showNotify(
+            data.message || `ระบบได้ส่งรหัส OTP 6 หลักไปยัง Gmail (${data.email || 'apichat.utopia@gmail.com'}) เรียบร้อยแล้ว`,
+            'success',
+            'ส่งรหัส OTP สำเร็จ'
+          );
         } else if (data.token) {
           setToken(data.token);
           setLoginStep('authenticated');
           fetchData(data.token);
         }
       } else {
-        alert(data.message || 'Username หรือ Password ไม่ถูกต้อง');
+        showNotify(data.message || 'Username หรือ Password ไม่ถูกต้อง', 'error', 'ไม่สามารถเข้าสู่ระบบได้');
       }
     } catch (err) {
-      alert('ไม่สามารถเชื่อมต่อระบบหลังบ้านได้ (Server Offline)');
+      showNotify('ไม่สามารถเชื่อมต่อระบบหลังบ้านได้ (Server Offline)', 'error', 'การเชื่อมต่อขัดข้อง');
     }
   };
 
@@ -96,7 +108,7 @@ export default function App() {
   const handleMfaSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!mfaCode.trim() || mfaCode.trim().length !== 6) {
-      alert('กรุณากรอกรหัส OTP 6 หลักที่ได้รับทางอีเมล Gmail');
+      showNotify('กรุณากรอกรหัส OTP 6 หลักที่ได้รับทางอีเมล Gmail', 'warning', 'ข้อมูลไม่ครบถ้วน');
       return;
     }
     try {
@@ -111,10 +123,10 @@ export default function App() {
         setLoginStep('authenticated');
         fetchData(data.token);
       } else {
-        alert(data.message || 'รหัส OTP ไม่ถูกต้อง กรุณาตรวจสอบอีเมล Gmail ของท่านอีกครั้ง');
+        showNotify(data.message || 'รหัส OTP ไม่ถูกต้อง กรุณาตรวจสอบอีเมล Gmail ของท่านอีกครั้ง', 'error', 'ตรวจสอบ OTP ไม่ผ่าน');
       }
     } catch (err) {
-      alert('ไม่สามารถเชื่อมต่อระบบหลังบ้านเพื่อตรวจสอบรหัส OTP ได้');
+      showNotify('ไม่สามารถเชื่อมต่อระบบหลังบ้านเพื่อตรวจสอบรหัส OTP ได้', 'error', 'การเชื่อมต่อขัดข้อง');
     }
   };
 
@@ -122,11 +134,11 @@ export default function App() {
   const handleChangePasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentPasswordInput || !newPasswordInput) {
-      alert('กรุณากรอกรหัสผ่านปัจจุบันและรหัสผ่านใหม่');
+      showNotify('กรุณากรอกรหัสผ่านปัจจุบันและรหัสผ่านใหม่', 'warning', 'ข้อมูลไม่ครบถ้วน');
       return;
     }
     if (newPasswordInput !== confirmPasswordInput) {
-      alert('รหัสผ่านใหม่กับยืนยันรหัสผ่านไม่ตรงกัน');
+      showNotify('รหัสผ่านใหม่กับยืนยันรหัสผ่านไม่ตรงกัน', 'warning', 'รหัสผ่านไม่ตรงกัน');
       return;
     }
     if (!token) return;
@@ -145,16 +157,16 @@ export default function App() {
       });
       const data = await res.json();
       if (data.success) {
-        alert('✓ เปลี่ยนรหัสผ่านสำเร็จเรียบร้อยแล้ว ท่านสามารถใช้รหัสผ่านใหม่ได้ทันที');
+        showNotify('เปลี่ยนรหัสผ่านสำเร็จเรียบร้อยแล้ว ท่านสามารถใช้รหัสผ่านใหม่ได้ทันที', 'success', 'เปลี่ยนรหัสผ่านสำเร็จ');
         setIsChangePasswordOpen(false);
         setCurrentPasswordInput('');
         setNewPasswordInput('');
         setConfirmPasswordInput('');
       } else {
-        alert(data.message || 'ไม่สามารถเปลี่ยนรหัสผ่านได้');
+        showNotify(data.message || 'ไม่สามารถเปลี่ยนรหัสผ่านได้', 'error', 'เปลี่ยนรหัสผ่านไม่สำเร็จ');
       }
     } catch (err) {
-      alert('เกิดข้อผิดพลาดในการเชื่อมต่อเพื่อเปลี่ยนรหัสผ่าน');
+      showNotify('เกิดข้อผิดพลาดในการเชื่อมต่อเพื่อเปลี่ยนรหัสผ่าน', 'error', 'การเชื่อมต่อขัดข้อง');
     }
   };
 
@@ -201,7 +213,7 @@ export default function App() {
   // Send OTP Email Trigger (REAL API)
   const handleSendEmailOtp = async () => {
     if (!tenantFormData.email.trim() || !tenantFormData.email.includes('@')) {
-      alert('กรุณากรอกอีเมลติดต่อทางการให้ถูกต้องก่อนส่งรหัส OTP');
+      showNotify('กรุณากรอกอีเมลติดต่อทางการให้ถูกต้องก่อนส่งรหัส OTP', 'warning', 'อีเมลไม่ถูกต้อง');
       return;
     }
     try {
@@ -214,12 +226,12 @@ export default function App() {
       if (data.success) {
         setTenantOtpInput('');
         setShowOtpVerificationModal(true);
-        alert(`✓ ส่งรหัส OTP ยืนยันไปยังอีเมล ${tenantFormData.email.trim()} เรียบร้อยแล้ว (มีอายุ 5 นาที)`);
+        showNotify(`ส่งรหัส OTP ยืนยันไปยังอีเมล ${tenantFormData.email.trim()} เรียบร้อยแล้ว (มีอายุ 5 นาที)`, 'success', 'ส่ง OTP เรียบร้อย');
       } else {
-        alert(data.message || 'ไม่สามารถส่งรหัส OTP ได้ กรุณาลองใหม่อีกครั้ง');
+        showNotify(data.message || 'ไม่สามารถส่งรหัส OTP ได้ กรุณาลองใหม่อีกครั้ง', 'error', 'ส่ง OTP ไม่สำเร็จ');
       }
     } catch (err) {
-      alert('เกิดข้อผิดพลาดในการเชื่อมต่อเพื่อส่งรหัส OTP');
+      showNotify('เกิดข้อผิดพลาดในการเชื่อมต่อเพื่อส่งรหัส OTP', 'error', 'การเชื่อมต่อขัดข้อง');
     }
   };
 
@@ -227,7 +239,7 @@ export default function App() {
   const handleVerifyOtpSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!tenantOtpInput.trim() || tenantOtpInput.trim().length !== 6) {
-      alert('กรุณากรอกรหัส OTP 6 หลัก');
+      showNotify('กรุณากรอกรหัส OTP 6 หลัก', 'warning', 'ข้อมูลไม่ครบถ้วน');
       return;
     }
     try {
@@ -243,12 +255,12 @@ export default function App() {
       if (data.success) {
         setIsEmailVerified(true);
         setShowOtpVerificationModal(false);
-        alert(`✓ ยืนยันอีเมล ${tenantFormData.email} ด้วยรหัส OTP สำเร็จเรียบร้อยแล้ว`);
+        showNotify(`ยืนยันอีเมล ${tenantFormData.email} ด้วยรหัส OTP สำเร็จเรียบร้อยแล้ว`, 'success', 'ยืนยันอีเมลสำเร็จ');
       } else {
-        alert(data.message || 'รหัส OTP ไม่ถูกต้องหรือหมดอายุแล้ว กรุณาตรวจสอบอีกครั้ง');
+        showNotify(data.message || 'รหัส OTP ไม่ถูกต้องหรือหมดอายุแล้ว กรุณาตรวจสอบอีกครั้ง', 'error', 'ตรวจสอบ OTP ไม่ผ่าน');
       }
     } catch (err) {
-      alert('เกิดข้อผิดพลาดในการตรวจสอบรหัส OTP');
+      showNotify('เกิดข้อผิดพลาดในการตรวจสอบรหัส OTP', 'error', 'การเชื่อมต่อขัดข้อง');
     }
   };
 
@@ -257,15 +269,15 @@ export default function App() {
     e.preventDefault();
     
     // Strict Mandatory Validation
-    if (!tenantFormData.nameTh.trim()) return alert('กรุณากรอก "ชื่อหน่วยงาน (ภาษาไทย)"');
-    if (!tenantFormData.nameEn.trim()) return alert('กรุณากรอก "ชื่อหน่วยงาน (ภาษาอังกฤษ / ชื่อย่อ)"');
-    if (!tenantFormData.id.trim()) return alert('กรุณากรอก "รหัสประจำหน่วยงานในระบบ"');
-    if (!tenantFormData.email.trim()) return alert('กรุณากรอก "อีเมลติดต่อทางการ"');
-    if (!tenantFormData.phone.trim()) return alert('กรุณากรอก "เบอร์โทรศัพท์ติดต่อ" สำหรับช่องทางติดต่อผู้ให้บริการ');
+    if (!tenantFormData.nameTh.trim()) return showNotify('กรุณากรอก "ชื่อหน่วยงาน (ภาษาไทย)"', 'warning', 'ข้อมูลไม่ครบถ้วน');
+    if (!tenantFormData.nameEn.trim()) return showNotify('กรุณากรอก "ชื่อหน่วยงาน (ภาษาอังกฤษ / ชื่อย่อ)"', 'warning', 'ข้อมูลไม่ครบถ้วน');
+    if (!tenantFormData.id.trim()) return showNotify('กรุณากรอก "รหัสประจำหน่วยงานในระบบ"', 'warning', 'ข้อมูลไม่ครบถ้วน');
+    if (!tenantFormData.email.trim()) return showNotify('กรุณากรอก "อีเมลติดต่อทางการ"', 'warning', 'ข้อมูลไม่ครบถ้วน');
+    if (!tenantFormData.phone.trim()) return showNotify('กรุณากรอก "เบอร์โทรศัพท์ติดต่อ" สำหรับช่องทางติดต่อผู้ให้บริการ', 'warning', 'ข้อมูลไม่ครบถ้วน');
 
     // Require Email OTP Verification for new tenants
     if (!editingTenantId && !isEmailVerified) {
-      return alert('กรุณากดปุ่ม "ส่งรหัส OTP ยืนยันอีเมล" และยืนยันตัวตนอีเมลก่อนบันทึก');
+      return showNotify('กรุณากดปุ่ม "ส่งรหัส OTP ยืนยันอีเมล" และยืนยันตัวตนอีเมลก่อนบันทึก', 'warning', 'ยังไม่ได้ยืนยันอีเมล');
     }
 
     try {
@@ -277,25 +289,25 @@ export default function App() {
           headers,
           body: JSON.stringify(tenantFormData)
         });
-        alert(`อัปเดตข้อมูลหน่วยงาน "${tenantFormData.nameTh}" เรียบร้อยแล้ว`);
+        showNotify(`อัปเดตข้อมูลหน่วยงาน "${tenantFormData.nameTh}" เรียบร้อยแล้ว`, 'success', 'อัปเดตข้อมูลสำเร็จ');
       } else {
         // Create new
         const checkRes = await fetch('/api/tenants', { headers });
         const checkData = await checkRes.json();
         if (checkData.success && checkData.tenants.some((t: Tenant) => t.id === tenantFormData.id.trim())) {
-          return alert('รหัสหน่วยงาน (Tenant ID) นี้มีอยู่ในระบบแล้ว กรุณาใช้รหัสอื่น');
+          return showNotify('รหัสหน่วยงาน (Tenant ID) นี้มีอยู่ในระบบแล้ว กรุณาใช้รหัสอื่น', 'error', 'รหัสหน่วยงานซ้ำ');
         }
         await fetch('/api/tenants', {
           method: 'POST',
           headers,
           body: JSON.stringify(tenantFormData)
         });
-        alert(`สร้างหน่วยงานใหม่ "${tenantFormData.nameTh}" พร้อมยืนยันอีเมลสำเร็จเรียบร้อยแล้ว`);
+        showNotify(`สร้างหน่วยงานใหม่ "${tenantFormData.nameTh}" พร้อมยืนยันอีเมลสำเร็จเรียบร้อยแล้ว`, 'success', 'สร้างหน่วยงานสำเร็จ');
       }
       if (token) fetchData(token);
       setShowTenantModal(false);
     } catch (err) {
-      alert('Error saving tenant');
+      showNotify('เกิดข้อผิดพลาดในการบันทึกข้อมูลหน่วยงาน', 'error', 'บันทึกไม่สำเร็จ');
     }
   };
 
@@ -309,7 +321,7 @@ export default function App() {
     if (!deletingTenant) return;
     
     if (deleteConfirmText.trim().toUpperCase() !== 'DELETE') {
-      alert('กรุณาพิมพ์คำว่า "DELETE" ให้ถูกต้องเพื่อยืนยันการลบหน่วยงาน');
+      showNotify('กรุณาพิมพ์คำว่า "DELETE" ให้ถูกต้องเพื่อยืนยันการลบหน่วยงาน', 'warning', 'ยืนยันไม่ถูกต้อง');
       return;
     }
 
@@ -318,12 +330,12 @@ export default function App() {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      alert(`🗑️ ลบหน่วยงาน "${deletingTenant.nameTh}" และยูสเซอร์ในสังกัดออกจากระบบเรียบร้อยแล้ว`);
+      showNotify(`ลบหน่วยงาน "${deletingTenant.nameTh}" และยูสเซอร์ในสังกัดออกจากระบบเรียบร้อยแล้ว`, 'success', 'ลบหน่วยงานสำเร็จ');
       if (token) fetchData(token);
       setDeletingTenant(null);
       setDeleteConfirmText('');
     } catch (err) {
-      alert('Error deleting tenant');
+      showNotify('เกิดข้อผิดพลาดในการลบหน่วยงาน', 'error', 'ลบหน่วยงานไม่สำเร็จ');
     }
   };
 
@@ -355,7 +367,7 @@ export default function App() {
   const handleCreateUserSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newUserData.username || !newUserData.fullName) {
-      alert('กรุณากรอกข้อมูล Username และชื่อ-นามสกุลให้ครบถ้วน');
+      showNotify('กรุณากรอกข้อมูล Username และชื่อ-นามสกุลให้ครบถ้วน', 'warning', 'ข้อมูลไม่ครบถ้วน');
       return;
     }
 
@@ -377,9 +389,9 @@ export default function App() {
       });
       if (token) fetchData(token);
       setShowAddUserModal(false);
-      alert(`สร้างบัญชีเจ้าหน้าที่ "${newUser.fullName}" เรียบร้อยแล้ว (รหัสผ่านเริ่มต้น: 123456)`);
+      showNotify(`สร้างบัญชีเจ้าหน้าที่ "${newUser.fullName}" เรียบร้อยแล้ว (รหัสผ่านเริ่มต้น: 123456)`, 'success', 'สร้างบัญชีสำเร็จ');
     } catch (err) {
-      alert('Error creating user');
+      showNotify('เกิดข้อผิดพลาดในการสร้างบัญชีผู้ใช้', 'error', 'สร้างบัญชีไม่สำเร็จ');
     }
   };
 
@@ -387,7 +399,7 @@ export default function App() {
   const handleResetPassword = (uname: string) => {
     const newPass = prompt(`กรุณาระบุ รหัสผ่านใหม่ สำหรับยูสเซอร์ "${uname}":`);
     if (newPass) {
-      alert(`🔑 รีเซ็ตรหัสผ่านสำหรับ "${uname}" เป็น "${newPass}" สำเร็จเรียบร้อยแล้ว`);
+      showNotify(`รีเซ็ตรหัสผ่านสำหรับ "${uname}" เป็น "${newPass}" สำเร็จเรียบร้อยแล้ว`, 'success', 'รีเซ็ตรหัสผ่านสำเร็จ');
     }
   };
 
@@ -483,18 +495,24 @@ export default function App() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-center mb-1.5">รหัสผ่าน OTP 6 หลัก จาก Gmail</label>
-                <input
-                  type="text"
-                  maxLength={6}
-                  value={mfaCode}
-                  onChange={(e) => setMfaCode(e.target.value)}
-                  placeholder="1 2 3 4 5 6"
-                  className={`w-full text-center tracking-[0.5em] font-mono text-lg font-bold py-2.5 border rounded-xl focus:outline-none focus:border-emerald-500 ${inputBgClass}`}
-                  required
-                  autoFocus
-                />
-                <span className="block text-[10px] text-emerald-400 text-center mt-1">✓ กรุณากรอกรหัส OTP 6 หลักที่ได้รับทางอีเมล Gmail (อายุ 5 นาที)</span>
+                <label className="block text-xs font-bold text-center mb-2 text-slate-300">
+                  รหัสผ่าน OTP 6 หลัก จาก Gmail
+                </label>
+                <div className="relative max-w-[280px] mx-auto">
+                  <input
+                    type="text"
+                    maxLength={6}
+                    value={mfaCode}
+                    onChange={(e) => setMfaCode(e.target.value.replace(/[^0-9]/g, ''))}
+                    placeholder="• • • • • •"
+                    className="w-full text-center tracking-[0.6em] font-mono text-2xl font-extrabold py-3 px-4 bg-slate-900/90 border-2 border-emerald-500/50 hover:border-emerald-500 rounded-2xl text-emerald-400 placeholder:text-slate-600 focus:outline-none focus:border-emerald-400 focus:ring-4 focus:ring-emerald-500/20 transition shadow-inner"
+                    required
+                    autoFocus
+                  />
+                </div>
+                <span className="block text-[11px] text-emerald-400/90 text-center mt-2 font-medium">
+                  ✓ กรุณากรอกรหัสตัวเลข 6 หลักที่ได้รับทางอีเมล Gmail (อายุ 5 นาที)
+                </span>
               </div>
 
               <div className="flex gap-2">
@@ -1195,6 +1213,56 @@ export default function App() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Professional Notification Modal */}
+      {notifyModal && notifyModal.open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-fadeIn">
+          <div className="bg-slate-900/95 border border-slate-700/80 rounded-3xl max-w-sm w-full p-6 text-center shadow-2xl relative overflow-hidden transform transition-all scale-100">
+            {/* Top Glow Accent */}
+            <div className={`absolute top-0 left-0 right-0 h-1.5 ${
+              notifyModal.type === 'success' ? 'bg-gradient-to-r from-emerald-500 to-teal-400' :
+              notifyModal.type === 'warning' ? 'bg-gradient-to-r from-amber-500 to-yellow-400' :
+              'bg-gradient-to-r from-rose-500 to-red-400'
+            }`} />
+
+            {/* Icon */}
+            <div className="flex justify-center mb-4 mt-2">
+              <div className={`p-4 rounded-2xl ${
+                notifyModal.type === 'success' ? 'bg-emerald-500/15 border border-emerald-500/30 text-emerald-400' :
+                notifyModal.type === 'warning' ? 'bg-amber-500/15 border border-amber-500/30 text-amber-400' :
+                'bg-rose-500/15 border border-rose-500/30 text-rose-400'
+              }`}>
+                {notifyModal.type === 'success' ? (
+                  <CheckCircle2 className="h-10 w-10 animate-bounce-short" />
+                ) : (
+                  <AlertCircle className="h-10 w-10" />
+                )}
+              </div>
+            </div>
+
+            {/* Content */}
+            <h3 className="text-lg font-extrabold text-white mb-2">
+              {notifyModal.title}
+            </h3>
+            <p className="text-sm text-slate-300 leading-relaxed mb-6 font-normal">
+              {notifyModal.message}
+            </p>
+
+            {/* Action Button */}
+            <button
+              type="button"
+              onClick={() => setNotifyModal(null)}
+              className={`w-full py-3 px-6 rounded-xl font-bold text-sm text-white shadow-lg transition duration-200 transform hover:-translate-y-0.5 ${
+                notifyModal.type === 'success' ? 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 shadow-emerald-900/40' :
+                notifyModal.type === 'warning' ? 'bg-gradient-to-r from-amber-600 to-yellow-600 hover:from-amber-500 hover:to-yellow-500 shadow-amber-900/40' :
+                'bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 shadow-rose-900/40'
+              }`}
+            >
+              รับทราบ / ตกลง
+            </button>
           </div>
         </div>
       )}
