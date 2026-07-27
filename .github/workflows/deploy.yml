@@ -23,20 +23,30 @@ jobs:
       - name: 📦 Install Dependencies
         run: npm ci
 
-      - name: 🔨 Build Frontend (Vite + TypeScript)
+      - name: 🔨 Build Frontend
         run: npm run build
 
-      - name: 📤 Copy built files to server via SCP
+      - name: 📦 Package files for deployment
+        run: |
+          tar -czf deploy.tar.gz dist/ server.js package.json package-lock.json ecosystem.config.cjs
+
+      - name: 🔑 Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PASSWORD }}" > /tmp/sshpass_file
+          chmod 600 /tmp/sshpass_file
+
+      - name: 📤 Upload package to server
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USERNAME }}
           password: ${{ secrets.SSH_PASSWORD }}
           port: 22
-          source: "dist/,server.js,package.json,package-lock.json,ecosystem.config.cjs"
-          target: ${{ secrets.APP_PATH }}
+          source: "deploy.tar.gz"
+          target: "/tmp/"
 
-      - name: ♻️ Restart server via SSH
+      - name: ♻️ Extract and restart on server
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SSH_HOST }}
@@ -44,10 +54,17 @@ jobs:
           password: ${{ secrets.SSH_PASSWORD }}
           port: 22
           script: |
+            set -e
+            echo "📂 Extracting deployment package..."
             cd ${{ secrets.APP_PATH }}
+            tar -xzf /tmp/deploy.tar.gz
+            rm /tmp/deploy.tar.gz
+
             echo "📦 Installing production dependencies..."
             npm install --omit=dev
+
             echo "♻️ Restarting PM2..."
             pm2 restart pdpa-req-system
-            echo "✅ Deploy complete!"
+
+            echo "✅ Deploy complete! Site is live."
 
