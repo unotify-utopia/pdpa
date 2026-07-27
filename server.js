@@ -451,6 +451,21 @@ app.post('/api/super-admin/login', async (req, res) => {
     const valid = await bcrypt.compare(password, user.password_hash);
     if (!valid) return res.status(401).json({ success: false, message: 'รหัสผ่านไม่ถูกต้อง' });
     
+    // Require REAL 2FA MFA for Super Admin
+    if (user.mfa_enabled || user.role === 'superadmin') {
+      const { mfaCode } = req.body;
+      if (!user.two_factor_secret) {
+        return res.json({ success: true, requires2FASetup: true, username: user.username });
+      }
+      if (!mfaCode) {
+        return res.json({ success: true, requires2FA: true, message: 'กรุณากรอกรหัส 2FA จากแอป Google / Microsoft Authenticator' });
+      }
+      const isValid = authenticator.verify({ token: mfaCode, secret: user.two_factor_secret });
+      if (!isValid) {
+        return res.status(401).json({ success: false, message: 'รหัส 2FA 6 หลักไม่ถูกต้อง กรุณาตรวจสอบรหัสในแอป Authenticator' });
+      }
+    }
+
     const token = jwt.sign({ id: user.id, role: user.role, username: user.username }, JWT_SECRET, { expiresIn: '1h' });
     return res.json({ success: true, token, user: { id: user.id, username: user.username, role: user.role } });
   } catch (err) {

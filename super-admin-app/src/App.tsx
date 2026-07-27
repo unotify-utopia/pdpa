@@ -31,8 +31,9 @@ export default function App() {
 
   const [activeTab, setActiveTab] = useState<'tenants' | 'users'>('tenants');
 
-  // Token state
+  // Token and 2FA state
   const [token, setToken] = useState<string | null>(null);
+  const [qrCodeUrl, setQrCodeUrl] = useState<string>('');
 
   // Master Tenants List State
   const [tenants, setTenants] = useState<Tenant[]>([]);
@@ -68,8 +69,27 @@ export default function App() {
       });
       const data = await res.json();
       if (data.success) {
-        setToken(data.token);
-        setLoginStep('mfa');
+        if (data.requires2FASetup) {
+          const setupRes = await fetch('/api/auth/2fa/setup', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password })
+          });
+          const setupData = await setupRes.json();
+          if (setupData.success) {
+            setQrCodeUrl(setupData.qrCodeUrl || '');
+            setLoginStep('mfa');
+          } else {
+            alert('ไม่สามารถสร้าง QR Code สำหรับตั้งค่า 2FA ได้');
+          }
+        } else if (data.requires2FA) {
+          setQrCodeUrl('');
+          setLoginStep('mfa');
+        } else if (data.token) {
+          setToken(data.token);
+          setLoginStep('authenticated');
+          fetchData(data.token);
+        }
       } else {
         alert(data.message || 'Username หรือ Password ไม่ถูกต้อง');
       }
@@ -78,14 +98,29 @@ export default function App() {
     }
   };
 
-  // Step 2: Verify MFA TOTP
-  const handleMfaSubmit = (e: React.FormEvent) => {
+  // Step 2: Verify MFA TOTP (REAL SYSTEM)
+  const handleMfaSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (mfaCode.trim() === '123456' || mfaCode.trim().length === 6) {
-      setLoginStep('authenticated');
-      if (token) fetchData(token);
-    } else {
-      alert('รหัส MFA Code 6 หลักไม่ถูกต้อง (ลองใช้ 123456)');
+    if (!mfaCode.trim() || mfaCode.trim().length !== 6) {
+      alert('กรุณากรอกรหัส 2FA 6 หลักจากแอป Authenticator');
+      return;
+    }
+    try {
+      const res = await fetch('/api/super-admin/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password, mfaCode: mfaCode.trim() })
+      });
+      const data = await res.json();
+      if (data.success && data.token) {
+        setToken(data.token);
+        setLoginStep('authenticated');
+        fetchData(data.token);
+      } else {
+        alert(data.message || 'รหัส 2FA ไม่ถูกต้อง กรุณาตรวจสอบรหัสจากแอป Google Authenticator');
+      }
+    } catch (err) {
+      alert('ไม่สามารถเชื่อมต่อระบบหลังบ้านเพื่อตรวจสอบรหัส 2FA ได้');
     }
   };
 
@@ -129,25 +164,57 @@ export default function App() {
     setShowTenantModal(true);
   };
 
-  // Send OTP Email Trigger
-  const handleSendEmailOtp = () => {
+  // Send OTP Email Trigger (REAL API)
+  const handleSendEmailOtp = async () => {
     if (!tenantFormData.email.trim() || !tenantFormData.email.includes('@')) {
       alert('กรุณากรอกอีเมลติดต่อทางการให้ถูกต้องก่อนส่งรหัส OTP');
       return;
     }
-    setTenantOtpInput('');
-    setShowOtpVerificationModal(true);
+    try {
+      const res = await fetch('/api/public/send-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: tenantFormData.email.trim() })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setTenantOtpInput('');
+        setShowOtpVerificationModal(true);
+        alert(`✓ ส่งรหัส OTP ยืนยันไปยังอีเมล ${tenantFormData.email.trim()} เรียบร้อยแล้ว (มีอายุ 5 นาที)`);
+      } else {
+        alert(data.message || 'ไม่สามารถส่งรหัส OTP ได้ กรุณาลองใหม่อีกครั้ง');
+      }
+    } catch (err) {
+      alert('เกิดข้อผิดพลาดในการเชื่อมต่อเพื่อส่งรหัส OTP');
+    }
   };
 
-  // Verify OTP Trigger
-  const handleVerifyOtpSubmit = (e: React.FormEvent) => {
+  // Verify OTP Trigger (REAL API)
+  const handleVerifyOtpSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (tenantOtpInput.trim() === '123456' || tenantOtpInput.trim().length === 6) {
-      setIsEmailVerified(true);
-      setShowOtpVerificationModal(false);
-      alert(`✓ ยืนยันอีเมล ${tenantFormData.email} ด้วยรหัส OTP สำเร็จเรียบร้อยแล้ว`);
-    } else {
-      alert('รหัส OTP ไม่ถูกต้อง กรุณาลองใช้อีเมลตัวอย่าง OTP: 123456');
+    if (!tenantOtpInput.trim() || tenantOtpInput.trim().length !== 6) {
+      alert('กรุณากรอกรหัส OTP 6 หลัก');
+      return;
+    }
+    try {
+      const res = await fetch('/api/public/verify-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: tenantFormData.email.trim(),
+          otp: tenantOtpInput.trim()
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setIsEmailVerified(true);
+        setShowOtpVerificationModal(false);
+        alert(`✓ ยืนยันอีเมล ${tenantFormData.email} ด้วยรหัส OTP สำเร็จเรียบร้อยแล้ว`);
+      } else {
+        alert(data.message || 'รหัส OTP ไม่ถูกต้องหรือหมดอายุแล้ว กรุณาตรวจสอบอีกครั้ง');
+      }
+    } catch (err) {
+      alert('เกิดข้อผิดพลาดในการตรวจสอบรหัส OTP');
     }
   };
 
@@ -370,12 +437,23 @@ export default function App() {
               </div>
 
               <div className="text-center py-2 space-y-2">
-                <div className="inline-block p-3 bg-slate-900 border border-slate-800 rounded-xl">
-                  <QrCode className="h-16 w-16 text-slate-300 mx-auto" />
-                </div>
+                {qrCodeUrl ? (
+                  <div className="space-y-2">
+                    <div className="inline-block p-2 bg-white border border-slate-200 rounded-xl">
+                      <img src={qrCodeUrl} alt="2FA QR Code" className="h-40 w-40 mx-auto" />
+                    </div>
+                    <p className="text-xs text-amber-400 font-semibold px-2">
+                      กรุณาสแกน QR Code นี้ในแอป Google / Microsoft Authenticator ของคุณ
+                    </p>
+                  </div>
+                ) : (
+                  <div className="inline-block p-3 bg-slate-900 border border-slate-800 rounded-xl">
+                    <QrCode className="h-16 w-16 text-slate-300 mx-auto" />
+                  </div>
+                )}
                 <p className="text-[11px] text-slate-400 flex items-center justify-center gap-1">
                   <Smartphone className="h-3.5 w-3.5 text-emerald-400" />
-                  <span>เปิดแอป Google / Microsoft Authenticator บนมือถือ</span>
+                  <span>เปิดแอป Google / Microsoft Authenticator บนมือถือของคุณ</span>
                 </p>
               </div>
 
@@ -391,7 +469,7 @@ export default function App() {
                   required
                   autoFocus
                 />
-                <span className="block text-[10px] text-slate-500 text-center mt-1">รหัสตัวอย่างทดสอบ: 123456</span>
+                <span className="block text-[10px] text-emerald-400 text-center mt-1">✓ กรุณานำรหัส 6 หลักจากแอป Authenticator มายืนยัน</span>
               </div>
 
               <div className="flex gap-2">
@@ -929,7 +1007,7 @@ export default function App() {
                   required
                   autoFocus
                 />
-                <span className="block text-[10px] text-slate-500 mt-1">รหัสตัวอย่างทดสอบ OTP: 123456</span>
+                <span className="block text-[10px] text-emerald-400 mt-1">* กรุณานำรหัส 6 หลักที่ได้รับทางอีเมลมากรอก (รหัสมีอายุ 5 นาที)</span>
               </div>
 
               <div className="flex gap-2">
