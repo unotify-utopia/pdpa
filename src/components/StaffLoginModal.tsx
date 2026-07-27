@@ -65,6 +65,7 @@ export const StaffLoginModal: React.FC<StaffLoginModalProps> = ({
         email: data.user.email,
         role: data.user.role as any,
         roles: data.user.roles || [data.user.role],
+        isSuperAdmin: data.user.isSuperAdmin,
         department: data.user.department,
         mfaEnabled: true
       };
@@ -113,6 +114,7 @@ export const StaffLoginModal: React.FC<StaffLoginModalProps> = ({
         email: data.user.email,
         role: data.user.role as any,
         roles: data.user.roles || [data.user.role],
+        isSuperAdmin: data.user.isSuperAdmin,
         department: data.user.department,
         mfaEnabled: true
       };
