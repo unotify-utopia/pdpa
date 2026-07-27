@@ -30,18 +30,12 @@ jobs:
         run: |
           tar -czf deploy.tar.gz dist/ server.js package.json package-lock.json ecosystem.config.cjs
 
-      - name: 🔑 Setup SSH key
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PASSWORD }}" > /tmp/sshpass_file
-          chmod 600 /tmp/sshpass_file
-
       - name: 📤 Upload package to server
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USERNAME }}
-          password: ${{ secrets.SSH_PASSWORD }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: 22
           source: "deploy.tar.gz"
           target: "/tmp/"
@@ -51,7 +45,7 @@ jobs:
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USERNAME }}
-          password: ${{ secrets.SSH_PASSWORD }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: 22
           script: |
             set -e
@@ -59,12 +53,9 @@ jobs:
             cd ${{ secrets.APP_PATH }}
             tar -xzf /tmp/deploy.tar.gz
             rm /tmp/deploy.tar.gz
-
             echo "📦 Installing production dependencies..."
             npm install --omit=dev
-
             echo "♻️ Restarting PM2..."
             pm2 restart pdpa-req-system
-
             echo "✅ Deploy complete! Site is live."
 
