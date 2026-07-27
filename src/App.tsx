@@ -4775,7 +4775,7 @@ export default function App() {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 text-slate-700">
-                          {requests
+                          {filteredRequests
                             .filter((req) => !statusFilterGroup || statusFilterGroup.includes(req.status))
                             .map((req) => (
                             <tr key={req.id} className="hover:bg-slate-50 transition">
