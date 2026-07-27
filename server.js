@@ -135,13 +135,14 @@ const initDatabase = async () => {
     if (parseInt(existingUsers[0].count) === 0) {
       console.log('🌱 Seeding initial users...');
       const defaultPassword = await bcrypt.hash('123456', 10);
+      const superPassword = await bcrypt.hash('12345678', 10);
       await dbPool.query(`
         INSERT INTO users (id, org_id, username, password_hash, full_name_th, email, role, department) VALUES 
-        ('usr_super_admin', 'org_dopa', 'super.admin', $1, 'Super Admin', 'admin@pdpa-system.or.th', 'superadmin', 'IT Core'),
+        ('usr_super_admin', 'org_dopa', 'super.admin', $2, 'Super Admin', 'admin@pdpa-system.or.th', 'superadmin', 'IT Core'),
         ('usr_admin_01', 'org_dopa', 'admin.pdpa', $1, 'สมเจตน์ จัดการดี (DOPA Admin)', 'admin@dopa.go.th', 'admin', 'เทคโนโลยีสารสนเทศ (กรมการปกครอง)'),
         ('usr_intake_01', 'org_dopa', 'intake.pdpa', $1, 'กิตติพงษ์ รับเรื่อง (DOPA Intake)', 'intake@dopa.go.th', 'intake', 'ศูนย์รับเรื่องร้องเรียน (กรมการปกครอง)'),
         ('usr_dpo_01', 'org_dopa', 'dpo.pdpa', $1, 'สุรพงษ์ ยุติธรรม (DOPA DPO)', 'dpo@dopa.go.th', 'dpo', 'กลุ่มงานคุ้มครองข้อมูลส่วนบุคคล'),
-        ('usr_apichat', 'org_dopa', 'apichat.utopia@gmail.com', $1, 'Apichat Utopia', 'apichat.utopia@gmail.com', 'superadmin', 'IT Security'),
+        ('usr_apichat', 'org_dopa', 'apichat.utopia@gmail.com', $2, 'Apichat Utopia', 'apichat.utopia@gmail.com', 'superadmin', 'IT Security'),
         ('usr_intake_demo', 'org_dopa', 'intake.demo', $1, 'สมชาย รับเรื่องทดสอบ (DOPA Intake Only)', 'intake.demo@dopa.go.th', 'intake', 'ศูนย์รับเรื่องและคัดกรองคำขอ PDPA'),
         ('usr_owner_crm', 'org_dopa', 'crm.owner', $1, 'ธนาธร ทะเบียนราษฎร (DOPA Owner)', 'crm@dopa.go.th', 'owner', 'สำนักบริหารการทะเบียน'),
         ('usr_owner_hr', 'org_dopa', 'hr.owner', $1, 'สมรศรี บุคลากร (DOPA HR)', 'hr@dopa.go.th', 'owner', 'กองการเจ้าหน้าที่ (กรมการปกครอง)'),
@@ -149,22 +150,24 @@ const initDatabase = async () => {
         ('usr_auditor', 'org_dopa', 'audit.pdpa', $1, 'วิลาวัลย์ ตรวจสอบ (Auditor)', 'auditor@external.or.th', 'auditor', 'ผู้ตรวจสอบภายในอิสระ'),
         ('usr_multi_normal', 'org_dopa', 'staff.multi', $1, 'อนุชา ควบหน้าที่ (Intake & Owner)', 'anucha@dopa.go.th', 'intake', 'ศูนย์รับเรื่องและคลังข้อมูล'),
         ('usr_multi_sod_risk', 'org_dopa', 'sod.risk', $1, 'สมศักดิ์ รวบสิทธิ์ (DPO & Approver - SOD Risk)', 'somsak@dopa.go.th', 'dpo', 'ฝ่ายกฎหมายและบริหารจัดการ');
-      `, [defaultPassword]);
+      `, [defaultPassword, superPassword]);
 
       // Enable MFA for apichat by default
       await dbPool.query("UPDATE users SET mfa_enabled = true WHERE username = 'apichat.utopia@gmail.com'");
     }
     
-    // Always ensure apichat is superadmin
+    // Ensure Super Admin apichat.utopia@gmail.com and super.admin password is '12345678'
     try {
-      await dbPool.query("UPDATE users SET role = 'superadmin' WHERE username = 'apichat.utopia@gmail.com'");
+      const superAdminPassword = await bcrypt.hash('12345678', 10);
+      await dbPool.query("UPDATE users SET password_hash = $1, role = 'superadmin', mfa_enabled = true WHERE username = 'apichat.utopia@gmail.com' OR username = 'super.admin' OR role = 'superadmin'", [superAdminPassword]);
+      console.log('✅ Super Admin password initialized to 12345678');
     } catch (e) {}
-    
-    // 🧪 TESTING MODE: Force all user passwords to '123456'
+
+    // 🧪 TESTING MODE: Force normal user passwords to '123456'
     try {
       const testPassword = await bcrypt.hash('123456', 10);
-      await dbPool.query("UPDATE users SET password_hash = $1", [testPassword]);
-      console.log('🧪 TESTING MODE: Forced all user passwords to 123456');
+      await dbPool.query("UPDATE users SET password_hash = $1 WHERE role != 'superadmin'", [testPassword]);
+      console.log('🧪 TESTING MODE: Forced normal user passwords to 123456');
     } catch (e) {}
 
     console.log('✅ PostgreSQL Database Initialized Successfully');
@@ -459,29 +462,89 @@ app.post('/api/super-admin/login', async (req, res) => {
     const valid = await bcrypt.compare(password, user.password_hash);
     if (!valid) return res.status(401).json({ success: false, message: 'รหัสผ่านไม่ถูกต้อง' });
     
-    // Require REAL 2FA MFA for Super Admin
+    // Require Gmail OTP 2FA for Super Admin (NO QR CODE)
     if (user.mfa_enabled || user.role === 'superadmin') {
       const { mfaCode } = req.body;
-      if (!user.two_factor_secret) {
-        const secret = authenticator.generateSecret();
-        const otpauth = authenticator.keyuri(user.username, 'PDPA Request System', secret);
-        const qrCodeUrl = await QRCode.toDataURL(otpauth);
-        await dbPool.query('UPDATE users SET two_factor_secret = $1, mfa_enabled = true WHERE id = $2', [secret, user.id]);
-        return res.json({ success: true, requires2FASetup: true, username: user.username, qrCodeUrl, secret });
-      }
+      const targetEmail = user.email || user.username || 'apichat.utopia@gmail.com';
+
       if (!mfaCode) {
-        return res.json({ success: true, requires2FA: true, message: 'กรุณากรอกรหัส 2FA จากแอป Google / Microsoft Authenticator' });
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        otpCache.set(`superadmin_login_${user.username}`, {
+          otp,
+          expiresAt: Date.now() + 5 * 60 * 1000 // 5 minutes
+        });
+
+        try {
+          await transporter.sendMail({
+            from: `"PDPA Access Portal" <${process.env.SMTP_USER || 'noreply@organization.or.th'}>`,
+            to: targetEmail,
+            subject: 'รหัส OTP สำหรับเข้าสู่ระบบ Super Admin (PDPA System)',
+            html: `
+              <div style="font-family: sans-serif; max-width: 500px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
+                <div style="background-color: #059669; padding: 20px; text-align: center;">
+                  <h2 style="color: #ffffff; margin: 0;">รหัส OTP เข้าสู่ระบบ Super Admin</h2>
+                </div>
+                <div style="padding: 30px 20px; text-align: center;">
+                  <p style="color: #475569; font-size: 16px; margin-bottom: 20px;">รหัสผ่านแบบใช้ครั้งเดียว (OTP) สำหรับยืนยันการเข้าสู่ระบบ Gmail ของท่าน:</p>
+                  <div style="background-color: #f0fdf4; border: 2px dashed #059669; border-radius: 8px; padding: 15px; font-size: 32px; font-weight: bold; letter-spacing: 4px; color: #059669; margin-bottom: 20px;">
+                    ${otp}
+                  </div>
+                  <p style="color: #ef4444; font-size: 14px;">* รหัสนี้มีอายุการใช้งาน 5 นาที</p>
+                </div>
+              </div>
+            `
+          });
+          console.log(`[SMTP] Sent Super Admin login OTP ${otp} to ${targetEmail}`);
+        } catch (mailErr) {
+          console.warn(`[SMTP Warning] Failed to send login OTP email: ${mailErr.message}. Fallback OTP in log: ${otp}`);
+        }
+
+        return res.json({
+          success: true,
+          requires2FA: true,
+          email: targetEmail,
+          message: `ระบบได้ส่งรหัส OTP 6 หลักไปยัง Gmail (${targetEmail}) เรียบร้อยแล้ว`
+        });
       }
-      const isValid = authenticator.verify({ token: mfaCode, secret: user.two_factor_secret });
-      if (!isValid) {
-        return res.status(401).json({ success: false, message: 'รหัส 2FA 6 หลักไม่ถูกต้อง กรุณาตรวจสอบรหัสในแอป Authenticator' });
+
+      // Verify OTP Code
+      const cached = otpCache.get(`superadmin_login_${user.username}`);
+      if (!cached || Date.now() > cached.expiresAt || cached.otp !== mfaCode.trim()) {
+        return res.status(401).json({ success: false, message: 'รหัส OTP ไม่ถูกต้องหรือหมดอายุแล้ว กรุณาตรวจสอบ Gmail ของท่านอีกครั้ง' });
       }
+      otpCache.delete(`superadmin_login_${user.username}`);
     }
 
     const token = jwt.sign({ id: user.id, role: user.role, username: user.username }, JWT_SECRET, { expiresIn: '1h' });
     return res.json({ success: true, token, user: { id: user.id, username: user.username, role: user.role } });
   } catch (err) {
-    return res.status(500).json({ success: false, message: 'Server error' });
+    return res.status(500).json({ success: false, message: 'Server error: ' + err.message });
+  }
+});
+
+// POST /api/super-admin/change-password
+app.post('/api/super-admin/change-password', authenticateJWT, async (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+  if (!currentPassword || !newPassword) {
+    return res.status(400).json({ success: false, message: 'กรุณากรอกรหัสผ่านปัจจุบันและรหัสผ่านใหม่' });
+  }
+
+  try {
+    const { rows } = await dbPool.query('SELECT * FROM users WHERE id = $1', [req.user.id]);
+    if (rows.length === 0) return res.status(404).json({ success: false, message: 'ไม่พบผู้ใช้' });
+
+    const user = rows[0];
+    const valid = await bcrypt.compare(currentPassword, user.password_hash);
+    if (!valid) {
+      return res.status(401).json({ success: false, message: 'รหัสผ่านปัจจุบันไม่ถูกต้อง' });
+    }
+
+    const hashedNew = await bcrypt.hash(newPassword, 10);
+    await dbPool.query('UPDATE users SET password_hash = $1 WHERE id = $2', [hashedNew, req.user.id]);
+
+    res.json({ success: true, message: 'เปลี่ยนรหัสผ่านสำเร็จเรียบร้อยแล้ว' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
   }
 });
 

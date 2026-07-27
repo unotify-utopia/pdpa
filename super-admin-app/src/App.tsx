@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ShieldCheck, Building2, UserCheck, Key, Lock, LogOut, Plus, Sun, Moon, QrCode, Smartphone, CheckCircle2, Trash2 } from 'lucide-react';
+import { ShieldCheck, Building2, UserCheck, Key, Lock, LogOut, Plus, Sun, Moon, CheckCircle2, Trash2, Mail } from 'lucide-react';
 
 interface Tenant {
   id: string;
@@ -31,9 +31,15 @@ export default function App() {
 
   const [activeTab, setActiveTab] = useState<'tenants' | 'users'>('tenants');
 
-  // Token and 2FA state
+  // Token and OTP email state
   const [token, setToken] = useState<string | null>(null);
-  const [qrCodeUrl, setQrCodeUrl] = useState<string>('');
+  const [otpEmail, setOtpEmail] = useState<string>('');
+
+  // Change Password Modal State
+  const [isChangePasswordOpen, setIsChangePasswordOpen] = useState<boolean>(false);
+  const [currentPasswordInput, setCurrentPasswordInput] = useState<string>('');
+  const [newPasswordInput, setNewPasswordInput] = useState<string>('');
+  const [confirmPasswordInput, setConfirmPasswordInput] = useState<string>('');
 
   // Master Tenants List State
   const [tenants, setTenants] = useState<Tenant[]>([]);
@@ -69,27 +75,10 @@ export default function App() {
       });
       const data = await res.json();
       if (data.success) {
-        if (data.requires2FASetup) {
-          if (data.qrCodeUrl) {
-            setQrCodeUrl(data.qrCodeUrl);
-            setLoginStep('mfa');
-          } else {
-            const setupRes = await fetch('/api/auth/2fa/setup', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ username, password })
-            });
-            const setupData = await setupRes.json();
-            if (setupData.success) {
-              setQrCodeUrl(setupData.qrCodeUrl || '');
-              setLoginStep('mfa');
-            } else {
-              alert(setupData.message || setupData.error || 'ไม่สามารถสร้าง QR Code สำหรับตั้งค่า 2FA ได้');
-            }
-          }
-        } else if (data.requires2FA) {
-          setQrCodeUrl('');
+        if (data.requires2FA || data.requires2FASetup) {
+          setOtpEmail(data.email || 'apichat.utopia@gmail.com');
           setLoginStep('mfa');
+          alert(data.message || `ระบบได้ส่งรหัส OTP 6 หลักไปยัง Gmail (${data.email || 'apichat.utopia@gmail.com'}) เรียบร้อยแล้ว`);
         } else if (data.token) {
           setToken(data.token);
           setLoginStep('authenticated');
@@ -103,11 +92,11 @@ export default function App() {
     }
   };
 
-  // Step 2: Verify MFA TOTP (REAL SYSTEM)
+  // Step 2: Verify Gmail OTP Code (REAL SYSTEM)
   const handleMfaSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!mfaCode.trim() || mfaCode.trim().length !== 6) {
-      alert('กรุณากรอกรหัส 2FA 6 หลักจากแอป Authenticator');
+      alert('กรุณากรอกรหัส OTP 6 หลักที่ได้รับทางอีเมล Gmail');
       return;
     }
     try {
@@ -122,10 +111,50 @@ export default function App() {
         setLoginStep('authenticated');
         fetchData(data.token);
       } else {
-        alert(data.message || 'รหัส 2FA ไม่ถูกต้อง กรุณาตรวจสอบรหัสจากแอป Google Authenticator');
+        alert(data.message || 'รหัส OTP ไม่ถูกต้อง กรุณาตรวจสอบอีเมล Gmail ของท่านอีกครั้ง');
       }
     } catch (err) {
-      alert('ไม่สามารถเชื่อมต่อระบบหลังบ้านเพื่อตรวจสอบรหัส 2FA ได้');
+      alert('ไม่สามารถเชื่อมต่อระบบหลังบ้านเพื่อตรวจสอบรหัส OTP ได้');
+    }
+  };
+
+  // Change Password Handler
+  const handleChangePasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentPasswordInput || !newPasswordInput) {
+      alert('กรุณากรอกรหัสผ่านปัจจุบันและรหัสผ่านใหม่');
+      return;
+    }
+    if (newPasswordInput !== confirmPasswordInput) {
+      alert('รหัสผ่านใหม่กับยืนยันรหัสผ่านไม่ตรงกัน');
+      return;
+    }
+    if (!token) return;
+
+    try {
+      const res = await fetch('/api/super-admin/change-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          currentPassword: currentPasswordInput,
+          newPassword: newPasswordInput
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert('✓ เปลี่ยนรหัสผ่านสำเร็จเรียบร้อยแล้ว ท่านสามารถใช้รหัสผ่านใหม่ได้ทันที');
+        setIsChangePasswordOpen(false);
+        setCurrentPasswordInput('');
+        setNewPasswordInput('');
+        setConfirmPasswordInput('');
+      } else {
+        alert(data.message || 'ไม่สามารถเปลี่ยนรหัสผ่านได้');
+      }
+    } catch (err) {
+      alert('เกิดข้อผิดพลาดในการเชื่อมต่อเพื่อเปลี่ยนรหัสผ่าน');
     }
   };
 
@@ -438,32 +467,23 @@ export default function App() {
             <form onSubmit={handleMfaSubmit} className="space-y-4 animate-fade-in">
               <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl text-xs text-emerald-400 flex items-center gap-2">
                 <CheckCircle2 className="h-5 w-5 shrink-0" />
-                <span>ยืนยันตัวตนขั้นแรกสำเร็จ กรุณากรอกรหัส OTP 6 หลัก จากแอป Authenticator</span>
+                <span>ยืนยันตัวตนขั้นแรกสำเร็จ กรุณากรอกรหัส OTP 6 หลักที่ส่งไปยัง Gmail ของท่าน</span>
               </div>
 
-              <div className="text-center py-2 space-y-2">
-                {qrCodeUrl ? (
-                  <div className="space-y-2">
-                    <div className="inline-block p-2 bg-white border border-slate-200 rounded-xl">
-                      <img src={qrCodeUrl} alt="2FA QR Code" className="h-40 w-40 mx-auto" />
-                    </div>
-                    <p className="text-xs text-amber-400 font-semibold px-2">
-                      กรุณาสแกน QR Code นี้ในแอป Google / Microsoft Authenticator ของคุณ
-                    </p>
-                  </div>
-                ) : (
-                  <div className="inline-block p-3 bg-slate-900 border border-slate-800 rounded-xl">
-                    <QrCode className="h-16 w-16 text-slate-300 mx-auto" />
-                  </div>
-                )}
-                <p className="text-[11px] text-slate-400 flex items-center justify-center gap-1">
-                  <Smartphone className="h-3.5 w-3.5 text-emerald-400" />
-                  <span>เปิดแอป Google / Microsoft Authenticator บนมือถือของคุณ</span>
+              <div className="text-center py-4 space-y-2">
+                <div className="inline-block p-4 bg-slate-900 border border-slate-800 rounded-2xl">
+                  <Mail className="h-14 w-14 text-emerald-400 mx-auto" />
+                </div>
+                <p className="text-[13px] text-slate-200 font-bold">
+                  ตรวจสอบรหัส OTP ที่อีเมล Gmail: <span className="text-emerald-400">{otpEmail || 'apichat.utopia@gmail.com'}</span>
+                </p>
+                <p className="text-[11px] text-slate-400">
+                  <span>นำรหัสตัวเลข 6 หลักที่ได้รับในกล่องจดหมายมากรอกเพื่อยืนยันเข้าสู่ระบบ</span>
                 </p>
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-center mb-1.5">รหัสผ่าน 2FA TOTP (6 หลัก)</label>
+                <label className="block text-xs font-bold text-center mb-1.5">รหัสผ่าน OTP 6 หลัก จาก Gmail</label>
                 <input
                   type="text"
                   maxLength={6}
@@ -474,7 +494,7 @@ export default function App() {
                   required
                   autoFocus
                 />
-                <span className="block text-[10px] text-emerald-400 text-center mt-1">✓ กรุณานำรหัส 6 หลักจากแอป Authenticator มายืนยัน</span>
+                <span className="block text-[10px] text-emerald-400 text-center mt-1">✓ กรุณากรอกรหัส OTP 6 หลักที่ได้รับทางอีเมล Gmail (อายุ 5 นาที)</span>
               </div>
 
               <div className="flex gap-2">
@@ -532,6 +552,14 @@ export default function App() {
             >
               {isDark ? <Sun className="h-4 w-4 text-amber-400" /> : <Moon className="h-4 w-4 text-indigo-600" />}
               <span className="hidden md:inline">{isDark ? 'ธีมสว่าง' : 'ธีมมืด'}</span>
+            </button>
+
+            <button
+              onClick={() => setIsChangePasswordOpen(true)}
+              className="bg-emerald-500/10 hover:bg-emerald-600 text-emerald-500 hover:text-white text-xs font-semibold px-4 py-2 rounded-lg transition border border-emerald-500/30 flex items-center gap-1.5"
+            >
+              <Key className="h-4 w-4" />
+              <span>เปลี่ยนรหัสผ่าน</span>
             </button>
 
             <button
@@ -989,7 +1017,7 @@ export default function App() {
         <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className={`border rounded-2xl p-6 max-w-sm w-full shadow-2xl space-y-4 ${cardBgClass} animate-fade-in text-center`}>
             <div className="inline-flex p-3 bg-brand-500/20 border border-brand-500/30 rounded-2xl text-brand-400 mb-1">
-              <QrCode className="h-8 w-8 text-emerald-400" />
+              <Mail className="h-8 w-8 text-emerald-400" />
             </div>
             
             <div className="space-y-1">
@@ -1091,6 +1119,79 @@ export default function App() {
                   }`}
                 >
                   🗑️ ยืนยันลบหน่วยงานถาวร
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Change Password Modal */}
+      {isChangePasswordOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-fade-in">
+          <div className={`w-full max-w-md p-6 rounded-2xl border shadow-2xl space-y-4 ${cardBgClass}`}>
+            <div className="flex items-center justify-between border-b border-slate-800/60 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="p-2 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
+                  <Key className="h-5 w-5 text-emerald-400" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-sm">เปลี่ยนรหัสผ่าน Super Admin</h3>
+                  <p className="text-[11px] text-slate-400">กำหนดรหัสผ่านใหม่เพื่อความปลอดภัยของระบบกลาง</p>
+                </div>
+              </div>
+            </div>
+
+            <form onSubmit={handleChangePasswordSubmit} className="space-y-3">
+              <div>
+                <label className="block text-xs font-bold mb-1">รหัสผ่านปัจจุบัน</label>
+                <input
+                  type="password"
+                  value={currentPasswordInput}
+                  onChange={(e) => setCurrentPasswordInput(e.target.value)}
+                  placeholder="รหัสผ่านปัจจุบัน"
+                  className={`w-full text-xs py-2 px-3 border rounded-xl focus:outline-none focus:border-emerald-500 ${inputBgClass}`}
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold mb-1">รหัสผ่านใหม่</label>
+                <input
+                  type="password"
+                  value={newPasswordInput}
+                  onChange={(e) => setNewPasswordInput(e.target.value)}
+                  placeholder="รหัสผ่านใหม่ (อย่างน้อย 6 ตัวอักษร)"
+                  className={`w-full text-xs py-2 px-3 border rounded-xl focus:outline-none focus:border-emerald-500 ${inputBgClass}`}
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold mb-1">ยืนยันรหัสผ่านใหม่</label>
+                <input
+                  type="password"
+                  value={confirmPasswordInput}
+                  onChange={(e) => setConfirmPasswordInput(e.target.value)}
+                  placeholder="พิมพ์รหัสผ่านใหม่อีกครั้ง"
+                  className={`w-full text-xs py-2 px-3 border rounded-xl focus:outline-none focus:border-emerald-500 ${inputBgClass}`}
+                  required
+                />
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsChangePasswordOpen(false)}
+                  className="w-1/3 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold py-2.5 rounded-xl transition"
+                >
+                  ยกเลิก
+                </button>
+                <button
+                  type="submit"
+                  className="w-2/3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 rounded-xl text-xs transition shadow-lg"
+                >
+                  ✓ บันทึกรหัสผ่านใหม่
                 </button>
               </div>
             </form>
