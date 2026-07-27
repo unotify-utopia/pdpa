@@ -158,6 +158,7 @@ export default function App() {
   const [templates, setTemplates] = useState<DocumentTemplate[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [activeUser, setActiveUser] = useState<UserType | null>(initialUser);
+  const [impersonatedOrgId, setImpersonatedOrgId] = useState<string | null>(null);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [isChangePasswordModalOpen, setIsChangePasswordModalOpen] = useState(false);
   const [manualChannel, setManualChannel] = useState<'office' | 'post' | 'email' | 'e-service'>('office');
@@ -169,6 +170,12 @@ export default function App() {
   
   // Backend Users from DB
   const [backendUsers, setBackendUsers] = useState<UserType[]>([]);
+
+  // Derived state for Super Admin Impersonation
+  const currentViewOrgId = (activeUser?.isSuperAdmin && impersonatedOrgId) ? impersonatedOrgId : activeUser?.orgId;
+  const filteredRequests = (activeUser?.isSuperAdmin && impersonatedOrgId)
+    ? requests.filter(r => r.orgId === impersonatedOrgId)
+    : requests;
 
   // Idle Timeout System for Main App (10 minutes)
   useEffect(() => {
@@ -494,7 +501,7 @@ export default function App() {
 
   // State calculations helper for sidebar badge count
   const getBadgeCount = (statuses: RequestStatus[]) => {
-    return requests.filter(r => statuses.includes(r.status)).length;
+    return filteredRequests.filter(r => statuses.includes(r.status)).length;
   };
 
   // --- PUBLIC PORTAL FORM STATE WIZARD ---
@@ -718,7 +725,7 @@ export default function App() {
     e.preventDefault();
     if (!activeUser) return;
     
-    const orgId = activeUser.orgId || '';
+    const orgId = currentViewOrgId || '';
 
     const newReq: Request = {
       id: `REQ-${Date.now()}`,
@@ -1556,7 +1563,7 @@ export default function App() {
   };
 
   // Clean UI lookup helper for active requests details
-  const activeRequestObj = selectedRequestId ? requests.find(r => r.id === selectedRequestId) : null;
+  const activeRequestObj = selectedRequestId ? filteredRequests.find(r => r.id === selectedRequestId) : null;
 
   return (
     <div className="min-h-screen flex flex-col font-sans">
@@ -1573,7 +1580,7 @@ export default function App() {
           {activeUser ? (
             <div className="flex items-center gap-3 flex-wrap">
               <span className="text-brand-400 font-bold bg-slate-800 px-2.5 py-1 rounded border border-slate-700">
-                🏢 {organizations.find((o) => o.id === activeUser.orgId)?.nameTh || 'หน่วยงานทั่วไป'} ({activeUser.fullNameTh})
+                🏢 {organizations.find((o) => o.id === currentViewOrgId)?.nameTh || 'หน่วยงานทั่วไป'} ({activeUser.fullNameTh})
               </span>
 
               <button
@@ -1629,6 +1636,27 @@ export default function App() {
                   <span className="bg-slate-800 border border-slate-700 text-slate-300 px-2 py-0.5 rounded font-bold text-[11px] uppercase">
                     {activeUser.role}
                   </span>
+                </div>
+              )}
+
+              {/* Super Admin Tenant Switcher (Impersonation) */}
+              {activeUser.isSuperAdmin && (
+                <div className="flex items-center gap-1.5 border-l border-slate-700 pl-3 animate-fade-in">
+                  <span className="text-amber-400 font-semibold text-[11px] flex items-center gap-1">
+                    <AlertTriangle className="h-3 w-3" /> แฝงตัว (Impersonate):
+                  </span>
+                  <select
+                    value={impersonatedOrgId || ''}
+                    onChange={(e) => setImpersonatedOrgId(e.target.value || null)}
+                    className="bg-amber-900/30 border border-amber-500/50 text-amber-300 rounded px-2 py-0.5 font-bold text-[11px] focus:outline-none focus:ring-1 focus:ring-amber-500 max-w-[150px] truncate"
+                  >
+                    <option value="">-- ดูทั้งหมด (Global) --</option>
+                    {organizations.map((org: any) => (
+                      <option key={org.id} value={org.id}>
+                        {org.nameTh} ({org.id})
+                      </option>
+                    ))}
+                  </select>
                 </div>
               )}
 
@@ -3278,9 +3306,9 @@ export default function App() {
                       </div>
                       
                       {/* Mini count badges */}
-                      {item.id === 'requests' && requests.length > 0 && (
+                      {item.id === 'requests' && filteredRequests.length > 0 && (
                         <span className="bg-slate-800 text-slate-300 text-[10px] px-1.5 py-0.5 rounded font-mono font-bold">
-                          {requests.length}
+                          {filteredRequests.length}
                         </span>
                       )}
                     </button>
@@ -4220,7 +4248,7 @@ export default function App() {
                     {/* Operational counter grid (Clickable Interactive Cards) */}
                     <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                       {[
-                        { label: 'คำขอเข้าใหม่ทั้งหมด', count: requests.length, color: 'border-l-brand-500 hover:border-brand-500 hover:shadow-md text-brand-600', statuses: null },
+                        { label: 'คำขอเข้าใหม่ทั้งหมด', count: filteredRequests.length, color: 'border-l-brand-500 hover:border-brand-500 hover:shadow-md text-brand-600', statuses: null },
                         { label: 'รอตรวจสอบตัวตน', count: getBadgeCount(['Submitted', 'Received', 'Identity Verification', 'Completeness Review']), color: 'border-l-indigo-500 hover:border-indigo-500 hover:shadow-md text-indigo-600', statuses: ['Submitted', 'Received', 'Identity Verification', 'Completeness Review'] as RequestStatus[] },
                         { label: 'อยู่ระหว่างสืบค้นข้อมูล', count: getBadgeCount(['Complete', 'Assigned', 'Data Collection']), color: 'border-l-amber-500 hover:border-amber-500 hover:shadow-md text-amber-600', statuses: ['Complete', 'Assigned', 'Data Collection'] as RequestStatus[] },
                         { label: 'รอฝ่ายกฎหมาย/DPO ตรวจ', count: getBadgeCount(['Data Owner Review', 'DPO or Legal Review', 'Redaction Required', 'Approval Pending']), color: 'border-l-rose-500 hover:border-rose-500 hover:shadow-md text-rose-600', statuses: ['Data Owner Review', 'DPO or Legal Review', 'Redaction Required', 'Approval Pending'] as RequestStatus[] },
@@ -4245,14 +4273,14 @@ export default function App() {
                     </div>
 
                     {/* Dynamic Charts visual component */}
-                    <DashboardCharts requests={requests} />
+                    <DashboardCharts requests={filteredRequests} />
 
                     {/* Quick overview of latest requests */}
                     <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-4">
                       <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider">คำร้องที่ต้องการความช่วยเหลือเร่งด่วน (Urgent SLA Action)</span>
                       
                       <div className="divide-y divide-slate-100">
-                        {requests.slice(0, 3).map((req) => (
+                        {filteredRequests.slice(0, 3).map((req) => (
                           <div
                             key={req.id}
                             onClick={() => setSelectedRequestId(req.id)}
@@ -4629,7 +4657,7 @@ export default function App() {
                         </thead>
                         <tbody className="divide-y divide-slate-100 text-slate-700">
                           {backendUsers
-                            .filter((u: UserType) => u.orgId === activeUser.orgId || activeUser.role === 'superadmin')
+                            .filter((u: UserType) => u.orgId === currentViewOrgId || (activeUser.role === 'superadmin' && !impersonatedOrgId))
                             .map((user: UserType) => (
                               <tr key={user.id} className="hover:bg-slate-50/80 transition">
                                 <td className="p-3 font-bold text-slate-900">
@@ -4710,7 +4738,7 @@ export default function App() {
                           onClick={() => setStatusFilterGroup(null)}
                           className="bg-brand-600 hover:bg-brand-700 text-white font-semibold text-[11px] px-2.5 py-1 rounded transition shadow-sm"
                         >
-                          ✕ ล้างตัวกรอง (แสดงทั้งหมด {requests.length} คำขอ)
+                          ✕ ล้างตัวกรอง (แสดงทั้งหมด {filteredRequests.length} คำขอ)
                         </button>
                       </div>
                     )}
@@ -4718,7 +4746,7 @@ export default function App() {
                     <div className="p-4 border-b border-slate-100 bg-slate-50 flex flex-wrap items-center justify-between gap-4">
                       <span className="text-xs font-bold text-slate-800">
                         ตารางสืบค้นและดำเนินงานคำร้องขอใช้สิทธิข้อมูลส่วนบุคคล (Data Subject Access Requests) 
-                        ({requests.filter((r) => !statusFilterGroup || statusFilterGroup.includes(r.status)).length} รายการ)
+                        ({filteredRequests.filter((r) => !statusFilterGroup || statusFilterGroup.includes(r.status)).length} รายการ)
                       </span>
                       <button
                         type="button"
@@ -4804,7 +4832,7 @@ export default function App() {
                         { title: '4. รออนุมัติ/ชำระเงิน (Approval)', statuses: ['Approval Pending', 'Fee Notification', 'Awaiting Payment'] },
                         { title: '5. เตรียมส่งมอบ/ปิดงาน (Delivery)', statuses: ['Approved', 'Partially Approved', 'Ready for Delivery', 'Delivered', 'Closed'] }
                       ].map((col, idx) => {
-                        const colRequests = requests.filter(r => col.statuses.includes(r.status));
+                        const colRequests = filteredRequests.filter(r => col.statuses.includes(r.status));
                         return (
                           <div key={idx} className="bg-slate-100/70 border border-slate-200 rounded-xl p-3 min-w-[200px] flex flex-col space-y-3 h-[450px]">
                             <div className="flex justify-between items-center">
@@ -5021,7 +5049,7 @@ export default function App() {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 text-slate-700">
-                          {requests.filter(r => ['Closed', 'Delivered', 'Destroyed'].includes(r.status)).map((req) => {
+                          {filteredRequests.filter(r => ['Closed', 'Delivered', 'Destroyed'].includes(r.status)).map((req) => {
                             const closedAtDate = req.statusHistory.find(h => h.status === 'Closed')?.changedAt || req.submissionDate;
                             const destroyDate = new Date(closedAtDate);
                             destroyDate.setFullYear(destroyDate.getFullYear() + 2); // 2 years

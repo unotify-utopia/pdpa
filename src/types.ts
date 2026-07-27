@@ -21,6 +21,7 @@ export interface User {
   email: string;
   role: Role; // Primary role for legacy compatibility
   roles: Role[]; // Multi-role support
+  isSuperAdmin?: boolean;
   department?: string;
   mfaEnabled: boolean;
   sodWarnings?: string[]; // SOD compliance flags
