@@ -375,10 +375,8 @@ app.post('/api/auth/login', async (req, res) => {
       if (!mfaCode) {
         // Generate and send OTP
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
-        otpCache.set(`staff_login_${user.username}`, {
-          otp,
-          expiresAt: Date.now() + 5 * 60 * 1000 // 5 minutes
-        });
+        const otpData = JSON.stringify({ otp, expiresAt: Date.now() + 5 * 60 * 1000 });
+        await dbPool.query('UPDATE users SET two_factor_secret = $1 WHERE id = $2', [otpData, user.id]);
 
         let emailSent = true;
         try {
@@ -416,14 +414,21 @@ app.post('/api/auth/login', async (req, res) => {
         });
       }
 
-      // Verify OTP
-      const cached = otpCache.get(`staff_login_${user.username}`);
-      if (!cached || cached.otp !== mfaCode || Date.now() > cached.expiresAt) {
+      // Verify OTP from database
+      if (!user.two_factor_secret || !user.two_factor_secret.startsWith('{')) {
+         return res.status(401).json({ success: false, message: 'รหัส OTP ไม่ถูกต้องหรือหมดอายุ' });
+      }
+      try {
+        const cached = JSON.parse(user.two_factor_secret);
+        if (!cached || cached.otp !== mfaCode || Date.now() > cached.expiresAt) {
+          return res.status(401).json({ success: false, message: 'รหัส OTP ไม่ถูกต้องหรือหมดอายุ' });
+        }
+      } catch (e) {
         return res.status(401).json({ success: false, message: 'รหัส OTP ไม่ถูกต้องหรือหมดอายุ' });
       }
       
       // Clear OTP after successful use
-      otpCache.delete(`staff_login_${user.username}`);
+      await dbPool.query('UPDATE users SET two_factor_secret = NULL WHERE id = $1', [user.id]);
     }
 
     // Generate JWT token

@@ -218,7 +218,6 @@ export const StaffLoginModal: React.FC<StaffLoginModalProps> = ({
                   type="text"
                   maxLength={6}
                   required
-                  placeholder="123456"
                   value={otpCode}
                   onChange={(e) => setOtpCode(e.target.value)}
                   className="w-full font-mono text-center text-lg font-bold border border-slate-300 rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-brand-500 text-slate-900 tracking-widest"
