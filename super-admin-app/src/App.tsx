@@ -39,6 +39,45 @@ export default function App() {
   // Custom Professional Notification Dialog Modal State
   const [notifyModal, setNotifyModal] = useState<{ open: boolean; title: string; message: string; type: 'success' | 'warning' | 'error'; onConfirm?: () => void } | null>(null);
 
+  // Idle Timeout System
+  useEffect(() => {
+    let timeoutId: NodeJS.Timeout;
+
+    const resetTimer = () => {
+      clearTimeout(timeoutId);
+      // Set timeout for 5 minutes (300,000 ms)
+      timeoutId = setTimeout(() => {
+        if (loginStep === 'authenticated') {
+          sessionStorage.removeItem('pdpa_super_token');
+          setToken(null);
+          setLoginStep('credentials');
+          
+          const defaultTitle = 'ระบบตัดการเชื่อมต่ออัตโนมัติ';
+          setNotifyModal({ 
+            open: true, 
+            title: defaultTitle, 
+            message: 'ท่านไม่ได้ใช้งานระบบเกิน 5 นาที ระบบจึงทำการออกจากระบบอัตโนมัติเพื่อความปลอดภัย', 
+            type: 'warning' 
+          });
+        }
+      }, 5 * 60 * 1000);
+    };
+
+    if (loginStep === 'authenticated') {
+      // Start timer
+      resetTimer();
+      // Listen for user activity
+      const events = ['mousemove', 'mousedown', 'keydown', 'scroll', 'touchstart'];
+      events.forEach(event => window.addEventListener(event, resetTimer));
+
+      // Cleanup
+      return () => {
+        clearTimeout(timeoutId);
+        events.forEach(event => window.removeEventListener(event, resetTimer));
+      };
+    }
+  }, [loginStep]);
+
   const showNotify = (message: string, type: 'success' | 'warning' | 'error' = 'success', title?: string, onConfirm?: () => void) => {
     const defaultTitle = type === 'success' ? 'การแจ้งเตือนจากระบบ' : type === 'warning' ? 'ข้อความแจ้งเตือน' : 'เกิดข้อผิดพลาด';
     setNotifyModal({ open: true, title: title || defaultTitle, message, type, onConfirm });
