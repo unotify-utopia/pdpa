@@ -30,6 +30,7 @@ export default function App() {
   const [mfaCode, setMfaCode] = useState('');
 
   const [activeTab, setActiveTab] = useState<'tenants' | 'users'>('tenants');
+  const [selectedTenantForUsers, setSelectedTenantForUsers] = useState<string>('');
 
   // Token and OTP email state
   const [token, setToken] = useState<string | null>(null);
@@ -368,7 +369,7 @@ export default function App() {
       username: '',
       fullName: '',
       email: '',
-      orgId: tenants[0]?.id || 'org_dopa',
+      orgId: selectedTenantForUsers || tenants[0]?.id || 'org_dopa',
       role: 'intake',
       department: ''
     });
@@ -677,6 +678,15 @@ export default function App() {
 
                 <div className="flex gap-2 pt-1">
                   <button
+                    onClick={() => {
+                      setSelectedTenantForUsers(t.id);
+                      setActiveTab('users');
+                    }}
+                    className={`flex-1 text-xs py-1.5 rounded-lg font-semibold transition border ${isDark ? 'bg-indigo-500/10 border-indigo-500/30 text-indigo-400 hover:bg-indigo-500/20' : 'bg-indigo-50 border-indigo-200 text-indigo-600 hover:bg-indigo-100'}`}
+                  >
+                    👥 จัดการผู้ใช้
+                  </button>
+                  <button
                     onClick={() => handleOpenEditTenantModal(t)}
                     className={`flex-1 text-xs py-1.5 rounded-lg font-semibold transition border ${isDark ? 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700' : 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200'}`}
                   >
@@ -687,7 +697,7 @@ export default function App() {
                       setDeletingTenant(t);
                       setDeleteConfirmText('');
                     }}
-                    className="bg-red-500/10 hover:bg-red-600 text-red-500 hover:text-white border border-red-500/30 text-xs px-3 py-1.5 rounded-lg transition font-semibold flex items-center gap-1"
+                    className="bg-red-500/10 hover:bg-red-600 text-red-500 hover:text-white border border-red-500/30 text-xs px-3 py-1.5 rounded-lg transition font-semibold flex items-center justify-center gap-1"
                     title="ลบหน่วยงานออกจากระบบ"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
@@ -702,27 +712,57 @@ export default function App() {
         {/* TAB 2: Users & Password Management */}
         {activeTab === 'users' && (
           <div className={`border rounded-xl overflow-hidden p-6 space-y-4 ${cardBgClass}`}>
-            <h2 className="text-sm font-bold flex items-center gap-2">
-              <UserCheck className="h-4 w-4 text-emerald-500" />
-              <span>รายการผู้ใช้งานเจ้าหน้าที่ประจำหน่วยงานทั้งหมด</span>
-            </h2>
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <h2 className="text-sm font-bold flex items-center gap-2">
+                <UserCheck className="h-4 w-4 text-emerald-500" />
+                <span>จัดการผู้ใช้งานประจำหน่วยงาน</span>
+              </h2>
+              
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <span className="text-xs font-semibold whitespace-nowrap text-slate-400">เลือกหน่วยงาน:</span>
+                <select
+                  value={selectedTenantForUsers}
+                  onChange={(e) => setSelectedTenantForUsers(e.target.value)}
+                  className={`text-xs py-1.5 px-3 rounded-lg border focus:outline-none focus:border-emerald-500 w-full sm:w-64 font-mono ${isDark ? 'bg-slate-900 border-slate-700 text-slate-200' : 'bg-white border-slate-300 text-slate-700'}`}
+                >
+                  <option value="">-- กรุณาเลือกหน่วยงาน --</option>
+                  {tenants.map(t => (
+                    <option key={t.id} value={t.id}>{t.nameTh} ({t.id})</option>
+                  ))}
+                </select>
+              </div>
+            </div>
 
-            <div className="overflow-x-auto border rounded-xl border-slate-800/40">
-              <table className="w-full text-left text-xs border-collapse">
-                <thead>
-                  <tr className={`border-b font-bold ${tableHeaderBg}`}>
-                    <th className="p-3">ชื่อ-นามสกุล</th>
-                    <th className="p-3">Username / อีเมล</th>
-                    <th className="p-3">หน่วยงาน</th>
-                    <th className="p-3">บทบาทสิทธิ์ (Role)</th>
-                    <th className="p-3 text-center">จัดการรหัสผ่าน</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-800/40">
-                  {users.map((u) => (
-                    <tr key={u.id} className="hover:bg-slate-800/20 transition">
-                      <td className="p-3 font-bold">
-                        {u.fullName}
+            {!selectedTenantForUsers ? (
+              <div className={`p-10 text-center rounded-xl border border-dashed ${isDark ? 'border-slate-800 bg-slate-900/30 text-slate-500' : 'border-slate-300 bg-slate-50 text-slate-500'}`}>
+                <Building2 className="h-10 w-10 mx-auto mb-3 opacity-20" />
+                <p className="font-semibold text-sm">กรุณาเลือกหน่วยงาน</p>
+                <p className="text-xs mt-1">โปรดเลือกหน่วยงานจากเมนูด้านบนเพื่อจัดการผู้ใช้งานในสังกัด</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto border rounded-xl border-slate-800/40">
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead>
+                    <tr className={`border-b font-bold ${tableHeaderBg}`}>
+                      <th className="p-3">ชื่อ-นามสกุล</th>
+                      <th className="p-3">Username / อีเมล</th>
+                      <th className="p-3">หน่วยงาน</th>
+                      <th className="p-3">บทบาทสิทธิ์ (Role)</th>
+                      <th className="p-3 text-center">จัดการรหัสผ่าน</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800/40">
+                    {users.filter(u => u.orgId === selectedTenantForUsers).length === 0 ? (
+                      <tr>
+                        <td colSpan={5} className="p-8 text-center text-slate-500">
+                          ไม่มีผู้ใช้งานในหน่วยงานนี้
+                        </td>
+                      </tr>
+                    ) : (
+                      users.filter(u => u.orgId === selectedTenantForUsers).map((u) => (
+                        <tr key={u.id} className="hover:bg-slate-800/20 transition">
+                          <td className="p-3 font-bold">
+                            {u.fullName}
                         <span className="block text-[10px] font-normal text-slate-400">{u.department}</span>
                       </td>
                       <td className="p-3 font-mono">
@@ -745,10 +785,12 @@ export default function App() {
                         </button>
                       </td>
                     </tr>
-                  ))}
+                  ))
+                )}
                 </tbody>
               </table>
             </div>
+            )}
           </div>
         )}
 
