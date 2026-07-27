@@ -145,6 +145,39 @@ export default function App() {
       .catch(console.error);
   }, []);
 
+  // Fetch backend users
+  const reloadUsers = () => {
+    const user = activeUser || getCurrentUser();
+    if (user && (user.role === 'admin' || user.role === 'superadmin')) {
+      const token = localStorage.getItem('pdpa_token');
+      if (token) {
+        fetch('/api/users', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        })
+          .then(res => res.json())
+          .then(data => {
+            if (data.success && data.users) {
+              const usersWithSod = data.users.map((u: any) => {
+                const userRoles = u.roles || [u.role];
+                const warnings = [];
+                if (userRoles.includes('dpo') && userRoles.includes('approver')) {
+                   warnings.push('Conflict of Interest: DPO ไม่ควรเป็นผู้อนุมัติคำขอ (Approver) เพื่อรักษาสถานะผู้ประเมินอิสระ');
+                }
+                if (userRoles.includes('intake') && userRoles.includes('owner')) {
+                   warnings.push('Data Pipeline Risk: ผู้รับเรื่อง (Intake) ไม่ควรเป็นผู้ดึงข้อมูล (Owner) เองทั้งหมดโดยไม่มีคนสอบทาน');
+                }
+                return { ...u, sodWarnings: warnings };
+              });
+              setBackendUsers(usersWithSod);
+            }
+          })
+          .catch(console.error);
+      }
+    }
+  };
+
   // Reload local state from DB
   const reloadData = () => {
     const currentUser = getCurrentUser();
@@ -184,6 +217,7 @@ export default function App() {
 
     setConfig(getComplianceConfig());
     setTemplates(getDocumentTemplates());
+    reloadUsers();
   };
 
   useEffect(() => {
@@ -214,35 +248,7 @@ export default function App() {
 
   // Fetch Backend Users
   useEffect(() => {
-    if (activeUser && (activeUser.role === 'admin' || activeUser.role === 'superadmin')) {
-      const token = localStorage.getItem('pdpa_token');
-      if (token) {
-        fetch('/api/users', {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        })
-          .then(res => res.json())
-          .then(data => {
-            if (data.success && data.users) {
-              const usersWithSod = data.users.map((u: any) => {
-                // Determine SOD Warnings based on roles (mock logic)
-                const userRoles = u.roles || [u.role];
-                const warnings = [];
-                if (userRoles.includes('dpo') && userRoles.includes('approver')) {
-                   warnings.push('Conflict of Interest: DPO ไม่ควรเป็นผู้อนุมัติคำขอ (Approver) เพื่อรักษาสถานะผู้ประเมินอิสระ');
-                }
-                if (userRoles.includes('intake') && userRoles.includes('owner')) {
-                   warnings.push('Data Pipeline Risk: ผู้รับเรื่อง (Intake) ไม่ควรเป็นผู้ดึงข้อมูล (Owner) เองทั้งหมดโดยไม่มีคนสอบทาน');
-                }
-                return { ...u, sodWarnings: warnings };
-              });
-              setBackendUsers(usersWithSod);
-            }
-          })
-          .catch(console.error);
-      }
-    }
+    reloadUsers();
   }, [activeUser]);
 
   // Withdraw OTP Verification Modal States
@@ -1785,7 +1791,7 @@ export default function App() {
                               .then((data) => {
                                 if (data.success) {
                                   alert('ลบผู้ใช้งานสำเร็จ');
-                                  window.location.reload();
+                                  reloadUsers();
                                 }
                               });
                           }
@@ -1857,7 +1863,7 @@ export default function App() {
                       if (data.success) {
                         alert(editingUser ? 'บันทึกการแก้ไขสิทธิ์เรียบร้อยแล้ว' : 'เพิ่มผู้ใช้งานสำเร็จ! รหัสผ่านเริ่มต้นคือ 123456');
                         setIsUserModalOpen(false);
-                        window.location.reload();
+                        reloadUsers();
                       } else {
                         alert('เกิดข้อผิดพลาด: ' + (data.error || data.message || 'ไม่ทราบสาเหตุ'));
                       }
@@ -3648,7 +3654,8 @@ export default function App() {
                           onClick={() => {
                             if (window.confirm('ยืนยันการจัดส่งข้อมูลให้เจ้าของข้อมูลและปิดเรื่องคำขอนี้?')) {
                               changeRequestStatus(activeRequestObj.id, 'Closed', activeUser, 'จัดส่งมอบลิงก์ดาวน์โหลดอย่างปลอดภัยและปิดเรื่องสำเร็จ');
-                              window.location.reload();
+                              reloadData();
+                              setSelectedRequestId(null);
                             }
                           }}
                           className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm px-4 py-3 rounded-xl transition flex items-center justify-center gap-2"
