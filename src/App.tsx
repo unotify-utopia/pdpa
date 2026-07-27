@@ -149,7 +149,7 @@ export default function App() {
   const reloadUsers = () => {
     const user = activeUser || getCurrentUser();
     if (user && (user.role === 'admin' || user.role === 'superadmin')) {
-      const token = localStorage.getItem('pdpa_token');
+      const token = sessionStorage.getItem('pdpa_token') || sessionStorage.getItem('pdpa_jwt_token');
       if (token) {
         fetch('/api/users', {
           headers: {
@@ -192,7 +192,7 @@ export default function App() {
 
     if (currentUser) {
       // Authenticated User: Fetch from secure API
-      const token = localStorage.getItem('pdpa_token');
+      const token = sessionStorage.getItem('pdpa_token') || sessionStorage.getItem('pdpa_jwt_token');
       fetch('/api/requests', {
         headers: token ? { 'Authorization': `Bearer ${token}` } : {}
       })
@@ -1556,6 +1556,7 @@ export default function App() {
 
               <button
                 onClick={() => {
+                  sessionStorage.clear();
                   setCurrentUser(null);
                   setActiveUser(null);
                   setSelectedRequestId(null);
@@ -1757,7 +1758,7 @@ export default function App() {
                     <button
                       type="button"
                       onClick={() => {
-                        const token = localStorage.getItem('pdpa_token');
+                        const token = sessionStorage.getItem('pdpa_token') || sessionStorage.getItem('pdpa_jwt_token');
                         if (token) {
                           fetch(`/api/users/${editingUser.id}`, {
                             method: 'PUT',
@@ -1781,7 +1782,7 @@ export default function App() {
                       type="button"
                       onClick={() => {
                         if (window.confirm(`ยืนยันการลบผู้ใช้: ${editingUser.fullNameTh} ออกจากระบบ?`)) {
-                          const token = localStorage.getItem('pdpa_token');
+                          const token = sessionStorage.getItem('pdpa_token') || sessionStorage.getItem('pdpa_jwt_token');
                           if (token) {
                             fetch(`/api/users/${editingUser.id}`, {
                               method: 'DELETE',
@@ -1817,7 +1818,7 @@ export default function App() {
                 <button
                   type="button"
                   onClick={async () => {
-                    const token = localStorage.getItem('pdpa_token');
+                    const token = sessionStorage.getItem('pdpa_token') || sessionStorage.getItem('pdpa_jwt_token');
                     if (!userForm.username || !userForm.fullNameTh) {
                       alert('กรุณากรอกรหัสผู้ใช้ และชื่อ-นามสกุลให้ครบถ้วน');
                       return;

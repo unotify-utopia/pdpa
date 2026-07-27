@@ -70,6 +70,10 @@ export const StaffLoginModal: React.FC<StaffLoginModalProps> = ({
       }
 
       // Login success
+      if (data.token) {
+        sessionStorage.setItem('pdpa_token', data.token);
+        sessionStorage.setItem('pdpa_jwt_token', data.token);
+      }
       const user: UserType = {
         id: data.user.id,
         orgId: data.user.orgId,
@@ -111,6 +115,11 @@ export const StaffLoginModal: React.FC<StaffLoginModalProps> = ({
       if (!data.success) {
         setErrorMsg(data.message || 'รหัส 2FA ไม่ถูกต้อง');
         return;
+      }
+
+      if (data.token) {
+        sessionStorage.setItem('pdpa_token', data.token);
+        sessionStorage.setItem('pdpa_jwt_token', data.token);
       }
 
       const user: UserType = {

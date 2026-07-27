@@ -52,10 +52,10 @@ export const initializeDB = () => {
   if (!localStorage.getItem(KEYS.AUDIT_LOGS)) {
     localStorage.setItem(KEYS.AUDIT_LOGS, JSON.stringify(initialAuditLogs));
   }
-  if (!localStorage.getItem(KEYS.CURRENT_USER)) {
-    // Initial state is unauthenticated (Clean Public Portal)
-    localStorage.removeItem(KEYS.CURRENT_USER);
-  }
+  // Clean up any legacy persistent login in localStorage so user session is never remembered across browser restarts/tabs
+  localStorage.removeItem(KEYS.CURRENT_USER);
+  localStorage.removeItem('pdpa_jwt_token');
+  localStorage.removeItem('pdpa_token');
 };
 
 // Helper: Calculate simple hash checksum
@@ -119,16 +119,21 @@ export const getAuditLogs = (): AuditLog[] => {
 
 export const getCurrentUser = (): User => {
   initializeDB();
-  return JSON.parse(localStorage.getItem(KEYS.CURRENT_USER) || 'null');
+  return JSON.parse(sessionStorage.getItem(KEYS.CURRENT_USER) || 'null');
 };
 
 export const setCurrentUser = (user: User | null) => {
+  localStorage.removeItem(KEYS.CURRENT_USER);
+  localStorage.removeItem('pdpa_jwt_token');
+  localStorage.removeItem('pdpa_token');
+
   if (!user) {
-    localStorage.removeItem(KEYS.CURRENT_USER);
-    localStorage.removeItem('pdpa_jwt_token');
+    sessionStorage.removeItem(KEYS.CURRENT_USER);
+    sessionStorage.removeItem('pdpa_jwt_token');
+    sessionStorage.removeItem('pdpa_token');
     return;
   }
-  localStorage.setItem(KEYS.CURRENT_USER, JSON.stringify(user));
+  sessionStorage.setItem(KEYS.CURRENT_USER, JSON.stringify(user));
   addAuditLog('SWITCH_USER_ROLE', `เปลี่ยนสวมบทบาทการทำงานเป็น: ${user.fullNameTh} (${user.role.toUpperCase()})`, user);
 };
 

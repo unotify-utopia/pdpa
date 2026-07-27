@@ -14,15 +14,18 @@ export interface LoginResponse {
 const TOKEN_KEY = 'pdpa_jwt_token';
 
 export const getAuthToken = (): string | null => {
-  return localStorage.getItem(TOKEN_KEY);
+  localStorage.removeItem(TOKEN_KEY);
+  return sessionStorage.getItem(TOKEN_KEY);
 };
 
 export const setAuthToken = (token: string) => {
-  localStorage.setItem(TOKEN_KEY, token);
+  localStorage.removeItem(TOKEN_KEY);
+  sessionStorage.setItem(TOKEN_KEY, token);
 };
 
 export const removeAuthToken = () => {
   localStorage.removeItem(TOKEN_KEY);
+  sessionStorage.removeItem(TOKEN_KEY);
 };
 
 // Login API
