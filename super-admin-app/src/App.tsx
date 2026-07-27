@@ -70,17 +70,22 @@ export default function App() {
       const data = await res.json();
       if (data.success) {
         if (data.requires2FASetup) {
-          const setupRes = await fetch('/api/auth/2fa/setup', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username, password })
-          });
-          const setupData = await setupRes.json();
-          if (setupData.success) {
-            setQrCodeUrl(setupData.qrCodeUrl || '');
+          if (data.qrCodeUrl) {
+            setQrCodeUrl(data.qrCodeUrl);
             setLoginStep('mfa');
           } else {
-            alert('ไม่สามารถสร้าง QR Code สำหรับตั้งค่า 2FA ได้');
+            const setupRes = await fetch('/api/auth/2fa/setup', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ username, password })
+            });
+            const setupData = await setupRes.json();
+            if (setupData.success) {
+              setQrCodeUrl(setupData.qrCodeUrl || '');
+              setLoginStep('mfa');
+            } else {
+              alert(setupData.message || setupData.error || 'ไม่สามารถสร้าง QR Code สำหรับตั้งค่า 2FA ได้');
+            }
           }
         } else if (data.requires2FA) {
           setQrCodeUrl('');

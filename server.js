@@ -362,8 +362,11 @@ app.post('/api/auth/login', async (req, res) => {
       const { mfaCode } = req.body;
       
       if (!user.two_factor_secret) {
-        // Needs setup
-        return res.json({ success: true, requires2FASetup: true, username: user.username });
+        const secret = authenticator.generateSecret();
+        const otpauth = authenticator.keyuri(user.username, 'PDPA Request System', secret);
+        const qrCodeUrl = await QRCode.toDataURL(otpauth);
+        await dbPool.query('UPDATE users SET two_factor_secret = $1, mfa_enabled = true WHERE id = $2', [secret, user.id]);
+        return res.json({ success: true, requires2FASetup: true, username: user.username, qrCodeUrl, secret });
       }
 
       if (!mfaCode) {
@@ -411,19 +414,24 @@ app.post('/api/auth/2fa/setup', async (req, res) => {
   if (!username || !password) return res.status(400).json({ success: false, message: 'กรุณากรอก Username และ Password' });
 
   try {
-    const { rows } = await dbPool.query('SELECT * FROM users WHERE username = $1', [username]);
+    const { rows } = await dbPool.query('SELECT * FROM users WHERE username = $1 ORDER BY (case when role = $2 then 1 else 2 end) ASC, created_at DESC', [username, 'superadmin']);
     if (rows.length === 0) return res.status(401).json({ success: false, message: 'ไม่พบผู้ใช้' });
 
-    const user = rows[0];
-    const valid = await bcrypt.compare(password, user.password_hash);
-    if (!valid) return res.status(401).json({ success: false, message: 'รหัสผ่านไม่ถูกต้อง' });
+    let user = null;
+    for (const r of rows) {
+      if (await bcrypt.compare(password, r.password_hash)) {
+        user = r;
+        break;
+      }
+    }
+    if (!user) return res.status(401).json({ success: false, message: 'รหัสผ่านไม่ถูกต้อง' });
 
     const secret = authenticator.generateSecret();
     const otpauth = authenticator.keyuri(user.username, 'PDPA Request System', secret);
     const qrCodeUrl = await QRCode.toDataURL(otpauth);
 
-    // Save secret to DB
-    await dbPool.query('UPDATE users SET two_factor_secret = $1 WHERE username = $2', [secret, username]);
+    // Save secret to DB by unique user ID
+    await dbPool.query('UPDATE users SET two_factor_secret = $1, mfa_enabled = true WHERE id = $2', [secret, user.id]);
 
     res.json({ success: true, qrCodeUrl, secret });
   } catch (err) {
@@ -455,7 +463,11 @@ app.post('/api/super-admin/login', async (req, res) => {
     if (user.mfa_enabled || user.role === 'superadmin') {
       const { mfaCode } = req.body;
       if (!user.two_factor_secret) {
-        return res.json({ success: true, requires2FASetup: true, username: user.username });
+        const secret = authenticator.generateSecret();
+        const otpauth = authenticator.keyuri(user.username, 'PDPA Request System', secret);
+        const qrCodeUrl = await QRCode.toDataURL(otpauth);
+        await dbPool.query('UPDATE users SET two_factor_secret = $1, mfa_enabled = true WHERE id = $2', [secret, user.id]);
+        return res.json({ success: true, requires2FASetup: true, username: user.username, qrCodeUrl, secret });
       }
       if (!mfaCode) {
         return res.json({ success: true, requires2FA: true, message: 'กรุณากรอกรหัส 2FA จากแอป Google / Microsoft Authenticator' });
