@@ -389,11 +389,11 @@ const sendWorkflowNotification = async (request, oldStatus, newStatus, eventType
   const isOnlineWeb = request.contactChannel === 'web';
   const statusNameTh = getStatusNameTh(newStatus);
   
-  // Define default officer email addresses per role
-  const intakeEmail = process.env.INTAKE_EMAIL || 'kanya@organization.or.th';
-  const ownerEmail = process.env.OWNER_EMAIL || 'weera@organization.or.th';
-  const dpoEmail = process.env.DPO_EMAIL || 'dpo@organization.or.th';
-  const approverEmail = process.env.APPROVER_EMAIL || 'approver@organization.or.th';
+  // Define default officer email addresses per role (mapped to tester email for now)
+  const intakeEmail = process.env.INTAKE_EMAIL || 'youtub6.numcom@gmail.com';
+  const ownerEmail = process.env.OWNER_EMAIL || 'youtub6.numcom@gmail.com';
+  const dpoEmail = process.env.DPO_EMAIL || 'youtub6.numcom@gmail.com';
+  const approverEmail = process.env.APPROVER_EMAIL || 'youtub6.numcom@gmail.com';
 
   const recipients = [];
   let subject = '';
