@@ -189,9 +189,48 @@ export default function App() {
 
   // Derived state for Super Admin Impersonation
   const currentViewOrgId = (activeUser?.isSuperAdmin && impersonatedOrgId) ? impersonatedOrgId : activeUser?.orgId;
-  const filteredRequests = (activeUser?.isSuperAdmin && impersonatedOrgId)
+  const baseRequests = (activeUser?.isSuperAdmin && impersonatedOrgId)
     ? requests.filter(r => r.orgId === impersonatedOrgId)
     : requests;
+
+  // Enforce FLOW: Filter requests based on user roles
+  const filteredRequests = baseRequests.filter(r => {
+    if (!activeUser) return false;
+    const roles = activeUser.roles || [activeUser.role];
+    if (roles.includes('superadmin') || roles.includes('admin') || roles.includes('auditor')) return true;
+    
+    // If they have multiple roles, they can see the request if ANY role permits it
+    return roles.some(role => {
+      switch (role) {
+        case 'intake':
+          // Intake can see all requests in the system
+          return true;
+        case 'owner':
+          // Owner sees requests once they are assigned or beyond
+          const ownerHiddenStatuses = ['Draft', 'Submitted', 'Received', 'Identity Verification', 'Awaiting Identity Evidence', 'Completeness Review', 'Awaiting Additional Information', 'Complete'];
+          return !ownerHiddenStatuses.includes(r.status);
+        case 'dpo':
+          // DPO ONLY sees requests that have reached DPO stage or beyond
+          const dpoVisibleStatuses = [
+            'DPO or Legal Review', 'Redaction Required', 'Approval Pending', 
+            'Fee Notification', 'Awaiting Payment', 'Approved', 'Partially Approved', 
+            'Denied', 'No Data Found', 'Ready for Delivery', 'Delivered', 
+            'Receipt Confirmed', 'Closed', 'Legal Hold', 'Archived', 'Destroyed'
+          ];
+          return dpoVisibleStatuses.includes(r.status);
+        case 'approver':
+          // Approver ONLY sees requests that need approval or beyond
+          const approverVisibleStatuses = [
+            'Approval Pending', 'Approved', 'Partially Approved', 'Denied',
+            'Ready for Delivery', 'Delivered', 'Receipt Confirmed', 'Closed',
+            'Archived', 'Destroyed'
+          ];
+          return approverVisibleStatuses.includes(r.status);
+        default:
+          return false;
+      }
+    });
+  });
 
   // Idle Timeout System for Main App (10 minutes)
   // Unified Force Logout Helper for Staff Portal
