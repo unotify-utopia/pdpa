@@ -610,7 +610,7 @@ export default function App() {
     setAccuracyCertified(false);
   };
 
-  const submitPublicRequest = (e: React.FormEvent) => {
+  const submitPublicRequest = async (e: React.FormEvent) => {
     e.preventDefault();
 
     // 1. Check mandatory consent checkboxes
