@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ShieldCheck, Building2, UserCheck, Key, Lock, LogOut, Plus, Sun, Moon, CheckCircle2, Trash2, Mail, AlertCircle, Eye, EyeOff, Check, Archive, Download, FileText, CheckCircle, ShieldAlert, RefreshCw, X } from 'lucide-react';
+import { ShieldCheck, Building2, UserCheck, Key, Lock, LogOut, Plus, Sun, Moon, CheckCircle2, Trash2, Mail, AlertCircle, Eye, EyeOff, Check, Archive, Download, FileText, CheckCircle, ShieldAlert, RefreshCw, X, Activity, Server, ArrowRight, Sparkles, Shield } from 'lucide-react';
 
 interface Tenant {
   id: string;
@@ -702,130 +702,256 @@ export default function App() {
 
   // LOGIN SCREEN (Step 1 & Step 2 MFA)
   if (loginStep !== 'authenticated') {
-    return (
-      <div className={`min-h-screen ${bgClass} flex flex-col items-center justify-center p-4 transition-colors duration-200`}>
-        {/* Top Theme Switcher */}
-        <div className="absolute top-4 right-4">
-          <button
-            onClick={() => setTheme(isDark ? 'light' : 'dark')}
-            className={`p-2.5 rounded-xl border transition ${cardBgClass} flex items-center gap-2 text-xs font-semibold`}
-          >
-            {isDark ? <Sun className="h-4 w-4 text-amber-400" /> : <Moon className="h-4 w-4 text-indigo-600" />}
-            <span>{isDark ? 'โหมดสว่าง (Light Mode)' : 'โหมดมืด (Dark Mode)'}</span>
-          </button>
-        </div>
+    const isDarkTheme = isDark;
+    const pageBg = isDarkTheme 
+      ? 'bg-slate-950 text-slate-100' 
+      : 'bg-slate-100 text-slate-900';
+    const leftTextSubtitle = isDarkTheme ? 'text-slate-400' : 'text-slate-600';
+    const badgeCardBg = isDarkTheme 
+      ? 'bg-slate-900/80 border-slate-800 hover:border-slate-700' 
+      : 'bg-white/90 border-slate-200 hover:border-slate-300 shadow-sm';
+    const loginCardBg = isDarkTheme
+      ? 'bg-slate-900/90 border-slate-800 text-white shadow-2xl'
+      : 'bg-white border-slate-200 text-slate-900 shadow-xl';
+    const inputCustomBg = isDarkTheme
+      ? 'bg-slate-950 border-slate-800 text-white placeholder-slate-500 focus:border-emerald-500'
+      : 'bg-slate-50 border-slate-300 text-slate-900 placeholder-slate-400 focus:border-emerald-600';
 
-        <div className={`border rounded-2xl p-8 max-w-md w-full shadow-2xl space-y-6 ${cardBgClass}`}>
-          <div className="text-center space-y-2">
-            <div className="inline-flex p-3 bg-emerald-500/20 border border-emerald-500/30 rounded-2xl text-emerald-400 mb-1">
-              <ShieldCheck className="h-9 w-9 text-emerald-500" />
+    return (
+      <div className={`min-h-screen ${pageBg} flex items-center justify-center p-4 lg:p-8 relative overflow-hidden transition-colors duration-300 font-sans`}>
+        {/* Ambient Decorative Background Glows */}
+        <div className="absolute -top-32 -left-32 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none animate-pulse" />
+        <div className="absolute -bottom-32 -right-32 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute top-1/2 left-1/3 w-80 h-80 bg-teal-500/5 rounded-full blur-3xl pointer-events-none" />
+
+        {/* Widescreen Hero & Login Container */}
+        <div className="max-w-6xl w-full grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center relative z-10 my-auto">
+          
+          {/* LEFT SIDE: Enterprise Platform Overview & Watchdog Panel (7 Columns) */}
+          <div className="lg:col-span-7 space-y-6 lg:pr-4">
+            
+            {/* Top Status Badge */}
+            <div className="inline-flex items-center gap-2.5 px-3.5 py-1.5 rounded-full text-xs font-mono font-bold bg-gradient-to-r from-emerald-500/20 via-teal-500/15 to-amber-500/20 border border-emerald-500/30 text-emerald-400 shadow-lg shadow-emerald-500/10 animate-fade-in">
+              <Sparkles className="h-4 w-4 text-emerald-400 animate-spin" style={{ animationDuration: '6s' }} />
+              <span>THAILAND PDPA ENTERPRISE CORE • V2.5 STANDALONE</span>
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse ml-1" />
             </div>
-            <h1 className="text-xl font-bold">Super Admin Enterprise Control</h1>
-            <p className="text-xs text-slate-400">พอร์ทัลบริหารจัดการระบบหลังบ้านระดับความมั่นคงปลอดภัยสูง</p>
+
+            {/* Main Headline */}
+            <div className="space-y-3">
+              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight leading-tight">
+                <span>Super Admin </span>
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-300 to-amber-300">
+                  Enterprise Control
+                </span>
+              </h1>
+              <p className={`text-sm sm:text-base ${leftTextSubtitle} leading-relaxed max-w-xl`}>
+                ศูนย์บริหารจัดการระบบกำกับดูแลคำขอสิทธิ์ตามพระราชบัญญัติคุ้มครองข้อมูลส่วนบุคคล พ.ศ. 2562 (PDPA) ระดับความมั่นคงปลอดภัยสูง สำหรับผู้บริการกลางและผู้กำกับดูแลสัญญา
+              </p>
+            </div>
+
+            {/* Security Engine Badges Row */}
+            <div className="grid grid-cols-3 gap-3 pt-2">
+              <div className={`p-3 rounded-2xl border transition ${badgeCardBg} flex flex-col gap-1`}>
+                <div className="flex items-center gap-1.5 text-emerald-400 font-bold text-xs">
+                  <ShieldCheck className="h-4 w-4 shrink-0" />
+                  <span>2FA MFA Zero-Trust</span>
+                </div>
+                <p className="text-[11px] text-slate-400">ยืนยันตัวตน 2 ชั้นผ่านรหัส OTP Gmail</p>
+              </div>
+              <div className={`p-3 rounded-2xl border transition ${badgeCardBg} flex flex-col gap-1`}>
+                <div className="flex items-center gap-1.5 text-amber-400 font-bold text-xs">
+                  <FileText className="h-4 w-4 shrink-0" />
+                  <span>SHA-256 Checksum</span>
+                </div>
+                <p className="text-[11px] text-slate-400">รับรองความถูกต้องข้อมูลส่งมอบทางกฎหมาย</p>
+              </div>
+              <div className={`p-3 rounded-2xl border transition ${badgeCardBg} flex flex-col gap-1`}>
+                <div className="flex items-center gap-1.5 text-indigo-400 font-bold text-xs">
+                  <Server className="h-4 w-4 shrink-0" />
+                  <span>Standalone Node</span>
+                </div>
+                <p className="text-[11px] text-slate-400">แยกพอร์ตอิสระ /super-admin ปลอดภัยสูง</p>
+              </div>
+            </div>
+
+            {/* Key Capabilities Overview Cards */}
+            <div className="space-y-3 pt-2">
+              <div className={`p-4 rounded-2xl border transition ${badgeCardBg} flex items-start gap-3`}>
+                <div className="p-2.5 bg-emerald-500/20 border border-emerald-500/30 rounded-xl text-emerald-400 shrink-0 mt-0.5">
+                  <Building2 className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-sm">ระบบกำกับดูแลสัญญาและส่งมอบข้อมูล (Tenant Lifecycle & Takeout)</h3>
+                  <p className="text-xs text-slate-400 mt-1 leading-relaxed">
+                    ควบคุมสถานะสัญญาทั้งระบบ Active, Expired, Suspended พร้อมเครื่องมือส่งมอบชุดข้อมูล JSON/CSV และหนังสือบันทึกข้อตกลง (Handover Memorandum) รับรองด้วย Digital Signature
+                  </p>
+                </div>
+              </div>
+
+              <div className={`p-4 rounded-2xl border transition ${badgeCardBg} flex items-start gap-3`}>
+                <div className="p-2.5 bg-indigo-500/20 border border-indigo-500/30 rounded-xl text-indigo-400 shrink-0 mt-0.5">
+                  <Activity className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-sm">บันทึกประวัติความปลอดภัยระดับสูง (Master Security Audit Trail)</h3>
+                  <p className="text-xs text-slate-400 mt-1 leading-relaxed">
+                    บันทึกทุกเหตุการณ์และคำสั่งของ Super Admin อย่างโปร่งใส (Non-Repudiation) พร้อมตรวจสอบสถิติคำขอสิทธิ์และสถานะระบบแบบ Real-time
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer indicator */}
+            <div className="flex items-center gap-2 text-xs text-slate-500 font-mono pt-1">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
+              <span>TLS 1.3 Encryption Active • Compliance Watchdog Engine Running</span>
+            </div>
           </div>
 
-          {/* STEP 1: Username & Password */}
-          {loginStep === 'credentials' && (
-            <form onSubmit={handleStep1Submit} className="space-y-4" autoComplete="off">
-              <div>
-                <label className="block text-xs font-semibold mb-1.5">Username ผู้ดูแลระบบกลาง</label>
-                <input
-                  type="text"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  placeholder="super.admin"
-                  autoComplete="new-password"
-                  className={`w-full px-4 py-2.5 border rounded-xl text-xs focus:outline-none focus:border-emerald-500 ${inputBgClass}`}
-                  required
-                />
-              </div>
+          {/* RIGHT SIDE: Sophisticated Glass Login Box (5 Columns) */}
+          <div className="lg:col-span-5">
+            <div className={`border rounded-3xl p-7 sm:p-8 w-full transition-all relative overflow-hidden ${loginCardBg}`}>
+              {/* Glowing accent bar at top */}
+              <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-emerald-500 via-teal-400 to-amber-400" />
 
-              <div>
-                <label className="block text-xs font-semibold mb-1.5">Master Security Password</label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
-                  <input
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="กรอกรหัสผ่าน"
-                    autoComplete="new-password"
-                    className={`w-full pl-9 pr-4 py-2.5 border rounded-xl text-xs focus:outline-none focus:border-emerald-500 ${inputBgClass}`}
-                    required
-                  />
+              {/* Top Bar with Security label and Theme Switcher */}
+              <div className="flex items-center justify-between pb-5 mb-5 border-b border-slate-800/80">
+                <div className="flex items-center gap-2 text-xs font-bold text-emerald-400">
+                  <Shield className="h-4 w-4" />
+                  <span>SECURE EXECUTIVE LOGIN</span>
                 </div>
-              </div>
-
-              <button
-                type="submit"
-                className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 rounded-xl text-xs transition shadow-lg flex items-center justify-center gap-1.5"
-              >
-                <span>ถัดไป: ยืนยันรหัส MFA Authenticator →</span>
-              </button>
-            </form>
-          )}
-
-          {/* STEP 2: MFA TOTP Code Verification */}
-          {loginStep === 'mfa' && (
-            <form onSubmit={handleMfaSubmit} className="space-y-4 animate-fade-in">
-              <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl text-xs text-emerald-400 flex items-center gap-2">
-                <CheckCircle2 className="h-5 w-5 shrink-0" />
-                <span>ยืนยันตัวตนขั้นแรกสำเร็จ กรุณากรอกรหัส OTP 6 หลักที่ส่งไปยัง Gmail ของท่าน</span>
-              </div>
-
-              <div className="text-center py-3 space-y-2">
-                <div className="inline-block p-4 bg-slate-900 border border-slate-800 rounded-2xl">
-                  <Mail className="h-14 w-14 text-emerald-400 mx-auto" />
-                </div>
-                <p className="text-[13px] text-slate-200 font-bold">
-                  ตรวจสอบรหัส OTP ที่อีเมล Gmail: <span className="text-emerald-400">{otpEmail || 'apichat.utopia@gmail.com'}</span>
-                </p>
-                <p className="text-[11px] text-slate-400">
-                  <span>นำรหัสตัวเลข 6 หลักที่ได้รับในกล่องจดหมายมากรอกเพื่อยืนยันเข้าสู่ระบบ</span>
-                </p>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-center mb-2 text-slate-300">
-                  รหัสผ่าน OTP 6 หลัก จาก Gmail
-                </label>
-                <div className="relative max-w-[280px] mx-auto">
-                  <input
-                    type="text"
-                    maxLength={6}
-                    value={mfaCode}
-                    onChange={(e) => setMfaCode(e.target.value.replace(/[^0-9]/g, ''))}
-                    placeholder="• • • • • •"
-                    autoFocus
-                    className="w-full text-center tracking-[0.6em] font-mono text-2xl font-extrabold py-3 px-4 bg-slate-900/90 border-2 border-emerald-500/50 hover:border-emerald-500 rounded-2xl text-emerald-400 placeholder:text-slate-600 focus:outline-none focus:border-emerald-400 focus:ring-4 focus:ring-emerald-500/20 transition shadow-inner"
-                    required
-                  />
-                </div>
-                <span className="block text-[11px] text-emerald-400/90 text-center mt-2 font-medium">
-                  ✓ กรุณากรอกรหัสตัวเลข 6 หลักที่ได้รับทางอีเมล Gmail (อายุ 5 นาที)
-                </span>
-              </div>
-
-              <div className="flex gap-2">
                 <button
                   type="button"
-                  onClick={() => setLoginStep('credentials')}
-                  className="w-1/3 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold py-2.5 rounded-xl transition"
+                  onClick={() => setTheme(isDarkTheme ? 'light' : 'dark')}
+                  className="p-2 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 text-slate-300 text-xs font-semibold flex items-center gap-1.5 transition"
                 >
-                  ย้อนกลับ
-                </button>
-                <button
-                  type="submit"
-                  className="w-2/3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 rounded-xl text-xs transition shadow-lg"
-                >
-                  เข้าสู่ระบบหลังบ้าน
+                  {isDarkTheme ? <Sun className="h-3.5 w-3.5 text-amber-400" /> : <Moon className="h-3.5 w-3.5 text-indigo-400" />}
+                  <span>{isDarkTheme ? 'สว่าง' : 'มืด'}</span>
                 </button>
               </div>
-            </form>
-          )}
 
-          <div className="text-[11px] text-slate-500 text-center border-t border-slate-800 pt-4 font-mono">
-            🔒 High Security Isolated Super Admin Console v2.5
+              {/* Header Title inside Card */}
+              <div className="space-y-1 mb-6">
+                <h2 className="text-xl font-bold tracking-tight">เข้าสู่ระบบพอร์ทัลผู้ดูแลระบบกลาง</h2>
+                <p className="text-xs text-slate-400">ยืนยันสิทธิ์เพื่อเข้าถึงเครื่องมือบริหารจัดการระดับสูง</p>
+              </div>
+
+              {/* STEP 1: Username & Password */}
+              {loginStep === 'credentials' && (
+                <form onSubmit={handleStep1Submit} className="space-y-4" autoComplete="off">
+                  <div>
+                    <label className="block text-xs font-semibold mb-1.5">Username ผู้ดูแลระบบกลาง</label>
+                    <div className="relative">
+                      <UserCheck className="absolute left-3.5 top-3 h-4 w-4 text-slate-400" />
+                      <input
+                        type="text"
+                        value={username}
+                        onChange={(e) => setUsername(e.target.value)}
+                        placeholder="super.admin"
+                        autoComplete="new-password"
+                        className={`w-full pl-10 pr-4 py-2.5 border rounded-xl text-xs focus:outline-none transition-all ${inputCustomBg}`}
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold mb-1.5">Master Security Password</label>
+                    <div className="relative">
+                      <Lock className="absolute left-3.5 top-3 h-4 w-4 text-slate-400" />
+                      <input
+                        type="password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        placeholder="กรอกรหัสผ่านปลอดภัย"
+                        autoComplete="new-password"
+                        className={`w-full pl-10 pr-4 py-2.5 border rounded-xl text-xs focus:outline-none transition-all ${inputCustomBg}`}
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="pt-2">
+                    <button
+                      type="submit"
+                      className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold py-3 rounded-xl text-xs transition shadow-lg shadow-emerald-600/20 flex items-center justify-center gap-2 group"
+                    >
+                      <span>ถัดไป: ยืนยันรหัส MFA Authenticator</span>
+                      <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                    </button>
+                  </div>
+
+                  <div className="p-3 bg-slate-800/40 border border-slate-800 rounded-xl text-[11px] text-slate-400 text-center leading-relaxed mt-4">
+                    💡 ระบบเปิดใช้งาน <b>MFA Protection</b> ทุกครั้งที่เข้าสู่ระบบ รหัส OTP จะถูกส่งไปยังอีเมลที่ลงทะเบียน
+                  </div>
+                </form>
+              )}
+
+              {/* STEP 2: MFA TOTP Code Verification */}
+              {loginStep === 'mfa' && (
+                <form onSubmit={handleMfaSubmit} className="space-y-4 animate-fade-in">
+                  <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl text-xs text-emerald-400 flex items-center gap-2">
+                    <CheckCircle2 className="h-5 w-5 shrink-0" />
+                    <span>ยืนยันตัวตนขั้นแรกสำเร็จ กรุณากรอกรหัส OTP 6 หลักที่ส่งไปยังอีเมล</span>
+                  </div>
+
+                  <div className="text-center py-3 space-y-2">
+                    <div className="inline-block p-4 bg-slate-900 border border-slate-800 rounded-2xl shadow-inner">
+                      <Mail className="h-12 w-12 text-emerald-400 mx-auto" />
+                    </div>
+                    <p className="text-[13px] font-bold">
+                      ตรวจสอบรหัส OTP ที่อีเมล: <span className="text-emerald-400">{otpEmail || 'apichat.utopia@gmail.com'}</span>
+                    </p>
+                    <p className="text-[11px] text-slate-400">
+                      นำรหัสตัวเลข 6 หลักที่ได้รับในกล่องจดหมายมากรอกเพื่อยืนยันเข้าสู่ระบบ
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-center mb-2 text-slate-300">
+                      รหัสผ่าน OTP 6 หลัก จาก Gmail
+                    </label>
+                    <div className="relative max-w-[260px] mx-auto">
+                      <input
+                        type="text"
+                        maxLength={6}
+                        value={mfaCode}
+                        onChange={(e) => setMfaCode(e.target.value.replace(/[^0-9]/g, ''))}
+                        placeholder="• • • • • •"
+                        autoFocus
+                        className="w-full text-center tracking-[0.55em] font-mono text-2xl font-extrabold py-3 px-4 bg-slate-900/90 border-2 border-emerald-500/50 hover:border-emerald-500 rounded-2xl text-emerald-400 placeholder:text-slate-600 focus:outline-none focus:border-emerald-400 focus:ring-4 focus:ring-emerald-500/20 transition shadow-inner"
+                        required
+                      />
+                    </div>
+                    <span className="block text-[11px] text-emerald-400/90 text-center mt-2 font-medium">
+                      ✓ กรุณากรอกรหัสตัวเลข 6 หลักที่ได้รับทางอีเมล (อายุ 5 นาที)
+                    </span>
+                  </div>
+
+                  <div className="flex gap-2 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setLoginStep('credentials')}
+                      className="w-1/3 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold py-2.5 rounded-xl transition"
+                    >
+                      ย้อนกลับ
+                    </button>
+                    <button
+                      type="submit"
+                      className="w-2/3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold py-2.5 rounded-xl text-xs transition shadow-lg"
+                    >
+                      เข้าสู่ระบบหลังบ้าน
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              {/* Card Footer */}
+              <div className="text-[11px] text-slate-500 text-center border-t border-slate-800/80 pt-4 mt-6 font-mono">
+                🔒 Isolated Super Admin Console v2.5 • High Security MFA
+              </div>
+            </div>
           </div>
         </div>
       </div>
