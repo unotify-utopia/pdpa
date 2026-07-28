@@ -3728,10 +3728,10 @@ export default function App() {
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                   
                   {/* Left Column: Intake details, identity, completeness checks */}
-                  <div className="lg:col-span-2 space-y-6">
+                  <div className="lg:col-span-2 space-y-6 flex flex-col">
                     
                     {/* Module 0: Data Subject & Requester Profile Card */}
-                    <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-4">
+                    <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-4 order-1">
                       <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                         <span className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
                           <User className="h-4 w-4 text-brand-600" />
@@ -3801,7 +3801,7 @@ export default function App() {
                     </div>
 
                     {/* General Request Metadata */}
-                    <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-4">
+                    <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-4 order-2">
                       <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider">ขอบเขตข้อมูลที่ร้องขอ (Request Scope)</span>
                       
                       <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg text-xs leading-relaxed text-slate-800">
@@ -3866,8 +3866,8 @@ export default function App() {
                     </div>
 
                     {/* Module A: Identity & Completeness verification (INTAKE ROLE) */}
-                    {['intake', 'admin', 'dpo'].includes(activeUser.role) && (
-                      <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-4">
+                    {['intake', 'admin'].includes(activeUser.role) && (
+                      <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-4 order-3">
                         <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
                           <UserCheck className="h-4 w-4 text-brand-600" />
                           <span>การตรวจสอบข้อมูลและสิทธิยื่นเรื่อง (Intake Verification & Completeness)</span>
@@ -4011,7 +4011,7 @@ export default function App() {
 
                     {/* Staff Direct Message Board with Citizen */}
                     {['intake', 'admin', 'dpo', 'owner'].includes(activeUser.role) && (
-                      <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden flex flex-col h-[400px]">
+                      <div className={"bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden flex flex-col h-[400px] " + (activeUser.role === 'dpo' ? 'order-5' : 'order-6')}>
                         <div className="bg-slate-900 text-white px-5 py-3.5 flex items-center justify-between">
                           <div>
                             <span className="block font-bold text-sm text-white flex items-center gap-2">
@@ -4080,7 +4080,7 @@ export default function App() {
 
                     {/* Close Request and Delivery management */}
                     {['intake', 'admin'].includes(activeUser.role) && activeRequestObj.status === 'Ready for Delivery' && (
-                      <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-4">
+                      <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-4 order-last">
                         <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider">จัดส่งสำเนาและปิดเรื่อง (Delivery & Archive)</span>
                         <p className="text-xs text-slate-500">ตรวจสอบสถานะชำระค่าธรรมเนียม (ถ้ามี) เรียบร้อยแล้ว กดปุ่มเพื่อบันทึกการส่งมอบข้อมูลปลอดภัย</p>
                         
@@ -4102,7 +4102,7 @@ export default function App() {
 
                     {/* Module B: Data Gathering Tasking (Section 3.5) */}
                     {['owner', 'admin', 'intake', 'dpo'].includes(activeUser.role) && (
-                      <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-4">
+                      <div className={"bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-4 " + (activeUser.role === 'dpo' ? 'order-6' : 'order-4')}>
                         <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
                           <Search className="h-4 w-4 text-brand-600" />
                           <span>งานค้นหาและสืบค้นข้อมูลระบบภายใน (Data Discovery & Gathering)</span>
@@ -4232,7 +4232,7 @@ export default function App() {
 
                     {/* Module C: Document Redaction Panel (DPO/LEGAL ROLE) */}
                     {['dpo', 'admin'].includes(activeUser.role) && (
-                      <div className="space-y-4">
+                      <div className={"space-y-4 " + (activeUser.role === 'dpo' ? 'order-4' : 'order-5')}>
                         <RedactionCanvas
                           onRedactApplied={(record) => handleRedactionApplied(activeRequestObj.id, record)}
                           onSaveAll={() => handleSaveRedactionAll(activeRequestObj.id)}
