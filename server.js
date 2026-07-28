@@ -1022,6 +1022,8 @@ app.delete('/api/users/:id', authenticateJWT, requireRole(['admin']), async (req
     console.error('Error deleting user:', err);
     res.status(500).json({ success: false, error: 'Database error' });
   }
+});
+
 // GET /api/public/tenants (Public list of active organizations for online PDPA request submission)
 app.get('/api/public/tenants', async (req, res) => {
   try {
