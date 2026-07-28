@@ -146,6 +146,17 @@ export default function App() {
     setNotifyState({ open: true, title: title || defaultTitle, message: cleanMessage, type, onConfirm, onCancel });
   };
 
+  // Helper to handle strict database mode — declared AFTER showNotify so it can call it on error
+  const safeUpdateRequest = async (req: Request, actor: UserType, action: string, detail: string) => {
+    try {
+      await updateRequest(req, actor, action, detail);
+      return true;
+    } catch (err: any) {
+      showNotify(err.message || 'เกิดข้อผิดพลาดในการบันทึกข้อมูล', 'error');
+      return false;
+    }
+  };
+
   // App context navigation states
   const initialUser = getCurrentUser();
   const [view, setView] = useState<'public' | 'internal' | 'tracking' | 'download' | 'superadmin'>(
@@ -975,9 +986,9 @@ export default function App() {
     }
   };
 
-  const handleWithdrawRequest = (reqId: string, reason: string) => {
+  const handleWithdrawRequest = async (reqId: string, reason: string) => {
     const mockUser: UserType = { id: 'user', orgId: 'org_dopa', username: 'data.subject', fullNameTh: 'ผู้ยื่นคำขอ', fullNameEn: 'Data Subject', email: '', role: 'intake', roles: ['intake'], mfaEnabled: false };
-    changeRequestStatus(reqId, 'Withdrawn', mockUser, `ถอนคำขอเนื่องจาก: ${reason}`);
+    await changeRequestStatus(reqId, 'Withdrawn', mockUser, `ถอนคำขอเนื่องจาก: ${reason}`);
     // Update active tracked view
     const req = getRequestById(reqId);
     if (req) setTrackedRequest(req);
@@ -1008,7 +1019,7 @@ export default function App() {
     
     // Automatically transition status and resume SLA when citizen uploads additional documents
     if (trackedRequest.status === 'Awaiting Additional Information') {
-      changeRequestStatus(trackedRequest.id, 'Completeness Review', mockUser, `ผู้ยื่นอัปโหลดเอกสารแก้ไขเรียบร้อยแล้ว (${fileName}) - ปลดล็อกนับเวลา SLA ต่อไป`);
+      await changeRequestStatus(trackedRequest.id, 'Completeness Review', mockUser, `ผู้ยื่นอัปโหลดเอกสารแก้ไขเรียบร้อยแล้ว (${fileName}) - ปลดล็อกนับเวลา SLA ต่อไป`);
       const updatedReq = getRequestById(trackedRequest.id);
       if (updatedReq) setTrackedRequest(updatedReq);
     }
@@ -1066,7 +1077,7 @@ export default function App() {
       
       // Update status if it was not closed
       if (downloadRequest.status === 'Ready for Delivery') {
-        changeRequestStatus(downloadRequest.id, 'Delivered', mockSubjectUser, 'ผู้ยื่นดาวน์โหลดข้อมูลผ่านระบบจัดส่งปลอดภัยสำเร็จ');
+        await changeRequestStatus(downloadRequest.id, 'Delivered', mockSubjectUser, 'ผู้ยื่นดาวน์โหลดข้อมูลผ่านระบบจัดส่งปลอดภัยสำเร็จ');
       }
       
       reloadData();
@@ -1121,7 +1132,7 @@ export default function App() {
     setCheckItems(prev => ({ ...prev, [key]: !prev[key] }));
   };
 
-  const handleVerifyIdentityQuick = (reqId: string, status: 'verified' | 'rejected', assurance: 'low' | 'medium' | 'high') => {
+  const handleVerifyIdentityQuick = async (reqId: string, status: 'verified' | 'rejected', assurance: 'low' | 'medium' | 'high') => {
     if (!activeUser) return;
     const req = getRequestById(reqId);
     if (!req) return;
@@ -1139,13 +1150,13 @@ export default function App() {
       setCheckItems(prev => ({ ...prev, identity: true }));
     }
 
-    updateRequest(req, activeUser, 'VERIFY_IDENTITY', `ยืนยันตัวตนระดับ ${assurance.toUpperCase()} ผลเป็น: ${status === 'verified' ? 'ผ่าน' : 'ปฏิเสธ'}`);
+    await safeUpdateRequest(req, activeUser, 'VERIFY_IDENTITY', `ยืนยันตัวตนระดับ ${assurance.toUpperCase()} ผลเป็น: ${status === 'verified' ? 'ผ่าน' : 'ปฏิเสธ'}`);
     reloadData();
   };
 
   const markCompletenessDone = (reqId: string) => {
     if (!activeUser) return;
-    changeRequestStatus(reqId, 'Complete', activeUser, 'ตรวจสอบเอกสารครบถ้วนเรียบร้อย เริ่มนับระยะเวลาดำเนินการ SLA');
+    await changeRequestStatus(reqId, 'Complete', activeUser, 'ตรวจสอบเอกสารครบถ้วนเรียบร้อย เริ่มนับระยะเวลาดำเนินการ SLA');
     reloadData();
   };
 
@@ -1160,7 +1171,7 @@ export default function App() {
     if (!checkItems.repDocs) missing.push('หนังสือมอบอำนาจหรือเอกสารประจำตัวผู้รับมอบอำนาจ');
 
     const comment = `เอกสารหลักฐานขาดความสมบูรณ์: ขอเอกสารเพิ่มเติมสำหรับ ${missing.join(', ')}. ${incompleteComment}`;
-    changeRequestStatus(reqId, 'Awaiting Additional Information', activeUser, comment);
+    await changeRequestStatus(reqId, 'Awaiting Additional Information', activeUser, comment);
     
     // Auto-generate notification thread message
     const req = getRequestById(reqId);
@@ -1294,13 +1305,13 @@ export default function App() {
     reloadData();
   };
 
-  const handleSaveRedactionAll = (reqId: string) => {
+  const handleSaveRedactionAll = async (reqId: string) => {
     if (!activeUser) return;
     const req = getRequestById(reqId);
     if (!req) return;
 
     // Transition to DPO or Legal review
-    changeRequestStatus(reqId, 'DPO or Legal Review', activeUser, 'บันทึกการถมดำและส่งต่อให้กฎหมาย/DPO พิจารณาฐานสิทธิ์และเอกสารแจ้งผล');
+    await changeRequestStatus(reqId, 'DPO or Legal Review', activeUser, 'บันทึกการถมดำและส่งต่อให้กฎหมาย/DPO พิจารณาฐานสิทธิ์และเอกสารแจ้งผล');
     reloadData();
   };
 
@@ -1348,7 +1359,7 @@ export default function App() {
       paymentStatus: subtotal > 0 ? 'pending' : 'waived'
     };
 
-    updateRequest(req, activeUser, 'CALCULATE_FEE', `คำนวณอัตราค่าธรรมเนียมสำเร็จ ยอดสุทธิ: ${subtotal} บาท (สถานะ: ${subtotal > 0 ? 'รอนัดชำระ' : 'ยกเว้น'})`);
+    await safeUpdateRequest(req, activeUser, 'CALCULATE_FEE', `คำนวณอัตราค่าธรรมเนียมสำเร็จ ยอดสุทธิ: ${subtotal} บาท (สถานะ: ${subtotal > 0 ? 'รอนัดชำระ' : 'ยกเว้น'})`);
     reloadData();
     showNotify('คำนวณและบันทึกอัตราค่าธรรมเนียมเรียบร้อยแล้ว');
   };
@@ -1367,7 +1378,7 @@ export default function App() {
     
     // Automatically advance state
     if (req.status === 'Awaiting Payment' || req.status === 'Fee Notification') {
-      changeRequestStatus(reqId, 'Ready for Delivery', activeUser, 'ชำระค่าธรรมเนียมแล้ว เตรียมส่งข้อมูลสิทธิ์ทางช่องทางปลอดภัย');
+      await changeRequestStatus(reqId, 'Ready for Delivery', activeUser, 'ชำระค่าธรรมเนียมแล้ว เตรียมส่งข้อมูลสิทธิ์ทางช่องทางปลอดภัย');
     }
     
     reloadData();
@@ -1427,18 +1438,18 @@ export default function App() {
     }
 
     // Change status
-    changeRequestStatus(reqId, resultStatus, activeUser, `ผู้อนุมัติมีคำสั่งอย่างเป็นทางการ: ${resultStatus}`);
+    await changeRequestStatus(reqId, resultStatus, activeUser, `ผู้อนุมัติมีคำสั่งอย่างเป็นทางการ: ${resultStatus}`);
 
     // If approved and has fees, go to payment. If not, go to Ready for Delivery (digital)
     if (['Approved', 'Partially Approved'].includes(resultStatus)) {
       if (req.feeCalculation && req.feeCalculation.totalCalculated > 0 && req.feeCalculation.paymentStatus === 'pending') {
-        changeRequestStatus(reqId, 'Fee Notification', activeUser, 'แจ้งเรียกเก็บค่าธรรมเนียมตามใบแจ้งหนี้ก่อนส่งมอบข้อมูล');
+        await changeRequestStatus(reqId, 'Fee Notification', activeUser, 'แจ้งเรียกเก็บค่าธรรมเนียมตามใบแจ้งหนี้ก่อนส่งมอบข้อมูล');
       } else {
-        changeRequestStatus(reqId, 'Ready for Delivery', activeUser, 'ไม่มีค่าธรรมเนียมหรือยกเว้นแล้ว เตรียมส่งข้อมูลสิทธิ์');
+        await changeRequestStatus(reqId, 'Ready for Delivery', activeUser, 'ไม่มีค่าธรรมเนียมหรือยกเว้นแล้ว เตรียมส่งข้อมูลสิทธิ์');
       }
     } else {
       // Rejections or no data go straight to close or delivery of reject letter
-      changeRequestStatus(reqId, 'Ready for Delivery', activeUser, 'พร้อมส่งมอบหนังสือชี้แจงคำปฏิเสธ / ไม่พบข้อมูล');
+      await changeRequestStatus(reqId, 'Ready for Delivery', activeUser, 'พร้อมส่งมอบหนังสือชี้แจงคำปฏิเสธ / ไม่พบข้อมูล');
     }
 
     reloadData();
@@ -1447,11 +1458,11 @@ export default function App() {
   // Delivery package (Section 3.9)
   const handleMarkAsDelivered = (reqId: string) => {
     if (!activeUser) return;
-    changeRequestStatus(reqId, 'Delivered', activeUser, 'เจ้าหน้าที่ทำการจัดส่งหนังสือราชการและข้อมูลสำเร็จ');
+    await changeRequestStatus(reqId, 'Delivered', activeUser, 'เจ้าหน้าที่ทำการจัดส่งหนังสือราชการและข้อมูลสำเร็จ');
     
     // Automatically close after delivery
     setTimeout(() => {
-      changeRequestStatus(reqId, 'Closed', activeUser, 'คำขอสิ้นสุดกระบวนการ บันทึกระยะเวลาดำเนินการเฉลี่ยปิดงาน');
+      await changeRequestStatus(reqId, 'Closed', activeUser, 'คำขอสิ้นสุดกระบวนการ บันทึกระยะเวลาดำเนินการเฉลี่ยปิดงาน');
       reloadData();
     }, 1000);
   };
@@ -4071,7 +4082,7 @@ export default function App() {
                         <button
                           onClick={() => {
                             if (window.confirm('ยืนยันการจัดส่งข้อมูลให้เจ้าของข้อมูลและปิดเรื่องคำขอนี้?')) {
-                              changeRequestStatus(activeRequestObj.id, 'Closed', activeUser, 'จัดส่งมอบลิงก์ดาวน์โหลดอย่างปลอดภัยและปิดเรื่องสำเร็จ');
+                              await changeRequestStatus(activeRequestObj.id, 'Closed', activeUser, 'จัดส่งมอบลิงก์ดาวน์โหลดอย่างปลอดภัยและปิดเรื่องสำเร็จ');
                               reloadData();
                               setSelectedRequestId(null);
                             }
@@ -4441,7 +4452,7 @@ export default function App() {
                                   </button>
                                   <button
                                     type="button"
-                                    onClick={() => changeRequestStatus(activeRequestObj.id, 'DPO or Legal Review', activeUser, 'ส่งกลับแก้ไขความเห็นพิจารณากฎหมาย')}
+                                    onClick={async () => await changeRequestStatus(activeRequestObj.id, 'DPO or Legal Review', activeUser, 'ส่งกลับแก้ไขความเห็นพิจารณากฎหมาย')}
                                     className="bg-rose-600 hover:bg-rose-700 text-white font-bold py-1.5 px-2 rounded transition"
                                   >
                                     ส่งกลับแก้ไข

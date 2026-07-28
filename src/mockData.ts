@@ -497,7 +497,7 @@ export const seedRequests: Request[] = [
       firstName: 'ฟกดฟกด',
       lastName: 'ฟกดฟกดอฟ',
       idNumber: '1-1005-00123-45-6',
-      email: 'unotify.utopia@gmail.com',
+      email: 'user.test8@example.com',
       phone: '089-888-7766',
       address: '123/45 ถ.วิภาวดีรังสิต แขวงจตุจักร เขตจตุจักร กรุงเทพฯ 10900'
     },
@@ -565,7 +565,7 @@ export const seedRequests: Request[] = [
       firstName: 'ฟกดฟกด',
       lastName: 'ฟกดฟกดอฟ',
       idNumber: '1-1005-00123-45-6',
-      email: 'unotify.utopia@gmail.com',
+      email: 'user.test9@example.com',
       phone: '089-888-7766',
       address: '123/45 ถ.วิภาวดีรังสิต แขวงจตุจักร เขตจตุจักร กรุงเทพฯ 10900'
     },

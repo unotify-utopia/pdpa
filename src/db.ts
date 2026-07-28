@@ -143,14 +143,13 @@ export const setCurrentUser = (user: User | null) => {
 };
 
 // Add Audit Log Entry (Section 3.11)
-export const addAuditLog = (
+export const addAuditLog = async (
   action: string,
   details: string,
   user: User,
   requestId?: string,
   trackingNo?: string
-): AuditLog => {
-  const logs = JSON.parse(localStorage.getItem(KEYS.AUDIT_LOGS) || '[]');
+): Promise<AuditLog> => {
   const newLog: AuditLog = {
     id: `log_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
     orgId: user.orgId || 'org_dopa',
@@ -171,8 +170,26 @@ export const addAuditLog = (
   const plainText = `${newLog.timestamp}|${newLog.actorId}|${newLog.action}|${newLog.details}`;
   newLog.checksum = generateChecksum(plainText);
 
-  logs.push(newLog);
+  // Sync to PostgreSQL Master Database via API
+  try {
+    const token = sessionStorage.getItem('pdpa_token') || sessionStorage.getItem('pdpa_jwt_token');
+    await fetch('/api/audit-logs', {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+      },
+      body: JSON.stringify(newLog)
+    });
+  } catch (err) {
+    console.error('Failed to sync audit log to PostgresDB:', err);
+    // Don't throw for audit logs to not block main operations
+  }
+  
+  const logs = JSON.parse(localStorage.getItem(KEYS.AUDIT_LOGS) || '[]');
+  logs.unshift(newLog);
   localStorage.setItem(KEYS.AUDIT_LOGS, JSON.stringify(logs));
+
   return newLog;
 };
 
@@ -185,7 +202,7 @@ export const getRequestByTrackingNo = (trackingNo: string): Request | undefined 
   return getRequests().find((r) => r.trackingNo.toUpperCase() === trackingNo.trim().toUpperCase());
 };
 
-// Generate Next Tenant-Specific Tracking Number (REQ-[TENANT_CODE]-[YEAR]-[0001])
+// Internal Helper for Tracking Number
 export const generateTrackingNumber = (orgId: string = 'org_dopa', isManual: boolean = false): string => {
   const requests = getRequests();
   const yearBE = new Date().getFullYear() + 543;
@@ -214,9 +231,8 @@ export const generateTrackingNumber = (orgId: string = 'org_dopa', isManual: boo
   return `${prefix}${nextNum}`;
 };
 
-// Insert New Request (Section 3.2)
+// Create New Request (Section 3) - Pure function now
 export const createRequest = (requestData: Omit<Request, 'id' | 'uuid' | 'trackingNo' | 'status' | 'submissionDate' | 'slaRemainingDays' | 'slaDaysUsed' | 'slaPaused' | 'slaExtended' | 'slaEvents' | 'statusHistory' | 'dataCollectionTasks' | 'redactionRecords' | 'feeCalculation' | 'messageThread' | 'legalHold' | 'identityVerification'> & { orgId?: string }): Request => {
-  const requests = getRequests();
   const config = getComplianceConfig();
   const targetOrgId = requestData.orgId || 'org_dopa';
   
@@ -238,18 +254,21 @@ export const createRequest = (requestData: Omit<Request, 'id' | 'uuid' | 'tracki
     slaPaused: false,
     slaExtended: false,
     slaEvents: [],
-    statusHistory: [
-      { status: 'Submitted', changedAt: new Date().toISOString(), changedBy: 'System (Public Portal)' }
-    ],
+    statusHistory: [{
+      status: 'Submitted',
+      changedAt: new Date().toISOString(),
+      changedBy: requestData.requester.firstName + ' ' + requestData.requester.lastName,
+      comment: 'ยื่นคำร้องขอใช้สิทธิเข้าสู่ระบบ'
+    }],
     identityVerification: {
       status: 'pending',
-      assuranceLevel: 'low',
+      assuranceLevel: 'medium',
       method: 'document_check'
     },
     dataCollectionTasks: [],
     redactionRecords: [],
     feeCalculation: {
-      noFee: requestData.requestDetails.deliveryMethod === 'secure_download',
+      noFee: true,
       paperPages: 0,
       computerPages: 0,
       certificationsCount: 0,
@@ -262,63 +281,44 @@ export const createRequest = (requestData: Omit<Request, 'id' | 'uuid' | 'tracki
     legalHold: false,
   };
 
-  requests.unshift(newRequest);
-  saveRequests(requests);
-
-  // Sync to PostgreSQL Master Database via API
-  fetch('/api/public/requests', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(newRequest)
-  }).then(() => {
-    window.dispatchEvent(new CustomEvent('workflow-notify', {
-      detail: {
-        title: 'แจ้งเตือนตาม Flow เอกสาร (Email Workflow)',
-        message: `ส่งอีเมลยืนยันการเปิดคำขอใหม่ เลขที่ ${trackingNo} ไปยังผู้เกี่ยวข้องตาม Workflow เรียบร้อยแล้ว`
-      }
-    }));
-  }).catch((err) => console.log('PostgreSQL Background Sync:', err));
-
-  // Log creation
-  const mockSystemUser: User = { id: 'system', orgId: 'org_dopa', username: 'system', fullNameTh: 'พอร์ทัลสาธารณะ', fullNameEn: 'Public Portal', email: '', role: 'intake', roles: ['intake'], mfaEnabled: false };
-  addAuditLog('SUBMIT_REQUEST', `ผู้รับข้อมูลยื่นคำขอใหม่แบบออนไลน์ เลขที่ ${trackingNo}`, mockSystemUser, newRequest.id, trackingNo);
-
   return newRequest;
 };
 
 // Update Request Details & Status (Section 4)
 export const updateRequest = async (updatedReq: Request, actor: User, auditAction: string, auditDetail: string) => {
+  // Sync to PostgreSQL Master Database via API FIRST (Strict Mode)
+  const res = await fetch('/api/public/requests', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(updatedReq)
+  });
+  
+  if (!res.ok) {
+    throw new Error('การบันทึกข้อมูลไปยังฐานข้อมูลล้มเหลว กรุณาลองใหม่อีกครั้ง');
+  }
+
+  // Update local cache only if DB sync succeeds
   const requests = getRequests();
   const index = requests.findIndex((r) => r.id === updatedReq.id);
   if (index !== -1) {
     requests[index] = updatedReq;
     saveRequests(requests);
-    addAuditLog(auditAction, auditDetail, actor, updatedReq.id, updatedReq.trackingNo);
     
-    // Sync to PostgreSQL Master Database via API
-    try {
-      await fetch('/api/public/requests', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updatedReq)
-      });
-      // Notify staff UI that email workflow notification was sent
-      window.dispatchEvent(new CustomEvent('workflow-notify', {
-        detail: {
-          title: 'แจ้งเตือนตาม Flow เอกสาร (Email Workflow)',
-          message: `ส่งอีเมลแจ้งความคืบหน้าสถานะ "${updatedReq.status}" ไปยังผู้เกี่ยวข้องตาม Workflow เรียบร้อยแล้ว`
-        }
-      }));
-      // Force UI reload immediately instead of waiting for 3s interval
-      window.dispatchEvent(new Event('focus'));
-    } catch (err) {
-      console.log('PostgreSQL Background Sync Update:', err);
-    }
+    // Do not block UI for audit log
+    addAuditLog(auditAction, auditDetail, actor, updatedReq.id, updatedReq.trackingNo).catch(console.error);
+    
+    // Notify staff UI that email workflow notification was sent
+    window.dispatchEvent(new CustomEvent('workflow-notify', {
+      detail: {
+        title: 'แจ้งเตือนตาม Flow เอกสาร (Email Workflow)',
+        message: `ส่งอีเมลแจ้งความคืบหน้าสถานะ "${updatedReq.status}" ไปยังผู้เกี่ยวข้องตาม Workflow เรียบร้อยแล้ว`
+      }
+    }));
   }
 };
 
 // Change Request Status & Manage SLA Events
-export const changeRequestStatus = (
+export const changeRequestStatus = async (
   requestId: string,
   newStatus: RequestStatus,
   actor: User,
@@ -384,7 +384,7 @@ export const changeRequestStatus = (
     comment,
   });
 
-  updateRequest(req, actor, 'UPDATE_STATUS', `เปลี่ยนสถานะคำขอจาก "${prevStatus}" เป็น "${newStatus}"${comment ? ` (ความเห็น: ${comment})` : ''}`);
+  await updateRequest(req, actor, 'UPDATE_STATUS', `เปลี่ยนสถานะคำขอจาก "${prevStatus}" เป็น "${newStatus}"${comment ? ` (ความเห็น: ${comment})` : ''}`);
 };
 
 // SLA Calculations Utility (Section 5)

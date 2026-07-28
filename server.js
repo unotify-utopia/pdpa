@@ -1272,6 +1272,36 @@ app.get('/api/public/tenants', async (req, res) => {
   }
 });
 
+// POST /api/audit-logs (Create audit log)
+app.post('/api/audit-logs', async (req, res) => {
+  try {
+    const log = req.body;
+    await dbPool.query(
+      `INSERT INTO audit_logs (id, org_id, timestamp, actor_id, actor_name, actor_role, action, request_id, request_tracking_no, ip_address, user_agent, details, checksum) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
+      [
+        log.id || `log_${Date.now()}`,
+        log.orgId || (req.user && req.user.orgId) || 'public',
+        log.timestamp || new Date().toISOString(),
+        log.actorId || (req.user && req.user.id) || 'public_user',
+        log.actorName || (req.user && req.user.fullNameTh) || 'ประชาชน',
+        log.actorRole || (req.user && req.user.role) || 'public',
+        log.action,
+        log.requestId,
+        log.requestTrackingNo,
+        req.headers['x-forwarded-for'] || req.socket.remoteAddress || '127.0.0.1',
+        req.headers['user-agent'] || 'Frontend API',
+        log.details,
+        log.checksum || ''
+      ]
+    );
+    res.status(201).json({ success: true, message: 'Audit log created' });
+  } catch (err) {
+    console.error('Failed to create audit log via API:', err);
+    res.status(500).json({ success: false, message: 'Database error' });
+  }
+});
+
 // GET /api/public/requests (Cross-Browser Public Request Sync API)
 app.get('/api/public/requests', async (req, res) => {
   try {
@@ -1334,8 +1364,8 @@ app.post('/api/public/requests', async (req, res) => {
     // Ensure tenant exists in database to prevent Foreign Key constraint violation
     try {
       await dbPool.query(
-        'INSERT INTO tenants (id, name, code) VALUES ($1, $2, $3) ON CONFLICT (id) DO NOTHING',
-        [orgId, requestData.targetOrgName || orgId, orgCodePrefix]
+        'INSERT INTO tenants (id, name_th, name_en, email, phone) VALUES ($1, $2, $2, $3, $4) ON CONFLICT (id) DO NOTHING',
+        [orgId, requestData.targetOrgName || orgId, 'contact@example.com', '-']
       );
     } catch (tenantErr) {
       console.warn('Auto-create tenant warning:', tenantErr.message);
