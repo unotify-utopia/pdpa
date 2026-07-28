@@ -737,6 +737,8 @@ app.put('/api/super-admin/tenants/:id/status', authenticateJWT, requireRole([]),
       'UPDATE_TENANT_CONTRACT_STATUS',
       `เปลี่ยนสถานะสัญญาหน่วยงาน ${tenantName} (${tenantId}) เป็น: ${status.toUpperCase()}`,
       req.user,
+      null,
+      null,
       req
     );
 
@@ -764,7 +766,7 @@ app.post('/api/super-admin/tenants/:id/offboard-export', authenticateJWT, requir
 
     // Query PDPA requests
     const requestsRes = await dbPool.query(
-      'SELECT * FROM requests WHERE tenant_id = $1 ORDER BY submitted_at DESC',
+      'SELECT * FROM requests WHERE org_id = $1 ORDER BY created_at DESC',
       [tenantId]
     );
 
@@ -804,6 +806,8 @@ app.post('/api/super-admin/tenants/:id/offboard-export', authenticateJWT, requir
       'TENANT_OFFBOARD_EXPORT',
       `ส่งมอบและนำออกข้อมูลหน่วยงานหมดสัญญา: ${tenant.name_th} (${tenantId}) - SHA-256: ${checksum.substring(0, 16)}...`,
       req.user,
+      null,
+      null,
       req
     );
 

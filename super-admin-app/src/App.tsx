@@ -498,11 +498,16 @@ export default function App() {
   };
 
   const handleConfirmOffboardExport = async () => {
-    if (masterConfirmText !== 'EXPORT-' + exportTenantModal?.id.toUpperCase() && masterConfirmText !== 'EXPORT') {
-      showNotify(`กรุณาพิมพ์ "EXPORT-${exportTenantModal?.id.toUpperCase()}" หรือ "EXPORT" เพื่อยืนยันความปลอดภัยระดับสูงก่อนนำออกข้อมูล`, 'error', 'ยืนยันไม่ถูกต้อง');
+    const cleanConfirm = masterConfirmText.trim().toUpperCase();
+    const expectedFull = 'EXPORT-' + exportTenantModal?.id.toUpperCase();
+    if (cleanConfirm !== expectedFull && cleanConfirm !== 'EXPORT') {
+      showNotify(`กรุณาพิมพ์ "${expectedFull}" หรือ "EXPORT" เพื่อยืนยันความปลอดภัยระดับสูงก่อนนำออกข้อมูล`, 'error', 'ยืนยันไม่ถูกต้อง');
       return;
     }
-    if (!token || !exportTenantModal) return;
+    if (!token || !exportTenantModal) {
+      showNotify('เซสชันหรือโทเคนของท่านหมดอายุ กรุณาเข้าสู่ระบบอีกครั้ง', 'error', 'ไม่พบสิทธิ์การเข้าใช้งาน');
+      return;
+    }
 
     setExportingLoading(true);
     try {
@@ -1595,7 +1600,7 @@ export default function App() {
 
       {/* Professional Notification Modal */}
       {notifyModal && notifyModal.open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-fadeIn">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-fadeIn">
           <div className="bg-slate-900/95 border border-slate-700/80 rounded-3xl max-w-sm w-full p-6 text-center shadow-2xl relative overflow-hidden transform transition-all scale-100">
             {/* Top Glow Accent */}
             <div className={`absolute top-0 left-0 right-0 h-1.5 ${
