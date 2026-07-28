@@ -1022,6 +1022,21 @@ app.delete('/api/users/:id', authenticateJWT, requireRole(['admin']), async (req
     console.error('Error deleting user:', err);
     res.status(500).json({ success: false, error: 'Database error' });
   }
+// GET /api/public/tenants (Public list of active organizations for online PDPA request submission)
+app.get('/api/public/tenants', async (req, res) => {
+  try {
+    const { rows } = await dbPool.query("SELECT id, name_th, name_en, status FROM tenants WHERE status = 'active' OR status IS NULL ORDER BY created_at ASC");
+    const mappedTenants = rows.map(t => ({
+      id: t.id,
+      nameTh: t.name_th,
+      nameEn: t.name_en,
+      code: t.id.replace('org_', '')
+    }));
+    res.json({ success: true, tenants: mappedTenants });
+  } catch (err) {
+    console.error('Error fetching public tenants:', err);
+    res.status(500).json({ success: false, message: 'Server error fetching public tenants' });
+  }
 });
 
 // GET /api/public/requests (Cross-Browser Public Request Sync API)

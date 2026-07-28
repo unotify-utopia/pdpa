@@ -225,28 +225,25 @@ export default function App() {
 
   useEffect(() => {
     const token = sessionStorage.getItem('pdpa_token') || sessionStorage.getItem('pdpa_jwt_token');
-    if (!token) return;
+    const endpoint = token ? '/api/tenants' : '/api/public/tenants';
+    const headers: Record<string, string> = token ? { 'Authorization': `Bearer ${token}` } : {};
     
-    fetch('/api/tenants', {
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
-    })
+    fetch(endpoint, { headers })
       .then(res => {
-        if (res.status === 401 || res.status === 403) {
+        if (token && (res.status === 401 || res.status === 403)) {
           handleStaffForceLogout('เซสชันของท่านหมดอายุ กรุณาเข้าสู่ระบบอีกครั้งเพื่อความปลอดภัย');
           return null;
         }
         return res.json();
       })
       .then(data => {
-        if (data && data.success) {
+        if (data && data.success && Array.isArray(data.tenants)) {
            const formatted = data.tenants.map((t: any) => ({ id: t.id, nameTh: t.nameTh || t.name_th, nameEn: t.nameEn || t.name_en, code: t.id.replace('org_', '') }));
            setOrganizations(formatted);
         }
       })
       .catch(console.error);
-  }, [activeUser]);
+  }, [activeUser, publicTab]);
 
   // Fetch backend users
   const reloadUsers = () => {
@@ -382,6 +379,7 @@ export default function App() {
   // Active Selections
   const [selectedTargetOrgId, setSelectedTargetOrgId] = useState<string>('');
   const [tenantSearchQuery, setTenantSearchQuery] = useState<string>('');
+  const [isTenantDropdownOpen, setIsTenantDropdownOpen] = useState<boolean>(false);
   const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
   const [isNewRequestSuccess, setIsNewRequestSuccess] = useState<Request | null>(null);
   
@@ -2447,19 +2445,36 @@ export default function App() {
                           <input
                             type="text"
                             value={tenantSearchQuery}
-                            onChange={(e) => setTenantSearchQuery(e.target.value)}
-                            placeholder="พิมพ์ชื่อหน่วยงาน เช่น กรมการปกครอง, สรรพากร, หรือพิมพ์ dopa..."
-                            className="w-full text-xs font-medium pl-10 pr-4 py-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 bg-white text-slate-900 shadow-inner"
+                            onChange={(e) => {
+                              setTenantSearchQuery(e.target.value);
+                              setIsTenantDropdownOpen(true);
+                            }}
+                            onFocus={() => setIsTenantDropdownOpen(true)}
+                            onClick={() => setIsTenantDropdownOpen(true)}
+                            placeholder="พิมพ์ชื่อหน่วยงาน หรือคลิกที่นี่เพื่อเลือกจากรายชื่อทั้งหมด..."
+                            className="w-full text-xs font-medium pl-10 pr-24 py-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 bg-white text-slate-900 shadow-inner cursor-pointer"
                           />
-                          {tenantSearchQuery && (
+                          <div className="absolute right-2 top-1.5 flex items-center gap-1">
+                            {tenantSearchQuery && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setTenantSearchQuery('');
+                                }}
+                                className="text-xs text-slate-400 hover:text-slate-600 font-bold px-1.5 py-1"
+                                title="ล้างคำค้นหา"
+                              >
+                                ✕
+                              </button>
+                            )}
                             <button
                               type="button"
-                              onClick={() => setTenantSearchQuery('')}
-                              className="absolute right-3 top-2.5 text-xs text-slate-400 hover:text-slate-600 font-bold px-1"
+                              onClick={() => setIsTenantDropdownOpen(!isTenantDropdownOpen)}
+                              className="text-[10px] font-bold text-brand-600 hover:text-brand-800 bg-brand-50 hover:bg-brand-100 px-2 py-1 rounded-lg border border-brand-200 transition"
                             >
-                              ✕
+                              {isTenantDropdownOpen ? 'ปิดรายชื่อ' : 'ดูรายชื่อ'}
                             </button>
-                          )}
+                          </div>
                         </div>
 
                         {/* Selected Active Tenant Badge */}
@@ -2483,20 +2498,30 @@ export default function App() {
                           </div>
                         )}
 
-                        {/* Filtered Organization List Results - Displayed ONLY when user types in search query */}
-                        {tenantSearchQuery.trim() !== '' && (
+                        {/* Filtered Organization List Results */}
+                        {(tenantSearchQuery.trim() !== '' || isTenantDropdownOpen) && (
                           <div className="bg-white border border-brand-200 rounded-xl p-2 shadow-lg space-y-1.5 max-h-60 overflow-y-auto animate-fade-in z-10">
-                            <span className="text-[10px] text-slate-400 font-bold px-2 py-1 block">
-                              ผลการค้นหาหน่วยงานใกล้เคียง ({
-                                organizations.filter((org: any) => 
-                                  org.nameTh.toLowerCase().includes(tenantSearchQuery.toLowerCase()) ||
-                                  org.nameEn.toLowerCase().includes(tenantSearchQuery.toLowerCase()) ||
-                                  org.id.toLowerCase().includes(tenantSearchQuery.toLowerCase())
-                                ).length
-                              } รายการ):
-                            </span>
+                            <div className="flex items-center justify-between px-2 py-1 border-b border-slate-100">
+                              <span className="text-[10px] text-slate-400 font-bold">
+                                {tenantSearchQuery.trim() !== ''
+                                  ? `ผลการค้นหาหน่วยงานใกล้เคียง (${organizations.filter((org: any) =>
+                                      org.nameTh.toLowerCase().includes(tenantSearchQuery.toLowerCase()) ||
+                                      org.nameEn.toLowerCase().includes(tenantSearchQuery.toLowerCase()) ||
+                                      org.id.toLowerCase().includes(tenantSearchQuery.toLowerCase())
+                                    ).length} รายการ):`
+                                  : `รายชื่อหน่วยงานทั้งหมดที่เปิดรับคำขอบนระบบ (${organizations.length} หน่วยงาน):`}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => setIsTenantDropdownOpen(false)}
+                                className="text-[10px] text-slate-400 hover:text-slate-700 font-bold"
+                              >
+                                ✕ ปิด
+                              </button>
+                            </div>
                             {organizations
-                                .filter((org: any) => 
+                              .filter((org: any) => 
+                                tenantSearchQuery.trim() === '' ||
                                 org.nameTh.toLowerCase().includes(tenantSearchQuery.toLowerCase()) ||
                                 org.nameEn.toLowerCase().includes(tenantSearchQuery.toLowerCase()) ||
                                 org.id.toLowerCase().includes(tenantSearchQuery.toLowerCase())
@@ -2509,7 +2534,8 @@ export default function App() {
                                     type="button"
                                     onClick={() => {
                                       setSelectedTargetOrgId(org.id);
-                                      setTenantSearchQuery(''); // Clear search query to close results dropdown cleanly
+                                      setTenantSearchQuery('');
+                                      setIsTenantDropdownOpen(false);
                                     }}
                                     className={`w-full p-2.5 rounded-lg border text-left transition flex items-center justify-between gap-2 ${
                                       isSelected
@@ -2535,6 +2561,7 @@ export default function App() {
                               })}
 
                             {organizations.filter(org => 
+                              tenantSearchQuery.trim() === '' ||
                               org.nameTh.toLowerCase().includes(tenantSearchQuery.toLowerCase()) ||
                               org.nameEn.toLowerCase().includes(tenantSearchQuery.toLowerCase()) ||
                               org.id.toLowerCase().includes(tenantSearchQuery.toLowerCase())
