@@ -179,6 +179,7 @@ export default function App() {
       if (data.success) {
         if (data.requires2FA || data.requires2FASetup) {
           setOtpEmail(data.email || 'apichat.utopia@gmail.com');
+          setMfaCode('');
           setLoginStep('mfa');
         } else if (data.token) {
           setToken(data.token);
@@ -201,11 +202,13 @@ export default function App() {
       showNotify('กรุณากรอกรหัส OTP 6 หลักที่ได้รับทางอีเมล Gmail', 'warning', 'ข้อมูลไม่ครบถ้วน');
       return;
     }
+    const submittedCode = mfaCode.trim();
+    setMfaCode('');
     try {
       const res = await fetch('/api/super-admin/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password, mfaCode: mfaCode.trim() })
+        body: JSON.stringify({ username, password, mfaCode: submittedCode })
       });
       const data = await res.json();
       if (data.success && data.token) {
@@ -344,13 +347,15 @@ export default function App() {
       showNotify('กรุณากรอกรหัส OTP 6 หลัก', 'warning', 'ข้อมูลไม่ครบถ้วน');
       return;
     }
+    const submittedOtp = tenantOtpInput.trim();
+    setTenantOtpInput('');
     try {
       const res = await fetch('/api/public/verify-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email: tenantFormData.email.trim(),
-          otp: tenantOtpInput.trim()
+          otp: submittedOtp
         })
       });
       const data = await res.json();
@@ -1180,6 +1185,7 @@ export default function App() {
                       <input
                         type="text"
                         maxLength={6}
+                        autoComplete="off"
                         value={mfaCode}
                         onChange={(e) => setMfaCode(e.target.value.replace(/[^0-9]/g, ''))}
                         placeholder="• • • • • •"
@@ -1196,7 +1202,7 @@ export default function App() {
                   <div className="flex gap-3 pt-2">
                     <button
                       type="button"
-                      onClick={() => setLoginStep('credentials')}
+                      onClick={() => { setLoginStep('credentials'); setMfaCode(''); }}
                       className="w-1/3 bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-bold py-3.5 rounded-2xl transition"
                     >
                       ย้อนกลับ

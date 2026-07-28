@@ -935,7 +935,9 @@ export default function App() {
     e.preventDefault();
     if (!trackedRequest) return;
     
-    const isValid = await verifyRealOtp(trackedRequest.requester.email, trackedRequest.requester.phone, otpCode, trackedRequest.trackingNo);
+    const submittedOtp = otpCode;
+    setOtpCode('');
+    const isValid = await verifyRealOtp(trackedRequest.requester.email, trackedRequest.requester.phone, submittedOtp, trackedRequest.trackingNo);
     if (isValid) {
       setShowOtpModal(false);
       setView('tracking');
@@ -5487,6 +5489,7 @@ export default function App() {
                     type="text"
                     maxLength={6}
                     required
+                    autoComplete="off"
                     placeholder="XXXXXX"
                     value={otpCode}
                     onChange={(e) => setOtpCode(e.target.value)}

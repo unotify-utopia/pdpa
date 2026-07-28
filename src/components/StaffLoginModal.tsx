@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Lock, User, KeyRound, ShieldCheck, AlertCircle } from 'lucide-react';
 import type { User as UserType } from '../types';
 
@@ -19,7 +19,18 @@ export const StaffLoginModal: React.FC<StaffLoginModalProps> = ({
   const [mfaStep, setMfaStep] = useState(false);
   const [otpCode, setOtpCode] = useState('');
   const [pendingUser, setPendingUser] = useState<any | null>(null);
-  
+
+  useEffect(() => {
+    if (isOpen) {
+      setOtpCode('');
+      setErrorMsg('');
+      setUsername('');
+      setPassword('');
+      setMfaStep(false);
+      setPendingUser(null);
+    }
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   const handleLoginSubmit = async (e: React.FormEvent) => {
@@ -83,6 +94,9 @@ export const StaffLoginModal: React.FC<StaffLoginModalProps> = ({
       return;
     }
     
+    const submittedOtp = otpCode;
+    setOtpCode('');
+
     try {
       const res = await fetch('/api/auth/login', {
         method: 'POST',
@@ -90,7 +104,7 @@ export const StaffLoginModal: React.FC<StaffLoginModalProps> = ({
         body: JSON.stringify({ 
           username: pendingUser.username, 
           password: pendingUser.password,
-          mfaCode: otpCode 
+          mfaCode: submittedOtp 
         })
       });
       const data = await res.json();
@@ -222,6 +236,7 @@ export const StaffLoginModal: React.FC<StaffLoginModalProps> = ({
                   type="text"
                   maxLength={6}
                   required
+                  autoComplete="off"
                   value={otpCode}
                   onChange={(e) => setOtpCode(e.target.value)}
                   className="w-full font-mono text-center text-lg font-bold border border-slate-300 rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-brand-500 text-slate-900 tracking-widest"
@@ -233,6 +248,8 @@ export const StaffLoginModal: React.FC<StaffLoginModalProps> = ({
                   type="button"
                   onClick={() => {
                     setMfaStep(false);
+                    setOtpCode('');
+                    setErrorMsg('');
                   }}
                   className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold py-2.5 rounded-lg transition"
                 >
