@@ -2360,22 +2360,22 @@ export default function App() {
                   <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-2">
                     <div className="h-8 w-8 rounded-full bg-brand-100 text-brand-600 font-bold flex items-center justify-center text-sm">1</div>
                     <span className="block font-bold text-slate-800 text-sm">ยื่นคำขอและยืนยันตัว</span>
-                    <p className="text-xs text-slate-500 leading-relaxed">กรอกข้อมูล เลือกขอบเขตข้อมูล อัปโหลดภาพบัตรที่ผ่านระบบเซนเซอร์และยืนยัน OTP</p>
+                    <p className="text-xs text-slate-500 leading-relaxed">กรอกรายละเอียดคำขอ เลือกขอบเขตข้อมูล อัปโหลดสำเนาบัตรประจำตัวประชาชน (พร้อมรับรองสำเนาถูกต้อง) และยืนยันตัวตนผ่านรหัส OTP</p>
                   </div>
                   <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-2">
                     <div className="h-8 w-8 rounded-full bg-brand-100 text-brand-600 font-bold flex items-center justify-center text-sm">2</div>
                     <span className="block font-bold text-slate-800 text-sm">คัดกรองความสมบูรณ์</span>
-                    <p className="text-xs text-slate-500 leading-relaxed">เจ้าหน้าที่รับคำกรอง ตรวจสอบข้อมูลครบถ้วนภายใน 15 วัน หากขาดจะแจ้งกลับทันที</p>
+                    <p className="text-xs text-slate-500 leading-relaxed">เจ้าหน้าที่ตรวจสอบความถูกต้องและครบถ้วนของคำขอภายใน 15 วัน หากเอกสารไม่สมบูรณ์จะแจ้งให้ท่านทราบเพื่อดำเนินการแก้ไขเพิ่มเติม</p>
                   </div>
                   <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-2">
                     <div className="h-8 w-8 rounded-full bg-brand-100 text-brand-600 font-bold flex items-center justify-center text-sm">3</div>
                     <span className="block font-bold text-slate-800 text-sm">พิจารณาและคัดลอก</span>
-                    <p className="text-xs text-slate-500 leading-relaxed">ค้นหาข้อมูล สั่งถมดำเซนเซอร์ปกปิดบุคคลภายนอก และอนุมัติปิดงานภายใน 30 วัน</p>
+                    <p className="text-xs text-slate-500 leading-relaxed">ค้นหา รวบรวม และปกปิดข้อมูลของบุคคลอื่น (ถ้ามี) พร้อมดำเนินการตามคำขอให้แล้วเสร็จภายใน 30 วัน นับแต่วันที่ได้รับคำขอที่สมบูรณ์</p>
                   </div>
                   <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-2">
                     <div className="h-8 w-8 rounded-full bg-brand-100 text-brand-600 font-bold flex items-center justify-center text-sm">4</div>
                     <span className="block font-bold text-slate-800 text-sm">รับข้อมูลปลอดภัย</span>
-                    <p className="text-xs text-slate-500 leading-relaxed">รับรหัสดาวน์โหลดไฟล์ผ่าน Signed URL อายุสั้น หรือรับเอกสารด้วยตนเองที่สำนักงาน</p>
+                    <p className="text-xs text-slate-500 leading-relaxed">รับรหัสผ่านสำหรับดาวน์โหลดข้อมูลทางระบบอิเล็กทรอนิกส์ (ลิงก์มีอายุการใช้งานจำกัด) หรือติดต่อรับเอกสารด้วยตนเอง ณ สถานที่ทำการ</p>
                   </div>
                 </div>
 
