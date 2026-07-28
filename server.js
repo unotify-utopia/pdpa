@@ -101,6 +101,12 @@ const initDatabase = async () => {
         details TEXT,
         checksum VARCHAR(100)
       );
+
+      CREATE TABLE IF NOT EXISTS system_settings (
+        key VARCHAR(100) PRIMARY KEY,
+        value TEXT NOT NULL,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
     `);
     
     try {
@@ -748,6 +754,92 @@ app.put('/api/super-admin/tenants/:id/status', authenticateJWT, requireRole([]),
   }
 });
 
+const DEFAULT_HANDOVER_MEMO_TEMPLATE = `================================================================================
+          หนังสือบันทึกข้อตกลงการส่งมอบข้อมูลและสิ้นสุดสัญญาการใช้บริการ
+          (PDPA DATA OFFBOARDING & HANDOVER MEMORANDUM)
+================================================================================
+
+วันที่ส่งมอบ: {{EXPORT_DATE}}
+รหัสอ้างอิงส่งมอบ: OFFBOARD-{{TENANT_ID}}-{{EXPORT_DATE_SHORT}}
+
+1. ข้อมูลหน่วยงานผู้ใช้บริการ (Data Controller)
+   - ชื่อหน่วยงาน: {{TENANT_NAME_TH}} ({{TENANT_NAME_EN}})
+   - รหัสหน่วยงานในระบบ (Tenant ID): {{TENANT_ID}}
+   - สถานะสัญญา ณ วันส่งมอบ: สิ้นสุดสัญญาการใช้บริการ / ไม่ต่ออายุสัญญา (EXPIRED)
+
+2. รายละเอียดชุดข้อมูลที่ส่งมอบ (Export Package Manifest)
+   - ชื่อไฟล์ที่ส่งมอบ: {{FILENAME}}
+   - ขนาดไฟล์: {{FILE_SIZE_KB}} KB
+   - จำนวนบัญชีผู้ใช้ในสังกัด: {{TOTAL_USERS}} บัญชี
+   - จำนวนคำขอสิทธิ์ PDPA ทั้งหมด: {{TOTAL_REQUESTS}} รายการ
+   - จำนวนบันทึกความปลอดภัย (Audit Logs): {{TOTAL_LOGS}} รายการ
+
+3. รหัสรับรองความถูกต้องแท้จริงทางอิเล็กทรอนิกส์ (Cryptographic Integrity Hash)
+   - อัลกอริทึมที่ใช้: Secure Hash Algorithm 256-bit (SHA-256)
+   - รหัส SHA-256 Checksum:
+     [ {{SHA256_CHECKSUM}} ]
+
+4. คำรับรองคู่สัญญา
+   ผู้ให้บริการระบบ (Service Provider) ได้ทำการส่งมอบไฟล์ข้อมูลตามรายละเอียดข้างต้น
+   คืนให้แก่ผู้แทนหน่วยงานเรียบร้อยแล้ว โดยผู้แทนหน่วยงานได้ตรวจสอบรหัส SHA-256
+   และยืนยันว่าข้อมูลถูกต้องครบถ้วน สมบูรณ์ตามพระราชบัญญัติคุ้มครองข้อมูลส่วนบุคคล พ.ศ. 2562
+
+   ทั้งนี้ ผู้ให้บริการระบบยืนยันว่าได้ระงับการเข้าถึงระบบของบัญชีผู้ใช้สังกัดหน่วยงานดังกล่าว
+   และดำเนินการจัดการข้อมูลบนเซิร์ฟเวอร์กลางตามมาตรฐานความปลอดภัยเรียบร้อยแล้ว
+
+
+     ลงชื่อ ..............................................         ลงชื่อ ..............................................
+          ( .......................................... )               ( .......................................... )
+           ผู้แทนผู้ให้บริการระบบ (Super Admin)                  ผู้แทนหน่วยงานผู้ใช้บริการ (Data Controller)
+           วันที่: ........ / ........ / ............           วันที่: ........ / ........ / ............
+================================================================================`;
+
+// GET /api/super-admin/settings/:key (Super Admin ONLY)
+app.get('/api/super-admin/settings/:key', authenticateJWT, requireRole([]), async (req, res) => {
+  const { key } = req.params;
+  try {
+    const { rows } = await dbPool.query('SELECT value, updated_at FROM system_settings WHERE key = $1', [key]);
+    if (rows.length === 0) {
+      if (key === 'handover_memo_template') {
+        return res.json({ success: true, key, value: DEFAULT_HANDOVER_MEMO_TEMPLATE, isDefault: true });
+      }
+      return res.status(404).json({ success: false, message: 'ไม่พบค่ากำหนดนี้' });
+    }
+    res.json({ success: true, key, value: rows[0].value, updatedAt: rows[0].updated_at });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// PUT /api/super-admin/settings/:key (Super Admin ONLY)
+app.put('/api/super-admin/settings/:key', authenticateJWT, requireRole([]), async (req, res) => {
+  const { key } = req.params;
+  const { value } = req.body;
+  if (value === undefined) {
+    return res.status(400).json({ success: false, message: 'กรุณาระบุข้อความที่ต้องการบันทึก' });
+  }
+  try {
+    await dbPool.query(
+      `INSERT INTO system_settings (key, value, updated_at) VALUES ($1, $2, CURRENT_TIMESTAMP)
+       ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = CURRENT_TIMESTAMP`,
+      [key, value]
+    );
+
+    addServerAuditLog(
+      'UPDATE_SYSTEM_SETTING',
+      `อัปเดตแบบฟอร์มการตั้งค่าระบบ: ${key}`,
+      req.user,
+      null,
+      null,
+      req
+    );
+
+    res.json({ success: true, message: 'บันทึกแบบฟอร์มต้นแบบเรียบร้อยแล้ว' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 // POST /api/super-admin/tenants/:id/offboard-export (Super Admin ONLY)
 app.post('/api/super-admin/tenants/:id/offboard-export', authenticateJWT, requireRole([]), async (req, res) => {
   const tenantId = req.params.id;
@@ -801,6 +893,32 @@ app.post('/api/super-admin/tenants/:id/offboard-export', authenticateJWT, requir
 
     archivePayload.meta.sha256Checksum = checksum;
 
+    // Fetch custom handover memo template if exists
+    let memoTemplate = DEFAULT_HANDOVER_MEMO_TEMPLATE;
+    try {
+      const memoRes = await dbPool.query('SELECT value FROM system_settings WHERE key = $1', ['handover_memo_template']);
+      if (memoRes.rows.length > 0 && memoRes.rows[0].value) {
+        memoTemplate = memoRes.rows[0].value;
+      }
+    } catch (e) {}
+
+    const exportDateShort = new Date().toISOString().split('T')[0].replace(/-/g, '');
+    const filename = `${tenant.id}_PDPA_OFFBOARDING_ARCHIVE_${new Date().toISOString().split('T')[0]}.json`;
+    const sizeKb = (Buffer.byteLength(jsonString, 'utf8') / 1024).toFixed(2);
+
+    const handoverMemoText = memoTemplate
+      .replace(/{{TENANT_ID}}/g, tenant.id)
+      .replace(/{{TENANT_NAME_TH}}/g, tenant.name_th)
+      .replace(/{{TENANT_NAME_EN}}/g, tenant.name_en)
+      .replace(/{{EXPORT_DATE}}/g, new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' }))
+      .replace(/{{EXPORT_DATE_SHORT}}/g, exportDateShort)
+      .replace(/{{FILENAME}}/g, filename)
+      .replace(/{{FILE_SIZE_KB}}/g, sizeKb)
+      .replace(/{{TOTAL_USERS}}/g, String(usersRes.rows.length))
+      .replace(/{{TOTAL_REQUESTS}}/g, String(requestsRes.rows.length))
+      .replace(/{{TOTAL_LOGS}}/g, String(logsRes.rows.length))
+      .replace(/{{SHA256_CHECKSUM}}/g, checksum);
+
     // Log this offboarding export to audit logs
     addServerAuditLog(
       'TENANT_OFFBOARD_EXPORT',
@@ -821,7 +939,8 @@ app.post('/api/super-admin/tenants/:id/offboard-export', authenticateJWT, requir
         totalAuditLogs: logsRes.rows.length,
         packageSizeBytes: Buffer.byteLength(jsonString, 'utf8')
       },
-      packageData: archivePayload
+      packageData: archivePayload,
+      handoverMemoText: handoverMemoText
     });
   } catch (err) {
     console.error('Error in offboard export:', err);

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ShieldCheck, Building2, UserCheck, Key, Lock, LogOut, Plus, Sun, Moon, CheckCircle2, Trash2, Mail, AlertCircle, Eye, EyeOff, Check, Archive, Download, FileText, CheckCircle, ShieldAlert } from 'lucide-react';
+import { ShieldCheck, Building2, UserCheck, Key, Lock, LogOut, Plus, Sun, Moon, CheckCircle2, Trash2, Mail, AlertCircle, Eye, EyeOff, Check, Archive, Download, FileText, CheckCircle, ShieldAlert, RefreshCw, X } from 'lucide-react';
 
 interface Tenant {
   id: string;
@@ -35,7 +35,11 @@ export default function App() {
   const [exportFormat, setExportFormat] = useState<'json' | 'csv'>('json');
   const [masterConfirmText, setMasterConfirmText] = useState('');
   const [exportingLoading, setExportingLoading] = useState(false);
-  const [offboardCertModal, setOffboardCertModal] = useState<{ open: boolean; tenant: Tenant; checksum: string; exportedAt: string; stats: { totalUsers: number; totalRequests: number; totalAuditLogs: number; packageSizeBytes: number }; payload: any } | null>(null);
+  const [offboardCertModal, setOffboardCertModal] = useState<{ open: boolean; tenant: Tenant; checksum: string; exportedAt: string; stats: { totalUsers: number; totalRequests: number; totalAuditLogs: number; packageSizeBytes: number }; payload: any; handoverMemoText?: string } | null>(null);
+  const [memoTemplateModalOpen, setMemoTemplateModalOpen] = useState(false);
+  const [memoTemplateText, setMemoTemplateText] = useState('');
+  const [memoTemplateLoading, setMemoTemplateLoading] = useState(false);
+  const [memoTemplateSaving, setMemoTemplateSaving] = useState(false);
 
   // Token and OTP email state
   const [token, setToken] = useState<string | null>(null);
@@ -558,13 +562,29 @@ export default function App() {
         URL.revokeObjectURL(url);
       }
 
+      // Simultaneously download official Handover Memorandum (.txt) with pre-filled SHA-256
+      if (data.handoverMemoText) {
+        setTimeout(() => {
+          const memoBlob = new Blob(["\uFEFF" + data.handoverMemoText], { type: 'text/plain;charset=utf-8;' });
+          const memoUrl = URL.createObjectURL(memoBlob);
+          const memoA = document.createElement('a');
+          memoA.href = memoUrl;
+          memoA.download = `${exportTenantModal.id}_HANDOVER_MEMORANDUM_${new Date().toISOString().split('T')[0]}.txt`;
+          document.body.appendChild(memoA);
+          memoA.click();
+          document.body.removeChild(memoA);
+          URL.revokeObjectURL(memoUrl);
+        }, 300);
+      }
+
       const certPayload = {
         open: true,
         tenant: exportTenantModal,
         checksum: data.checksum,
         exportedAt: data.exportedAt,
         stats: data.stats,
-        payload: data.packageData
+        payload: data.packageData,
+        handoverMemoText: data.handoverMemoText
       };
 
       setExportTenantModal(null);
@@ -577,6 +597,99 @@ export default function App() {
     } finally {
       setExportingLoading(false);
     }
+  };
+
+  // Handover Memorandum Template Management
+  const handleOpenMemoTemplateModal = async () => {
+    setMemoTemplateModalOpen(true);
+    setMemoTemplateLoading(true);
+    try {
+      const res = await fetch('/api/super-admin/settings/handover_memo_template', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (data.success && data.value) {
+        setMemoTemplateText(data.value);
+      } else {
+        showNotify('ไม่สามารถโหลดแม่แบบได้: ' + (data.message || ''), 'error');
+      }
+    } catch (err: any) {
+      showNotify('ข้อผิดพลาดการเชื่อมต่อ: ' + err.message, 'error');
+    } finally {
+      setMemoTemplateLoading(false);
+    }
+  };
+
+  const handleSaveMemoTemplate = async () => {
+    if (!memoTemplateText.trim()) {
+      showNotify('กรุณาระบุข้อความในแม่แบบ', 'error');
+      return;
+    }
+    setMemoTemplateSaving(true);
+    try {
+      const res = await fetch('/api/super-admin/settings/handover_memo_template', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ value: memoTemplateText })
+      });
+      const data = await res.json();
+      if (data.success) {
+        showNotify('บันทึกแม่แบบบันทึกข้อตกลงส่งมอบข้อมูลเรียบร้อยแล้ว', 'success', 'บันทึกสำเร็จ');
+        setMemoTemplateModalOpen(false);
+      } else {
+        showNotify('ไม่สามารถบันทึกแม่แบบได้: ' + (data.message || ''), 'error');
+      }
+    } catch (err: any) {
+      showNotify('เกิดข้อผิดพลาดในการเชื่อมต่อ: ' + err.message, 'error');
+    } finally {
+      setMemoTemplateSaving(false);
+    }
+  };
+
+  const handleResetDefaultMemoTemplate = () => {
+    setMemoTemplateText(`================================================================================
+          หนังสือบันทึกข้อตกลงการส่งมอบข้อมูลและสิ้นสุดสัญญาการใช้บริการ
+          (PDPA DATA OFFBOARDING & HANDOVER MEMORANDUM)
+================================================================================
+
+วันที่ส่งมอบ: {{EXPORT_DATE}}
+รหัสอ้างอิงส่งมอบ: OFFBOARD-{{TENANT_ID}}-{{EXPORT_DATE_SHORT}}
+
+1. ข้อมูลหน่วยงานผู้ใช้บริการ (Data Controller)
+   - ชื่อหน่วยงาน: {{TENANT_NAME_TH}} ({{TENANT_NAME_EN}})
+   - รหัสหน่วยงานในระบบ (Tenant ID): {{TENANT_ID}}
+   - สถานะสัญญา ณ วันส่งมอบ: สิ้นสุดสัญญาการใช้บริการ / ไม่ต่ออายุสัญญา (EXPIRED)
+
+2. รายละเอียดชุดข้อมูลที่ส่งมอบ (Export Package Manifest)
+   - ชื่อไฟล์ที่ส่งมอบ: {{FILENAME}}
+   - ขนาดไฟล์: {{FILE_SIZE_KB}} KB
+   - จำนวนบัญชีผู้ใช้ในสังกัด: {{TOTAL_USERS}} บัญชี
+   - จำนวนคำขอสิทธิ์ PDPA ทั้งหมด: {{TOTAL_REQUESTS}} รายการ
+   - จำนวนบันทึกความปลอดภัย (Audit Logs): {{TOTAL_LOGS}} รายการ
+
+3. รหัสรับรองความถูกต้องแท้จริงทางอิเล็กทรอนิกส์ (Cryptographic Integrity Hash)
+   - อัลกอริทึมที่ใช้: Secure Hash Algorithm 256-bit (SHA-256)
+   - รหัส SHA-256 Checksum:
+     [ {{SHA256_CHECKSUM}} ]
+
+4. คำรับรองคู่สัญญา
+   ผู้ให้บริการระบบ (Service Provider) ได้ทำการส่งมอบไฟล์ข้อมูลตามรายละเอียดข้างต้น
+   คืนให้แก่ผู้แทนหน่วยงานเรียบร้อยแล้ว โดยผู้แทนหน่วยงานได้ตรวจสอบรหัส SHA-256
+   และยืนยันว่าข้อมูลถูกต้องครบถ้วน สมบูรณ์ตามพระราชบัญญัติคุ้มครองข้อมูลส่วนบุคคล พ.ศ. 2562
+
+   ทั้งนี้ ผู้ให้บริการระบบยืนยันว่าได้ระงับการเข้าถึงระบบของบัญชีผู้ใช้สังกัดหน่วยงานดังกล่าว
+   และดำเนินการจัดการข้อมูลบนเซิร์ฟเวอร์กลางตามมาตรฐานความปลอดภัยเรียบร้อยแล้ว
+
+
+     ลงชื่อ ..............................................         ลงชื่อ ..............................................
+          ( .......................................... )               ( .......................................... )
+           ผู้แทนผู้ให้บริการระบบ (Super Admin)                  ผู้แทนหน่วยงานผู้ใช้บริการ (Data Controller)
+           วันที่: ........ / ........ / ............           วันที่: ........ / ........ / ............
+================================================================================`);
+    showNotify('คืนค่าแม่แบบมาตรฐานเรียบร้อยแล้ว อย่าลืมกดบันทึกการเปลี่ยนแปลง', 'success', 'รีเซ็ตแม่แบบ');
   };
 
   // Theme Styling Helper
@@ -993,6 +1106,14 @@ export default function App() {
                   </p>
                 </div>
               </div>
+              <button
+                type="button"
+                onClick={handleOpenMemoTemplateModal}
+                className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/40 rounded-xl font-bold text-xs flex items-center gap-2 shadow transition-all hover:scale-105 shrink-0"
+              >
+                <FileText className="h-4 w-4 text-amber-400" />
+                <span>✏️ ตั้งค่าแม่แบบบันทึกส่งมอบ (Handover Memo)</span>
+              </button>
             </div>
 
             {/* Tenants Table with Offboarding Controls */}
@@ -1816,7 +1937,28 @@ export default function App() {
               </div>
             </div>
 
-            <div className="flex justify-end gap-3 pt-2 border-t border-slate-800">
+            <div className="flex justify-between items-center gap-3 pt-3 border-t border-slate-800 flex-wrap">
+              <button
+                type="button"
+                onClick={() => {
+                  if (offboardCertModal.handoverMemoText) {
+                    const blob = new Blob(["\uFEFF" + offboardCertModal.handoverMemoText], { type: 'text/plain;charset=utf-8;' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `${offboardCertModal.tenant.id}_HANDOVER_MEMORANDUM_${new Date().toISOString().split('T')[0]}.txt`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                    showNotify('ดาวน์โหลดหนังสือบันทึกข้อตกลงส่งมอบข้อมูลเรียบร้อยแล้ว', 'success', 'ดาวน์โหลดสำเร็จ');
+                  }
+                }}
+                className="py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-400 border border-amber-500/30 text-xs font-bold transition flex items-center gap-2 shadow"
+              >
+                <FileText className="h-4 w-4 text-amber-400" />
+                <span>📄 ดาวน์โหลดบันทึกส่งมอบ (.TXT)</span>
+              </button>
               <button
                 type="button"
                 onClick={() => setOffboardCertModal(null)}
@@ -1824,6 +1966,101 @@ export default function App() {
               >
                 เสร็จสิ้น / ปิดหน้าต่าง
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Handover Memo Template Editing Modal */}
+      {memoTemplateModalOpen && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className={`border rounded-3xl max-w-2xl w-full p-6 space-y-4 shadow-2xl relative overflow-hidden ${cardBgClass}`}>
+            <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-amber-500 to-yellow-400" />
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-amber-500/20 rounded-xl text-amber-400 border border-amber-500/30">
+                  <FileText className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-base text-white">ตั้งค่าข้อความต้นแบบบันทึกข้อตกลงส่งมอบข้อมูล</h3>
+                  <p className="text-xs text-slate-400">Handover Memorandum Template Editor สำหรับ Super Admin</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setMemoTemplateModalOpen(false)}
+                className="p-1.5 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white transition"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <div className="bg-slate-900/90 border border-slate-800 p-3 rounded-xl text-xs space-y-1">
+                <span className="font-bold text-amber-400 block">💡 คำแนะนำตัวแปรอัตโนมัติ (Dynamic Placeholders):</span>
+                <p className="text-slate-300 leading-relaxed">
+                  สามารถใช้ตัวแปรด้านล่างเพื่อให้ระบบเติมข้อมูลจริงและรหัส SHA-256 อัตโนมัติในวันส่งมอบ:
+                </p>
+                <div className="flex flex-wrap gap-1.5 pt-1 font-mono text-[10px]">
+                  <span className="bg-slate-800 text-amber-300 px-2 py-0.5 rounded border border-slate-700">{'{{TENANT_ID}}'}</span>
+                  <span className="bg-slate-800 text-amber-300 px-2 py-0.5 rounded border border-slate-700">{'{{TENANT_NAME_TH}}'}</span>
+                  <span className="bg-slate-800 text-amber-300 px-2 py-0.5 rounded border border-slate-700">{'{{TENANT_NAME_EN}}'}</span>
+                  <span className="bg-slate-800 text-amber-300 px-2 py-0.5 rounded border border-slate-700">{'{{EXPORT_DATE}}'}</span>
+                  <span className="bg-slate-800 text-amber-300 px-2 py-0.5 rounded border border-slate-700">{'{{EXPORT_DATE_SHORT}}'}</span>
+                  <span className="bg-slate-800 text-amber-300 px-2 py-0.5 rounded border border-slate-700">{'{{FILENAME}}'}</span>
+                  <span className="bg-slate-800 text-amber-300 px-2 py-0.5 rounded border border-slate-700">{'{{FILE_SIZE_KB}}'}</span>
+                  <span className="bg-slate-800 text-amber-300 px-2 py-0.5 rounded border border-slate-700">{'{{TOTAL_USERS}}'}</span>
+                  <span className="bg-slate-800 text-amber-300 px-2 py-0.5 rounded border border-slate-700">{'{{TOTAL_REQUESTS}}'}</span>
+                  <span className="bg-slate-800 text-amber-300 px-2 py-0.5 rounded border border-slate-700">{'{{TOTAL_LOGS}}'}</span>
+                  <span className="bg-slate-800 text-emerald-300 px-2 py-0.5 rounded border border-emerald-500/40 font-bold">{'{{SHA256_CHECKSUM}}'}</span>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-300 mb-1.5">
+                  เนื้อหาหนังสือบันทึกข้อตกลงส่งมอบข้อมูล (Handover Memorandum Template):
+                </label>
+                {memoTemplateLoading ? (
+                  <div className="h-64 flex items-center justify-center border border-slate-800 rounded-xl bg-slate-950 text-slate-400 text-xs">
+                    <RefreshCw className="h-5 w-5 animate-spin mr-2" /> กำลังโหลดแม่แบบ...
+                  </div>
+                ) : (
+                  <textarea
+                    value={memoTemplateText}
+                    onChange={(e) => setMemoTemplateText(e.target.value)}
+                    rows={15}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs font-mono text-slate-200 focus:outline-none focus:border-amber-500/50 leading-relaxed"
+                    placeholder="ระบุข้อความบันทึกข้อตกลง..."
+                  />
+                )}
+              </div>
+            </div>
+
+            <div className="flex justify-between items-center pt-3 border-t border-slate-800">
+              <button
+                type="button"
+                onClick={handleResetDefaultMemoTemplate}
+                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition"
+              >
+                🔄 คืนค่าแม่แบบเริ่มต้น (Reset Default)
+              </button>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setMemoTemplateModalOpen(false)}
+                  className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition"
+                >
+                  ยกเลิก
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveMemoTemplate}
+                  disabled={memoTemplateSaving}
+                  className="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold transition shadow-lg flex items-center gap-2 disabled:opacity-50"
+                >
+                  {memoTemplateSaving && <RefreshCw className="h-4 w-4 animate-spin" />}
+                  <span>บันทึกแม่แบบ (Save Template)</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
