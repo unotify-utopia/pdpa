@@ -181,7 +181,7 @@ export const StaffLoginModal: React.FC<StaffLoginModalProps> = ({
                   type="text"
                   required
                   autoComplete="new-password"
-                  placeholder="อีเมล หรือ Username (เช่น apichat.utopia@gmail.com)"
+                  placeholder="อีเมล หรือ Username (เช่น staff@example.com)"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   className="w-full text-xs border border-slate-300 rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-brand-500 text-slate-900"
