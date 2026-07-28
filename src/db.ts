@@ -336,7 +336,7 @@ export const changeRequestStatus = async (
   }
 
   // Set completeness check date & SLA Start
-  if (newStatus === 'Complete' && !req.completenessCheckedDate) {
+  if (newStatus === 'Documents Verified' && !req.completenessCheckedDate) {
     req.completenessCheckedDate = new Date().toISOString();
     req.slaStartDate = new Date().toISOString();
     const config = getComplianceConfig();

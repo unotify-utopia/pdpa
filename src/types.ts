@@ -35,7 +35,7 @@ export type RequestStatus =
   | 'Awaiting Identity Evidence'
   | 'Completeness Review'
   | 'Awaiting Additional Information'
-  | 'Complete'
+  | 'Documents Verified'
   | 'Assigned'
   | 'Data Collection'
   | 'Data Owner Review'

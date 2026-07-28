@@ -205,7 +205,7 @@ export default function App() {
         case 'intake':
           return true; // Intake can manage at any stage
         case 'owner':
-          const ownerHidden = ['Draft', 'Submitted', 'Received', 'Identity Verification', 'Awaiting Identity Evidence', 'Completeness Review', 'Awaiting Additional Information', 'Complete'];
+          const ownerHidden = ['Draft', 'Submitted', 'Received', 'Identity Verification', 'Awaiting Identity Evidence', 'Completeness Review', 'Awaiting Additional Information'];
           return !ownerHidden.includes(req.status);
         case 'dpo':
           const dpoVisible = [
@@ -1196,7 +1196,7 @@ export default function App() {
 
   const markCompletenessDone = async (reqId: string) => {
     if (!activeUser) return;
-    await changeRequestStatus(reqId, 'Complete', activeUser, 'ตรวจสอบเอกสารครบถ้วนเรียบร้อย เริ่มนับระยะเวลาดำเนินการ SLA');
+    await changeRequestStatus(reqId, 'Documents Verified', activeUser, 'ตรวจสอบเอกสารครบถ้วนเรียบร้อย เริ่มนับระยะเวลาดำเนินการ SLA');
     reloadData();
   };
 
@@ -1252,7 +1252,7 @@ export default function App() {
     req.dataCollectionTasks.push(newTask);
     
     // Switch state to data collection
-    if (req.status === 'Assigned' || req.status === 'Complete') {
+    if (req.status === 'Assigned' || req.status === 'Documents Verified') {
       req.status = 'Data Collection';
       req.statusHistory.push({
         status: 'Data Collection',
@@ -4607,7 +4607,7 @@ export default function App() {
                       {[
                         { label: 'คำขอเข้าใหม่ทั้งหมด', count: filteredRequests.length, color: 'border-l-brand-500 hover:border-brand-500 hover:shadow-md text-brand-600', statuses: null },
                         { label: 'รอตรวจสอบตัวตน', count: getBadgeCount(['Submitted', 'Received', 'Identity Verification', 'Completeness Review']), color: 'border-l-indigo-500 hover:border-indigo-500 hover:shadow-md text-indigo-600', statuses: ['Submitted', 'Received', 'Identity Verification', 'Completeness Review'] as RequestStatus[] },
-                        { label: 'อยู่ระหว่างสืบค้นข้อมูล', count: getBadgeCount(['Complete', 'Assigned', 'Data Collection']), color: 'border-l-amber-500 hover:border-amber-500 hover:shadow-md text-amber-600', statuses: ['Complete', 'Assigned', 'Data Collection'] as RequestStatus[] },
+                        { label: 'อยู่ระหว่างสืบค้นข้อมูล', count: getBadgeCount(['Documents Verified', 'Assigned', 'Data Collection']), color: 'border-l-amber-500 hover:border-amber-500 hover:shadow-md text-amber-600', statuses: ['Documents Verified', 'Assigned', 'Data Collection'] as RequestStatus[] },
                         { label: 'รอฝ่ายกฎหมาย/DPO ตรวจ', count: getBadgeCount(['Data Owner Review', 'DPO or Legal Review', 'Redaction Required', 'Approval Pending']), color: 'border-l-rose-500 hover:border-rose-500 hover:shadow-md text-rose-600', statuses: ['Data Owner Review', 'DPO or Legal Review', 'Redaction Required', 'Approval Pending'] as RequestStatus[] },
                         { label: 'พร้อมส่งมอบ / ปิดเคส', count: getBadgeCount(['Ready for Delivery', 'Delivered', 'Closed']), color: 'border-l-emerald-500 hover:border-emerald-500 hover:shadow-md text-emerald-600', statuses: ['Ready for Delivery', 'Delivered', 'Closed'] as RequestStatus[] }
                       ].map((card, i) => (
@@ -5196,7 +5196,7 @@ export default function App() {
                       {/* Column 1: Intake */}
                       {[
                         { title: '1. ตรวจรับคำขอ (Intake)', statuses: ['Submitted', 'Received', 'Identity Verification', 'Awaiting Identity Evidence', 'Completeness Review'] },
-                        { title: '2. สืบค้นระบบ (Gathering)', statuses: ['Complete', 'Assigned', 'Data Collection'] },
+                        { title: '2. สืบค้นระบบ (Gathering)', statuses: ['Documents Verified', 'Assigned', 'Data Collection'] },
                         { title: '3. กฎหมาย/DPO (Legal Check)', statuses: ['Data Owner Review', 'DPO or Legal Review', 'Redaction Required'] },
                         { title: '4. รออนุมัติ/ชำระเงิน (Approval)', statuses: ['Approval Pending', 'Fee Notification', 'Awaiting Payment'] },
                         { title: '5. เตรียมส่งมอบ/ปิดงาน (Delivery)', statuses: ['Approved', 'Partially Approved', 'Ready for Delivery', 'Delivered', 'Closed'] }

@@ -196,7 +196,7 @@ export const seedRequests: Request[] = [
       { status: 'Received', changedAt: '2026-07-02T11:00:00Z', changedBy: 'intake.pdpa' },
       { status: 'Identity Verification', changedAt: '2026-07-02T11:15:00Z', changedBy: 'intake.pdpa' },
       { status: 'Completeness Review', changedAt: '2026-07-03T08:00:00Z', changedBy: 'intake.pdpa' },
-      { status: 'Complete', changedAt: '2026-07-03T09:00:00Z', changedBy: 'intake.pdpa' },
+      { status: 'Documents Verified', changedAt: '2026-07-03T09:00:00Z', changedBy: 'intake.pdpa' },
       { status: 'Assigned', changedAt: '2026-07-03T10:00:00Z', changedBy: 'intake.pdpa' },
       { status: 'Data Collection', changedAt: '2026-07-03T10:10:00Z', changedBy: 'crm.owner' },
       { status: 'DPO or Legal Review', changedAt: '2026-07-15T14:00:00Z', changedBy: 'dpo.pdpa' },
@@ -443,7 +443,7 @@ export const seedRequests: Request[] = [
       { status: 'Received', changedAt: '2026-07-10T10:00:00Z', changedBy: 'intake.pdpa' },
       { status: 'Identity Verification', changedAt: '2026-07-10T11:00:00Z', changedBy: 'intake.pdpa' },
       { status: 'Completeness Review', changedAt: '2026-07-11T12:00:00Z', changedBy: 'intake.pdpa' },
-      { status: 'Complete', changedAt: '2026-07-11T13:00:00Z', changedBy: 'intake.pdpa' },
+      { status: 'Documents Verified', changedAt: '2026-07-11T13:00:00Z', changedBy: 'intake.pdpa' },
       { status: 'Assigned', changedAt: '2026-07-12T09:00:00Z', changedBy: 'intake.pdpa' },
       { status: 'Data Collection', changedAt: '2026-07-12T10:00:00Z', changedBy: 'intake.pdpa' }
     ],
