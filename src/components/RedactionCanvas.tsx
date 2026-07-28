@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { EyeOff, ShieldAlert, Check, RefreshCw } from 'lucide-react';
-import type { RedactionRecord } from '../types';
+import type { RedactionRecord, Request } from '../types';
 
 interface RedactionCanvasProps {
+  request?: Request;
   onRedactApplied: (redactRecord: Omit<RedactionRecord, 'id' | 'timestamp' | 'operator'>) => void;
   onSaveAll: () => void;
 }
@@ -18,19 +19,36 @@ interface DocumentField {
 }
 
 export const RedactionCanvas: React.FC<RedactionCanvasProps> = ({
+  request,
   onRedactApplied,
   onSaveAll,
 }) => {
   const [fields, setFields] = useState<DocumentField[]>([
-    { id: 'f1', label: 'ชื่อผู้รับสิทธิ', value: 'นายสมเกียรติ รักไทย (เจ้าของสิทธิ)', isSensitive: false, isRedacted: false },
-    { id: 'f2', label: 'เลขบัตรประชาชน', value: '1-1234-56789-01-2', isSensitive: true, isRedacted: false },
-    { id: 'f3', label: 'อีเมลหลัก', value: 'somkiat.rakthai@example.com', isSensitive: false, isRedacted: false },
-    { id: 'f4', label: 'เบอร์โทรศัพท์', value: '081-234-5678', isSensitive: false, isRedacted: false },
+    { id: 'f1', label: 'ชื่อผู้รับสิทธิ', value: request ? `${request.requester.firstName} ${request.requester.lastName} (เจ้าของสิทธิ)` : 'นายสมเกียรติ รักไทย (เจ้าของสิทธิ)', isSensitive: false, isRedacted: false },
+    { id: 'f2', label: 'เลขบัตรประชาชน', value: request ? request.requester.idNumber : '1-1234-56789-01-2', isSensitive: true, isRedacted: false },
+    { id: 'f3', label: 'อีเมลหลัก', value: request ? request.requester.email : 'somkiat.rakthai@example.com', isSensitive: false, isRedacted: false },
+    { id: 'f4', label: 'เบอร์โทรศัพท์', value: request ? request.requester.phone : '081-234-5678', isSensitive: false, isRedacted: false },
     { id: 'f5', label: 'ชื่อผู้แนะนำการขาย (บุคคลอื่น)', value: 'นางสาววิภา ตระกูลดี (พนักงานขาย)', isSensitive: true, isRedacted: false },
     { id: 'f6', label: 'เบอร์ติดต่อผู้แนะนำ (บุคคลอื่น)', value: '085-999-1234', isSensitive: true, isRedacted: false },
-    { id: 'f7', label: 'ที่อยู่ปัจจุบัน', value: '99/9 ถ.พหลโยธิน แขวงจตุจักร เขตจตุจักร กรุงเทพฯ 10900', isSensitive: false, isRedacted: false },
+    { id: 'f7', label: 'ที่อยู่ปัจจุบัน', value: request?.requester.address || '99/9 ถ.พหลโยธิน แขวงจตุจักร เขตจตุจักร กรุงเทพฯ 10900', isSensitive: false, isRedacted: false },
     { id: 'f8', label: 'ลายมือชื่อเจ้าหน้าที่อนุมัติบัญชี', value: 'ประภาส (สแกนลายเซ็นดิจิทัล)', isSensitive: true, isRedacted: false },
   ]);
+
+  useEffect(() => {
+    if (request) {
+      setFields(prev => prev.map(f => {
+        const r = request.requester;
+        switch(f.id) {
+          case 'f1': return { ...f, value: `${r.firstName} ${r.lastName} (เจ้าของสิทธิ)` };
+          case 'f2': return { ...f, value: r.idNumber };
+          case 'f3': return { ...f, value: r.email };
+          case 'f4': return { ...f, value: r.phone };
+          case 'f7': return { ...f, value: r.address || f.value };
+          default: return f;
+        }
+      }));
+    }
+  }, [request]);
 
   const [selectedFieldId, setSelectedFieldId] = useState<string | null>(null);
   const [redactMode, setRedactMode] = useState<'blackout' | 'masking'>('blackout');

@@ -2172,7 +2172,7 @@ export default function App() {
                     <button
                       type="button"
                       onClick={() => {
-                        if (window.confirm(`ยืนยันการลบผู้ใช้: ${editingUser.fullNameTh} ออกจากระบบ?`)) {
+                        showNotify(`ยืนยันการลบผู้ใช้: ${editingUser.fullNameTh} ออกจากระบบ?`, 'confirm', 'ยืนยันการลบผู้ใช้', () => {
                           const token = sessionStorage.getItem('pdpa_token') || sessionStorage.getItem('pdpa_jwt_token');
                           if (token) {
                             fetch(`/api/users/${editingUser.id}`, {
@@ -2184,10 +2184,11 @@ export default function App() {
                                 if (data.success) {
                                   showNotify('ลบผู้ใช้งานสำเร็จ');
                                   reloadUsers();
+                                  setIsUserModalOpen(false);
                                 }
                               });
                           }
-                        }
+                        });
                       }}
                       className="bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-300 font-bold px-3 py-2 rounded-lg text-xs transition flex items-center gap-1.5"
                     >
@@ -3710,10 +3711,7 @@ export default function App() {
                         <button
                           type="button"
                           onClick={() => {
-                            const reason = prompt('ระบุเหตุจำเป็นหรือเหตุขัดข้องในการขยายระยะเวลาสืบค้นข้อมูล:');
-                            if (reason) {
-                              handleExtendSla(activeRequestObj.id, reason);
-                            }
+                            setExtendSlaModal({ open: true, reqId: activeRequestObj.id, reason: '' });
                           }}
                           className="mt-1 bg-amber-500 hover:bg-amber-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded transition"
                         >
@@ -4085,12 +4083,12 @@ export default function App() {
                         <p className="text-xs text-slate-500">ตรวจสอบสถานะชำระค่าธรรมเนียม (ถ้ามี) เรียบร้อยแล้ว กดปุ่มเพื่อบันทึกการส่งมอบข้อมูลปลอดภัย</p>
                         
                         <button
-                          onClick={async () => {
-                            if (window.confirm('ยืนยันการจัดส่งข้อมูลให้เจ้าของข้อมูลและปิดเรื่องคำขอนี้?')) {
+                          onClick={() => {
+                            showNotify('ยืนยันการจัดส่งข้อมูลให้เจ้าของข้อมูลและปิดเรื่องคำขอนี้?', 'confirm', 'ยืนยันการจัดส่งและปิดเรื่อง', async () => {
                               await changeRequestStatus(activeRequestObj.id, 'Closed', activeUser, 'จัดส่งมอบลิงก์ดาวน์โหลดอย่างปลอดภัยและปิดเรื่องสำเร็จ');
                               reloadData();
                               setSelectedRequestId(null);
-                            }
+                            });
                           }}
                           className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm px-4 py-3 rounded-xl transition flex items-center justify-center gap-2"
                         >
@@ -5310,11 +5308,11 @@ export default function App() {
                       <button
                         type="button"
                         onClick={() => {
-                          if (confirm('ยืนยันการรีเซ็ตข้อความแม่แบบทั้งหมดกลับเป็นค่าเริ่มต้นมาตรฐานของระบบหรือไม่?')) {
+                          showNotify('ยืนยันการรีเซ็ตข้อความแม่แบบทั้งหมดกลับเป็นค่าเริ่มต้นมาตรฐานของระบบหรือไม่?', 'confirm', 'ยืนยันการรีเซ็ตแม่แบบ', () => {
                             const defaults = resetDocumentTemplates();
                             setTemplates(defaults);
                             showNotify('รีเซ็ตข้อความแม่แบบหนังสือราชการทั้งหมดกลับเป็นค่าเริ่มต้นเรียบร้อยแล้ว', 'success', 'รีเซ็ตสำเร็จ');
-                          }
+                          });
                         }}
                         className="text-[11px] bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded font-semibold transition"
                       >
