@@ -632,11 +632,22 @@ export default function App() {
     const targetEmail = reqType === 'self' ? requesterForm.email : repForm.email;
     const targetPhone = reqType === 'self' ? requesterForm.phone : repForm.phone;
     
-    fetch('/api/public/send-otp', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: targetEmail, phone: targetPhone })
-    }).catch(err => console.error('Failed to send OTP:', err));
+    try {
+      const res = await fetch('/api/public/send-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: targetEmail, phone: targetPhone })
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        showNotify(`❌ ${data.message || 'ไม่สามารถส่งรหัส OTP ได้ กรุณาลองใหม่อีกครั้ง'}`);
+        return; // Stop and do not show modal
+      }
+    } catch (err) {
+      console.error('Failed to send OTP:', err);
+      showNotify('❌ การเชื่อมต่อล้มเหลว ไม่สามารถส่งรหัส OTP ได้');
+      return;
+    }
     
     setSubmissionOtpCode('');
     setShowSubmissionOtpModal(true);
