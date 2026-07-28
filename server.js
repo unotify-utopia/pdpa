@@ -389,13 +389,47 @@ const sendWorkflowNotification = async (request, oldStatus, newStatus, eventType
   const isOnlineWeb = request.contactChannel === 'web';
   const statusNameTh = getStatusNameTh(newStatus);
   
-  // Define default officer email addresses per role (mapped to tester email for now)
-  const intakeEmail = process.env.INTAKE_EMAIL || 'youtub6.numcom@gmail.com';
-  const ownerEmail = process.env.OWNER_EMAIL || 'youtub6.numcom@gmail.com';
-  const dpoEmail = process.env.DPO_EMAIL || 'youtub6.numcom@gmail.com';
-  const approverEmail = process.env.APPROVER_EMAIL || 'youtub6.numcom@gmail.com';
+  // Define default fallback officer email addresses per role
+  let intakeEmails = [process.env.INTAKE_EMAIL || 'youtub6.numcom@gmail.com'];
+  let ownerEmails = [process.env.OWNER_EMAIL || 'youtub6.numcom@gmail.com'];
+  let dpoEmails = [process.env.DPO_EMAIL || 'youtub6.numcom@gmail.com'];
+  let approverEmails = [process.env.APPROVER_EMAIL || 'youtub6.numcom@gmail.com'];
+
+  // Dynamically fetch actual emails from database based on orgId and role
+  if (request.orgId) {
+    try {
+      const { rows: officers } = await dbPool.query(
+        "SELECT role, email FROM users WHERE org_id = $1 AND email IS NOT NULL AND email != ''",
+        [request.orgId]
+      );
+      
+      const intakes = officers.filter(o => o.role === 'intake').map(o => o.email);
+      if (intakes.length > 0) intakeEmails = intakes;
+      
+      const owners = officers.filter(o => o.role === 'owner').map(o => o.email);
+      if (owners.length > 0) ownerEmails = owners;
+      
+      const dpos = officers.filter(o => o.role === 'dpo').map(o => o.email);
+      if (dpos.length > 0) dpoEmails = dpos;
+      
+      const approvers = officers.filter(o => o.role === 'approver').map(o => o.email);
+      if (approvers.length > 0) approverEmails = approvers;
+    } catch (err) {
+      console.error('Error fetching officer emails for notification:', err.message);
+    }
+  }
 
   const recipients = [];
+  
+  // Helper to add multiple officers of the same role
+  const addRecipients = (emails, roleName, actionRequired) => {
+    emails.forEach(email => {
+      if (email && !recipients.find(r => r.email === email)) {
+        recipients.push({ email, roleName, actionRequired });
+      }
+    });
+  };
+
   let subject = '';
   let flowMessageTh = '';
   let nextActionTh = '';
@@ -404,9 +438,9 @@ const sendWorkflowNotification = async (request, oldStatus, newStatus, eventType
     if (isOnlineWeb) {
       // 1. ประชาชนกรอกคำร้องออนไลน์ -> ส่งอีเมลแจ้ง Intake + แจ้งยืนยันไปที่ประชาชน
       if (citizenEmail) {
-        recipients.push({ email: citizenEmail, roleName: 'ประชาชนผู้ยื่นคำขอ', actionRequired: 'ติดตามสถานะคำขอผ่านระบบ Tracking' });
+        addRecipients([citizenEmail], 'ประชาชนผู้ยื่นคำขอ', 'ติดตามสถานะคำขอผ่านระบบ Tracking');
       }
-      recipients.push({ email: intakeEmail, roleName: 'เจ้าหน้าที่รับเรื่อง (Intake Officer)', actionRequired: 'เข้าสู่ระบบเพื่อตรวจสอบและตรวจรับคำขอใหม่' });
+      addRecipients(intakeEmails, 'เจ้าหน้าที่รับเรื่อง (Intake Officer)', 'เข้าสู่ระบบเพื่อตรวจสอบและตรวจรับคำขอใหม่');
       
       subject = `[PDPA REQ - ${trackingNo}] ยืนยันรับคำขอเข้าถึงข้อมูลส่วนบุคคลผ่านช่องทางออนไลน์`;
       flowMessageTh = `ระบบได้รับคำขอเข้าถึงข้อมูลส่วนบุคคล (PDPA Request) จากประชาชนผ่านช่องทางบริการออนไลน์ (E-Service / Web Portal) เรียบร้อยแล้ว`;
@@ -414,9 +448,9 @@ const sendWorkflowNotification = async (request, oldStatus, newStatus, eventType
     } else {
       // 2. Intake รับเรื่องแบบ Manual -> ต้องมีการส่งเมล์เรื่องการเพิ่มคำร้องตาม flow ด้วย
       if (citizenEmail) {
-        recipients.push({ email: citizenEmail, roleName: 'ประชาชนเจ้าของข้อมูล (Data Subject)', actionRequired: 'ตรวจสอบรายละเอียดคำขอและติดตามสถานะสิทธิ์' });
+        addRecipients([citizenEmail], 'ประชาชนเจ้าของข้อมูล (Data Subject)', 'ตรวจสอบรายละเอียดคำขอและติดตามสถานะสิทธิ์');
       }
-      recipients.push({ email: intakeEmail, roleName: 'เจ้าหน้าที่ศูนย์รับเรื่อง (Intake Officer)', actionRequired: 'บันทึกคำขอ Manual Entry เข้าสู่ Flow งาน PDPA' });
+      addRecipients(intakeEmails, 'เจ้าหน้าที่ศูนย์รับเรื่อง (Intake Officer)', 'บันทึกคำขอ Manual Entry เข้าสู่ Flow งาน PDPA');
       
       subject = `[PDPA REQ - ${trackingNo}] แจ้งการเปิดคำขอใช้สิทธิ์ PDPA โดยเจ้าหน้าที่ศูนย์รับเรื่อง (Manual Entry)`;
       flowMessageTh = `เจ้าหน้าที่ศูนย์รับเรื่องได้ทำการบันทึกและเปิดคำขอใช้สิทธิ์ตามพระราชบัญญัติคุ้มครองข้อมูลส่วนบุคคล พ.ศ. 2562 ของท่านเข้าสู่ระบบเรียบร้อยแล้ว`;
@@ -428,38 +462,38 @@ const sendWorkflowNotification = async (request, oldStatus, newStatus, eventType
     flowMessageTh = `คำขอใช้สิทธิ์ PDPA เลขที่ ${trackingNo} มีการเปลี่ยนสถานะจาก "${oldStatus ? getStatusNameTh(oldStatus) : 'ไม่ระบุ'}" เป็น "${statusNameTh}"`;
 
     if (['Received', 'Completeness Review', 'Identity Verification'].includes(newStatus)) {
-      if (citizenEmail) recipients.push({ email: citizenEmail, roleName: 'ผู้ยื่นคำขอ', actionRequired: 'รับทราบการตรวจรับเรื่อง' });
-      recipients.push({ email: intakeEmail, roleName: 'เจ้าหน้าที่ Intake', actionRequired: 'ตรวจสอบเอกสารและยืนยันตัวตนเจ้าของข้อมูล' });
+      if (citizenEmail) addRecipients([citizenEmail], 'ผู้ยื่นคำขอ', 'รับทราบการตรวจรับเรื่อง');
+      addRecipients(intakeEmails, 'เจ้าหน้าที่ Intake', 'ตรวจสอบเอกสารและยืนยันตัวตนเจ้าของข้อมูล');
       nextActionTh = `อยู่ระหว่างเจ้าหน้าที่ศูนย์รับเรื่องตรวจสอบความถูกต้องของคำขอและหลักฐานยืนยันตัวตน`;
     } else if (['Awaiting Additional Information', 'Awaiting Identity Evidence'].includes(newStatus)) {
-      if (citizenEmail) recipients.push({ email: citizenEmail, roleName: 'ผู้ยื่นคำขอ', actionRequired: 'อัปโหลดเอกสาร/หลักฐานเพิ่มเติมทันที' });
+      if (citizenEmail) addRecipients([citizenEmail], 'ผู้ยื่นคำขอ', 'อัปโหลดเอกสาร/หลักฐานเพิ่มเติมทันที');
       nextActionTh = `ขอความกรุณาผู้ยื่นคำขออัปโหลดเอกสารเพิ่มเติมผ่านระบบติดตามสถานะ เพื่อปลดล็อกเวลา SLA`;
     } else if (['Complete', 'Assigned', 'Data Collection'].includes(newStatus)) {
-      recipients.push({ email: ownerEmail, roleName: 'ผู้ดูแลระบบข้อมูล (Data Owner)', actionRequired: 'สืบค้นและรวบรวมข้อมูลส่วนบุคคลที่เกี่ยวข้อง' });
-      recipients.push({ email: intakeEmail, roleName: 'เจ้าหน้าที่ Intake', actionRequired: 'ติดตามการทำงานของ Data Owner' });
+      addRecipients(ownerEmails, 'ผู้ดูแลระบบข้อมูล (Data Owner)', 'สืบค้นและรวบรวมข้อมูลส่วนบุคคลที่เกี่ยวข้อง');
+      addRecipients(intakeEmails, 'เจ้าหน้าที่ Intake', 'ติดตามการทำงานของ Data Owner');
       nextActionTh = `มอบหมายภารกิจให้เจ้าหน้าที่ผู้ดูแลระบบฐานข้อมูล (Data Owner) ดำเนินการรวบรวมข้อมูลส่วนบุคคลตาม SLA`;
     } else if (['Data Owner Review', 'DPO or Legal Review', 'Redaction Required'].includes(newStatus)) {
-      recipients.push({ email: dpoEmail, roleName: 'เจ้าหน้าที่คุ้มครองข้อมูลส่วนบุคคล (DPO/Legal)', actionRequired: 'พิจารณาความเห็นทางกฎหมายและตรวจสอบหนังสือชี้แจง' });
-      recipients.push({ email: ownerEmail, roleName: 'ผู้ดูแลระบบข้อมูล', actionRequired: 'รับทราบการส่งต่อ DPO' });
+      addRecipients(dpoEmails, 'เจ้าหน้าที่คุ้มครองข้อมูลส่วนบุคคล (DPO/Legal)', 'พิจารณาความเห็นทางกฎหมายและตรวจสอบหนังสือชี้แจง');
+      addRecipients(ownerEmails, 'ผู้ดูแลระบบข้อมูล', 'รับทราบการส่งต่อ DPO');
       nextActionTh = `เจ้าหน้าที่นิติกร/DPO ตรวจสอบฐานสิทธิ์ทางกฎหมาย การถมดำข้อมูลที่เกี่ยวข้องกับบุคคลที่สาม และเตรียมหนังสือแจ้งผล`;
     } else if (['Approval Pending', 'Fee Notification', 'Awaiting Payment'].includes(newStatus)) {
-      recipients.push({ email: approverEmail, roleName: 'ผู้มีอำนาจลงนาม (Approver)', actionRequired: 'พิจารณาอนุมัติคำสั่งอย่างเป็นทางการ' });
+      addRecipients(approverEmails, 'ผู้มีอำนาจลงนาม (Approver)', 'พิจารณาอนุมัติคำสั่งอย่างเป็นทางการ');
       if (citizenEmail && ['Fee Notification', 'Awaiting Payment'].includes(newStatus)) {
-        recipients.push({ email: citizenEmail, roleName: 'ผู้ยื่นคำขอ', actionRequired: 'ชำระค่าธรรมเนียมตามใบแจ้งหนี้' });
+        addRecipients([citizenEmail], 'ผู้ยื่นคำขอ', 'ชำระค่าธรรมเนียมตามใบแจ้งหนี้');
       }
       nextActionTh = `อยู่ระหว่างการพิจารณาอนุมัติคำสั่งอย่างเป็นทางการโดยผู้บริหาร/ผู้มีอำนาจลงนาม`;
     } else if (['Approved', 'Ready for Delivery', 'Delivered', 'Receipt Confirmed'].includes(newStatus)) {
-      if (citizenEmail) recipients.push({ email: citizenEmail, roleName: 'ผู้ยื่นคำขอ', actionRequired: 'ดาวน์โหลดข้อมูล/รับหนังสือแจ้งผลผ่านระบบปลอดภัย' });
-      recipients.push({ email: intakeEmail, roleName: 'เจ้าหน้าที่ Intake', actionRequired: 'จัดส่งมอบข้อมูลและบันทึกปิดงาน' });
-      recipients.push({ email: dpoEmail, roleName: 'เจ้าหน้าที่ DPO', actionRequired: 'ตรวจสอบการปิดรายงานตาม SLA' });
+      if (citizenEmail) addRecipients([citizenEmail], 'ผู้ยื่นคำขอ', 'ดาวน์โหลดข้อมูล/รับหนังสือแจ้งผลผ่านระบบปลอดภัย');
+      addRecipients(intakeEmails, 'เจ้าหน้าที่ Intake', 'จัดส่งมอบข้อมูลและบันทึกปิดงาน');
+      addRecipients(dpoEmails, 'เจ้าหน้าที่ DPO', 'ตรวจสอบการปิดรายงานตาม SLA');
       nextActionTh = `พิจารณาอนุมัติเรียบร้อยแล้ว พร้อมส่งมอบข้อมูลสิทธิ์และหนังสือราชการแจ้งผลอย่างปลอดภัยผ่านช่องทางที่ผู้ยื่นระบุ`;
     } else if (['Denied', 'No Data Found', 'Withdrawn', 'Disposed for Incomplete Information', 'Closed'].includes(newStatus)) {
-      if (citizenEmail) recipients.push({ email: citizenEmail, roleName: 'ผู้ยื่นคำขอ', actionRequired: 'รับทราบผลการตัดสิน/การสิ้นสุดคำขอ' });
-      recipients.push({ email: intakeEmail, roleName: 'เจ้าหน้าที่ Intake', actionRequired: 'จัดเก็บสถิติและปิดคำร้อง' });
-      recipients.push({ email: dpoEmail, roleName: 'เจ้าหน้าที่ DPO', actionRequired: 'บันทึกประวัติข้อกฎหมาย' });
+      if (citizenEmail) addRecipients([citizenEmail], 'ผู้ยื่นคำขอ', 'รับทราบผลการตัดสิน/การสิ้นสุดคำขอ');
+      addRecipients(intakeEmails, 'เจ้าหน้าที่ Intake', 'จัดเก็บสถิติและปิดคำร้อง');
+      addRecipients(dpoEmails, 'เจ้าหน้าที่ DPO', 'บันทึกประวัติข้อกฎหมาย');
       nextActionTh = `คำขอเสร็จสมบูรณ์และยุติกระบวนการตามกฎหมายคุ้มครองข้อมูลส่วนบุคคล พ.ศ. 2562 เรียบร้อยแล้ว`;
     } else {
-      recipients.push({ email: intakeEmail, roleName: 'เจ้าหน้าที่ Intake', actionRequired: 'ตรวจสอบความคืบหน้า' });
+      addRecipients(intakeEmails, 'เจ้าหน้าที่ Intake', 'ตรวจสอบความคืบหน้า');
       nextActionTh = `ดำเนินการตามขั้นตอนมาตรฐาน PDPA Request Workflow`;
     }
   }
