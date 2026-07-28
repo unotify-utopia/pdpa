@@ -5475,14 +5475,16 @@ export default function App() {
         <p className="text-[11px] text-brand-400 font-medium">
           สงวนลิขสิทธิ์ © บริษัท ยูโทเปีย เอ็นแอนด์เอ็น จำกัด (Utopia N&N Co., Ltd.) All Rights Reserved.
         </p>
-        <p className="text-[10px] text-slate-500">
-          พัฒนาสอดคล้องตามมาตรฐานพระราชบัญญัติคุ้มครองข้อมูลส่วนบุคคล พ.ศ. 2562 (สิทธิ์ในการเข้าถึงและรับสำเนาตามมาตรา 30)
-        </p>
-        {typeof __APP_VERSION__ !== 'undefined' && (
-          <p className="text-[9px] text-slate-600 mt-2 pt-2 border-t border-slate-800/50 inline-block font-mono">
-            v1.0.0-beta • rev: {__APP_VERSION__} ({__BUILD_DATE__})
+        <div className="relative flex flex-col md:flex-row justify-center items-center w-full">
+          <p className="text-[10px] text-slate-500">
+            พัฒนาสอดคล้องตามมาตรฐานพระราชบัญญัติคุ้มครองข้อมูลส่วนบุคคล พ.ศ. 2562 (สิทธิ์ในการเข้าถึงและรับสำเนาตามมาตรา 30)
           </p>
-        )}
+          {typeof __APP_VERSION__ !== 'undefined' && (
+            <span className="md:absolute md:right-0 text-[9px] text-slate-600 font-mono mt-2 md:mt-0">
+              v1.0.0-beta • rev: {__APP_VERSION__} ({__BUILD_DATE__})
+            </span>
+          )}
+        </div>
       </footer>
 
       {/* --- MOCK OTP MODAL --- */}
