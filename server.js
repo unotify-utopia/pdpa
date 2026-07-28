@@ -1302,7 +1302,7 @@ app.post('/api/public/requests', async (req, res) => {
     const tenantCount = parseInt(countRes.rows[0].count) + 1;
     
     // Format: REQ-[TENANT_CODE]-[YEAR]-[0001]
-    const trackingNo = `REQ-${orgCodePrefix}-${year}-${tenantCount.toString().padStart(4, '0')}`;
+    const trackingNo = requestData.trackingNo || `REQ-${orgCodePrefix}-${year}-${tenantCount.toString().padStart(4, '0')}`;
     const reqId = requestData.id || `req_${Date.now()}`;
     const requesterType = requestData.requesterType || 'self';
     const status = requestData.status || 'Submitted';
@@ -1329,6 +1329,16 @@ app.post('/api/public/requests', async (req, res) => {
       }
     } catch (existErr) {
       console.warn('Check existing request warning:', existErr.message);
+    }
+
+    // Ensure tenant exists in database to prevent Foreign Key constraint violation
+    try {
+      await dbPool.query(
+        'INSERT INTO tenants (id, name, code) VALUES ($1, $2, $3) ON CONFLICT (id) DO NOTHING',
+        [orgId, requestData.targetOrgName || orgId, orgCodePrefix]
+      );
+    } catch (tenantErr) {
+      console.warn('Auto-create tenant warning:', tenantErr.message);
     }
 
     // Insert into PostgreSQL Master Database
