@@ -203,6 +203,11 @@ export interface MessageThread {
   timestamp: string;
 }
 
+declare global {
+  const __APP_VERSION__: string;
+  const __BUILD_DATE__: string;
+}
+
 export interface Request {
   id: string;
   orgId: string; // Tenant Identifier

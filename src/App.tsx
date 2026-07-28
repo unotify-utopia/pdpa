@@ -5478,6 +5478,11 @@ export default function App() {
         <p className="text-[10px] text-slate-500">
           พัฒนาสอดคล้องตามมาตรฐานพระราชบัญญัติคุ้มครองข้อมูลส่วนบุคคล พ.ศ. 2562 (สิทธิ์ในการเข้าถึงและรับสำเนาตามมาตรา 30)
         </p>
+        {typeof __APP_VERSION__ !== 'undefined' && (
+          <p className="text-[9px] text-slate-600 mt-2 pt-2 border-t border-slate-800/50 inline-block font-mono">
+            v1.0.0-beta • rev: {__APP_VERSION__} ({__BUILD_DATE__})
+          </p>
+        )}
       </footer>
 
       {/* --- MOCK OTP MODAL --- */}
