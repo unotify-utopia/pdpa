@@ -472,17 +472,23 @@ const sendWorkflowNotification = async (request, oldStatus, newStatus, eventType
       if (citizenEmail) addRecipients([citizenEmail], 'ผู้ยื่นคำขอ', 'อัปโหลดเอกสาร/หลักฐานเพิ่มเติมทันที');
       nextActionTh = `ขอความกรุณาผู้ยื่นคำขออัปโหลดเอกสารเพิ่มเติมผ่านระบบติดตามสถานะ เพื่อปลดล็อกเวลา SLA`;
     } else if (['Complete', 'Assigned', 'Data Collection'].includes(newStatus)) {
+      if (citizenEmail) addRecipients([citizenEmail], 'ผู้ยื่นคำขอ', 'รับทราบการส่งเรื่องให้ผู้ดูแลระบบข้อมูล (Data Owner)');
       addRecipients(ownerEmails, 'ผู้ดูแลระบบข้อมูล (Data Owner)', 'สืบค้นและรวบรวมข้อมูลส่วนบุคคลที่เกี่ยวข้อง');
       addRecipients(intakeEmails, 'เจ้าหน้าที่ Intake', 'ติดตามการทำงานของ Data Owner');
       nextActionTh = `มอบหมายภารกิจให้เจ้าหน้าที่ผู้ดูแลระบบฐานข้อมูล (Data Owner) ดำเนินการรวบรวมข้อมูลส่วนบุคคลตาม SLA`;
     } else if (['Data Owner Review', 'DPO or Legal Review', 'Redaction Required'].includes(newStatus)) {
+      if (citizenEmail) addRecipients([citizenEmail], 'ผู้ยื่นคำขอ', 'รับทราบการส่งเรื่องให้เจ้าหน้าที่ DPO พิจารณาข้อกฎหมาย');
       addRecipients(dpoEmails, 'เจ้าหน้าที่คุ้มครองข้อมูลส่วนบุคคล (DPO/Legal)', 'พิจารณาความเห็นทางกฎหมายและตรวจสอบหนังสือชี้แจง');
       addRecipients(ownerEmails, 'ผู้ดูแลระบบข้อมูล', 'รับทราบการส่งต่อ DPO');
       nextActionTh = `เจ้าหน้าที่นิติกร/DPO ตรวจสอบฐานสิทธิ์ทางกฎหมาย การถมดำข้อมูลที่เกี่ยวข้องกับบุคคลที่สาม และเตรียมหนังสือแจ้งผล`;
     } else if (['Approval Pending', 'Fee Notification', 'Awaiting Payment'].includes(newStatus)) {
       addRecipients(approverEmails, 'ผู้มีอำนาจลงนาม (Approver)', 'พิจารณาอนุมัติคำสั่งอย่างเป็นทางการ');
-      if (citizenEmail && ['Fee Notification', 'Awaiting Payment'].includes(newStatus)) {
-        addRecipients([citizenEmail], 'ผู้ยื่นคำขอ', 'ชำระค่าธรรมเนียมตามใบแจ้งหนี้');
+      if (citizenEmail) {
+        if (['Fee Notification', 'Awaiting Payment'].includes(newStatus)) {
+          addRecipients([citizenEmail], 'ผู้ยื่นคำขอ', 'ชำระค่าธรรมเนียมตามใบแจ้งหนี้');
+        } else {
+          addRecipients([citizenEmail], 'ผู้ยื่นคำขอ', 'รับทราบการส่งเรื่องให้ผู้บริหารพิจารณาอนุมัติ');
+        }
       }
       nextActionTh = `อยู่ระหว่างการพิจารณาอนุมัติคำสั่งอย่างเป็นทางการโดยผู้บริหาร/ผู้มีอำนาจลงนาม`;
     } else if (['Approved', 'Ready for Delivery', 'Delivered', 'Receipt Confirmed'].includes(newStatus)) {
@@ -496,6 +502,7 @@ const sendWorkflowNotification = async (request, oldStatus, newStatus, eventType
       addRecipients(dpoEmails, 'เจ้าหน้าที่ DPO', 'บันทึกประวัติข้อกฎหมาย');
       nextActionTh = `คำขอเสร็จสมบูรณ์และยุติกระบวนการตามกฎหมายคุ้มครองข้อมูลส่วนบุคคล พ.ศ. 2562 เรียบร้อยแล้ว`;
     } else {
+      if (citizenEmail) addRecipients([citizenEmail], 'ผู้ยื่นคำขอ', 'รับทราบสถานะการดำเนินการของคำขอ');
       addRecipients(intakeEmails, 'เจ้าหน้าที่ Intake', 'ตรวจสอบความคืบหน้า');
       nextActionTh = `ดำเนินการตามขั้นตอนมาตรฐาน PDPA Request Workflow`;
     }
