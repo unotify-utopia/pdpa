@@ -223,9 +223,20 @@ export default function App() {
         'Authorization': `Bearer ${token}`
       }
     })
-      .then(res => res.json())
+      .then(res => {
+        if (res.status === 401 || res.status === 403) {
+          sessionStorage.clear();
+          localStorage.removeItem('pdpa_req_current_user');
+          localStorage.removeItem('pdpa_token');
+          localStorage.removeItem('pdpa_jwt_token');
+          setActiveUser(null);
+          setView('public');
+          return null;
+        }
+        return res.json();
+      })
       .then(data => {
-        if (data.success) {
+        if (data && data.success) {
            const formatted = data.tenants.map((t: any) => ({ id: t.id, nameTh: t.nameTh || t.name_th, nameEn: t.nameEn || t.name_en, code: t.id.replace('org_', '') }));
            setOrganizations(formatted);
         }

@@ -48,6 +48,21 @@ export default function App() {
   // Custom Professional Notification Dialog Modal State
   const [notifyModal, setNotifyModal] = useState<{ open: boolean; title: string; message: string; type: 'success' | 'warning' | 'error'; onConfirm?: () => void } | null>(null);
 
+  // Force Logout Helper (Cleans both sessionStorage & localStorage)
+  const handleForceLogout = (reason?: string) => {
+    sessionStorage.removeItem('adminToken');
+    sessionStorage.removeItem('pdpa_super_token');
+    localStorage.removeItem('adminToken');
+    localStorage.removeItem('pdpa_super_token');
+    setToken(null);
+    setLoginStep('credentials');
+    setPassword('');
+    setMfaCode('');
+    if (reason) {
+      showNotify(reason, 'warning', 'ออกจากระบบความปลอดภัย');
+    }
+  };
+
   // Idle Timeout System
   useEffect(() => {
     let timeoutId: NodeJS.Timeout;
@@ -57,17 +72,7 @@ export default function App() {
       // Set timeout for 5 minutes (300,000 ms)
       timeoutId = setTimeout(() => {
         if (loginStep === 'authenticated') {
-          sessionStorage.removeItem('pdpa_super_token');
-          setToken(null);
-          setLoginStep('credentials');
-          
-          const defaultTitle = 'ระบบตัดการเชื่อมต่ออัตโนมัติ';
-          setNotifyModal({ 
-            open: true, 
-            title: defaultTitle, 
-            message: 'ท่านไม่ได้ใช้งานระบบเกิน 5 นาที ระบบจึงทำการออกจากระบบอัตโนมัติเพื่อความปลอดภัย', 
-            type: 'warning' 
-          });
+          handleForceLogout('ท่านไม่ได้ใช้งานระบบเกิน 5 นาที ระบบจึงทำการออกจากระบบอัตโนมัติเพื่อความปลอดภัย');
         }
       }, 5 * 60 * 1000);
     };
@@ -121,8 +126,16 @@ export default function App() {
         fetch('/api/tenants', { headers }),
         fetch('/api/users', { headers })
       ]);
+      if (tenantsRes.status === 401 || tenantsRes.status === 403 || usersRes.status === 401 || usersRes.status === 403) {
+        handleForceLogout('เซสชันของท่านหมดอายุหรือไม่มีสิทธิ์เข้าถึง กรุณาเข้าสู่ระบบอีกครั้งเพื่อความปลอดภัย');
+        return;
+      }
       const tenantsData = await tenantsRes.json();
       const usersData = await usersRes.json();
+      if (!tenantsData.success || !usersData.success) {
+        handleForceLogout('เซสชันของท่านหมดอายุ กรุณาเข้าสู่ระบบอีกครั้งเพื่อความปลอดภัย');
+        return;
+      }
       if (tenantsData.success) setTenants(tenantsData.tenants);
       if (usersData.success) setUsers(usersData.users);
     } catch (err) {
@@ -131,11 +144,25 @@ export default function App() {
   };
 
   useEffect(() => {
-    const savedToken = localStorage.getItem('adminToken');
+    // Purge any legacy localStorage token from older versions!
+    localStorage.removeItem('adminToken');
+    localStorage.removeItem('pdpa_super_token');
+
+    const savedToken = sessionStorage.getItem('adminToken');
     if (savedToken) {
-      setToken(savedToken);
-      setLoginStep('authenticated');
-      fetchData(savedToken);
+      fetch('/api/tenants', { headers: { 'Authorization': `Bearer ${savedToken}` } })
+        .then(res => {
+          if (res.status === 401 || res.status === 403) {
+            handleForceLogout();
+          } else {
+            setToken(savedToken);
+            setLoginStep('authenticated');
+            fetchData(savedToken);
+          }
+        })
+        .catch(() => {
+          handleForceLogout();
+        });
     }
   }, []);
 
@@ -155,7 +182,7 @@ export default function App() {
           setLoginStep('mfa');
         } else if (data.token) {
           setToken(data.token);
-          localStorage.setItem('adminToken', data.token);
+          sessionStorage.setItem('adminToken', data.token);
           setLoginStep('authenticated');
           fetchData(data.token);
         }
@@ -183,7 +210,7 @@ export default function App() {
       const data = await res.json();
       if (data.success && data.token) {
         setToken(data.token);
-        localStorage.setItem('adminToken', data.token);
+        sessionStorage.setItem('adminToken', data.token);
         setLoginStep('authenticated');
         fetchData(data.token);
       } else {
@@ -1235,13 +1262,7 @@ export default function App() {
             </button>
 
             <button
-              onClick={() => {
-                localStorage.removeItem('adminToken');
-                setToken(null);
-                setLoginStep('credentials');
-                setPassword('');
-                setMfaCode('');
-              }}
+              onClick={() => handleForceLogout('ท่านออกจากระบบ Super Administrator เรียบร้อยแล้ว')}
               className="bg-red-500/10 hover:bg-red-600 text-red-500 hover:text-white text-xs font-semibold px-4 py-2 rounded-lg transition border border-red-500/30 flex items-center gap-1.5"
             >
               <LogOut className="h-4 w-4" />

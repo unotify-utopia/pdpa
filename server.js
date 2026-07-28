@@ -466,7 +466,7 @@ app.post('/api/auth/login', async (req, res) => {
       orgId: user.org_id
     };
 
-    const token = jwt.sign(tokenPayload, JWT_SECRET, { expiresIn: '10h' });
+    const token = jwt.sign(tokenPayload, JWT_SECRET, { expiresIn: '2h' });
 
     // Note: Passed req as the last argument to capture real IP & User-Agent
     await addServerAuditLog('AUTH_LOGIN_SUCCESS', `เข้าสู่ระบบสำเร็จในบทบาท ${user.role.toUpperCase()}`, user, null, null, req);
