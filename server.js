@@ -182,24 +182,24 @@ const initDatabase = async () => {
       await dbPool.query("UPDATE users SET role = 'superadmin', mfa_enabled = true WHERE username = 'apichat.utopia@gmail.com' OR username = 'super.admin'");
     } catch (e) {}
 
-    // Run migration: Update old 'Complete' status to 'Documents Verified'
+    // Run migration: Update old 'Complete' status to 'Documents Verified' in both column and JSON data
     try {
-      await dbPool.query("UPDATE requests SET status = 'Documents Verified' WHERE status = 'Complete'");
+      const { rows } = await dbPool.query("SELECT id, data FROM requests WHERE status = 'Complete' OR data->>'status' = 'Complete'");
       
-      // Update history entries that have status 'Complete'
-      await dbPool.query(`
-        UPDATE requests 
-        SET status_history = (
-          SELECT jsonb_agg(
-            CASE 
-              WHEN elem->>'status' = 'Complete' THEN elem || '{"status": "Documents Verified"}'::jsonb
-              ELSE elem
-            END
-          )
-          FROM jsonb_array_elements(status_history) AS elem
-        )
-        WHERE status_history @> '[{"status": "Complete"}]'::jsonb
-      `);
+      for (const row of rows) {
+        if (row.data) {
+          row.data.status = 'Documents Verified';
+          if (Array.isArray(row.data.statusHistory)) {
+            row.data.statusHistory.forEach(h => {
+              if (h.status === 'Complete') {
+                h.status = 'Documents Verified';
+              }
+            });
+          }
+          await dbPool.query("UPDATE requests SET status = 'Documents Verified', data = $1 WHERE id = $2", [row.data, row.id]);
+        }
+      }
+      console.log('✅ Migrated Complete status to Documents Verified');
     } catch (e) {
       console.log('Migration error:', e);
     }
