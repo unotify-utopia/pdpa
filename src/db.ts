@@ -227,6 +227,8 @@ export const createRequest = (requestData: Omit<Request, 'id' | 'uuid' | 'tracki
     ...requestData,
     id: `req_${Date.now()}`,
     orgId: targetOrgId,
+    targetOrgId: requestData.targetOrgId || targetOrgId,
+    targetOrgName: requestData.targetOrgName || 'หน่วยงานผู้รับคำขอ PDPA',
     uuid,
     trackingNo,
     status: 'Submitted',

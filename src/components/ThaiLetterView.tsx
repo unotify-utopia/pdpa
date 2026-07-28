@@ -151,7 +151,7 @@ export const ThaiLetterView: React.FC<ThaiLetterViewProps> = ({
               LOGO
             </div>
             <div>
-              <span className="block font-bold text-xs uppercase tracking-wide">สถาบันคุ้มครองข้อมูลองค์กร</span>
+              <span className="block font-bold text-xs uppercase tracking-wide">{request.targetOrgName || 'หน่วยงานผู้รับคำขอ PDPA'}</span>
               <span className="block text-[11px] text-slate-500">PDPA Access Request Management System</span>
             </div>
           </div>

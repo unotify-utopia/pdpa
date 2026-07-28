@@ -684,6 +684,8 @@ export default function App() {
 
     const newReq = createRequest({
       orgId: selectedTargetOrgId,
+      targetOrgId: selectedTargetOrgId,
+      targetOrgName: organizations.find((o: any) => o.id === selectedTargetOrgId)?.nameTh || 'หน่วยงานผู้รับคำขอ PDPA',
       requesterType: reqType,
       requester: requesterForm,
       representative: reqType === 'representative' ? {
@@ -3080,7 +3082,7 @@ export default function App() {
                         {reqType === 'self' ? (
                           <WatermarkedUpload
                             label="สำเนาบัตรประชาชน/เอกสารยืนยันตัวตนเจ้าของข้อมูลส่วนบุคคล (JPEG, PNG, PDF)"
-                            orgName="สถาบันคุ้มครองข้อมูลองค์กร"
+                            orgName={organizations.find((o: any) => o.id === selectedTargetOrgId)?.nameTh || 'หน่วยงานผู้รับคำขอ'}
                             onFileProcessed={handleFileUpload}
                           />
                         ) : (
@@ -3088,14 +3090,14 @@ export default function App() {
                             {/* 1. Data Subject ID Card */}
                             <WatermarkedUpload
                               label="1. สำเนาบัตรประจำตัวประชาชนผู้มอบอำนาจ (เจ้าของข้อมูลส่วนบุคคล) (JPEG, PNG, PDF)"
-                              orgName="สถาบันคุ้มครองข้อมูลองค์กร"
+                              orgName={organizations.find((o: any) => o.id === selectedTargetOrgId)?.nameTh || 'หน่วยงานผู้รับคำขอ'}
                               onFileProcessed={(fileName, dataUrl) => handleFileUpload(`[ผู้มอบอำนาจ] ${fileName}`, dataUrl)}
                             />
 
                             {/* 2. Authorized Representative ID Card */}
                             <WatermarkedUpload
                               label="2. สำเนาบัตรประจำตัวประชาชนผู้รับมอบอำนาจ (Authorized Representative) (JPEG, PNG, PDF)"
-                              orgName="สถาบันคุ้มครองข้อมูลองค์กร"
+                              orgName={organizations.find((o: any) => o.id === selectedTargetOrgId)?.nameTh || 'หน่วยงานผู้รับคำขอ'}
                               onFileProcessed={(fileName, dataUrl) => handleFileUpload(`[ผู้รับมอบอำนาจ] ${fileName}`, dataUrl)}
                             />
 
@@ -3201,7 +3203,7 @@ export default function App() {
                 </div>
 
                 <div className="p-3 bg-brand-50 border border-brand-100 text-brand-800 rounded-xl text-[11px] leading-relaxed max-w-sm mx-auto">
-                  <strong>ข้อมูลประกอบระบบ Sandbox:</strong> <br />
+                  <strong>คำแนะนำเพื่อความปลอดภัยในการสืบค้นสถานะ:</strong> <br />
                   รหัสผ่านแบบใช้ครั้งเดียว (OTP) สำหรับยืนยันตัวตนเพื่อสืบค้นสถานะ จะส่งไปยังอีเมลของคุณ
                 </div>
 
@@ -3327,7 +3329,7 @@ export default function App() {
                     <span className="text-xs font-bold text-slate-800 block">อัปโหลดรูปภาพบัตรประชาชน / เอกสารเพิ่มเติมที่นี่:</span>
                     <WatermarkedUpload
                       label="แนบรูปถ่ายบัตรประชาชน หรือ เอกสารเพิ่มเติมที่ร้องขอ"
-                      orgName="สถาบันคุ้มครองข้อมูลองค์กร"
+                      orgName={organizations.find((o: any) => o.id === trackedRequest.targetOrgId)?.nameTh || trackedRequest.targetOrgName || 'หน่วยงานผู้รับคำขอ'}
                       onFileProcessed={handleUploadAdditionalTrack}
                     />
                   </div>
@@ -5449,7 +5451,7 @@ export default function App() {
           <div className="bg-white rounded-2xl border border-slate-200 p-6 max-w-sm w-full space-y-4 shadow-xl">
             <div className="text-center space-y-1">
               <Mail className="h-10 w-10 text-brand-600 mx-auto" />
-              <h4 className="font-bold text-slate-800 text-sm">การยืนยันรหัส OTP ในระบบ Sandbox</h4>
+              <h4 className="font-bold text-slate-800 text-sm">การยืนยันรหัส OTP เพื่อความปลอดภัย</h4>
               <p className="text-xs text-slate-400">
                 ระบบจะส่งรหัส OTP ไปที่ข้อมูลติดต่อ ({getContactInfo(trackedRequest).email})
               </p>

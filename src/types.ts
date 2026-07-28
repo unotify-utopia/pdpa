@@ -206,6 +206,8 @@ export interface MessageThread {
 export interface Request {
   id: string;
   orgId: string; // Tenant Identifier
+  targetOrgId?: string;
+  targetOrgName?: string;
   uuid: string;
   trackingNo: string;
   requesterType: RequesterType;
