@@ -17,10 +17,24 @@ interface User {
   fullName: string;
   email: string;
   role: string;
+  roles?: string[];
   department: string;
 }
 
 export default function App() {
+  
+  // SOD helper function
+  const calculateSodWarnings = (rolesList: string[]): string[] => {
+    const warnings: string[] = [];
+    if (rolesList.includes('dpo') && rolesList.includes('approver')) {
+      warnings.push('Conflict of Interest: DPO ไม่ควรเป็นผู้อนุมัติคำขอ (Approver) เพื่อรักษาสถานะผู้ประเมินอิสระ');
+    }
+    if (rolesList.includes('intake') && rolesList.includes('owner')) {
+      warnings.push('Data Pipeline Risk: ผู้รับเรื่อง (Intake) ไม่ควรเป็นผู้ดึงข้อมูล (Owner) เองทั้งหมดโดยไม่มีคนสอบทาน');
+    }
+    return warnings;
+  };
+
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const [loginStep, setLoginStep] = useState<'credentials' | 'mfa' | 'authenticated'>('credentials');
   
@@ -49,7 +63,7 @@ export default function App() {
   const [notifyModal, setNotifyModal] = useState<{ open: boolean; title: string; message: string; type: 'success' | 'warning' | 'error'; onConfirm?: () => void } | null>(null);
 
   const [resetPasswordModal, setResetPasswordModal] = useState<{ open: boolean; user: User | null; newPassword: string }>({ open: false, user: null, newPassword: '' });
-  const [editRoleModal, setEditRoleModal] = useState<{ open: boolean; user: User | null; newRole: string }>({ open: false, user: null, newRole: '' });
+  const [editRoleModal, setEditRoleModal] = useState<{ open: boolean; user: User | null; newRoles: string[] }>({ open: false, user: null, newRoles: [] });
 
 
   // Force Logout Helper (Cleans both sessionStorage & localStorage)
@@ -458,6 +472,7 @@ export default function App() {
     email: '',
     orgId: '',
     role: 'intake',
+    roles: ['intake'],
     department: ''
   });
 
@@ -469,6 +484,7 @@ export default function App() {
       email: '',
       orgId: selectedTenantForUsers || tenants[0]?.id || 'org_dopa',
       role: 'intake',
+    roles: ['intake'],
       department: ''
     });
     setShowAddUserModal(true);
@@ -488,7 +504,8 @@ export default function App() {
       username: newUserData.username.trim(),
       fullName: newUserData.fullName.trim(),
       email: newUserData.email.trim() || `${newUserData.username.trim()}@pdpa-system.or.th`,
-      role: newUserData.role,
+      role: newUserData.roles[0] || 'intake',
+      roles: newUserData.roles,
       department: newUserData.department.trim() || 'หน่วยงานผู้ปฏิบัติงาน'
     };
 
@@ -537,11 +554,13 @@ export default function App() {
   };
 
   const handleEditRole = (u: User) => {
-    setEditRoleModal({ open: true, user: u, newRole: u.role });
+    let currentRoles = u.roles || [];
+    if (currentRoles.length === 0) currentRoles = [u.role];
+    setEditRoleModal({ open: true, user: u, newRoles: currentRoles });
   };
 
   const submitEditRole = async () => {
-    if (!editRoleModal.user || !editRoleModal.newRole) return;
+    if (!editRoleModal.user || editRoleModal.newRoles.length === 0) return;
     try {
       const res = await fetch(`/api/users/${editRoleModal.user.id}`, {
         method: 'PUT',
@@ -549,13 +568,13 @@ export default function App() {
         body: JSON.stringify({
           ...editRoleModal.user,
           fullNameTh: editRoleModal.user.fullName,
-          role: editRoleModal.newRole,
-          roles: [editRoleModal.newRole]
+          role: editRoleModal.newRoles[0],
+          roles: editRoleModal.newRoles
         })
       });
       if (res.ok) {
         showNotify(`อัปเดตสิทธิ์สำหรับ "${editRoleModal.user.username}" สำเร็จเรียบร้อยแล้ว`, 'success', 'อัปเดตสิทธิ์สำเร็จ');
-        setEditRoleModal({ open: false, user: null, newRole: '' });
+        setEditRoleModal({ open: false, user: null, newRoles: [] });
         if (token) fetchData(token); // refresh
       } else {
         showNotify('เกิดข้อผิดพลาดในการเปลี่ยนสิทธิ์', 'error', 'ผิดพลาด');
@@ -2559,7 +2578,7 @@ export default function App() {
                 <Shield className="h-5 w-5 text-blue-500" />
                 <span>แก้ไขบทบาทสิทธิ์ (Edit Role)</span>
               </h3>
-              <button onClick={() => setEditRoleModal({ open: false, user: null, newRole: '' })} className="p-1 hover:bg-slate-800 rounded-lg text-slate-500 transition">
+              <button onClick={() => setEditRoleModal({ open: false, user: null, newRoles: [] })} className="p-1 hover:bg-slate-800 rounded-lg text-slate-500 transition">
                 <X className="h-5 w-5" />
               </button>
             </div>
@@ -2568,24 +2587,70 @@ export default function App() {
                 <label className="block text-xs font-semibold mb-1 text-slate-400">ผู้ใช้งาน</label>
                 <div className="text-sm font-bold text-emerald-500">{editRoleModal.user.username} <span className="text-slate-400 font-normal">({editRoleModal.user.fullName})</span></div>
               </div>
+              
               <div>
-                <label className="block text-xs font-semibold mb-1 text-slate-400">เลือกบทบาทใหม่</label>
-                <select
-                  value={editRoleModal.newRole}
-                  onChange={(e) => setEditRoleModal({ ...editRoleModal, newRole: e.target.value })}
-                  className={`w-full text-sm px-3 py-2 rounded-lg border outline-none focus:border-blue-500 transition ${isDark ? 'bg-slate-950 border-slate-800 text-slate-300' : 'bg-white border-slate-300'}`}
-                >
-                  <option value="intake">INTAKE (เจ้าหน้าที่รับเรื่อง)</option>
-                  <option value="owner">OWNER (ผู้ดูแลระบบข้อมูล)</option>
-                  <option value="dpo">DPO (เจ้าหน้าที่คุ้มครองข้อมูลส่วนบุคคล)</option>
-                  <option value="approver">APPROVER (ผู้อนุมัติ/ผู้บริหาร)</option>
-                  <option value="admin">ADMIN (ผู้ดูแลระบบหน่วยงาน)</option>
-                </select>
+                <label className="block text-xs font-semibold mb-2 text-slate-400">บทบาทสิทธิ์ (Roles)</label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {Object.entries({
+                    intake: 'INTAKE (เจ้าหน้าที่รับเรื่อง)',
+                    owner: 'OWNER (ผู้ดูแลระบบข้อมูล)',
+                    dpo: 'DPO (เจ้าหน้าที่คุ้มครองข้อมูลส่วนบุคคล)',
+                    approver: 'APPROVER (ผู้อนุมัติ/ผู้บริหาร)',
+                    admin: 'ADMIN (ผู้ดูแลระบบหน่วยงาน)'
+                  }).map(([roleKey, roleLabel]) => {
+                    const isChecked = editRoleModal.newRoles.includes(roleKey);
+                    return (
+                      <label
+                        key={roleKey}
+                        className={`flex items-center gap-2.5 p-3 rounded-xl border cursor-pointer transition select-none ${
+                          isChecked
+                            ? (isDark ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400' : 'bg-emerald-50/70 border-emerald-500 font-bold text-emerald-900')
+                            : (isDark ? 'bg-slate-900 border-slate-700 text-slate-400 hover:bg-slate-800' : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100')
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={(e) => {
+                            let nextRoles = [...editRoleModal.newRoles];
+                            if (e.target.checked) {
+                              nextRoles.push(roleKey);
+                            } else {
+                              nextRoles = nextRoles.filter(r => r !== roleKey);
+                            }
+                            if (nextRoles.length === 0) nextRoles = ['intake'];
+                            setEditRoleModal({ ...editRoleModal, newRoles: nextRoles });
+                          }}
+                          className="h-4 w-4 rounded text-emerald-600 focus:ring-emerald-500"
+                        />
+                        <span className="text-xs">{roleLabel}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+                {/* Real-time SOD Warning */}
+                {(() => {
+                  const warnings = calculateSodWarnings(editRoleModal.newRoles);
+                  if (warnings.length > 0) {
+                    return (
+                      <div className={`mt-3 p-3 rounded-xl border-l-4 space-y-1 ${isDark ? 'bg-amber-500/10 border-amber-500 text-amber-500' : 'bg-amber-50 border-amber-500 text-amber-800'}`}>
+                        {warnings.map((w, i) => (
+                          <div key={i} className="flex items-start gap-2 text-[11px] font-bold">
+                            <AlertCircle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+                            <span>{w}</span>
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
               </div>
+
             </div>
             <div className={`px-6 py-4 border-t flex justify-end gap-3 ${isDark ? 'border-slate-800 bg-slate-900/50' : 'border-slate-100 bg-slate-50'}`}>
               <button
-                onClick={() => setEditRoleModal({ open: false, user: null, newRole: '' })}
+                onClick={() => setEditRoleModal({ open: false, user: null, newRoles: [] })}
                 className={`px-4 py-2 rounded-lg text-sm font-bold transition ${isDark ? 'hover:bg-slate-800 text-slate-400' : 'hover:bg-slate-200 text-slate-600'}`}
               >
                 ยกเลิก
