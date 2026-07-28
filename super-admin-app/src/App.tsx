@@ -1524,9 +1524,13 @@ export default function App() {
                       </td>
                       <td className="p-3 font-mono text-[11px] text-slate-400">{u.orgId}</td>
                       <td className="p-3">
-                        <span className="bg-emerald-500/20 text-emerald-500 border border-emerald-500/30 px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase">
-                          {u.role}
-                        </span>
+                        <div className="flex flex-wrap gap-1">
+                          {(u.roles && u.roles.length > 0 ? u.roles : [u.role]).map((r) => (
+                            <span key={r} className="bg-emerald-500/20 text-emerald-500 border border-emerald-500/30 px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase">
+                              {r}
+                            </span>
+                          ))}
+                        </div>
                       </td>
                       <td className="p-3 text-center flex items-center justify-center gap-2">
                         <button
