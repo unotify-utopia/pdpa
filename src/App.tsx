@@ -2927,17 +2927,23 @@ export default function App() {
                         <div className="space-y-1">
                           <label className="text-xs font-medium text-slate-700 flex justify-between">
                             <span>ขอบเขตวันและเวลาเริ่มต้นข้อมูล</span>
-                            <span className="text-[10px] text-slate-400">ไม่เกินวันปัจจุบัน</span>
+                            <span className="text-[10px] text-slate-400">
+                              {scopeForm.timeframeEnd ? `ไม่เกิน ${scopeForm.timeframeEnd}` : 'ไม่เกินวันปัจจุบัน'}
+                            </span>
                           </label>
                           <input
                             type="date"
-                            max={new Date().toLocaleDateString('sv-SE')}
+                            max={scopeForm.timeframeEnd || new Date().toLocaleDateString('sv-SE')}
                             value={scopeForm.timeframeStart}
                             onChange={(e) => {
                               const selected = e.target.value;
                               const today = new Date().toLocaleDateString('sv-SE');
                               if (selected > today) {
                                 showNotify('⚠️ ไม่สามารถเลือกวันที่เริ่มต้นเกิน "วันที่ปัจจุบัน" ได้');
+                                return;
+                              }
+                              if (scopeForm.timeframeEnd && selected > scopeForm.timeframeEnd) {
+                                showNotify('⚠️ "วันที่เริ่มต้น" ต้องไม่ล่วงหน้ากว่า "วันที่สิ้นสุด" กรุณาเลือกวันที่ให้ถูกต้อง');
                                 return;
                               }
                               setScopeForm({...scopeForm, timeframeStart: selected});
@@ -2948,10 +2954,13 @@ export default function App() {
                         <div className="space-y-1">
                           <label className="text-xs font-medium text-slate-700 flex justify-between">
                             <span>ขอบเขตวันและเวลาสิ้นสุดข้อมูล</span>
-                            <span className="text-[10px] text-slate-400">ไม่เกินวันปัจจุบัน</span>
+                            <span className="text-[10px] text-slate-400">
+                              {scopeForm.timeframeStart ? `ตั้งแต่ ${scopeForm.timeframeStart} ถึงปัจจุบัน` : 'ไม่เกินวันปัจจุบัน'}
+                            </span>
                           </label>
                           <input
                             type="date"
+                            min={scopeForm.timeframeStart || undefined}
                             max={new Date().toLocaleDateString('sv-SE')}
                             value={scopeForm.timeframeEnd}
                             onChange={(e) => {
@@ -2959,6 +2968,10 @@ export default function App() {
                               const today = new Date().toLocaleDateString('sv-SE');
                               if (selected > today) {
                                 showNotify('⚠️ ไม่สามารถเลือกวันที่สิ้นสุดเกิน "วันที่ปัจจุบัน" ได้');
+                                return;
+                              }
+                              if (scopeForm.timeframeStart && selected < scopeForm.timeframeStart) {
+                                showNotify('⚠️ "วันที่สิ้นสุด" ต้องไม่ก่อนหน้า "วันที่เริ่มต้น" กรุณาเลือกวันที่ให้ถูกต้อง');
                                 return;
                               }
                               setScopeForm({...scopeForm, timeframeEnd: selected});
