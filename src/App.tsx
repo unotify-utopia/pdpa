@@ -271,7 +271,7 @@ export default function App() {
   // Fetch backend users
   const reloadUsers = () => {
     const user = activeUser || getCurrentUser();
-    if (user && (user.role === 'admin' || user.role === 'superadmin')) {
+    if (user) {
       const token = sessionStorage.getItem('pdpa_token') || sessionStorage.getItem('pdpa_jwt_token');
       if (token) {
         fetch('/api/users', {
@@ -2128,7 +2128,7 @@ export default function App() {
                         ))}
                       </ul>
                       <p className="text-[10px] text-amber-700 pt-1">
-                        * สามารถบันทึกข้อมูลได้ แต่ระบบจะทำเครื่องหมายแจ้งเตือนความเสี่ยงในรายงาน Audit
+                        * ไม่สามารถบันทึกข้อมูลได้ กรุณาปรับเปลี่ยนบทบาทสิทธิ์ให้ถูกต้องตามหลักการคานอำนาจ
                       </p>
                     </div>
                   );
@@ -2159,7 +2159,7 @@ export default function App() {
                             .then((res) => res.json())
                             .then((data) => {
                               if (data.success) {
-                                showNotify('รหัสผ่านถูกตั้งค่าใหม่เป็น 123456 เรียบร้อยแล้ว');
+                                showNotify('รหัสผ่านถูกตั้งค่าใหม่เป็น 123456 เรียบร้อยแล้ว', 'success');
                               }
                             });
                         }
@@ -2212,7 +2212,11 @@ export default function App() {
                   onClick={async () => {
                     const token = sessionStorage.getItem('pdpa_token') || sessionStorage.getItem('pdpa_jwt_token');
                     if (!userForm.username || !userForm.fullNameTh) {
-                      showNotify('กรุณากรอกรหัสผู้ใช้ และชื่อ-นามสกุลให้ครบถ้วน');
+                      showNotify('กรุณากรอกรหัสผู้ใช้ และชื่อ-นามสกุลให้ครบถ้วน', 'warning');
+                      return;
+                    }
+                    if (calculateSodWarnings(userForm.roles).length > 0) {
+                      showNotify('ไม่สามารถบันทึกได้ เนื่องจากมีสิทธิ์ที่ขัดแย้งกัน (SOD Conflict) กรุณาปรับเปลี่ยนบทบาทสิทธิ์ให้ถูกต้อง', 'error');
                       return;
                     }
                     if (!token) {
@@ -3596,7 +3600,7 @@ export default function App() {
                   { id: 'audit', label: 'รายงานบันทึกตรวจสอบสิทธิ์', icon: Lock, roles: ['admin', 'auditor', 'dpo'] }
                 ].map((item) => {
                   const userRoles = activeUser.roles || [activeUser.role];
-                  const hasAccess = item.roles.some((r) => userRoles.includes(r as Role));
+                  const hasAccess = activeUser.role === 'superadmin' || item.roles.some((r) => userRoles.includes(r as Role));
                   if (!hasAccess) return null;
 
                   const isActive = internalTab === item.id;
@@ -4119,11 +4123,13 @@ export default function App() {
                                   className="w-full text-xs border border-slate-300 rounded p-1.5 bg-white"
                                 >
                                   <option value="">-- โปรดเลือกระบบ --</option>
-                                  <option value="ระบบบริหารความสัมพันธ์ลูกค้า (CRM)">ระบบ CRM</option>
-                                  <option value="ระบบสมาชิกเว็บไซต์และ Mobile App">ระบบสมาชิก Web/App</option>
-                                  <option value="ระบบทรัพยากรบุคคล (HRIS)">ระบบ HR (สำหรับประวัติงาน)</option>
-                                  <option value="ระบบการเงินและบัญชี">ระบบการเงิน</option>
-                                  <option value="กล้องวงจรปิดนิรภัย (CCTV)">กล้อง CCTV</option>
+                                  {activeRequestObj.requestDetails.targetSystems && activeRequestObj.requestDetails.targetSystems.length > 0 ? (
+                                    activeRequestObj.requestDetails.targetSystems.map((sys, idx) => (
+                                      <option key={idx} value={sys}>{sys}</option>
+                                    ))
+                                  ) : (
+                                    <option value="สืบค้นทุกระบบที่บันทึกข้อมูลบุคคล">สืบค้นทุกระบบที่บันทึกข้อมูลบุคคล</option>
+                                  )}
                                 </select>
                               </div>
                               
@@ -4134,9 +4140,12 @@ export default function App() {
                                   onChange={(e) => setTaskAssignee(e.target.value)}
                                   className="w-full text-xs border border-slate-300 rounded p-1.5 bg-white"
                                 >
-                                  <option value="ธนาธร ระบบลูกค้า">ธนาธร (ฝ่าย CRM)</option>
-                                  <option value="สมรศรี งานบุคคล">สมรศรี (ฝ่าย HR)</option>
-                                  <option value="กิตติพงษ์ รับเรื่อง">กิตติพงษ์ (ความปลอดภัย CCTV)</option>
+                                  <option value="">-- เลือกผู้รับผิดชอบ --</option>
+                                  {backendUsers
+                                    .filter(u => u.orgId === currentViewOrgId)
+                                    .map(u => (
+                                      <option key={u.id} value={u.fullNameTh}>{u.fullNameTh} ({(u.roles && u.roles.length > 0 ? u.roles : [u.role]).join(', ')})</option>
+                                    ))}
                                 </select>
                               </div>
 
@@ -4232,6 +4241,7 @@ export default function App() {
                     {['dpo', 'admin'].includes(activeUser.role) && (
                       <div className={"space-y-4 " + (activeUser.role === 'dpo' ? 'order-4' : 'order-5')}>
                         <RedactionCanvas
+                          request={activeRequestObj}
                           onRedactApplied={(record) => handleRedactionApplied(activeRequestObj.id, record)}
                           onSaveAll={() => handleSaveRedactionAll(activeRequestObj.id)}
                         />

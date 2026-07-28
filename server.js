@@ -1197,7 +1197,7 @@ app.post('/api/super-admin/tenants/:id/offboard-export', authenticateJWT, requir
 });
 
 // GET /api/users
-app.get('/api/users', authenticateJWT, requireRole(['admin']), async (req, res) => {
+app.get('/api/users', authenticateJWT, async (req, res) => {
   try {
     // Hide superadmin from the list so normal admins cannot see or manage them
     const { rows } = await dbPool.query('SELECT id, org_id, username, full_name_th as "fullName", full_name_th as "fullNameTh", full_name_en as "fullNameEn", email, role, roles, department FROM users WHERE role != $1 ORDER BY created_at ASC', ['superadmin']);
