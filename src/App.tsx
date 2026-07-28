@@ -434,15 +434,23 @@ export default function App() {
     return { email: req.requester.email, phone: req.requester.phone };
   };
 
-  const triggerRealOtp = async (email: string, phone: string, trackingNo?: string) => {
+  const triggerRealOtp = async (email: string, phone: string, trackingNo?: string): Promise<boolean> => {
     try {
-      await fetch('/api/public/send-otp', {
+      const res = await fetch('/api/public/send-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, phone, reference: trackingNo })
       });
+      const data = await res.json();
+      if (!data.success) {
+        showNotify(data.message || 'ไม่สามารถส่งรหัส OTP ได้', 'error', 'เกิดข้อผิดพลาด');
+        return false;
+      }
+      return true;
     } catch (err) {
       console.error('Failed to send OTP via SMTP', err);
+      showNotify('เกิดข้อผิดพลาดในการเชื่อมต่อเพื่อส่ง OTP', 'error', 'เกิดข้อผิดพลาด');
+      return false;
     }
   };
 
@@ -906,7 +914,7 @@ export default function App() {
   const [searchLookupResults, setSearchLookupResults] = useState<Request[] | null>(null);
 
   // --- PUBLIC TRACKING LOGIC (Smart Keyword-Based Search) ---
-  const handleTrackSubmit = (e?: React.FormEvent, customKeyword?: string) => {
+  const handleTrackSubmit = async (e?: React.FormEvent, customKeyword?: string) => {
     if (e) e.preventDefault();
     setTrackingError(null);
     setSearchLookupResults(null);
@@ -917,41 +925,41 @@ export default function App() {
       return;
     }
 
-    const allReqs = getRequests();
-
-    // 1. Match Exact Tracking Number
-    let exactMatches = allReqs.filter(r => r.trackingNo.toUpperCase() === query);
-
-    if (exactMatches.length === 1) {
-      setTrackNo(exactMatches[0].trackingNo);
-      setTrackedRequest(exactMatches[0]);
-      setShowSearchLookupModal(false);
-      setOtpSent(false);
-      setShowOtpModal(true);
-      return;
-    }
-
-    // 2. Match Keyword partial or numeric suffix (e.g., '0008', '8', 'DOPA')
-    let partialMatches = allReqs.filter(r => {
-      const tNo = r.trackingNo.toUpperCase();
-      // Check if query is in tracking number, or numeric suffix match
-      if (tNo.includes(query)) return true;
-      const cleanDigitsQuery = query.replace(/[^0-9]/g, '');
-      if (cleanDigitsQuery.length > 0) {
-        const tNoDigits = tNo.replace(/[^0-9]/g, '');
-        return tNoDigits.endsWith(cleanDigitsQuery);
+    try {
+      const res = await fetch('/api/public/requests/search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ keyword: query })
+      });
+      const data = await res.json();
+      
+      if (!data.success) {
+        setTrackingError(data.message || 'เกิดข้อผิดพลาดในการค้นหา');
+        return;
       }
-      return false;
-    });
+      
+      const matches = data.results;
 
-    if (partialMatches.length === 0) {
-      setTrackingError(`ไม่พบข้อมูลคำร้องขอที่มีรหัสหรือคำค้นหา "${query}" ในระบบ`);
-      return;
+      if (matches.length === 0) {
+        setTrackingError(`ไม่พบข้อมูลคำร้องขอที่มีรหัสหรือคำค้นหา "${query}" ในระบบ`);
+        return;
+      }
+
+      if (matches.length === 1) {
+        setTrackNo(matches[0].trackingNo);
+        setTrackedRequest(matches[0]);
+        setShowSearchLookupModal(false);
+        setOtpSent(false);
+        setShowOtpModal(true);
+        return;
+      }
+
+      // Multiple matches
+      setSearchLookupResults(matches);
+      setShowSearchLookupModal(true);
+    } catch (err) {
+      setTrackingError('ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์เพื่อค้นหาข้อมูลได้');
     }
-
-    // ALWAYS show the list for partial matches, even if there's only 1 match.
-    // This allows the user to confirm if it's the right one.
-    setSearchLookupResults(partialMatches);
   };
 
   const handleVerifyOtp = async (e: React.FormEvent) => {
@@ -1010,7 +1018,7 @@ export default function App() {
   };
 
   // --- SECURE DOWNLOAD VERIFICATION (Section 3.9) ---
-  const handleDownloadCheck = (uuid: string) => {
+  const handleDownloadCheck = async (uuid: string) => {
     const req = requests.find(r => r.uuid === uuid);
     if (!req) {
       setDownloadError('ลิงก์ดาวน์โหลดไม่ถูกต้องหรือหมดอายุการใช้งานแล้ว');
@@ -1027,9 +1035,11 @@ export default function App() {
     setDownloadRequest(req);
     setDownloadToken(uuid);
     setDownloadError(null);
-    triggerRealOtp(req.requester.email, req.requester.phone, req.trackingNo);
-    setShowDownloadOtpModal(true);
-    setView('download');
+    const success = await triggerRealOtp(req.requester.email, req.requester.phone, req.trackingNo);
+    if (success) {
+      setShowDownloadOtpModal(true);
+      setView('download');
+    }
   };
 
   const handleVerifyDownloadOtp = async (e: React.FormEvent) => {
@@ -5486,10 +5496,12 @@ export default function App() {
               <div className="space-y-3 pt-2">
                 <button
                   type="button"
-                  onClick={() => {
+                  onClick={async () => {
                     const contact = getContactInfo(trackedRequest);
-                    triggerRealOtp(contact.email, contact.phone, trackedRequest.trackingNo);
-                    setOtpSent(true);
+                    const success = await triggerRealOtp(contact.email, contact.phone, trackedRequest.trackingNo);
+                    if (success) {
+                      setOtpSent(true);
+                    }
                   }}
                   className="w-full bg-brand-600 hover:bg-brand-700 text-white font-bold py-2.5 rounded-lg text-sm transition"
                 >

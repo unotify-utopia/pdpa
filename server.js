@@ -1471,6 +1471,51 @@ app.post('/api/public/verify-otp', async (req, res) => {
   }
 });
 
+// POST /api/public/requests/search (Public tracking lookup)
+app.post('/api/public/requests/search', async (req, res) => {
+  try {
+    const { keyword } = req.body;
+    if (!keyword || keyword.trim() === '') {
+      return res.status(400).json({ success: false, message: 'กรุณากรอกคำค้นหา' });
+    }
+
+    const query = keyword.trim().toUpperCase();
+    const cleanDigits = query.replace(/[^0-9]/g, '');
+
+    const { rows } = await dbPool.query('SELECT data FROM requests ORDER BY created_at DESC');
+    
+    // Filter matching requests
+    const matches = rows.map(r => r.data).filter(r => {
+      const tNo = (r.trackingNo || '').toUpperCase();
+      if (tNo === query) return true;
+      if (tNo.includes(query)) return true;
+      if (cleanDigits.length > 0 && tNo.replace(/[^0-9]/g, '').endsWith(cleanDigits)) return true;
+      return false;
+    });
+
+    // Return safe data (include requester type, rep, email, phone so frontend can request OTP)
+    const safeMatches = matches.map(reqObj => ({
+      id: reqObj.id,
+      trackingNo: reqObj.trackingNo,
+      status: reqObj.status,
+      submissionDate: reqObj.submissionDate,
+      requester: {
+        firstName: reqObj.requester?.firstName || '',
+        lastName: reqObj.requester?.lastName || '',
+        email: reqObj.requester?.email || '',
+        phone: reqObj.requester?.phone || ''
+      },
+      requesterType: reqObj.requesterType,
+      representative: reqObj.representative
+    }));
+
+    res.json({ success: true, results: safeMatches });
+  } catch (err) {
+    console.error('Error searching public requests:', err);
+    res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดในการค้นหา' });
+  }
+});
+
 // GET /api/public/track/:trackingNo
 app.get('/api/public/track/:trackingNo', async (req, res) => {
   try {
