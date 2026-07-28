@@ -35,7 +35,7 @@ export default function App() {
   const [exportFormat, setExportFormat] = useState<'json' | 'csv'>('json');
   const [masterConfirmText, setMasterConfirmText] = useState('');
   const [exportingLoading, setExportingLoading] = useState(false);
-  const [offboardCertModal, setOffboardCertModal] = useState<{ open: boolean; tenant: Tenant; checksum: string; exportedAt: string; stats: { totalUsers: number; totalRequests: number; totalAuditLogs: number; packageSizeBytes: number }; payload: any; handoverMemoText?: string } | null>(null);
+  const [offboardCertModal, setOffboardCertModal] = useState<{ open: boolean; tenant: Tenant; checksum: string; exportedAt: string; stats: { totalUsers: number; totalRequests: number; totalAuditLogs: number; packageSizeBytes: number }; payload: any; handoverMemoText?: string; exportFormat?: 'json' | 'csv' } | null>(null);
   const [memoTemplateModalOpen, setMemoTemplateModalOpen] = useState(false);
   const [memoTemplateText, setMemoTemplateText] = useState('');
   const [memoTemplateLoading, setMemoTemplateLoading] = useState(false);
@@ -501,6 +501,288 @@ export default function App() {
     }
   };
 
+  const handleDownloadArchive = (modal: any) => {
+    if (!modal || !modal.payload) return;
+    if (modal.exportFormat === 'csv') {
+      let csvContent = `PDPA OFFBOARDING SUMMARY MANIFEST\n`;
+      csvContent += `Tenant ID,${modal.payload.meta.tenantId}\n`;
+      csvContent += `Tenant Name (TH),${modal.payload.meta.tenantNameTh}\n`;
+      csvContent += `Export Timestamp,${modal.payload.meta.generatedAt}\n`;
+      csvContent += `SHA-256 Checksum,${modal.checksum}\n\n`;
+      csvContent += `SUMMARY STATS\n`;
+      csvContent += `Total Staff Accounts,${modal.stats.totalUsers}\n`;
+      csvContent += `Total PDPA Requests,${modal.stats.totalRequests}\n`;
+      csvContent += `Total Audit Logs,${modal.stats.totalAuditLogs}\n`;
+
+      const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${modal.tenant.id}_PDPA_OFFBOARDING_MANIFEST_${new Date().toISOString().split('T')[0]}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } else {
+      const jsonStr = JSON.stringify(modal.payload, null, 2);
+      const blob = new Blob([jsonStr], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${modal.tenant.id}_PDPA_OFFBOARDING_ARCHIVE_${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+    showNotify('ดาวน์โหลดไฟล์ชุดข้อมูลส่งมอบเรียบร้อยแล้ว', 'success', 'ดาวน์โหลดข้อมูลสำเร็จ');
+  };
+
+  const handleOpenHandoverPDF = (modal: any) => {
+    if (!modal) return;
+    const { tenant, checksum, exportedAt, stats, handoverMemoText } = modal;
+    const refNo = `OFFBOARD-${tenant.id.toUpperCase()}-${new Date(exportedAt).toISOString().split('T')[0]}`;
+    const dateFormatted = new Date(exportedAt).toLocaleDateString('th-TH', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+
+    const pdfWindow = window.open('', '_blank', 'width=950,height=1150');
+    if (!pdfWindow) {
+      showNotify('กรุณาอนุญาต Pop-up สำหรับสร้างเอกสาร PDF', 'error', 'เปิดหน้าต่างไม่สำเร็จ');
+      return;
+    }
+
+    const htmlContent = `
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <title>หนังสือบันทึกข้อตกลงการส่งมอบข้อมูลและสิ้นสุดสัญญา - ${tenant.id}</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&display=swap');
+    @page {
+      size: A4;
+      margin: 20mm;
+    }
+    body {
+      font-family: 'Sarabun', sans-serif;
+      color: #1e293b;
+      margin: 0;
+      padding: 24px;
+      line-height: 1.6;
+      background: #ffffff;
+    }
+    .header {
+      text-align: center;
+      border-bottom: 2px solid #0f172a;
+      padding-bottom: 16px;
+      margin-bottom: 24px;
+    }
+    .title {
+      font-size: 22px;
+      font-weight: 700;
+      color: #0f172a;
+      margin-bottom: 4px;
+    }
+    .subtitle {
+      font-size: 15px;
+      color: #475569;
+      font-weight: 500;
+    }
+    .ref-box {
+      display: flex;
+      justify-content: space-between;
+      font-size: 14px;
+      color: #475569;
+      margin-bottom: 24px;
+      padding: 10px 14px;
+      background: #f8fafc;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+    }
+    .section-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: #0f172a;
+      margin-top: 24px;
+      margin-bottom: 12px;
+      border-left: 4px solid #10b981;
+      padding-left: 10px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 24px;
+      font-size: 14px;
+    }
+    th, td {
+      border: 1px solid #cbd5e1;
+      padding: 10px 14px;
+      text-align: left;
+    }
+    th {
+      background-color: #f1f5f9;
+      font-weight: 600;
+      color: #334155;
+      width: 38%;
+    }
+    .hash-box {
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+      font-weight: 700;
+      background: #0f172a;
+      color: #34d399;
+      padding: 16px;
+      border-radius: 8px;
+      word-break: break-all;
+      border: 1px solid #334155;
+      margin-bottom: 24px;
+    }
+    .memo-content {
+      font-size: 15px;
+      color: #334155;
+      background: #f8fafc;
+      border: 1px solid #cbd5e1;
+      padding: 18px;
+      border-radius: 8px;
+      white-space: pre-wrap;
+      margin-bottom: 36px;
+      line-height: 1.8;
+    }
+    .signatures {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 50px;
+      page-break-inside: avoid;
+    }
+    .sig-block {
+      width: 45%;
+      text-align: center;
+      font-size: 14px;
+    }
+    .sig-line {
+      margin-top: 65px;
+      border-bottom: 1px dotted #475569;
+      margin-bottom: 8px;
+    }
+    @media print {
+      body { padding: 0; }
+      .no-print { display: none; }
+    }
+    .print-btn-bar {
+      text-align: right;
+      margin-bottom: 20px;
+    }
+    .btn {
+      background: #10b981;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      font-size: 15px;
+      font-weight: 700;
+      border-radius: 8px;
+      cursor: pointer;
+      font-family: 'Sarabun', sans-serif;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+  </style>
+</head>
+<body>
+  <div class="print-btn-bar no-print">
+    <button class="btn" onclick="window.print()">🖨️ พิมพ์ / บันทึกเป็นไฟล์ PDF (Print to PDF)</button>
+  </div>
+
+  <div class="header">
+    <div class="title">หนังสือบันทึกข้อตกลงการส่งมอบข้อมูลและสิ้นสุดสัญญาการใช้บริการ</div>
+    <div class="subtitle">PDPA DATA OFFBOARDING &amp; HANDOVER MEMORANDUM</div>
+  </div>
+
+  <div class="ref-box">
+    <div><b>รหัสอ้างอิงเอกสาร:</b> ${refNo}</div>
+    <div><b>วันที่ส่งมอบ:</b> ${dateFormatted}</div>
+  </div>
+
+  <div class="section-title">1. รายละเอียดหน่วยงานผู้ควบคุมข้อมูล (Data Controller)</div>
+  <table>
+    <tr>
+      <th>รหัสผู้เช่าระบบ (Tenant ID)</th>
+      <td><b>${tenant.id}</b></td>
+    </tr>
+    <tr>
+      <th>ชื่อหน่วยงาน / องค์กร</th>
+      <td><b>${tenant.nameTh} (${tenant.name})</b></td>
+    </tr>
+    <tr>
+      <th>วันที่สร้างแพ็กเกจส่งมอบ</th>
+      <td>${new Date(exportedAt).toLocaleString('th-TH')}</td>
+    </tr>
+  </table>
+
+  <div class="section-title">2. รายการส่งมอบชุดข้อมูลระบบ PDPA (Handover Manifest)</div>
+  <table>
+    <tr>
+      <th>จำนวนบัญชีผู้ใช้งาน (Staff Accounts)</th>
+      <td>${stats.totalUsers} บัญชี</td>
+    </tr>
+    <tr>
+      <th>จำนวนคำขอใช้สิทธิ์ตามกฎหมาย (PDPA Requests)</th>
+      <td>${stats.totalRequests} รายการ</td>
+    </tr>
+    <tr>
+      <th>จำนวนบันทึกความปลอดภัย (Security Audit Logs)</th>
+      <td>${stats.totalAuditLogs} รายการ</td>
+    </tr>
+    <tr>
+      <th>ขนาดชุดข้อมูลรวม (Archive Package Size)</th>
+      <td>${(stats.packageSizeBytes / 1024).toFixed(2)} KB</td>
+    </tr>
+  </table>
+
+  <div class="section-title">3. รหัสรับรองความถูกต้องแท้จริงทางอิเล็กทรอนิกส์ (SHA-256 Checksum)</div>
+  <div class="hash-box">${checksum}</div>
+
+  <div class="section-title">4. ข้อความบันทึกข้อตกลงตามกฎหมาย PDPA พ.ศ. 2562</div>
+  <div class="memo-content">${
+    handoverMemoText ||
+    `หนังสือบันทึกข้อตกลงฉบับนี้จัดทำขึ้นเพื่อเป็นหลักฐานยืนยันว่า หน่วยงานผู้ให้บริการระบบบริหารจัดการ PDPA (Service Provider / Data Processor) ได้ดำเนินการส่งมอบชุดข้อมูลทั้งหมดของหน่วยงาน ${tenant.nameTh} (${tenant.id}) รวมถึงข้อมูลคำขอสิทธิ์ของเจ้าของข้อมูลส่วนบุคคล (Data Subjects) และประวัติความปลอดภัย (Audit Logs) ครบถ้วนถูกต้อง
+
+โดยมีรหัสรับรองความถูกต้อง (SHA-256 Checksum) ที่ระบุข้างต้นเป็นเครื่องมือตรวจสอบยืนยันว่าข้อมูลมิได้ถูกแก้ไขเปลี่ยนแปลง และผู้ให้บริการจะดำเนินการทำลายชุดข้อมูลสำรองออกจากเซิร์ฟเวอร์ตามระยะเวลาที่กำหนดตาม พ.ร.บ. คุ้มครองข้อมูลส่วนบุคคล พ.ศ. 2562`
+  }</div>
+
+  <div class="signatures">
+    <div class="sig-block">
+      <div class="sig-line"></div>
+      <div>(......................................................)</div>
+      <div style="margin-top:4px; font-weight:600;">ผู้ส่งมอบข้อมูล (Super Administrator)</div>
+      <div style="font-size:13px; color:#64748b; margin-top:2px;">ผู้ดูแลระบบกลาง / Service Provider</div>
+    </div>
+    <div class="sig-block">
+      <div class="sig-line"></div>
+      <div>(......................................................)</div>
+      <div style="margin-top:4px; font-weight:600;">ผู้รับมอบข้อมูล (Data Controller)</div>
+      <div style="font-size:13px; color:#64748b; margin-top:2px;">ตัวแทนผู้มีอำนาจของหน่วยงาน ${tenant.nameTh}</div>
+    </div>
+  </div>
+
+  <script>
+    window.onload = function() {
+      setTimeout(function() {
+        window.print();
+      }, 400);
+    };
+  </script>
+</body>
+</html>
+    `;
+
+    pdfWindow.document.open();
+    pdfWindow.document.write(htmlContent);
+    pdfWindow.document.close();
+    showNotify('เปิดหน้าต่างบันทึกหนังสือข้อตกลง (PDF A4) เรียบร้อยแล้ว', 'success', 'สร้างเอกสารสำเร็จ');
+  };
+
   const handleConfirmOffboardExport = async () => {
     const cleanConfirm = masterConfirmText.trim().toUpperCase();
     const expectedFull = 'EXPORT-' + exportTenantModal?.id.toUpperCase();
@@ -527,56 +809,6 @@ export default function App() {
         throw new Error(data.message || 'สร้างแพ็กเกจส่งมอบไม่สำเร็จ');
       }
 
-      // Download file to browser
-      if (exportFormat === 'json') {
-        const jsonStr = JSON.stringify(data.packageData, null, 2);
-        const blob = new Blob([jsonStr], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${exportTenantModal.id}_PDPA_OFFBOARDING_ARCHIVE_${new Date().toISOString().split('T')[0]}.json`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-      } else {
-        // Convert to CSV summary
-        let csvContent = `PDPA OFFBOARDING SUMMARY MANIFEST\n`;
-        csvContent += `Tenant ID,${data.packageData.meta.tenantId}\n`;
-        csvContent += `Tenant Name (TH),${data.packageData.meta.tenantNameTh}\n`;
-        csvContent += `Export Timestamp,${data.packageData.meta.generatedAt}\n`;
-        csvContent += `SHA-256 Checksum,${data.checksum}\n\n`;
-        csvContent += `SUMMARY STATS\n`;
-        csvContent += `Total Staff Accounts,${data.stats.totalUsers}\n`;
-        csvContent += `Total PDPA Requests,${data.stats.totalRequests}\n`;
-        csvContent += `Total Audit Logs,${data.stats.totalAuditLogs}\n`;
-
-        const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${exportTenantModal.id}_PDPA_OFFBOARDING_MANIFEST_${new Date().toISOString().split('T')[0]}.csv`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-      }
-
-      // Simultaneously download official Handover Memorandum (.txt) with pre-filled SHA-256
-      if (data.handoverMemoText) {
-        setTimeout(() => {
-          const memoBlob = new Blob(["\uFEFF" + data.handoverMemoText], { type: 'text/plain;charset=utf-8;' });
-          const memoUrl = URL.createObjectURL(memoBlob);
-          const memoA = document.createElement('a');
-          memoA.href = memoUrl;
-          memoA.download = `${exportTenantModal.id}_HANDOVER_MEMORANDUM_${new Date().toISOString().split('T')[0]}.txt`;
-          document.body.appendChild(memoA);
-          memoA.click();
-          document.body.removeChild(memoA);
-          URL.revokeObjectURL(memoUrl);
-        }, 300);
-      }
-
       const certPayload = {
         open: true,
         tenant: exportTenantModal,
@@ -584,13 +816,14 @@ export default function App() {
         exportedAt: data.exportedAt,
         stats: data.stats,
         payload: data.packageData,
-        handoverMemoText: data.handoverMemoText
+        handoverMemoText: data.handoverMemoText,
+        exportFormat: exportFormat
       };
 
       setExportTenantModal(null);
       setMasterConfirmText('');
       setOffboardCertModal(certPayload);
-      showNotify(`สร้างแพ็กเกจส่งมอบข้อมูลสำหรับหน่วยงาน "${exportTenantModal.nameTh}" พร้อม SHA-256 Checksum สำเร็จเรียบร้อยแล้ว`, 'success', 'นำออกข้อมูลสำเร็จ');
+      showNotify(`สร้างชุดข้อมูลส่งมอบสำหรับ "${exportTenantModal.nameTh}" พร้อม SHA-256 สำเร็จ กรุณายืนยันดาวน์โหลดเอกสารในหน้าต่างรับรอง`, 'success', 'พร้อมดาวน์โหลดเอกสาร');
 
     } catch (err: any) {
       showNotify(err.message || 'เกิดข้อผิดพลาดในการนำออกข้อมูลหน่วยงาน', 'error', 'การส่งมอบข้อมูลล้มเหลว');
@@ -2065,29 +2298,55 @@ export default function App() {
                   💡 ใช้รหัสแฮชนี้ในบันทึกข้อตกลงสิ้นสุดสัญญา (Contract Expiry & Data Offboarding Memo) เพื่อยืนยันว่าชุดข้อมูลไม่ได้ถูกแก้ไข
                 </div>
               </div>
+
+              {/* Executive Download Center */}
+              <div className="p-4 bg-slate-900/90 border border-slate-700/80 rounded-2xl space-y-3 shadow-inner">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <div className="text-xs font-bold text-amber-400 flex items-center gap-1.5">
+                    <Download className="h-4 w-4 shrink-0" />
+                    <span>📦 ดำเนินการดาวน์โหลดเอกสาร (กรุณาดาวน์โหลดทั้ง 2 รายการด้วยตนเอง)</span>
+                  </div>
+                  <span className="text-[10px] text-slate-400 font-mono bg-slate-800 px-2 py-0.5 rounded border border-slate-700">
+                    ยืนยันด้วยตนเอง
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                  {/* Button 1: Download Archive (.json or .csv) */}
+                  <button
+                    type="button"
+                    onClick={() => handleDownloadArchive(offboardCertModal)}
+                    className="p-3.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs flex items-center justify-center gap-2 transition shadow-lg shadow-emerald-900/20 group"
+                  >
+                    <Archive className="h-4 w-4 text-emerald-200 group-hover:scale-110 transition-transform" />
+                    <span>1. ดาวน์โหลดชุดข้อมูล ({offboardCertModal.exportFormat === 'csv' ? '.CSV Manifest' : '.JSON Archive'})</span>
+                  </button>
+
+                  {/* Button 2: Generate PDF Handover Memo */}
+                  <button
+                    type="button"
+                    onClick={() => handleOpenHandoverPDF(offboardCertModal)}
+                    className="p-3.5 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white font-bold text-xs flex items-center justify-center gap-2 transition shadow-lg shadow-amber-900/20 group"
+                  >
+                    <FileText className="h-4 w-4 text-amber-200 group-hover:scale-110 transition-transform" />
+                    <span>2. พิมพ์/บันทึก หนังสือส่งมอบ (.PDF Formal A4)</span>
+                  </button>
+                </div>
+
+                <p className="text-[11px] text-slate-400 text-center">
+                  💡 ระบบเปลี่ยนรูปแบบเอกสารบันทึกข้อตกลงเป็น <b>.PDF ทางการ (A4 Formal Layout)</b> เพื่อให้พร้อมพิมพ์หรือบันทึกเป็นไฟล์ PDF ลงนามร่วมกันได้อย่างสะดวก
+                </p>
+              </div>
             </div>
 
             <div className="flex justify-between items-center gap-3 pt-3 border-t border-slate-800 flex-wrap">
               <button
                 type="button"
-                onClick={() => {
-                  if (offboardCertModal.handoverMemoText) {
-                    const blob = new Blob(["\uFEFF" + offboardCertModal.handoverMemoText], { type: 'text/plain;charset=utf-8;' });
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = `${offboardCertModal.tenant.id}_HANDOVER_MEMORANDUM_${new Date().toISOString().split('T')[0]}.txt`;
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
-                    URL.revokeObjectURL(url);
-                    showNotify('ดาวน์โหลดหนังสือบันทึกข้อตกลงส่งมอบข้อมูลเรียบร้อยแล้ว', 'success', 'ดาวน์โหลดสำเร็จ');
-                  }
-                }}
+                onClick={() => handleOpenHandoverPDF(offboardCertModal)}
                 className="py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-400 border border-amber-500/30 text-xs font-bold transition flex items-center gap-2 shadow"
               >
                 <FileText className="h-4 w-4 text-amber-400" />
-                <span>📄 ดาวน์โหลดบันทึกส่งมอบ (.TXT)</span>
+                <span>🖨️ พิมพ์หนังสือข้อตกลง (.PDF A4)</span>
               </button>
               <button
                 type="button"
