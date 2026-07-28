@@ -193,44 +193,40 @@ export default function App() {
     ? requests.filter(r => r.orgId === impersonatedOrgId)
     : requests;
 
-  // Enforce FLOW: Filter requests based on user roles
-  const filteredRequests = baseRequests.filter(r => {
-    if (!activeUser) return false;
-    const roles = activeUser.roles || [activeUser.role];
-    if (roles.includes('superadmin') || roles.includes('admin') || roles.includes('auditor')) return true;
+  // We let everyone see the requests in the table, but enforce FLOW on who can "manage" them
+  const filteredRequests = baseRequests;
+
+  const canManageRequestFlow = (req: Request, user: UserType): boolean => {
+    if (user.isSuperAdmin || user.role === 'superadmin' || user.role === 'admin' || user.role === 'auditor') return true;
     
-    // If they have multiple roles, they can see the request if ANY role permits it
+    const roles = user.roles || [user.role];
     return roles.some(role => {
       switch (role) {
         case 'intake':
-          // Intake can see all requests in the system
-          return true;
+          return true; // Intake can manage at any stage
         case 'owner':
-          // Owner sees requests once they are assigned or beyond
-          const ownerHiddenStatuses = ['Draft', 'Submitted', 'Received', 'Identity Verification', 'Awaiting Identity Evidence', 'Completeness Review', 'Awaiting Additional Information', 'Complete'];
-          return !ownerHiddenStatuses.includes(r.status);
+          const ownerHidden = ['Draft', 'Submitted', 'Received', 'Identity Verification', 'Awaiting Identity Evidence', 'Completeness Review', 'Awaiting Additional Information', 'Complete'];
+          return !ownerHidden.includes(req.status);
         case 'dpo':
-          // DPO ONLY sees requests that have reached DPO stage or beyond
-          const dpoVisibleStatuses = [
+          const dpoVisible = [
             'DPO or Legal Review', 'Redaction Required', 'Approval Pending', 
             'Fee Notification', 'Awaiting Payment', 'Approved', 'Partially Approved', 
             'Denied', 'No Data Found', 'Ready for Delivery', 'Delivered', 
             'Receipt Confirmed', 'Closed', 'Legal Hold', 'Archived', 'Destroyed'
           ];
-          return dpoVisibleStatuses.includes(r.status);
+          return dpoVisible.includes(req.status);
         case 'approver':
-          // Approver ONLY sees requests that need approval or beyond
-          const approverVisibleStatuses = [
+          const approverVisible = [
             'Approval Pending', 'Approved', 'Partially Approved', 'Denied',
             'Ready for Delivery', 'Delivered', 'Receipt Confirmed', 'Closed',
             'Archived', 'Destroyed'
           ];
-          return approverVisibleStatuses.includes(r.status);
+          return approverVisible.includes(req.status);
         default:
           return false;
       }
     });
-  });
+  };
 
   // Idle Timeout System for Main App (10 minutes)
   // Unified Force Logout Helper for Staff Portal
@@ -4644,7 +4640,13 @@ export default function App() {
                         {filteredRequests.slice(0, 3).map((req) => (
                           <div
                             key={req.id}
-                            onClick={() => setSelectedRequestId(req.id)}
+                            onClick={() => {
+                              if (activeUser && !canManageRequestFlow(req, activeUser)) {
+                                showNotify('คำร้องนี้ยังไม่อยู่ในขั้นตอนที่ท่านสามารถจัดการได้ (รอดำเนินการตาม FLOW)', 'warning');
+                                return;
+                              }
+                              setSelectedRequestId(req.id);
+                            }}
                             className="py-3 flex items-center justify-between text-xs cursor-pointer hover:bg-slate-50 transition px-2 rounded-lg"
                           >
                             <div className="space-y-0.5">
@@ -5164,7 +5166,13 @@ export default function App() {
                               <td className="p-3 text-center">
                                 <button
                                   type="button"
-                                  onClick={() => setSelectedRequestId(req.id)}
+                                  onClick={() => {
+                                    if (activeUser && !canManageRequestFlow(req, activeUser)) {
+                                      showNotify('คำร้องนี้ยังไม่อยู่ในขั้นตอนที่ท่านสามารถจัดการได้ (รอดำเนินการตาม FLOW)', 'warning');
+                                      return;
+                                    }
+                                    setSelectedRequestId(req.id);
+                                  }}
                                   className="text-brand-600 hover:text-brand-800 font-bold hover:underline"
                                 >
                                   ตรวจสอบเคส
@@ -5205,7 +5213,13 @@ export default function App() {
                               {colRequests.map((req) => (
                                 <div
                                   key={req.id}
-                                  onClick={() => setSelectedRequestId(req.id)}
+                                  onClick={() => {
+                                    if (activeUser && !canManageRequestFlow(req, activeUser)) {
+                                      showNotify('คำร้องนี้ยังไม่อยู่ในขั้นตอนที่ท่านสามารถจัดการได้ (รอดำเนินการตาม FLOW)', 'warning');
+                                      return;
+                                    }
+                                    setSelectedRequestId(req.id);
+                                  }}
                                   className="bg-white border border-slate-200 rounded-lg p-2.5 shadow-sm hover:border-brand-500 transition cursor-pointer text-xs space-y-1.5"
                                 >
                                   <div className="flex justify-between items-center font-bold text-[10px] text-slate-400">
