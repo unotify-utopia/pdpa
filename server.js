@@ -702,6 +702,13 @@ app.post('/api/auth/login', async (req, res) => {
       email: user.email,
       // For UI compatibility, superadmin pretends to be 'admin' so all menus and buttons show up
       role: user.role === 'superadmin' ? 'admin' : user.role,
+      roles: user.role === 'superadmin' ? ['admin'] : (() => {
+        try {
+          return typeof user.roles === 'string' ? JSON.parse(user.roles) : (user.roles || [user.role]);
+        } catch(e) {
+          return [user.role];
+        }
+      })(),
       isSuperAdmin: user.role === 'superadmin', 
       department: user.department,
       orgId: user.org_id
