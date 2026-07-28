@@ -181,22 +181,31 @@ export default function App() {
     : requests;
 
   // Idle Timeout System for Main App (10 minutes)
+  // Unified Force Logout Helper for Staff Portal
+  const handleStaffForceLogout = (reason?: string) => {
+    sessionStorage.clear();
+    setCurrentUser(null);
+    setActiveUser(null);
+    setSelectedRequestId(null);
+    setView('public');
+    setPublicTab('landing');
+    if (reason) {
+      showNotify(reason);
+    }
+  };
+
   useEffect(() => {
     let timeoutId: ReturnType<typeof setTimeout>;
 
     const resetTimer = () => {
       clearTimeout(timeoutId);
-      // Set timeout for 10 minutes (600,000 ms)
+      // Set timeout for 5 minutes (300,000 ms) - Unified PDPA Security Policy
       timeoutId = setTimeout(() => {
         if (activeUser) {
-          sessionStorage.clear();
-          setActiveUser(null);
-          setView('public');
-          setPublicTab('landing');
-          showNotify('ท่านไม่ได้ใช้งานระบบเกิน 10 นาที ระบบจึงทำการออกจากระบบอัตโนมัติเพื่อความปลอดภัย');
+          handleStaffForceLogout('ท่านไม่ได้ใช้งานระบบเกิน 5 นาที ระบบจึงทำการออกจากระบบอัตโนมัติเพื่อความปลอดภัย');
           window.location.reload();
         }
-      }, 10 * 60 * 1000);
+      }, 5 * 60 * 1000);
     };
 
     if (activeUser) {
@@ -225,12 +234,7 @@ export default function App() {
     })
       .then(res => {
         if (res.status === 401 || res.status === 403) {
-          sessionStorage.clear();
-          localStorage.removeItem('pdpa_req_current_user');
-          localStorage.removeItem('pdpa_token');
-          localStorage.removeItem('pdpa_jwt_token');
-          setActiveUser(null);
-          setView('public');
+          handleStaffForceLogout('เซสชันของท่านหมดอายุ กรุณาเข้าสู่ระบบอีกครั้งเพื่อความปลอดภัย');
           return null;
         }
         return res.json();
@@ -255,9 +259,15 @@ export default function App() {
             'Authorization': `Bearer ${token}`
           }
         })
-          .then(res => res.json())
+          .then(res => {
+            if (res.status === 401 || res.status === 403) {
+              handleStaffForceLogout('เซสชันของท่านหมดอายุ กรุณาเข้าสู่ระบบอีกครั้งเพื่อความปลอดภัย');
+              return null;
+            }
+            return res.json();
+          })
           .then(data => {
-            if (data.success && data.users) {
+            if (data && data.success && data.users) {
               const usersWithSod = data.users.map((u: any) => {
                 const userRoles = u.roles || [u.role];
                 const warnings = [];
@@ -295,9 +305,15 @@ export default function App() {
       fetch('/api/requests', {
         headers: token ? { 'Authorization': `Bearer ${token}` } : {}
       })
-        .then(res => res.json())
+        .then(res => {
+          if (res.status === 401 || res.status === 403) {
+            handleStaffForceLogout('เซสชันของท่านหมดอายุ กรุณาเข้าสู่ระบบอีกครั้งเพื่อความปลอดภัย');
+            return null;
+          }
+          return res.json();
+        })
         .then(data => {
-          if (data.success && Array.isArray(data.requests)) {
+          if (data && data.success && Array.isArray(data.requests)) {
             setRequests(data.requests);
           }
         })
