@@ -223,6 +223,16 @@ export default function App() {
     }
   }, [activeUser]);
 
+  // Listen for workflow email notification events from API / db
+  useEffect(() => {
+    const handleWorkflowNotify = (e: any) => {
+      const { title, message } = e.detail || {};
+      showNotify(message || 'ส่งอีเมลแจ้งเตือนความคืบหน้าตาม Workflow เรียบร้อยแล้ว', 'success', title || 'แจ้งเตือนตาม Flow เอกสาร');
+    };
+    window.addEventListener('workflow-notify', handleWorkflowNotify);
+    return () => window.removeEventListener('workflow-notify', handleWorkflowNotify);
+  }, []);
+
   useEffect(() => {
     const token = sessionStorage.getItem('pdpa_token') || sessionStorage.getItem('pdpa_jwt_token');
     const endpoint = token ? '/api/tenants' : '/api/public/tenants';
@@ -737,6 +747,7 @@ export default function App() {
         // Sync local storage with actual server tracking number
         newReq.trackingNo = data.request.trackingNo;
         saveLocal(newReq);
+        showNotify('ส่งอีเมลยืนยันการรับเรื่องไปยังประชาชน และแจ้งเตือนไปยังเจ้าหน้าที่ Intake ตาม Workflow เรียบร้อยแล้ว', 'success', 'ระบบแจ้งเตือนอัตโนมัติ (Email Workflow)');
       } else {
         setIsNewRequestSuccess(newReq);
       }
@@ -855,6 +866,7 @@ export default function App() {
         newReq.trackingNo = data.request.trackingNo;
         saveLocal(newReq);
         setManualEntrySuccessTrackingNo(data.request.trackingNo);
+        showNotify('ส่งอีเมลแจ้งเตือนการเพิ่มคำร้องใหม่ (Manual Entry) ไปยังประชาชน และเจ้าหน้าที่ที่เกี่ยวข้องตาม Workflow เรียบร้อยแล้ว', 'success', 'แจ้งเตือนตาม Flow เอกสาร');
       } else {
         setManualEntrySuccessTrackingNo(newReq.trackingNo);
       }

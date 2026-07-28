@@ -270,6 +270,13 @@ export const createRequest = (requestData: Omit<Request, 'id' | 'uuid' | 'tracki
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(newRequest)
+  }).then(() => {
+    window.dispatchEvent(new CustomEvent('workflow-notify', {
+      detail: {
+        title: 'แจ้งเตือนตาม Flow เอกสาร (Email Workflow)',
+        message: `ส่งอีเมลยืนยันการเปิดคำขอใหม่ เลขที่ ${trackingNo} ไปยังผู้เกี่ยวข้องตาม Workflow เรียบร้อยแล้ว`
+      }
+    }));
   }).catch((err) => console.log('PostgreSQL Background Sync:', err));
 
   // Log creation
@@ -295,6 +302,13 @@ export const updateRequest = async (updatedReq: Request, actor: User, auditActio
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updatedReq)
       });
+      // Notify staff UI that email workflow notification was sent
+      window.dispatchEvent(new CustomEvent('workflow-notify', {
+        detail: {
+          title: 'แจ้งเตือนตาม Flow เอกสาร (Email Workflow)',
+          message: `ส่งอีเมลแจ้งความคืบหน้าสถานะ "${updatedReq.status}" ไปยังผู้เกี่ยวข้องตาม Workflow เรียบร้อยแล้ว`
+        }
+      }));
       // Force UI reload immediately instead of waiting for 3s interval
       window.dispatchEvent(new Event('focus'));
     } catch (err) {

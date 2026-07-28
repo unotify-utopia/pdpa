@@ -345,6 +345,203 @@ const addServerAuditLog = async (action, details, actor, requestId, trackingNo, 
   }
 };
 
+// In-Memory Email Logs for Workflow Notifications (PDPA Request Tracking)
+const workflowEmailLogs = [];
+
+const getStatusNameTh = (status) => {
+  const statusMap = {
+    'Draft': 'แบบร่างคำขอ (Draft)',
+    'Submitted': 'ยื่นคำขอใหม่ (Submitted)',
+    'Received': 'รับเรื่องและรอตรวจสอบ (Received)',
+    'Completeness Review': 'ตรวจสอบความครบถ้วน (Completeness Review)',
+    'Identity Verification': 'ตรวจสอบและยืนยันตัวตน (Identity Verification)',
+    'Awaiting Additional Information': 'รอข้อมูล/เอกสารเพิ่มเติม (Awaiting Additional Info)',
+    'Awaiting Identity Evidence': 'รอเอกสารยืนยันตัวตน (Awaiting Identity Evidence)',
+    'Complete': 'เอกสารครบถ้วน/เริ่มนับ SLA (Complete)',
+    'Assigned': 'มอบหมายผู้รับผิดชอบ (Assigned)',
+    'Data Collection': 'อยู่ระหว่างรวบรวมข้อมูล (Data Collection)',
+    'Data Owner Review': 'เจ้าหน้าที่ข้อมูลตรวจสอบ (Data Owner Review)',
+    'DPO or Legal Review': 'นิติกร/DPO ตรวจสอบกฎหมาย (DPO/Legal Review)',
+    'Redaction Required': 'อยู่ระหว่างถมดำข้อมูล (Redaction Required)',
+    'Approval Pending': 'รอการอนุมัติคำสั่ง (Approval Pending)',
+    'Fee Notification': 'แจ้งค่าธรรมเนียมการดำเนินการ (Fee Notification)',
+    'Awaiting Payment': 'รอชำระค่าธรรมเนียม (Awaiting Payment)',
+    'Approved': 'อนุมัติคำขอ (Approved)',
+    'Ready for Delivery': 'เตรียมส่งมอบข้อมูล (Ready for Delivery)',
+    'Delivered': 'จัดส่งมอบข้อมูลแล้ว (Delivered)',
+    'Receipt Confirmed': 'ผู้ยื่นยืนยันรับข้อมูล (Receipt Confirmed)',
+    'Denied': 'ปฏิเสธคำขอ (Denied)',
+    'No Data Found': 'ไม่พบข้อมูลส่วนบุคคล (No Data Found)',
+    'Withdrawn': 'ผู้ยื่นถอนคำขอ (Withdrawn)',
+    'Disposed for Incomplete Information': 'จำหน่ายคดีเนื่องจากเอกสารไม่ครบถ้วน',
+    'Closed': 'ปิดคำขอเสร็จสมบูรณ์ (Closed)'
+  };
+  return statusMap[status] || status;
+};
+
+// Helper: Send Workflow Email Notification based on PDPA Document Flow
+const sendWorkflowNotification = async (request, oldStatus, newStatus, eventType) => {
+  if (!request) return;
+  
+  const trackingNo = request.trackingNo || 'REQ-UNKNOWN';
+  const citizenEmail = request.requester?.email || '';
+  const citizenName = `${request.requester?.firstName || ''} ${request.requester?.lastName || ''}`.trim() || 'ผู้ยื่นคำขอ';
+  const isOnlineWeb = request.contactChannel === 'web';
+  const statusNameTh = getStatusNameTh(newStatus);
+  
+  // Define default officer email addresses per role
+  const intakeEmail = process.env.INTAKE_EMAIL || 'kanya@organization.or.th';
+  const ownerEmail = process.env.OWNER_EMAIL || 'weera@organization.or.th';
+  const dpoEmail = process.env.DPO_EMAIL || 'dpo@organization.or.th';
+  const approverEmail = process.env.APPROVER_EMAIL || 'approver@organization.or.th';
+
+  const recipients = [];
+  let subject = '';
+  let flowMessageTh = '';
+  let nextActionTh = '';
+
+  if (eventType === 'CREATE') {
+    if (isOnlineWeb) {
+      // 1. ประชาชนกรอกคำร้องออนไลน์ -> ส่งอีเมลแจ้ง Intake + แจ้งยืนยันไปที่ประชาชน
+      if (citizenEmail) {
+        recipients.push({ email: citizenEmail, roleName: 'ประชาชนผู้ยื่นคำขอ', actionRequired: 'ติดตามสถานะคำขอผ่านระบบ Tracking' });
+      }
+      recipients.push({ email: intakeEmail, roleName: 'เจ้าหน้าที่รับเรื่อง (Intake Officer)', actionRequired: 'เข้าสู่ระบบเพื่อตรวจสอบและตรวจรับคำขอใหม่' });
+      
+      subject = `[PDPA REQ - ${trackingNo}] ยืนยันรับคำขอเข้าถึงข้อมูลส่วนบุคคลผ่านช่องทางออนไลน์`;
+      flowMessageTh = `ระบบได้รับคำขอเข้าถึงข้อมูลส่วนบุคคล (PDPA Request) จากประชาชนผ่านช่องทางบริการออนไลน์ (E-Service / Web Portal) เรียบร้อยแล้ว`;
+      nextActionTh = `เจ้าหน้าที่รับเรื่อง (Intake Officer) ดำเนินการตรวจสอบตัวตนและความครบถ้วนของเอกสารคำขอ`;
+    } else {
+      // 2. Intake รับเรื่องแบบ Manual -> ต้องมีการส่งเมล์เรื่องการเพิ่มคำร้องตาม flow ด้วย
+      if (citizenEmail) {
+        recipients.push({ email: citizenEmail, roleName: 'ประชาชนเจ้าของข้อมูล (Data Subject)', actionRequired: 'ตรวจสอบรายละเอียดคำขอและติดตามสถานะสิทธิ์' });
+      }
+      recipients.push({ email: intakeEmail, roleName: 'เจ้าหน้าที่ศูนย์รับเรื่อง (Intake Officer)', actionRequired: 'บันทึกคำขอ Manual Entry เข้าสู่ Flow งาน PDPA' });
+      
+      subject = `[PDPA REQ - ${trackingNo}] แจ้งการเปิดคำขอใช้สิทธิ์ PDPA โดยเจ้าหน้าที่ศูนย์รับเรื่อง (Manual Entry)`;
+      flowMessageTh = `เจ้าหน้าที่ศูนย์รับเรื่องได้ทำการบันทึกและเปิดคำขอใช้สิทธิ์ตามพระราชบัญญัติคุ้มครองข้อมูลส่วนบุคคล พ.ศ. 2562 ของท่านเข้าสู่ระบบเรียบร้อยแล้ว`;
+      nextActionTh = `ระบบเริ่มนับระยะเวลาดำเนินการและเข้าสู่ขั้นตอนการตรวจสอบความครบถ้วนตาม Workflow งาน PDPA`;
+    }
+  } else {
+    // eventType === 'STATUS_CHANGE' -> แจ้งเตือนไปตาม flow จนจบงาน
+    subject = `[PDPA REQ - ${trackingNo}] แจ้งความคืบหน้าสถานะคำขอ: ${statusNameTh}`;
+    flowMessageTh = `คำขอใช้สิทธิ์ PDPA เลขที่ ${trackingNo} มีการเปลี่ยนสถานะจาก "${oldStatus ? getStatusNameTh(oldStatus) : 'ไม่ระบุ'}" เป็น "${statusNameTh}"`;
+
+    if (['Received', 'Completeness Review', 'Identity Verification'].includes(newStatus)) {
+      if (citizenEmail) recipients.push({ email: citizenEmail, roleName: 'ผู้ยื่นคำขอ', actionRequired: 'รับทราบการตรวจรับเรื่อง' });
+      recipients.push({ email: intakeEmail, roleName: 'เจ้าหน้าที่ Intake', actionRequired: 'ตรวจสอบเอกสารและยืนยันตัวตนเจ้าของข้อมูล' });
+      nextActionTh = `อยู่ระหว่างเจ้าหน้าที่ศูนย์รับเรื่องตรวจสอบความถูกต้องของคำขอและหลักฐานยืนยันตัวตน`;
+    } else if (['Awaiting Additional Information', 'Awaiting Identity Evidence'].includes(newStatus)) {
+      if (citizenEmail) recipients.push({ email: citizenEmail, roleName: 'ผู้ยื่นคำขอ', actionRequired: 'อัปโหลดเอกสาร/หลักฐานเพิ่มเติมทันที' });
+      nextActionTh = `ขอความกรุณาผู้ยื่นคำขออัปโหลดเอกสารเพิ่มเติมผ่านระบบติดตามสถานะ เพื่อปลดล็อกเวลา SLA`;
+    } else if (['Complete', 'Assigned', 'Data Collection'].includes(newStatus)) {
+      recipients.push({ email: ownerEmail, roleName: 'ผู้ดูแลระบบข้อมูล (Data Owner)', actionRequired: 'สืบค้นและรวบรวมข้อมูลส่วนบุคคลที่เกี่ยวข้อง' });
+      recipients.push({ email: intakeEmail, roleName: 'เจ้าหน้าที่ Intake', actionRequired: 'ติดตามการทำงานของ Data Owner' });
+      nextActionTh = `มอบหมายภารกิจให้เจ้าหน้าที่ผู้ดูแลระบบฐานข้อมูล (Data Owner) ดำเนินการรวบรวมข้อมูลส่วนบุคคลตาม SLA`;
+    } else if (['Data Owner Review', 'DPO or Legal Review', 'Redaction Required'].includes(newStatus)) {
+      recipients.push({ email: dpoEmail, roleName: 'เจ้าหน้าที่คุ้มครองข้อมูลส่วนบุคคล (DPO/Legal)', actionRequired: 'พิจารณาความเห็นทางกฎหมายและตรวจสอบหนังสือชี้แจง' });
+      recipients.push({ email: ownerEmail, roleName: 'ผู้ดูแลระบบข้อมูล', actionRequired: 'รับทราบการส่งต่อ DPO' });
+      nextActionTh = `เจ้าหน้าที่นิติกร/DPO ตรวจสอบฐานสิทธิ์ทางกฎหมาย การถมดำข้อมูลที่เกี่ยวข้องกับบุคคลที่สาม และเตรียมหนังสือแจ้งผล`;
+    } else if (['Approval Pending', 'Fee Notification', 'Awaiting Payment'].includes(newStatus)) {
+      recipients.push({ email: approverEmail, roleName: 'ผู้มีอำนาจลงนาม (Approver)', actionRequired: 'พิจารณาอนุมัติคำสั่งอย่างเป็นทางการ' });
+      if (citizenEmail && ['Fee Notification', 'Awaiting Payment'].includes(newStatus)) {
+        recipients.push({ email: citizenEmail, roleName: 'ผู้ยื่นคำขอ', actionRequired: 'ชำระค่าธรรมเนียมตามใบแจ้งหนี้' });
+      }
+      nextActionTh = `อยู่ระหว่างการพิจารณาอนุมัติคำสั่งอย่างเป็นทางการโดยผู้บริหาร/ผู้มีอำนาจลงนาม`;
+    } else if (['Approved', 'Ready for Delivery', 'Delivered', 'Receipt Confirmed'].includes(newStatus)) {
+      if (citizenEmail) recipients.push({ email: citizenEmail, roleName: 'ผู้ยื่นคำขอ', actionRequired: 'ดาวน์โหลดข้อมูล/รับหนังสือแจ้งผลผ่านระบบปลอดภัย' });
+      recipients.push({ email: intakeEmail, roleName: 'เจ้าหน้าที่ Intake', actionRequired: 'จัดส่งมอบข้อมูลและบันทึกปิดงาน' });
+      recipients.push({ email: dpoEmail, roleName: 'เจ้าหน้าที่ DPO', actionRequired: 'ตรวจสอบการปิดรายงานตาม SLA' });
+      nextActionTh = `พิจารณาอนุมัติเรียบร้อยแล้ว พร้อมส่งมอบข้อมูลสิทธิ์และหนังสือราชการแจ้งผลอย่างปลอดภัยผ่านช่องทางที่ผู้ยื่นระบุ`;
+    } else if (['Denied', 'No Data Found', 'Withdrawn', 'Disposed for Incomplete Information', 'Closed'].includes(newStatus)) {
+      if (citizenEmail) recipients.push({ email: citizenEmail, roleName: 'ผู้ยื่นคำขอ', actionRequired: 'รับทราบผลการตัดสิน/การสิ้นสุดคำขอ' });
+      recipients.push({ email: intakeEmail, roleName: 'เจ้าหน้าที่ Intake', actionRequired: 'จัดเก็บสถิติและปิดคำร้อง' });
+      recipients.push({ email: dpoEmail, roleName: 'เจ้าหน้าที่ DPO', actionRequired: 'บันทึกประวัติข้อกฎหมาย' });
+      nextActionTh = `คำขอเสร็จสมบูรณ์และยุติกระบวนการตามกฎหมายคุ้มครองข้อมูลส่วนบุคคล พ.ศ. 2562 เรียบร้อยแล้ว`;
+    } else {
+      recipients.push({ email: intakeEmail, roleName: 'เจ้าหน้าที่ Intake', actionRequired: 'ตรวจสอบความคืบหน้า' });
+      nextActionTh = `ดำเนินการตามขั้นตอนมาตรฐาน PDPA Request Workflow`;
+    }
+  }
+
+  // Generate Email HTML Content
+  const htmlContent = `
+    <div style="font-family: 'Sarabun', sans-serif, Tahoma; max-width: 640px; margin: 0 auto; border: 1px solid #cbd5e1; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 16px rgba(0,0,0,0.06);">
+      <div style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); padding: 24px; text-align: center;">
+        <h2 style="color: #ffffff; margin: 0; font-size: 20px;">ระบบบริหารจัดการสิทธิ์ PDPA (PDPA Access Portal)</h2>
+        <p style="color: #e0f2fe; margin: 6px 0 0; font-size: 14px;">การแจ้งเตือนความคืบหน้าคำขอตาม Flow เอกสาร</p>
+      </div>
+      <div style="padding: 28px 24px; background-color: #ffffff;">
+        <p style="color: #334155; font-size: 16px; margin-top: 0;">เรียน ผู้เกี่ยวข้องตาม Workflow,</p>
+        <p style="color: #475569; font-size: 15px; line-height: 1.6; margin-bottom: 20px;">
+          ${flowMessageTh}
+        </p>
+        <div style="background-color: #f8fafc; border-left: 4px solid #0284c7; padding: 18px; margin: 20px 0; border-radius: 6px;">
+          <p style="margin: 0 0 10px; color: #1e293b; font-weight: bold; font-size: 16px;">
+            เลขที่คำขอ (Tracking No.): <span style="color: #0284c7;">${trackingNo}</span>
+          </p>
+          <p style="margin: 0 0 8px; color: #475569; font-size: 14px;">
+            <strong>สถานะปัจจุบัน:</strong> <span style="background-color: #e0f2fe; color: #0369a1; padding: 3px 10px; border-radius: 12px; font-weight: bold;">${statusNameTh}</span>
+          </p>
+          <p style="margin: 0 0 8px; color: #475569; font-size: 14px;">
+            <strong>ช่องทางการยื่น:</strong> ${isOnlineWeb ? 'ออนไลน์ผ่านเว็บไซต์ (Online E-Service)' : 'บันทึกคำขอโดยเจ้าหน้าที่ (Manual Intake Entry)'}
+          </p>
+          <p style="margin: 0 0 8px; color: #475569; font-size: 14px;">
+            <strong>ผู้ยื่นคำขอ:</strong> ${citizenName}
+          </p>
+          <p style="margin: 0; color: #475569; font-size: 14px;">
+            <strong>วันที่บันทึก:</strong> ${new Date().toLocaleString('th-TH')}
+          </p>
+        </div>
+        <div style="background-color: #f0fdf4; border: 1px solid #bbf7d0; padding: 16px; border-radius: 8px; margin: 24px 0;">
+          <p style="margin: 0 0 6px; color: #166534; font-weight: bold; font-size: 14px;">🎯 ขั้นตอนถัดไปใน Workflow:</p>
+          <p style="margin: 0; color: #15803d; font-size: 14px;">${nextActionTh}</p>
+        </div>
+        <div style="text-align: center; margin-top: 28px;">
+          <a href="http://localhost:5173" style="background-color: #0284c7; color: #ffffff; text-decoration: none; padding: 12px 28px; border-radius: 8px; font-weight: bold; font-size: 14px; display: inline-block;">
+            เข้าสู่ระบบเพื่อตรวจสอบคำขอ (PDPA Portal)
+          </a>
+        </div>
+        <p style="color: #94a3b8; font-size: 12px; text-align: center; margin-top: 28px; border-top: 1px solid #f1f5f9; padding-top: 16px;">
+          อีเมลนี้เป็นข้อความแจ้งเตือนอัตโนมัติตามข้อกำหนดกรอบเวลาการปฏิบัติงาน (SLA) และกระบวนการของพระราชบัญญัติคุ้มครองข้อมูลส่วนบุคคล พ.ศ. 2562
+        </p>
+      </div>
+    </div>
+  `;
+
+  // Send Emails & Record to Log
+  for (const rcpt of recipients) {
+    if (!rcpt.email) continue;
+    const logItem = {
+      id: `elog_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      timestamp: new Date().toISOString(),
+      trackingNo,
+      eventType,
+      recipientEmail: rcpt.email,
+      recipientRole: rcpt.roleName,
+      subject,
+      status: newStatus,
+      sentSuccess: true,
+      errorMsg: null
+    };
+    try {
+      await transporter.sendMail({
+        from: `"PDPA Access Portal" <${process.env.SMTP_USER || 'pdpa.utopia@gmail.com'}>`,
+        to: rcpt.email,
+        subject,
+        html: htmlContent
+      });
+      console.log(`📧 [Workflow Email Sent] To: ${rcpt.email} (${rcpt.roleName}) | Subject: ${subject}`);
+    } catch (mailErr) {
+      logItem.sentSuccess = false;
+      logItem.errorMsg = mailErr.message;
+      console.log(`📧 [Workflow Email Queued/Demo] To: ${rcpt.email} (${rcpt.roleName}) | Subject: ${subject} | Notice: ${mailErr.message}`);
+    }
+    workflowEmailLogs.unshift(logItem);
+    if (workflowEmailLogs.length > 500) workflowEmailLogs.pop();
+  }
+};
+
 // --- AUTHENTICATION ROUTES ---
 
 // POST /api/auth/login
@@ -1087,11 +1284,35 @@ app.post('/api/public/requests', async (req, res) => {
       slaDaysUsed: requestData.slaDaysUsed || 0
     };
 
+    // Check existing request status in database before insert/update
+    let isNewRequest = true;
+    let oldStatus = null;
+    try {
+      const existRes = await dbPool.query('SELECT status FROM requests WHERE id = $1', [reqId]);
+      if (existRes.rows.length > 0) {
+        isNewRequest = false;
+        oldStatus = existRes.rows[0].status;
+      }
+    } catch (existErr) {
+      console.warn('Check existing request warning:', existErr.message);
+    }
+
     // Insert into PostgreSQL Master Database
     await dbPool.query(
       'INSERT INTO requests (id, org_id, tracking_no, requester_type, status, data) VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT (id) DO UPDATE SET data = $6, status = $5',
       [reqId, orgId, trackingNo, requesterType, status, JSON.stringify(newRequest)]
     );
+
+    // Trigger workflow email notification according to PDPA Flow (non-blocking)
+    try {
+      if (isNewRequest) {
+        await sendWorkflowNotification(newRequest, null, status, 'CREATE');
+      } else if (oldStatus && oldStatus !== status) {
+        await sendWorkflowNotification(newRequest, oldStatus, status, 'STATUS_CHANGE');
+      }
+    } catch (notifyErr) {
+      console.error('Workflow notification error:', notifyErr.message);
+    }
 
     return res.status(201).json({
       success: true,
@@ -1101,6 +1322,30 @@ app.post('/api/public/requests', async (req, res) => {
   } catch (error) {
     console.error('Error inserting request to PostgreSQL:', error);
     return res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดในการบันทึกข้อมูล' });
+  }
+});
+
+// GET /api/public/email-logs (View sent workflow email notifications)
+app.get('/api/public/email-logs', (req, res) => {
+  return res.json({
+    success: true,
+    count: workflowEmailLogs.length,
+    logs: workflowEmailLogs
+  });
+});
+
+// POST /api/notify/workflow (Manually trigger workflow email notification)
+app.post('/api/notify/workflow', async (req, res) => {
+  try {
+    const { request, oldStatus, newStatus, eventType } = req.body;
+    if (!request) {
+      return res.status(400).json({ success: false, message: 'Missing request object' });
+    }
+    await sendWorkflowNotification(request, oldStatus || null, newStatus || request.status, eventType || 'STATUS_CHANGE');
+    return res.json({ success: true, message: 'ส่งอีเมลแจ้งเตือนตาม Flow เอกสารเรียบร้อยแล้ว' });
+  } catch (err) {
+    console.error('Manual notify workflow error:', err);
+    return res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดในการส่งอีเมลแจ้งเตือน' });
   }
 });
 
