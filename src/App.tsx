@@ -24,7 +24,9 @@ import {
   Scale,
   Building2,
   MessageSquare,
-  CheckCircle2
+  CheckCircle2,
+  Clock,
+  X
 } from 'lucide-react';
 
 import type {
@@ -564,6 +566,9 @@ export default function App() {
   // --- PUBLIC PORTAL FORM STATE WIZARD ---
   const [wizardStep, setWizardStep] = useState(1);
   const [reqType, setReqType] = useState<'self' | 'representative'>('self');
+
+  const [extendSlaModal, setExtendSlaModal] = useState<{ open: boolean; reqId: string | null; reason: string }>({ open: false, reqId: null, reason: '' });
+
   const [requesterForm, setRequesterForm] = useState({
     firstName: '',
     lastName: '',
@@ -5959,6 +5964,62 @@ export default function App() {
           </div>
         </div>
       )}
+      
+      {/* --- EXTEND SLA MODAL --- */}
+      {extendSlaModal.open && extendSlaModal.reqId && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-[60] animate-fadeIn">
+          <div className="bg-white rounded-2xl border border-slate-200 w-full max-w-md shadow-2xl overflow-hidden flex flex-col">
+            <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+              <h3 className="font-bold text-slate-800 flex items-center gap-2">
+                <Clock className="h-5 w-5 text-amber-500" />
+                ขยายระยะเวลาสืบค้นข้อมูล (+30 วัน)
+              </h3>
+              <button
+                onClick={() => setExtendSlaModal({ open: false, reqId: null, reason: '' })}
+                className="text-slate-400 hover:text-slate-600 transition p-1 rounded-lg hover:bg-slate-200"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            
+            <div className="p-6 space-y-4 flex-1">
+              <p className="text-sm text-slate-600">
+                ระบุเหตุจำเป็นหรือเหตุขัดข้องในการขยายระยะเวลาสืบค้นข้อมูล:
+              </p>
+              <textarea
+                autoFocus
+                placeholder="อธิบายเหตุผล..."
+                value={extendSlaModal.reason}
+                onChange={(e) => setExtendSlaModal({ ...extendSlaModal, reason: e.target.value })}
+                className="w-full text-sm px-3 py-2 rounded-lg border border-slate-300 focus:outline-none focus:border-amber-500 min-h-[100px] resize-none"
+              ></textarea>
+            </div>
+
+            <div className="px-6 py-4 border-t border-slate-100 flex justify-end gap-3 bg-slate-50 mt-auto">
+              <button
+                type="button"
+                onClick={() => setExtendSlaModal({ open: false, reqId: null, reason: '' })}
+                className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-bold rounded-xl transition"
+              >
+                ยกเลิก
+              </button>
+              <button
+                type="button"
+                disabled={!extendSlaModal.reason.trim()}
+                onClick={() => {
+                  handleExtendSla(extendSlaModal.reqId!, extendSlaModal.reason);
+                  setExtendSlaModal({ open: false, reqId: null, reason: '' });
+                }}
+                className="px-4 py-2 bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 transition shadow-md"
+              >
+                <CheckCircle2 className="h-4 w-4" />
+                <span>ยืนยันการขยายเวลา</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Added NotifyModal to replace alerts */}
       <NotifyModal 
         {...notifyState} 
