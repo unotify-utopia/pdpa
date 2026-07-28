@@ -4145,8 +4145,8 @@ export default function App() {
                           <span>งานค้นหาและสืบค้นข้อมูลระบบภายใน (Data Discovery & Gathering)</span>
                         </span>
 
-                        {/* Task assigner form for admin/DPO */}
-                        {['admin', 'intake', 'dpo'].includes(activeUser.role) && (
+                        {/* Task assigner form for admin/DPO/owner */}
+                        {['admin', 'intake', 'dpo', 'owner'].includes(activeUser.role) && (
                           <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 space-y-3">
                             <span className="block font-bold text-slate-700 text-xs">สร้างงานค้นหาข้อมูลระบบใหม่</span>
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-2 items-end">

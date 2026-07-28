@@ -182,6 +182,28 @@ const initDatabase = async () => {
       await dbPool.query("UPDATE users SET role = 'superadmin', mfa_enabled = true WHERE username = 'apichat.utopia@gmail.com' OR username = 'super.admin'");
     } catch (e) {}
 
+    // Run migration: Update old 'Complete' status to 'Documents Verified'
+    try {
+      await dbPool.query("UPDATE requests SET status = 'Documents Verified' WHERE status = 'Complete'");
+      
+      // Update history entries that have status 'Complete'
+      await dbPool.query(`
+        UPDATE requests 
+        SET status_history = (
+          SELECT jsonb_agg(
+            CASE 
+              WHEN elem->>'status' = 'Complete' THEN elem || '{"status": "Documents Verified"}'::jsonb
+              ELSE elem
+            END
+          )
+          FROM jsonb_array_elements(status_history) AS elem
+        )
+        WHERE status_history @> '[{"status": "Complete"}]'::jsonb
+      `);
+    } catch (e) {
+      console.log('Migration error:', e);
+    }
+
     console.log('✅ PostgreSQL Database Initialized Successfully');
   } catch (error) {
     console.error('❌ Database Initialization Error:', error);
