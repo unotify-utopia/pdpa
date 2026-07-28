@@ -535,7 +535,7 @@ const sendWorkflowNotification = async (request, oldStatus, newStatus, eventType
           <p style="margin: 0; color: #15803d; font-size: 14px;">${nextActionTh}</p>
         </div>
         <div style="text-align: center; margin-top: 28px;">
-          <a href="http://localhost:5173" style="background-color: #0284c7; color: #ffffff; text-decoration: none; padding: 12px 28px; border-radius: 8px; font-weight: bold; font-size: 14px; display: inline-block;">
+          <a href="${process.env.FRONTEND_URL || 'https://pdpa.numcomputer.com'}" style="background-color: #0284c7; color: #ffffff; text-decoration: none; padding: 12px 28px; border-radius: 8px; font-weight: bold; font-size: 14px; display: inline-block;">
             เข้าสู่ระบบเพื่อตรวจสอบคำขอ (PDPA Portal)
           </a>
         </div>
