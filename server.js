@@ -37,7 +37,10 @@ const dbPool = new Pool({
 
 dbPool.on('connect', (client) => {
   console.log('⚡ Connected to PostgreSQL pdpa_prod_db Master Engine (Asia/Bangkok Timezone)');
-  client.query("SET timezone = 'Asia/Bangkok'");
+});
+
+dbPool.on('error', (err, client) => {
+  console.error('Unexpected error on idle client', err);
 });
 
 // Database Initialization
