@@ -995,7 +995,7 @@ export default function App() {
     reloadData();
   };
 
-  const handleUploadAdditionalTrack = (fileName: string, dataUrl: string) => {
+  const handleUploadAdditionalTrack = async (fileName: string, dataUrl: string) => {
     if (!trackedRequest) return;
     const newAtt: Attachment = {
       id: `att_track_${Date.now()}`,
@@ -1154,13 +1154,13 @@ export default function App() {
     reloadData();
   };
 
-  const markCompletenessDone = (reqId: string) => {
+  const markCompletenessDone = async (reqId: string) => {
     if (!activeUser) return;
     await changeRequestStatus(reqId, 'Complete', activeUser, 'ตรวจสอบเอกสารครบถ้วนเรียบร้อย เริ่มนับระยะเวลาดำเนินการ SLA');
     reloadData();
   };
 
-  const markCompletenessDeficient = (reqId: string) => {
+  const markCompletenessDeficient = async (reqId: string) => {
     if (!activeUser) return;
     
     const missing: string[] = [];
@@ -1325,7 +1325,7 @@ export default function App() {
     otherCost: 0
   });
 
-  const handleFeeSubmit = (e: React.FormEvent, reqId: string) => {
+  const handleFeeSubmit = async (e: React.FormEvent, reqId: string) => {
     e.preventDefault();
     if (!activeUser) return;
     const req = getRequestById(reqId);
@@ -1365,7 +1365,7 @@ export default function App() {
   };
 
   // Simulating Payment Upload / Verification
-  const handleMarkAsPaid = (reqId: string) => {
+  const handleMarkAsPaid = async (reqId: string) => {
     if (!activeUser) return;
     const req = getRequestById(reqId);
     if (!req) return;
@@ -1426,7 +1426,7 @@ export default function App() {
     reloadData();
   };
 
-  const handleApproverSign = (reqId: string, resultStatus: 'Approved' | 'Partially Approved' | 'Denied' | 'No Data Found') => {
+  const handleApproverSign = async (reqId: string, resultStatus: 'Approved' | 'Partially Approved' | 'Denied' | 'No Data Found') => {
     if (!activeUser) return;
     const req = getRequestById(reqId);
     if (!req) return;
@@ -1456,12 +1456,12 @@ export default function App() {
   };
 
   // Delivery package (Section 3.9)
-  const handleMarkAsDelivered = (reqId: string) => {
+  const handleMarkAsDelivered = async (reqId: string) => {
     if (!activeUser) return;
     await changeRequestStatus(reqId, 'Delivered', activeUser, 'เจ้าหน้าที่ทำการจัดส่งหนังสือราชการและข้อมูลสำเร็จ');
     
     // Automatically close after delivery
-    setTimeout(() => {
+    setTimeout(async () => {
       await changeRequestStatus(reqId, 'Closed', activeUser, 'คำขอสิ้นสุดกระบวนการ บันทึกระยะเวลาดำเนินการเฉลี่ยปิดงาน');
       reloadData();
     }, 1000);
@@ -4080,7 +4080,7 @@ export default function App() {
                         <p className="text-xs text-slate-500">ตรวจสอบสถานะชำระค่าธรรมเนียม (ถ้ามี) เรียบร้อยแล้ว กดปุ่มเพื่อบันทึกการส่งมอบข้อมูลปลอดภัย</p>
                         
                         <button
-                          onClick={() => {
+                          onClick={async () => {
                             if (window.confirm('ยืนยันการจัดส่งข้อมูลให้เจ้าของข้อมูลและปิดเรื่องคำขอนี้?')) {
                               await changeRequestStatus(activeRequestObj.id, 'Closed', activeUser, 'จัดส่งมอบลิงก์ดาวน์โหลดอย่างปลอดภัยและปิดเรื่องสำเร็จ');
                               reloadData();
