@@ -839,34 +839,38 @@ export default function App() {
 
               {/* STEP 1: Username & Password */}
               {loginStep === 'credentials' && (
-                <form onSubmit={handleStep1Submit} className="space-y-4" autoComplete="off">
+                <form onSubmit={handleStep1Submit} className="space-y-5" autoComplete="off">
                   <div>
-                    <label className="block text-xs font-semibold mb-1.5">Username ผู้ดูแลระบบกลาง</label>
+                    <label className="block text-sm font-bold mb-2 text-slate-200">
+                      Username ผู้ดูแลระบบกลาง
+                    </label>
                     <div className="relative">
-                      <UserCheck className="absolute left-3.5 top-3 h-4 w-4 text-slate-400" />
+                      <UserCheck className="absolute left-4 top-4 h-5 w-5 text-emerald-400" />
                       <input
                         type="text"
                         value={username}
                         onChange={(e) => setUsername(e.target.value)}
                         placeholder="super.admin"
                         autoComplete="new-password"
-                        className={`w-full pl-10 pr-4 py-2.5 border rounded-xl text-xs focus:outline-none transition-all ${inputCustomBg}`}
+                        className={`w-full pl-12 pr-4 py-3.5 border rounded-2xl text-base sm:text-lg font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500/30 transition-all ${inputCustomBg}`}
                         required
                       />
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold mb-1.5">Master Security Password</label>
+                    <label className="block text-sm font-bold mb-2 text-slate-200">
+                      Master Security Password
+                    </label>
                     <div className="relative">
-                      <Lock className="absolute left-3.5 top-3 h-4 w-4 text-slate-400" />
+                      <Lock className="absolute left-4 top-4 h-5 w-5 text-emerald-400" />
                       <input
                         type="password"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         placeholder="กรอกรหัสผ่านปลอดภัย"
                         autoComplete="new-password"
-                        className={`w-full pl-10 pr-4 py-2.5 border rounded-xl text-xs focus:outline-none transition-all ${inputCustomBg}`}
+                        className={`w-full pl-12 pr-4 py-3.5 border rounded-2xl text-base sm:text-lg font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500/30 transition-all ${inputCustomBg}`}
                         required
                       />
                     </div>
@@ -875,14 +879,14 @@ export default function App() {
                   <div className="pt-2">
                     <button
                       type="submit"
-                      className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold py-3 rounded-xl text-xs transition shadow-lg shadow-emerald-600/20 flex items-center justify-center gap-2 group"
+                      className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold py-4 rounded-2xl text-base transition shadow-lg shadow-emerald-600/20 flex items-center justify-center gap-2 group"
                     >
                       <span>ถัดไป: ยืนยันรหัส MFA Authenticator</span>
-                      <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                      <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
                     </button>
                   </div>
 
-                  <div className="p-3 bg-slate-800/40 border border-slate-800 rounded-xl text-[11px] text-slate-400 text-center leading-relaxed mt-4">
+                  <div className="p-3.5 bg-slate-800/40 border border-slate-800 rounded-2xl text-xs text-slate-400 text-center leading-relaxed mt-4">
                     💡 ระบบเปิดใช้งาน <b>MFA Protection</b> ทุกครั้งที่เข้าสู่ระบบ รหัส OTP จะถูกส่งไปยังอีเมลที่ลงทะเบียน
                   </div>
                 </form>
@@ -890,8 +894,8 @@ export default function App() {
 
               {/* STEP 2: MFA TOTP Code Verification */}
               {loginStep === 'mfa' && (
-                <form onSubmit={handleMfaSubmit} className="space-y-4 animate-fade-in">
-                  <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl text-xs text-emerald-400 flex items-center gap-2">
+                <form onSubmit={handleMfaSubmit} className="space-y-5 animate-fade-in">
+                  <div className="p-3.5 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl text-xs sm:text-sm text-emerald-400 flex items-center gap-2 font-medium">
                     <CheckCircle2 className="h-5 w-5 shrink-0" />
                     <span>ยืนยันตัวตนขั้นแรกสำเร็จ กรุณากรอกรหัส OTP 6 หลักที่ส่งไปยังอีเมล</span>
                   </div>
@@ -900,19 +904,19 @@ export default function App() {
                     <div className="inline-block p-4 bg-slate-900 border border-slate-800 rounded-2xl shadow-inner">
                       <Mail className="h-12 w-12 text-emerald-400 mx-auto" />
                     </div>
-                    <p className="text-[13px] font-bold">
+                    <p className="text-sm font-bold">
                       ตรวจสอบรหัส OTP ที่อีเมล: <span className="text-emerald-400">{otpEmail || 'apichat.utopia@gmail.com'}</span>
                     </p>
-                    <p className="text-[11px] text-slate-400">
+                    <p className="text-xs text-slate-400">
                       นำรหัสตัวเลข 6 หลักที่ได้รับในกล่องจดหมายมากรอกเพื่อยืนยันเข้าสู่ระบบ
                     </p>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-center mb-2 text-slate-300">
+                    <label className="block text-sm font-bold text-center mb-2.5 text-slate-200">
                       รหัสผ่าน OTP 6 หลัก จาก Gmail
                     </label>
-                    <div className="relative max-w-[260px] mx-auto">
+                    <div className="relative max-w-[280px] mx-auto">
                       <input
                         type="text"
                         maxLength={6}
@@ -920,26 +924,26 @@ export default function App() {
                         onChange={(e) => setMfaCode(e.target.value.replace(/[^0-9]/g, ''))}
                         placeholder="• • • • • •"
                         autoFocus
-                        className="w-full text-center tracking-[0.55em] font-mono text-2xl font-extrabold py-3 px-4 bg-slate-900/90 border-2 border-emerald-500/50 hover:border-emerald-500 rounded-2xl text-emerald-400 placeholder:text-slate-600 focus:outline-none focus:border-emerald-400 focus:ring-4 focus:ring-emerald-500/20 transition shadow-inner"
+                        className="w-full text-center tracking-[0.55em] font-mono text-3xl font-extrabold py-3.5 px-4 bg-slate-900/90 border-2 border-emerald-500/50 hover:border-emerald-500 rounded-2xl text-emerald-400 placeholder:text-slate-600 focus:outline-none focus:border-emerald-400 focus:ring-4 focus:ring-emerald-500/20 transition shadow-inner"
                         required
                       />
                     </div>
-                    <span className="block text-[11px] text-emerald-400/90 text-center mt-2 font-medium">
+                    <span className="block text-xs text-emerald-400/90 text-center mt-2.5 font-medium">
                       ✓ กรุณากรอกรหัสตัวเลข 6 หลักที่ได้รับทางอีเมล (อายุ 5 นาที)
                     </span>
                   </div>
 
-                  <div className="flex gap-2 pt-2">
+                  <div className="flex gap-3 pt-2">
                     <button
                       type="button"
                       onClick={() => setLoginStep('credentials')}
-                      className="w-1/3 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold py-2.5 rounded-xl transition"
+                      className="w-1/3 bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-bold py-3.5 rounded-2xl transition"
                     >
                       ย้อนกลับ
                     </button>
                     <button
                       type="submit"
-                      className="w-2/3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold py-2.5 rounded-xl text-xs transition shadow-lg"
+                      className="w-2/3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold py-3.5 rounded-2xl text-sm transition shadow-lg"
                     >
                       เข้าสู่ระบบหลังบ้าน
                     </button>
