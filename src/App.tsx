@@ -199,13 +199,13 @@ export default function App() {
 
     const resetTimer = () => {
       clearTimeout(timeoutId);
-      // Set timeout for 5 minutes (300,000 ms) - Unified PDPA Security Policy
+      // Set timeout for 10 minutes (600,000 ms) - Staff Document Review Policy
       timeoutId = setTimeout(() => {
         if (activeUser) {
-          handleStaffForceLogout('ท่านไม่ได้ใช้งานระบบเกิน 5 นาที ระบบจึงทำการออกจากระบบอัตโนมัติเพื่อความปลอดภัย');
+          handleStaffForceLogout('ท่านไม่ได้ใช้งานระบบเกิน 10 นาที ระบบจึงทำการออกจากระบบอัตโนมัติเพื่อความปลอดภัย');
           window.location.reload();
         }
-      }, 5 * 60 * 1000);
+      }, 10 * 60 * 1000);
     };
 
     if (activeUser) {
