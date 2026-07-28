@@ -1229,12 +1229,18 @@ app.post('/api/users', authenticateJWT, requireRole(['admin']), async (req, res)
 // PUT /api/users/:id
 app.put('/api/users/:id', authenticateJWT, requireRole(['admin']), async (req, res) => {
   const { id } = req.params;
-  const { fullNameTh, fullNameEn, email, role, roles, department, resetPassword } = req.body;
+  const { fullNameTh, fullNameEn, email, role, roles, department, resetPassword, newPassword } = req.body;
   try {
     const assignedRoles = (roles && Array.isArray(roles) && roles.length > 0) ? roles : [role || 'intake'];
     const primaryRole = role || assignedRoles[0] || 'intake';
 
-    if (resetPassword) {
+    if (newPassword) {
+      const pwdHash = await bcrypt.hash(newPassword, 10);
+      await dbPool.query(
+        'UPDATE users SET full_name_th = $1, full_name_en = $2, email = $3, role = $4, roles = $5, department = $6, password_hash = $7 WHERE id = $8',
+        [fullNameTh, fullNameEn || fullNameTh, email, primaryRole, JSON.stringify(assignedRoles), department, pwdHash, id]
+      );
+    } else if (resetPassword) {
       const pwdHash = await bcrypt.hash('123456', 10);
       await dbPool.query(
         'UPDATE users SET full_name_th = $1, full_name_en = $2, email = $3, role = $4, roles = $5, department = $6, password_hash = $7 WHERE id = $8',
