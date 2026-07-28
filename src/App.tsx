@@ -3305,7 +3305,7 @@ export default function App() {
                 <div className="border-t border-slate-100 pt-3 space-y-2 text-xs text-slate-600">
                   <div className="flex justify-between">
                     <span>ผู้ยื่นคำขอ:</span>
-                    <span className="font-bold text-slate-900">{trackedRequest.requester.firstName} {trackedRequest.requester.lastName}</span>
+                    <span className="font-bold text-slate-900">{trackedRequest.requester?.firstName} {trackedRequest.requester?.lastName}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>วันที่ส่งคำขอ:</span>
@@ -3313,12 +3313,12 @@ export default function App() {
                   </div>
                   <div className="flex justify-between">
                     <span>ประเภทสิทธิ:</span>
-                    <span className="font-semibold uppercase">{trackedRequest.requestDetails.requestType}</span>
+                    <span className="font-semibold uppercase">{trackedRequest.requestDetails?.requestType || 'N/A'}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>ช่องทางรับมอบ:</span>
                     <span className="font-semibold text-brand-600">
-                      {trackedRequest.requestDetails.deliveryMethod === 'secure_download' ? 'ดาวน์โหลดออนไลน์' : trackedRequest.requestDetails.deliveryMethod === 'pickup' ? 'รับ ณ สำนักงาน' : 'ส่งทางไปรษณีย์'}
+                      {trackedRequest.requestDetails?.deliveryMethod === 'secure_download' ? 'ดาวน์โหลดออนไลน์' : trackedRequest.requestDetails?.deliveryMethod === 'pickup' ? 'รับ ณ สำนักงาน' : 'ส่งทางไปรษณีย์'}
                     </span>
                   </div>
                 </div>
@@ -3353,7 +3353,7 @@ export default function App() {
                   <div className="bg-white border border-amber-200 rounded-xl p-3 text-xs text-amber-900 leading-relaxed font-medium space-y-1">
                     <span className="block font-bold text-amber-800">รายละเอียดเอกสารที่ร้องขอเพิ่ม:</span>
                     <p className="text-slate-700 bg-amber-50/50 p-2 rounded border border-amber-100 font-mono text-[11px]">
-                      {trackedRequest.statusHistory.find(h => h.status === 'Awaiting Additional Information')?.comment || 'โปรดแนบรูปถ่ายสำเนาบัตรประจำตัวประชาชนเพิ่มเติมเพื่อยืนยันตัวตน'}
+                      {(trackedRequest.statusHistory || []).find(h => h.status === 'Awaiting Additional Information')?.comment || 'โปรดแนบรูปถ่ายสำเนาบัตรประจำตัวประชาชนเพิ่มเติมเพื่อยืนยันตัวตน'}
                     </p>
                     <p className="text-[10px] text-amber-700 pt-1 font-semibold">
                       ⏱️ กรุณาอัปโหลดเพิ่มเติมภายในเวลาที่กำหนด (10 วัน) มิฉะนั้นเรื่องจะถูกยกเลิกคำขอตามระบบอัตโนมัติ
@@ -3397,7 +3397,7 @@ export default function App() {
                 <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider">บันทึกขั้นตอนการดำเนินการ (TIMELINE HISTORY)</span>
                 
                 <div className="relative pl-6 border-l border-slate-200 space-y-6 pt-2">
-                  {trackedRequest.statusHistory.slice().reverse().map((h, i) => (
+                  {(trackedRequest.statusHistory || []).slice().reverse().map((h, i) => (
                     <div key={i} className="relative">
                       {/* Timeline dot */}
                       <span className="absolute -left-[30px] top-0.5 h-4.5 w-4.5 rounded-full border-2 border-white bg-brand-500 flex items-center justify-center text-[10px] text-white">
@@ -3426,12 +3426,12 @@ export default function App() {
                 
                 {/* Chat items */}
                 <div className="flex-1 p-4 overflow-y-auto space-y-3">
-                  {trackedRequest.messageThread.length === 0 ? (
+                  {(trackedRequest.messageThread || []).length === 0 ? (
                     <div className="text-center py-10 text-slate-400 text-xs">
                       ยังไม่มีประวัติการส่งข้อความ สนทนาถามตอบด้านล่างได้ทันที
                     </div>
                   ) : (
-                    trackedRequest.messageThread.map((msg) => (
+                    (trackedRequest.messageThread || []).map((msg) => (
                       <div
                         key={msg.id}
                         className={`flex flex-col max-w-[80%] rounded-lg p-2.5 text-xs ${
