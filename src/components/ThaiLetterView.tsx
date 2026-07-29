@@ -153,12 +153,35 @@ export const ThaiLetterView: React.FC<ThaiLetterViewProps> = ({
             เรื่อง {renderTemplateText(template.subjectTemplate)}
           </div>
 
-          <div className="text-justify space-y-[6pt]">
-            {renderTemplateText(template.bodyTemplate).split('\n').map((para, i) => (
-              <p key={i} className={para.trim() && !para.trim().startsWith('เรียน') ? "indent-[2.5cm]" : ""}>
-                {para}
-              </p>
-            ))}
+          <div className="text-left space-y-[6pt] break-words">
+            {(() => {
+              const fullText = renderTemplateText(template.bodyTemplate);
+              const lines = fullText.split('\n');
+              const cleanLines = [];
+              for (const line of lines) {
+                // Stop rendering if we hit the manual signature block from the database
+                if (line.trim().includes('ขอแสดงความนับถือ')) break;
+                cleanLines.push(line);
+              }
+              
+              return cleanLines.map((para, i) => {
+                const isHeadingLine = para.trim().startsWith('เรียน') || 
+                                      para.trim().startsWith('อ้างถึง') || 
+                                      para.trim().startsWith('สิ่งที่ส่งมาด้วย');
+                
+                // If it's an empty line, just render a spacer
+                if (!para.trim()) return <div key={i} className="h-[6pt]"></div>;
+                
+                // Indent only if it's not a heading line, and doesn't look like a continued list or URL
+                const shouldIndent = !isHeadingLine && !para.trim().startsWith('ลิงก์:') && !para.trim().startsWith('*');
+
+                return (
+                  <p key={i} className={shouldIndent ? "indent-[2.5cm]" : ""}>
+                    {para}
+                  </p>
+                );
+              });
+            })()}
           </div>
         </div>
 
