@@ -101,22 +101,6 @@ export const ThaiLetterView: React.FC<ThaiLetterViewProps> = ({
     return output;
   };
 
-  const getConfidentialityBadgeColor = (level: string) => {
-    switch (level) {
-      case 'SECRET': return 'bg-red-100 text-red-800 border-red-200';
-      case 'CONFIDENTIAL': return 'bg-amber-100 text-amber-800 border-amber-200';
-      default: return 'bg-slate-100 text-slate-700 border-slate-200';
-    }
-  };
-
-  const getConfidentialityLabel = (level: string) => {
-    switch (level) {
-      case 'SECRET': return 'ลับ (Secret)';
-      case 'CONFIDENTIAL': return 'ลับเฉพาะ (Confidential)';
-      default: return 'ปกติ (Unclassified)';
-    }
-  };
-
   return (
     <div className="w-full space-y-4">
       {/* Action panel above document */}
@@ -141,51 +125,37 @@ export const ThaiLetterView: React.FC<ThaiLetterViewProps> = ({
       </div>
 
       {/* Official Thai Letter Sheet */}
-      <div className="print-area bg-white border border-slate-300 shadow-md p-10 md:p-14 max-w-2xl mx-auto rounded-md font-sans text-slate-800 leading-relaxed text-sm relative overflow-hidden print:border-0 print:shadow-none print:p-0">
+      <div className="print-area bg-white font-sarabun text-[16pt] leading-none text-black w-[210mm] min-h-[297mm] mx-auto shadow-md relative pt-[2.5cm] pb-[2cm] pl-[3cm] pr-[2cm] print:shadow-none print:w-[210mm] print:h-[297mm]">
         
-        {/* Top Header Grid */}
-        <div className="flex justify-between items-start border-b border-slate-100 pb-4 mb-6">
-          <div className="flex items-center gap-3">
-            {/* Mock Organization Emblem/Logo */}
-            <div className="h-12 w-12 rounded border-2 border-slate-800 bg-slate-900 text-white flex items-center justify-center font-bold text-xs">
-              LOGO
-            </div>
-            <div>
-              <span className="block font-bold text-xs uppercase tracking-wide">{request.targetOrgName || 'หน่วยงานผู้รับคำขอ PDPA'}</span>
-              <span className="block text-[11px] text-slate-500">PDPA Access Request Management System</span>
-            </div>
+        {/* Header Layer */}
+        <div className="relative h-[3cm] mb-4">
+          <div className="absolute bottom-4 left-0">
+            ที่ สก. ๐๐๑ / {new Date().getFullYear() + 543}
           </div>
           
-          <div className="text-right text-[11px]">
-            <span className="block font-bold">ชั้นความลับ:</span>
-            <span className={`inline-block border px-2 py-0.5 rounded text-[10px] font-bold ${getConfidentialityBadgeColor(template.confidentialityLevel)}`}>
-              {getConfidentialityLabel(template.confidentialityLevel)}
-            </span>
+          {/* Garuda Logo */}
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 h-[3cm] w-[3cm] flex items-center justify-center border-2 border-slate-800 text-slate-800 font-bold text-sm rounded-full bg-slate-50">
+            ตราครุฑ
+          </div>
+          
+          <div className="absolute bottom-4 right-0 max-w-[6cm] text-right">
+            สำนักงานคุ้มครองข้อมูลส่วนบุคคล
           </div>
         </div>
 
         {/* Official Letter Body */}
-        <div className="space-y-4">
-          <div className="flex justify-between text-xs text-slate-600">
-            <span>ที่ สก. ๐๐๑ / {new Date().getFullYear() + 543}</span>
-            <span>สำนักงานคุ้มครองข้อมูลส่วนบุคคล</span>
+        <div className="space-y-[6pt]">
+          <div className="mb-4" style={{ marginLeft: '7.5cm' }}>
+            วันที่ {convertToThaiDate(new Date().toISOString())}
           </div>
 
-          <div className="text-center font-bold text-base my-2">
-            {template.nameTh}
+          <div className="mb-4">
+            เรื่อง {renderTemplateText(template.subjectTemplate)}
           </div>
 
-          <div className="text-right my-2">
-            <span className="font-medium">วันที่:</span> {convertToThaiDate(new Date().toISOString())}
-          </div>
-
-          <div className="text-slate-800 text-xs">
-            เรื่อง: {renderTemplateText(template.subjectTemplate)}
-          </div>
-
-          <div className="text-slate-800 text-xs text-justify leading-relaxed font-sans mt-4 space-y-4">
+          <div className="text-justify space-y-[6pt]">
             {renderTemplateText(template.bodyTemplate).split('\n').map((para, i) => (
-              <p key={i} className={para.trim() && !para.trim().startsWith('เรียน') ? "indent-10" : ""}>
+              <p key={i} className={para.trim() && !para.trim().startsWith('เรียน') ? "indent-[2.5cm]" : ""}>
                 {para}
               </p>
             ))}
@@ -193,36 +163,33 @@ export const ThaiLetterView: React.FC<ThaiLetterViewProps> = ({
         </div>
 
         {/* Signature Line */}
-        <div className="mt-16 relative pb-4">
-          <div className="absolute bottom-4 left-0 text-center text-[10px] text-slate-400 max-w-[150px] flex flex-col items-center border border-slate-100 p-2 rounded bg-slate-50">
-            <QrCode className="h-10 w-10 text-slate-500 mb-1" />
-            <span className="font-bold">สแกนตรวจสอบเอกสาร</span>
-            <span className="font-mono text-[8px] break-all">{request.uuid.substr(0, 15)}</span>
-          </div>
-
-          <div className="flex flex-col items-center justify-center ml-12">
-            <div className="text-slate-800 text-xs mb-8">
-              ขอแสดงความนับถือ
-            </div>
-            <div className="text-center space-y-1">
-              <div className="h-10 flex items-center justify-center relative">
-                {/* Simulated Signature Line */}
-                <div className="font-mono text-xs italic text-brand-600 select-none">
-                  / {signer.username} /
-                </div>
-                <div className="absolute inset-x-0 bottom-0 border-b border-dashed border-slate-300 w-40 mx-auto"></div>
+        <div className="mt-8" style={{ marginLeft: '7.5cm', width: '8.5cm' }}>
+          <div className="text-left mb-12">ขอแสดงความนับถือ</div>
+          
+          <div className="flex flex-col items-center">
+            <div className="h-8 flex items-center justify-center relative w-full">
+              <div className="font-mono text-[14pt] italic text-brand-600 select-none">
+                / {signer.username} /
               </div>
-              <div className="text-xs font-semibold mt-1">({signer.fullNameTh})</div>
-              <div className="text-[11px] text-slate-500">
-                {signer.role === 'dpo' ? 'เจ้าหน้าที่คุ้มครองข้อมูลส่วนบุคคล (DPO)' : 'ผู้อนุมัติมีอำนาจสั่งการ'}
-              </div>
+              <div className="absolute inset-x-0 bottom-0 border-b border-dashed border-slate-300 w-40 mx-auto"></div>
             </div>
+            <div className="mt-2">({signer.fullNameTh})</div>
+            <div>{signer.role === 'dpo' ? 'เจ้าหน้าที่คุ้มครองข้อมูลส่วนบุคคล (DPO)' : 'ผู้อนุมัติมีอำนาจสั่งการ'}</div>
           </div>
         </div>
 
-        {/* Footer info (Audit tracking token) */}
-        <div className="mt-12 pt-4 border-t border-slate-100 text-[10px] text-slate-400 flex justify-between">
-          <span>สิทธิและสำเนาข้อมูลผู้ควบคุม | PDPA Sec 30 Suite v1.0</span>
+        {/* Footer info & Audit tracking token */}
+        <div className="absolute bottom-[2cm] left-[3cm] text-[14pt] leading-tight">
+          สำนักงานคุ้มครองข้อมูลส่วนบุคคล<br/>
+          โทร. 02-123-4567<br/>
+          <div className="mt-2 text-[10pt] text-slate-400 flex items-center gap-2 border border-slate-100 p-1 w-[fit-content] rounded bg-slate-50">
+            <QrCode className="h-6 w-6 text-slate-500" />
+            <span className="font-mono text-[8pt]">{request.uuid.substr(0, 15)}</span>
+          </div>
+        </div>
+
+        <div className="absolute bottom-[2cm] right-[2cm] text-[10pt] text-slate-400 text-right leading-tight">
+          สิทธิและสำเนาข้อมูลผู้ควบคุม<br/>PDPA Sec 30 Suite v1.0<br/>
           <span className="font-mono">CHECKSUM: {request.trackingNo} - OK</span>
         </div>
       </div>
