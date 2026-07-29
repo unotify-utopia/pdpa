@@ -153,11 +153,7 @@ export const ThaiLetterView: React.FC<ThaiLetterViewProps> = ({
           <div className="absolute top-0 left-1/2 -translate-x-1/2 h-[3cm] w-[3cm] flex items-center justify-center rounded-full bg-transparent overflow-hidden">
             {org.logoUrl ? (
               <img src={org.logoUrl} alt="Logo" className="w-full h-full object-contain" />
-            ) : (
-              <div className="border-2 border-slate-800 text-slate-800 font-bold text-sm w-full h-full flex items-center justify-center rounded-full bg-slate-50">
-                ตราหน่วยงาน
-              </div>
-            )}
+            ) : null}
           </div>
           
           <div className="absolute bottom-4 right-0 max-w-[6cm] text-right">
