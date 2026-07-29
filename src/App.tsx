@@ -4700,7 +4700,7 @@ export default function App() {
                         </span>
 
                         {/* DPO input form */}
-                        {activeUser.role === 'dpo' || activeUser.role === 'admin' ? (
+                        {(activeUser.role === 'dpo' || activeUser.role === 'admin') && !activeRequestObj.decision?.approvedAt ? (
                           <div className="space-y-3 text-xs">
                             <div className="space-y-1">
                               <label className="font-semibold text-slate-700">ผลวินิจฉัยข้อเสนอสิทธิ์:</label>
@@ -4776,22 +4776,29 @@ export default function App() {
                                   <strong>บันทึกความเห็น:</strong> {activeRequestObj.decision.dpoRecommendation}
                                 </p>
                                 
-                                <div className="grid grid-cols-2 gap-2 pt-1">
-                                  <button
-                                    type="button"
-                                    onClick={() => handleApproverSign(activeRequestObj.id, activeRequestObj.decision?.result === 'approved' ? 'Approved' : activeRequestObj.decision?.result === 'partially_approved' ? 'Partially Approved' : 'Denied')}
-                                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-1.5 px-2 rounded transition"
-                                  >
-                                    อนุมัติตามเสนอ
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={async () => await changeRequestStatus(activeRequestObj.id, 'DPO or Legal Review', activeUser, 'ส่งกลับแก้ไขความเห็นพิจารณากฎหมาย')}
-                                    className="bg-rose-600 hover:bg-rose-700 text-white font-bold py-1.5 px-2 rounded transition"
-                                  >
-                                    ส่งกลับแก้ไข
-                                  </button>
-                                </div>
+                                {activeRequestObj.decision.approvedAt ? (
+                                  <div className="p-2 bg-emerald-100 text-emerald-800 text-xs rounded border border-emerald-200 mt-2">
+                                    <span className="font-bold flex items-center gap-1">✅ อนุมัติแล้ว</span>
+                                    โดย {activeRequestObj.decision.approverName} เมื่อ {new Date(activeRequestObj.decision.approvedAt).toLocaleDateString('th-TH')}
+                                  </div>
+                                ) : (
+                                  <div className="grid grid-cols-2 gap-2 pt-1">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleApproverSign(activeRequestObj.id, activeRequestObj.decision?.result === 'approved' ? 'Approved' : activeRequestObj.decision?.result === 'partially_approved' ? 'Partially Approved' : 'Denied')}
+                                      className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-1.5 px-2 rounded transition"
+                                    >
+                                      อนุมัติตามเสนอ
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={async () => await changeRequestStatus(activeRequestObj.id, 'DPO or Legal Review', activeUser, 'ส่งกลับแก้ไขความเห็นพิจารณากฎหมาย')}
+                                      className="bg-rose-600 hover:bg-rose-700 text-white font-bold py-1.5 px-2 rounded transition"
+                                    >
+                                      ส่งกลับแก้ไข
+                                    </button>
+                                  </div>
+                                )}
                               </div>
                             ) : (
                               <p className="text-[11px] text-teal-800">
