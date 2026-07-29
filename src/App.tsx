@@ -1657,6 +1657,7 @@ export default function App() {
       req.decision.approvedAt = new Date().toISOString();
       req.decision.approverName = activeUser.fullNameTh;
       req.decision.approverOpinion = 'เห็นชอบและยินยอมให้ลงนามหนังสือตามประกาศ DPO';
+      await updateRequest(req, activeUser, 'APPROVER_SIGN', 'ผู้บริหารลงนามเห็นชอบ');
     }
 
     // Change status
@@ -4700,7 +4701,7 @@ export default function App() {
                         </span>
 
                         {/* DPO input form */}
-                        {(activeUser.role === 'dpo' || activeUser.role === 'admin') && !activeRequestObj.decision?.approvedAt ? (
+                        {(activeUser.role === 'dpo' || activeUser.role === 'admin') && !(activeRequestObj.decision?.approvedAt || ['Ready for Delivery', 'Fee Notification', 'Delivered', 'Closed'].includes(activeRequestObj.status)) ? (
                           <div className="space-y-3 text-xs">
                             <div className="space-y-1">
                               <label className="font-semibold text-slate-700">ผลวินิจฉัยข้อเสนอสิทธิ์:</label>
@@ -4776,10 +4777,10 @@ export default function App() {
                                   <strong>บันทึกความเห็น:</strong> {activeRequestObj.decision.dpoRecommendation}
                                 </p>
                                 
-                                {activeRequestObj.decision.approvedAt ? (
+                                {activeRequestObj.decision.approvedAt || ['Ready for Delivery', 'Fee Notification', 'Delivered', 'Closed'].includes(activeRequestObj.status) ? (
                                   <div className="p-2 bg-emerald-100 text-emerald-800 text-xs rounded border border-emerald-200 mt-2">
                                     <span className="font-bold flex items-center gap-1">✅ อนุมัติแล้ว</span>
-                                    โดย {activeRequestObj.decision.approverName} เมื่อ {new Date(activeRequestObj.decision.approvedAt).toLocaleDateString('th-TH')}
+                                    โดย {activeRequestObj.decision.approverName || 'ผู้มีอำนาจลงนาม'} เมื่อ {activeRequestObj.decision.approvedAt ? new Date(activeRequestObj.decision.approvedAt).toLocaleDateString('th-TH') : new Date().toLocaleDateString('th-TH')}
                                   </div>
                                 ) : (
                                   <div className="grid grid-cols-2 gap-2 pt-1">
