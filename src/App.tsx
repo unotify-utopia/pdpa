@@ -4666,7 +4666,7 @@ export default function App() {
                       </div>
                     )}
                     {/* Module D.5: ตัวอย่างเอกสารส่งออก (Final Delivery Preview) */}
-                    {['dpo', 'admin'].includes(activeUser.role) && (
+                    {['dpo', 'admin', 'approver'].includes(activeUser.role) && (
                       <div className="bg-gradient-to-r from-slate-50 to-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-4 text-center">
                         <div className="flex flex-col items-center justify-center gap-2">
                           <div className="h-12 w-12 rounded-full bg-brand-100 text-brand-600 flex items-center justify-center mb-2">
@@ -4674,7 +4674,9 @@ export default function App() {
                           </div>
                           <span className="block text-sm font-bold text-slate-700">จำลองเอกสารส่งออกฉบับร่าง (Draft Preview)</span>
                           <p className="text-[11px] text-slate-500 max-w-sm mx-auto">
-                            พรีวิวตรวจสอบความถูกต้องของเนื้อหาในหนังสือราชการที่จะถูกสร้างขึ้น (ข้อความจะสอดคล้องกับผลวินิจฉัยที่คุณกำลังเลือกอยู่)
+                            {activeUser.role === 'approver' 
+                              ? 'ตรวจสอบเนื้อหาจดหมายฉบับร่างที่ผ่านการร่างโดย DPO ก่อนกดอนุมัติ'
+                              : 'พรีวิวตรวจสอบความถูกต้องของเนื้อหาในหนังสือราชการที่จะถูกสร้างขึ้น (ข้อความจะสอดคล้องกับผลวินิจฉัยที่คุณกำลังเลือกอยู่)'}
                           </p>
                         </div>
                         
@@ -6404,95 +6406,104 @@ export default function App() {
       )}
 
       {/* Final Delivery Preview Modal */}
-      {showDeliveryPreview && activeRequestObj && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto animate-fadeIn">
-          <div className="bg-slate-100 rounded-xl shadow-2xl w-full max-w-4xl flex flex-col max-h-[90vh] overflow-hidden border border-slate-300 relative">
-            <div className="bg-slate-800 p-4 border-b border-slate-700 flex justify-between items-center shrink-0">
-              <div className="flex items-center gap-3">
-                <div className="bg-white/20 p-2 rounded-lg">
-                  <FileCheck2 className="h-5 w-5 text-white" />
-                </div>
-                <div>
-                  <h2 className="text-base font-bold text-white">ตัวอย่างเอกสารส่งมอบฉบับร่าง (Delivery Draft Preview)</h2>
-                  <p className="text-[11px] text-slate-300">นี่คือแบบจำลองเอกสารที่จะถูกส่งออกจริงหลังได้รับการอนุมัติ</p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowDeliveryPreview(false)}
-                className="text-slate-400 hover:text-white bg-slate-700/50 hover:bg-slate-700 p-2 rounded-full transition"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <div className="p-4 overflow-y-auto bg-slate-100 flex flex-col items-center gap-6">
-              <div className="w-full max-w-3xl flex justify-between items-center mb-[-10px]">
-                <span className="text-xs font-bold text-slate-500 flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse"></span>
-                  สถานะจำลอง: {decisionType === 'approved' ? 'อนุมัติคำขอ' : decisionType === 'partially_approved' ? 'อนุมัติบางส่วน' : 'ปฏิเสธคำขอ'}
-                </span>
-              </div>
-              
-              <div className="w-full max-w-3xl bg-white shadow-lg shadow-slate-300/50 border border-slate-200 rounded-sm relative">
-                {/* Document header badge */}
-                <div className="absolute top-0 right-0 bg-red-500 text-white text-[10px] font-bold px-3 py-1 rounded-bl-lg uppercase tracking-widest shadow-sm z-10">
-                  DRAFT / ฉบับร่าง
-                </div>
-                <div className="scale-[0.95] origin-top">
-                  <ThaiLetterView
-                    request={{
-                      ...activeRequestObj,
-                      decision: {
-                        result: decisionType as any, // Cast since decisionType is tied to the local state
-                        reasons: [config?.rejectionReasons.find(r => r.code === denialBasisCode)?.labelTh || '...เหตุผลจำลอง...'],
-                        legalBasisText: config?.rejectionReasons.find(r => r.code === denialBasisCode)?.labelTh || '...มาตรากฎหมายจำลอง...',
-                        dpoCheckedAt: new Date().toISOString(),
-                        dpoName: activeUser?.fullNameTh || 'DPO Name',
-                      }
-                    }}
-                    template={templates.find(t => t.id === (decisionType === 'denied' ? 'temp_deny' : 'temp_approve')) || templates[0]}
-                    signer={activeUser!}
-                  />
-                </div>
-              </div>
-
-              {/* Attachment summary */}
-              {(decisionType === 'approved' || decisionType === 'partially_approved') && (
-                <div className="w-full max-w-3xl">
-                  <span className="text-xs font-bold text-slate-600 block mb-2">ไฟล์เอกสารแนบ (Attachments in Package):</span>
-                  <div className="bg-white border border-slate-200 rounded-lg p-4 shadow-sm flex items-center gap-4">
-                    <div className="h-12 w-12 bg-rose-100 text-rose-600 rounded flex items-center justify-center shrink-0">
-                      <FileBadge className="h-6 w-6" />
-                    </div>
-                    <div>
-                      <div className="text-sm font-bold text-slate-800">ข้อมูลส่วนบุคคลที่ผ่านการค้นหาและรวบรวมแล้ว.pdf</div>
-                      <div className="text-[11px] text-slate-500">
-                        รวมไฟล์จากระบบ {activeRequestObj.dataCollectionTasks.length} ระบบ (มีลายน้ำกำกับ DRAFT)
-                      </div>
-                    </div>
-                    <div className="ml-auto">
-                      <span className="bg-slate-100 text-slate-500 text-[10px] font-bold px-2 py-1 rounded uppercase">
-                        Auto-Generated
-                      </span>
-                    </div>
+      {showDeliveryPreview && activeRequestObj && (() => {
+        const previewResult = activeUser!.role === 'approver' && activeRequestObj.decision ? activeRequestObj.decision.result : decisionType;
+        const previewReasons = activeUser!.role === 'approver' && activeRequestObj.decision ? activeRequestObj.decision.reasons : [config?.rejectionReasons.find(r => r.code === denialBasisCode)?.labelTh || '...เหตุผลจำลอง...'];
+        const previewLegalBasis = activeUser!.role === 'approver' && activeRequestObj.decision ? activeRequestObj.decision.legalBasisText : (config?.rejectionReasons.find(r => r.code === denialBasisCode)?.labelTh || '...มาตรากฎหมายจำลอง...');
+        const previewDpoName = activeUser!.role === 'approver' && activeRequestObj.decision?.dpoName ? activeRequestObj.decision.dpoName : (activeUser?.fullNameTh || 'DPO Name');
+        const previewDpoCheckedAt = activeUser!.role === 'approver' && activeRequestObj.decision?.dpoCheckedAt ? activeRequestObj.decision.dpoCheckedAt : new Date().toISOString();
+        const templateId = previewResult === 'denied' || previewResult === 'no_data' ? 'temp_deny' : 'temp_approve';
+        
+        return (
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto animate-fadeIn">
+            <div className="bg-slate-100 rounded-xl shadow-2xl w-full max-w-4xl flex flex-col max-h-[90vh] overflow-hidden border border-slate-300 relative">
+              <div className="bg-slate-800 p-4 border-b border-slate-700 flex justify-between items-center shrink-0">
+                <div className="flex items-center gap-3">
+                  <div className="bg-white/20 p-2 rounded-lg">
+                    <FileCheck2 className="h-5 w-5 text-white" />
+                  </div>
+                  <div>
+                    <h2 className="text-base font-bold text-white">ตัวอย่างเอกสารส่งมอบฉบับร่าง (Delivery Draft Preview)</h2>
+                    <p className="text-[11px] text-slate-300">นี่คือแบบจำลองเอกสารที่จะถูกส่งออกจริงหลังได้รับการอนุมัติ</p>
                   </div>
                 </div>
-              )}
-            </div>
+                <button
+                  type="button"
+                  onClick={() => setShowDeliveryPreview(false)}
+                  className="text-slate-400 hover:text-white bg-slate-700/50 hover:bg-slate-700 p-2 rounded-full transition"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
 
-            <div className="bg-white p-4 border-t border-slate-200 flex justify-end shrink-0">
-              <button
-                type="button"
-                onClick={() => setShowDeliveryPreview(false)}
-                className="bg-slate-800 hover:bg-slate-900 text-white font-bold py-2.5 px-6 rounded-lg text-xs transition shadow-sm"
-              >
-                ปิดหน้าต่าง (Close)
-              </button>
+              <div className="p-4 overflow-y-auto bg-slate-100 flex flex-col items-center gap-6">
+                <div className="w-full max-w-3xl flex justify-between items-center mb-[-10px]">
+                  <span className="text-xs font-bold text-slate-500 flex items-center gap-2">
+                    <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse"></span>
+                    สถานะจำลอง: {previewResult === 'approved' ? 'อนุมัติคำขอ' : previewResult === 'partially_approved' ? 'อนุมัติบางส่วน' : previewResult === 'no_data' ? 'ไม่พบข้อมูล' : 'ปฏิเสธคำขอ'}
+                  </span>
+                </div>
+                
+                <div className="w-full max-w-3xl bg-white shadow-lg shadow-slate-300/50 border border-slate-200 rounded-sm relative">
+                  {/* Document header badge */}
+                  <div className="absolute top-0 right-0 bg-red-500 text-white text-[10px] font-bold px-3 py-1 rounded-bl-lg uppercase tracking-widest shadow-sm z-10">
+                    DRAFT / ฉบับร่าง
+                  </div>
+                  <div className="scale-[0.95] origin-top">
+                    <ThaiLetterView
+                      request={{
+                        ...activeRequestObj,
+                        decision: {
+                          result: previewResult as any,
+                          reasons: previewReasons,
+                          legalBasisText: previewLegalBasis,
+                          dpoCheckedAt: previewDpoCheckedAt,
+                          dpoName: previewDpoName,
+                        }
+                      }}
+                      template={templates.find(t => t.id === templateId) || templates[0]}
+                      signer={activeUser!}
+                    />
+                  </div>
+                </div>
+
+                {/* Attachment summary */}
+                {(previewResult === 'approved' || previewResult === 'partially_approved') && (
+                  <div className="w-full max-w-3xl">
+                    <span className="text-xs font-bold text-slate-600 block mb-2">ไฟล์เอกสารแนบ (Attachments in Package):</span>
+                    <div className="bg-white border border-slate-200 rounded-lg p-4 shadow-sm flex items-center gap-4">
+                      <div className="h-12 w-12 bg-rose-100 text-rose-600 rounded flex items-center justify-center shrink-0">
+                        <FileBadge className="h-6 w-6" />
+                      </div>
+                      <div>
+                        <div className="text-sm font-bold text-slate-800">ข้อมูลส่วนบุคคลที่ผ่านการค้นหาและรวบรวมแล้ว.pdf</div>
+                        <div className="text-[11px] text-slate-500">
+                          รวมไฟล์จากระบบ {activeRequestObj.dataCollectionTasks.length} ระบบ (มีลายน้ำกำกับ DRAFT)
+                        </div>
+                      </div>
+                      <div className="ml-auto">
+                        <span className="bg-slate-100 text-slate-500 text-[10px] font-bold px-2 py-1 rounded uppercase">
+                          Auto-Generated
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="bg-white p-4 border-t border-slate-200 flex justify-end shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setShowDeliveryPreview(false)}
+                  className="bg-slate-800 hover:bg-slate-900 text-white font-bold py-2.5 px-6 rounded-lg text-xs transition shadow-sm"
+                >
+                  ปิดหน้าต่าง (Close)
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Added NotifyModal to replace alerts */}
       <NotifyModal 
