@@ -5426,7 +5426,7 @@ export default function App() {
                               <td className="p-3">{convertToThaiDate(req.submissionDate)}</td>
                               <td className="p-3">
                                 <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                                  ['Approved', 'Delivered', 'Closed'].includes(req.status) ? 'bg-emerald-100 text-emerald-800' :
+                                  ['Approved', 'Ready for Delivery', 'Delivered', 'Closed'].includes(req.status) ? 'bg-emerald-100 text-emerald-800' :
                                   ['Denied', 'Withdrawn'].includes(req.status) ? 'bg-rose-100 text-rose-800' :
                                   'bg-brand-50 text-brand-700 border border-brand-100'
                                 }`}>
