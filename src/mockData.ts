@@ -4,7 +4,7 @@ import type { Organization, ComplianceConfig, User, Request, DocumentTemplate } 
 export const initialOrganizations: Organization[] = [
   {
     id: 'org_dopa',
-    nameTh: 'กรมการปกครอง (Department of Provincial Administration)',
+    nameTh: 'กรมการปกครอง',
     nameEn: 'Department of Provincial Administration',
     logoUrl: 'https://upload.wikimedia.org/wikipedia/th/thumb/6/69/Department_of_Provincial_Administration.svg/120px-Department_of_Provincial_Administration.svg.png',
     address: 'กรมการปกครอง ถนนอัษฎางค์ แขวงราชบพิธ เขตพระนคร กรุงเทพฯ 10200',
@@ -13,7 +13,7 @@ export const initialOrganizations: Organization[] = [
   },
   {
     id: 'org_rd',
-    nameTh: 'กรมสรรพากร (Revenue Department)',
+    nameTh: 'กรมสรรพากร',
     nameEn: 'Revenue Department',
     logoUrl: 'https://upload.wikimedia.org/wikipedia/th/thumb/7/7f/The_Revenue_Department_Thailand_logo.svg/120px-The_Revenue_Department_Thailand_logo.svg.png',
     address: 'กรมสรรพากร ซอยพหลโยธิน 7 ถนนพหลโยธิน แขวงพญาไท เขตพญาไท กรุงเทพฯ 10400',
@@ -22,7 +22,7 @@ export const initialOrganizations: Organization[] = [
   },
   {
     id: 'org_tech_th',
-    nameTh: 'บริษัท ไทยเทคโนโลยี อินโนเวชั่น จำกัด (Thai Tech)',
+    nameTh: 'บริษัท ไทยเทคโนโลยี อินโนเวชั่น จำกัด',
     nameEn: 'Thai Tech Innovation Co., Ltd.',
     logoUrl: 'https://images.unsplash.com/photo-1599305445671-ac291c95aaa9?w=150&h=150&fit=crop&q=80',
     address: '99/9 อาคารนวัตกรรม ชั้น 15 ถนนวิภาวดีรังสิต แขวงจตุจักร เขตจตุจักร กรุงเทพฯ 10900',
