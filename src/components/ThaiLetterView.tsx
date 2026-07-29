@@ -179,13 +179,13 @@ export const ThaiLetterView: React.FC<ThaiLetterViewProps> = ({
             <span className="font-medium">วันที่:</span> {convertToThaiDate(new Date().toISOString())}
           </div>
 
-          <div className="font-semibold text-slate-700">
-            เรื่อง: <span className="font-normal text-slate-900">{renderTemplateText(template.subjectTemplate)}</span>
+          <div className="text-slate-800 text-xs">
+            เรื่อง: {renderTemplateText(template.subjectTemplate)}
           </div>
 
           <div className="text-slate-800 text-xs text-justify leading-relaxed font-sans mt-4 space-y-4">
             {renderTemplateText(template.bodyTemplate).split('\n').map((para, i) => (
-              <p key={i} className={para.trim() ? "indent-10" : ""}>
+              <p key={i} className={para.trim() && !para.trim().startsWith('เรียน') ? "indent-10" : ""}>
                 {para}
               </p>
             ))}
@@ -193,24 +193,29 @@ export const ThaiLetterView: React.FC<ThaiLetterViewProps> = ({
         </div>
 
         {/* Signature Line */}
-        <div className="mt-12 flex justify-between items-end">
-          <div className="text-center text-[10px] text-slate-400 max-w-[200px] flex flex-col items-center border border-slate-100 p-2 rounded bg-slate-50">
+        <div className="mt-16 relative pb-4">
+          <div className="absolute bottom-4 left-0 text-center text-[10px] text-slate-400 max-w-[150px] flex flex-col items-center border border-slate-100 p-2 rounded bg-slate-50">
             <QrCode className="h-10 w-10 text-slate-500 mb-1" />
             <span className="font-bold">สแกนตรวจสอบเอกสาร</span>
             <span className="font-mono text-[8px] break-all">{request.uuid.substr(0, 15)}</span>
           </div>
 
-          <div className="text-center space-y-1">
-            <div className="h-10 flex items-center justify-center relative">
-              {/* Simulated Signature Line */}
-              <div className="font-mono text-xs italic text-brand-600 select-none">
-                / {signer.username} /
-              </div>
-              <div className="absolute inset-x-0 bottom-0 border-b border-dashed border-slate-300 w-40 mx-auto"></div>
+          <div className="flex flex-col items-center justify-center ml-12">
+            <div className="text-slate-800 text-xs mb-8">
+              ขอแสดงความนับถือ
             </div>
-            <div className="text-xs font-semibold mt-1">({signer.fullNameTh})</div>
-            <div className="text-[11px] text-slate-500">
-              {signer.role === 'dpo' ? 'เจ้าหน้าที่คุ้มครองข้อมูลส่วนบุคคล (DPO)' : 'ผู้อนุมัติมีอำนาจสั่งการ'}
+            <div className="text-center space-y-1">
+              <div className="h-10 flex items-center justify-center relative">
+                {/* Simulated Signature Line */}
+                <div className="font-mono text-xs italic text-brand-600 select-none">
+                  / {signer.username} /
+                </div>
+                <div className="absolute inset-x-0 bottom-0 border-b border-dashed border-slate-300 w-40 mx-auto"></div>
+              </div>
+              <div className="text-xs font-semibold mt-1">({signer.fullNameTh})</div>
+              <div className="text-[11px] text-slate-500">
+                {signer.role === 'dpo' ? 'เจ้าหน้าที่คุ้มครองข้อมูลส่วนบุคคล (DPO)' : 'ผู้อนุมัติมีอำนาจสั่งการ'}
+              </div>
             </div>
           </div>
         </div>
