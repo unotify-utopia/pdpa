@@ -1304,8 +1304,8 @@ export default function App() {
     if (!files || files.length === 0 || !activeUser) return;
     const file = files[0];
     
-    if (file.size > 5 * 1024 * 1024) {
-      alert('ขนาดไฟล์เกิน 5MB (File size exceeds 5MB)');
+    if (file.size > 3 * 1024 * 1024) {
+      alert('ขนาดไฟล์เกิน 3MB (จำกัดที่ 3MB เนื่องจากข้อจำกัดของ Cloud Server)');
       return;
     }
     
@@ -1326,31 +1326,43 @@ export default function App() {
           },
           body: JSON.stringify({ filename: file.name, fileData })
         });
-        const data = await res.json();
-        if (data.success) {
-          const req = getRequestById(reqId);
-          if (req) {
-            const t = req.dataCollectionTasks.find((t: any) => t.id === taskId);
-            if (t) {
-              if (!t.uploadedFiles) t.uploadedFiles = [];
-              t.uploadedFiles.push({
-                id: data.fileId,
-                name: file.name,
-                size: file.size,
-                type: file.type,
-                isMasked: false,
-                watermarkApplied: false,
-                uploadedAt: new Date().toISOString(),
-                fileUrl: data.fileId
-              });
+        
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success) {
+            const req = getRequestById(reqId);
+            if (req) {
+              const t = req.dataCollectionTasks.find((t: any) => t.id === taskId);
+              if (t) {
+                if (!t.uploadedFiles) t.uploadedFiles = [];
+                t.uploadedFiles.push({
+                  id: data.fileId,
+                  name: file.name,
+                  size: file.size,
+                  type: file.type,
+                  isMasked: false,
+                  watermarkApplied: false,
+                  uploadedAt: new Date().toISOString(),
+                  fileUrl: data.fileId
+                });
+              }
+              handleOwnerCompleteTask(reqId, taskId, 'found');
             }
-            handleOwnerCompleteTask(reqId, taskId, 'found');
+          } else {
+            alert('อัปโหลดไม่สำเร็จ: ' + data.message);
           }
         } else {
-          alert('อัปโหลดไม่สำเร็จ: ' + data.message);
+          let errText = 'Upload failed';
+          try {
+            const errData = await res.json();
+            errText = errData.message || errText;
+          } catch(err) {
+            errText = res.statusText;
+          }
+          alert(`อัปโหลดไม่สำเร็จ (HTTP ${res.status}): ${errText}`);
         }
-      } catch (err) {
-        alert('เกิดข้อผิดพลาดในการอัปโหลด');
+      } catch (err: any) {
+        alert('เกิดข้อผิดพลาดในการอัปโหลด: ' + err.message);
       }
     };
     reader.readAsDataURL(file);
