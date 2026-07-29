@@ -4318,7 +4318,7 @@ export default function App() {
 
                     {/* Module B: Data Gathering Tasking (Section 3.5) */}
                     {['owner', 'admin', 'intake', 'dpo'].includes(activeUser.role) && (
-                      <div className={"bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-4 " + (activeUser.role === 'dpo' ? 'order-6' : 'order-4')}>
+                      <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-4 order-4">
                         <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
                           <Search className="h-4 w-4 text-brand-600" />
                           <span>งานค้นหาและสืบค้นข้อมูลระบบภายใน (Data Discovery & Gathering)</span>
@@ -4532,7 +4532,7 @@ export default function App() {
 
                     {/* Module C: Document Redaction Panel (DPO/LEGAL ROLE) */}
                     {['dpo', 'admin'].includes(activeUser.role) && (
-                      <div className={"space-y-4 " + (activeUser.role === 'dpo' ? 'order-4' : 'order-5')}>
+                      <div className={"space-y-4 " + (activeUser.role === 'dpo' ? 'order-3' : 'order-5')}>
                         <RedactionCanvas
                           request={activeRequestObj}
                           onRedactApplied={(record) => handleRedactionApplied(activeRequestObj.id, record)}
