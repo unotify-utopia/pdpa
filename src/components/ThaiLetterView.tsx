@@ -1,5 +1,5 @@
-import React from 'react';
-import { Printer, Shield, QrCode } from 'lucide-react';
+import React, { useState } from 'react';
+import { Printer, Shield, QrCode, Mail, FileText } from 'lucide-react';
 import type { Request, DocumentTemplate, User } from '../types';
 import { initialOrganizations } from '../mockData';
 
@@ -96,7 +96,7 @@ export const ThaiLetterView: React.FC<ThaiLetterViewProps> = ({
     output = output.replace(/{{channel}}/g, request.contactChannel === 'web' ? 'เว็บไซต์ออนไลน์' : request.contactChannel === 'email' ? 'อีเมลสำนักงาน' : 'ยื่น ณ สำนักงาน');
     output = output.replace(/{{feeDetails}}/g, feeDetails);
     output = output.replace(/{{feeTotal}}/g, String(request.feeCalculation.totalCalculated));
-    output = output.replace(/{{downloadExpiryDays}}/g, '7');
+    output = output.replace(/{{downloadExpiryDays}}/g, '30');
     output = output.replace(/{{downloadLink}}/g, downloadLink);
     output = output.replace(/{{extensionDays}}/g, '30');
     output = output.replace(/{{newDeadline}}/g, newDeadlineTh);
@@ -122,30 +122,96 @@ export const ThaiLetterView: React.FC<ThaiLetterViewProps> = ({
     return output;
   };
 
+  const [viewMode, setViewMode] = useState<'letter' | 'email'>('letter');
+
   return (
     <div className="w-full space-y-4">
       {/* Action panel above document */}
-      <div className="bg-slate-50 border border-slate-200 p-3 rounded-lg flex items-center justify-between no-print">
+      <div className="bg-slate-50 border border-slate-200 p-3 rounded-lg flex flex-col sm:flex-row items-center justify-between gap-3 no-print">
         <div className="flex items-center gap-2">
           <Shield className="h-5 w-5 text-brand-600" />
           <div className="text-xs">
-            <span className="block font-bold text-slate-800">เครื่องสร้างเอกสารราชการไทย (Thai Document Builder)</span>
-            <span className="text-slate-500">ระบบสร้างจดหมายนำส่งแบบฟอร์ม PDF/Print สิทธิการเข้าถึงข้อมูล</span>
+            <span className="block font-bold text-slate-800">เครื่องสร้างเอกสารและอีเมล (Document & Email Builder)</span>
+            <span className="text-slate-500">ระบบสร้างจดหมายนำส่ง/อีเมลแจ้งผลการพิจารณา</span>
           </div>
         </div>
-        <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={onPrintMock ? onPrintMock : () => window.print()}
-            className="bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold py-1.5 px-3 rounded flex items-center gap-1 transition shadow-sm"
-          >
-            <Printer className="h-3.5 w-3.5" />
-            <span>พิมพ์รายงาน / บันทึก PDF</span>
-          </button>
+        
+        <div className="flex items-center gap-2">
+          <div className="flex bg-slate-200 p-0.5 rounded-md">
+            <button
+              onClick={() => setViewMode('letter')}
+              className={`px-3 py-1.5 text-xs font-bold rounded flex items-center gap-1.5 transition ${viewMode === 'letter' ? 'bg-white text-brand-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+            >
+              <FileText className="w-3.5 h-3.5" />
+              จดหมายกระดาษ (Letter)
+            </button>
+            <button
+              onClick={() => setViewMode('email')}
+              className={`px-3 py-1.5 text-xs font-bold rounded flex items-center gap-1.5 transition ${viewMode === 'email' ? 'bg-white text-brand-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+            >
+              <Mail className="w-3.5 h-3.5" />
+              อีเมลแจ้งเตือน (Email)
+            </button>
+          </div>
+          
+          {viewMode === 'letter' && (
+            <button
+              type="button"
+              onClick={onPrintMock ? onPrintMock : () => window.print()}
+              className="bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold py-1.5 px-3 rounded flex items-center gap-1 transition shadow-sm ml-2"
+            >
+              <Printer className="h-3.5 w-3.5" />
+              <span>พิมพ์รายงาน / PDF</span>
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Official Thai Letter Sheet */}
+      {viewMode === 'email' ? (
+        <div className="bg-slate-100 p-6 rounded-lg font-sans w-full max-w-3xl mx-auto border border-slate-200 no-print animate-fade-in">
+          <div className="bg-white rounded-xl shadow-md overflow-hidden">
+            <div className="bg-brand-700 p-4 flex items-center justify-center">
+              {org.logoUrl ? (
+                <img src={org.logoUrl} alt="Logo" className="h-10 object-contain bg-white p-1 rounded" />
+              ) : (
+                <span className="text-white font-bold text-lg">{org.nameTh}</span>
+              )}
+            </div>
+            <div className="p-6 space-y-4">
+              <h2 className="text-lg font-bold text-slate-800 border-b border-slate-100 pb-3">แจ้งผลการดำเนินการคำขอเลขที่ {request.trackingNo}</h2>
+              <p className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">
+                เรียน คุณ {request.requester.firstName} {request.requester.lastName},<br/><br/>
+                องค์กรได้พิจารณาอนุมัติการเข้าถึงข้อมูลตามสิทธิของท่านเรียบร้อยแล้ว รายละเอียดข้อมูลของท่านได้รับการตรวจสอบและจัดเตรียมไว้เป็นที่เรียบร้อย<br/><br/>
+                ท่านสามารถคลิกที่ปุ่มด้านล่างเพื่อดาวน์โหลดไฟล์ข้อมูลส่วนบุคคลของท่าน (รหัสอ้างอิง: {request.trackingNo}) ลิงก์นี้จะ<span className="text-rose-600 font-bold">หมดอายุภายใน 30 วัน</span>
+              </p>
+              
+              <div className="py-4 text-center">
+                <a 
+                  href={`https://pdpa.numcomputer.com/dl?ref=${request.trackingNo}`} 
+                  target="_blank" 
+                  rel="noreferrer"
+                  className="inline-block bg-brand-600 hover:bg-brand-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition transform hover:-translate-y-0.5"
+                >
+                  คลิกที่นี่เพื่อยืนยันและดาวน์โหลดเอกสาร
+                </a>
+              </div>
+              
+              <div className="bg-amber-50 border-l-4 border-amber-400 p-3 rounded text-xs text-amber-800">
+                <p className="font-bold mb-1">ความปลอดภัย (Security Note):</p>
+                <p>เพื่อความปลอดภัยของข้อมูล ท่านจะต้องกรอกรหัสผ่านแบบใช้ครั้งเดียว (OTP) ที่จะส่งไปยังมือถือหรืออีเมลของท่าน หลังจากคลิกปุ่มด้านบนแล้ว</p>
+              </div>
+              
+              <p className="text-xs text-slate-500 pt-4 border-t border-slate-100">
+                หากท่านมีข้อสงสัย หรือต้องการตรวจสอบความถูกต้องของอีเมลฉบับนี้<br/>
+                สามารถนำรหัสคำขอ {request.trackingNo} ไปตรวจสอบได้ที่ <a href="#" className="text-brand-600 hover:underline">pdpa.numcomputer.com/verify</a><br/>
+                <br/>
+                ขอแสดงความนับถือ<br/>
+                {org.nameTh}
+              </p>
+            </div>
+          </div>
+        </div>
+      ) : (
       <div className="print-area hidden print:block bg-white font-sarabun text-[12pt] leading-normal text-black w-[210mm] min-h-[297mm] mx-auto shadow-md relative pt-[2.5cm] pb-[2cm] pl-[3cm] pr-[2cm] print:shadow-none print:w-[210mm] print:h-[297mm]">
         
         {/* Header Layer */}
@@ -232,6 +298,7 @@ export const ThaiLetterView: React.FC<ThaiLetterViewProps> = ({
           <span className="text-[9pt] font-mono">REF: {request.trackingNo}</span>
         </div>
       </div>
+      )}
     </div>
   );
 };

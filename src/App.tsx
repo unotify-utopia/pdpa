@@ -70,6 +70,7 @@ import { SignaturePad } from './components/SignaturePad';
 import { WatermarkedUpload } from './components/WatermarkedUpload';
 import { RedactionCanvas } from './components/RedactionCanvas';
 import { ThaiLetterView, convertToThaiDate } from './components/ThaiLetterView';
+import { DocumentVerificationPortal } from './components/DocumentVerificationPortal';
 import { DashboardCharts } from './components/DashboardCharts';
 import { StaffLoginModal } from './components/StaffLoginModal';
 import { NotifyModal } from './components/NotifyModal';
@@ -163,7 +164,7 @@ export default function App() {
 
   // App context navigation states
   const initialUser = getCurrentUser();
-  const [view, setView] = useState<'public' | 'internal' | 'tracking' | 'download' | 'superadmin'>(
+  const [view, setView] = useState<'public' | 'internal' | 'tracking' | 'download' | 'superadmin' | 'verify'>(
     initialUser ? 'internal' : 'public'
   );
   const [publicTab, setPublicTab] = useState<'landing' | 'submit' | 'submitted_success'>('landing');
@@ -1138,6 +1139,40 @@ export default function App() {
     }
   };
 
+  const handleDownloadAction = async (reqId: string, _otpCodeStr: string) => {
+    const downloadReq = requests.find(r => r.id === reqId);
+    if (!downloadReq) return;
+
+    // Log downloand access
+    const mockSubjectUser: UserType = {
+      id: 'subject',
+      orgId: downloadReq.orgId || 'org_dopa',
+      username: 'data.subject',
+      fullNameTh: `${downloadReq.requester.firstName} ${downloadReq.requester.lastName}`,
+      fullNameEn: 'Data Subject',
+      email: downloadReq.requester.email,
+      role: 'intake',
+      roles: ['intake'],
+      mfaEnabled: false
+    };
+    
+    addAuditLog('SECURE_DOWNLOAD_FILE', `ผู้ยื่นยืนยัน OTP สำเร็จและดาวน์โหลดไฟล์ผ่านระบบตรวจสอบเอกสาร`, mockSubjectUser, downloadReq.id, downloadReq.trackingNo);
+    
+    // Update status if it was not closed
+    if (downloadReq.status === 'Ready for Delivery') {
+      await changeRequestStatus(downloadReq.id, 'Delivered', mockSubjectUser, 'ผู้ยื่นดาวน์โหลดข้อมูลผ่านระบบจัดส่งปลอดภัยสำเร็จ');
+      reloadData();
+    }
+    
+    // Simulate file download by creating mockup file
+    const link = document.createElement('a');
+    link.href = 'data:text/plain;charset=utf-8,' + encodeURIComponent(`[CONFIDENTIAL DATA REPORT FOR ${downloadReq.requester.firstName}]\n\nข้อมูลรายงานการใช้งานของท่าน ได้รับการตรวจสอบและส่งมอบตามสิทธิเรียบร้อยแล้ว.`);
+    link.download = `PDPA_EXPORT_${downloadReq.trackingNo}.txt`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   // --- STAFF WORKSPACE ACTION CONTROLLERS (Section 3) ---
   
   // Checklist State Management (Section 3.4)
@@ -1894,6 +1929,18 @@ export default function App() {
               </button>
 
               <button
+                onClick={() => setView('verify')}
+                className={`px-3 py-1 rounded font-bold transition flex items-center gap-1.5 ${
+                  view === 'verify'
+                    ? 'bg-brand-600 text-white'
+                    : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                }`}
+              >
+                <Shield className="w-3.5 h-3.5" />
+                ตรวจสอบ/ดาวน์โหลดเอกสาร (ประชาชน)
+              </button>
+
+              <button
                 onClick={() => { setView('internal'); setInternalTab('dashboard'); setSelectedRequestId(null); }}
                 className={`px-3 py-1 rounded font-bold transition ${
                   view === 'internal'
@@ -2494,6 +2541,19 @@ export default function App() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* --- RENDER VIEW: VERIFICATION & DOWNLOAD PORTAL --- */}
+      {view === 'verify' && (
+        <DocumentVerificationPortal
+          requests={requests}
+          organizations={organizations}
+          onTriggerOtp={triggerRealOtp}
+          onVerifyOtp={verifyRealOtp}
+          onDownload={(reqId, otpCodeStr) => {
+            handleDownloadAction(reqId, otpCodeStr);
+          }}
+        />
       )}
 
       {/* --- RENDER VIEW 1: PUBLIC REQUEST PORTAL --- */}
