@@ -4473,7 +4473,7 @@ export default function App() {
                                 ))}
                               
                               {/* System Owner action buttons - Moved to bottom */}
-                              {activeRequestObj.status === 'Data Collection' && activeRequestObj.dataCollectionTasks.length > 0 && (activeUser.role === 'owner' || activeUser.role === 'admin') && (
+                              {activeRequestObj.dataCollectionTasks.some((t: any) => t.status === 'pending') && (activeUser.role === 'owner' || activeUser.role === 'admin') && (
                                 <div className="flex flex-col gap-2 mt-6">
                                   <button
                                     type="button"
