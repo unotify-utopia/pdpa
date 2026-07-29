@@ -4671,6 +4671,38 @@ export default function App() {
                         </span>
                         
                         <div className="space-y-4">
+                          {/* Requester Attachments */}
+                          <div className="bg-slate-50 border border-slate-200 p-3 rounded-xl">
+                            <span className="text-xs font-bold text-slate-700 block mb-3 border-b border-slate-200 pb-2">หลักฐานและเอกสารแนบเบื้องต้น (Requester Attachments)</span>
+                            {activeRequestObj.attachments && activeRequestObj.attachments.length > 0 ? (
+                              <div className="space-y-2">
+                                {activeRequestObj.attachments.map((att) => (
+                                  <div key={att.id} className="flex justify-between items-center bg-white p-2 rounded-lg border border-slate-200 shadow-sm hover:border-brand-200 transition">
+                                    <div className="flex items-center gap-2 text-xs text-slate-700">
+                                      <FileText className="h-4 w-4 text-brand-500 shrink-0" />
+                                      <div className="flex flex-col">
+                                        <span className="font-semibold truncate max-w-[200px]" title={att.name}>{att.name}</span>
+                                        <span className="text-[9px] text-slate-400">({Math.round(att.size / 1024)} KB)</span>
+                                      </div>
+                                    </div>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        addAuditLog('VIEW_FILE', `DPO/Admin เปิดดูเอกสารเบื้องต้น (หน้า Review): ${att.name}`, activeUser, activeRequestObj.id, activeRequestObj.trackingNo);
+                                        setPreviewAttachment(att);
+                                      }}
+                                      className="bg-brand-50 hover:bg-brand-100 text-brand-700 text-[10px] font-bold py-1 px-3 rounded shadow-sm transition"
+                                    >
+                                      ดูเอกสาร
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <div className="text-center py-4 bg-white rounded border border-dashed border-slate-200 text-xs text-slate-400">ไม่มีเอกสารแนบเบื้องต้น</div>
+                            )}
+                          </div>
+                          
                           {/* Discovered Files */}
                           <div className="bg-slate-50 border border-slate-200 p-3 rounded-xl">
                             <span className="text-xs font-bold text-slate-700 block mb-3 border-b border-slate-200 pb-2">เอกสารที่ค้นพบจากระบบ (Discovered Data)</span>
