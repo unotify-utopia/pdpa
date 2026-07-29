@@ -1271,22 +1271,25 @@ export default function App() {
     reloadData();
   };
 
-  const handleOwnerCompleteTask = (reqId: string, taskId: string, isFound: 'found' | 'not_found' | 'not_applicable') => {
+  const handleOwnerCompleteFlow = (reqId: string) => {
     if (!activeUser) return;
     const req = getRequestById(reqId);
     if (!req) return;
 
-    const taskIndex = req.dataCollectionTasks.findIndex((t: DataCollectionTask) => t.id === taskId);
-    if (taskIndex === -1) return;
-
-    req.dataCollectionTasks[taskIndex].status = isFound;
-    req.dataCollectionTasks[taskIndex].completedAt = new Date().toISOString();
-    req.dataCollectionTasks[taskIndex].completedBy = activeUser.fullNameTh;
-    req.dataCollectionTasks[taskIndex].dataLineage = `ระบบ ${req.dataCollectionTasks[taskIndex].systemName} -> กวาดค้นหาด้วย SQL / Index -> จัดเก็บไฟล์ใน Object Private Container`;
+    let updated = 0;
+    req.dataCollectionTasks.forEach((t: DataCollectionTask) => {
+      if (t.status === 'pending') {
+        t.status = 'found';
+        t.completedAt = new Date().toISOString();
+        t.completedBy = activeUser.fullNameTh;
+        t.dataLineage = `ระบบ ${t.systemName} -> กวาดค้นหาด้วย SQL / Index -> จัดเก็บไฟล์ใน Object Private Container`;
+        updated++;
+      }
+    });
 
     // Auto transition to Data Owner Review if all tasks complete
     const allDone = req.dataCollectionTasks.every((t: DataCollectionTask) => t.status !== 'pending');
-    if (allDone) {
+    if (allDone && req.status === 'Data Collection') {
       req.status = 'Data Owner Review';
       req.statusHistory.push({
         status: 'Data Owner Review',
@@ -1296,8 +1299,10 @@ export default function App() {
       });
     }
 
-    updateRequest(req, activeUser, 'COMPLETE_DATA_TASK', `อัปเดตผลภารกิจค้นหาระบบ ${req.dataCollectionTasks[taskIndex].systemName} เป็น: ${isFound}`);
-    reloadData();
+    if (updated > 0 || allDone) {
+      updateRequest(req, activeUser, 'COMPLETE_DATA_TASK', `อัปเดตผลภารกิจค้นหาทั้งหมด ส่งไปยังขั้นตอนต่อไป`);
+      reloadData();
+    }
   };
 
   const handleTaskFileUpload = async (reqId: string, taskId: string, files: FileList | null) => {
@@ -1398,18 +1403,20 @@ export default function App() {
     }
   };
 
-  const handleOwnerEscalateTask = (reqId: string, taskId: string) => {
+  const handleOwnerEscalateFlow = (reqId: string) => {
     if (!activeUser) return;
     if (!confirm('คุณแน่ใจหรือไม่ที่จะแจ้งว่าไม่พบข้อมูล และส่งเรื่องนี้ข้ามไปยังผู้บริหารโดยตรง?')) return;
     const req = getRequestById(reqId);
     if (!req) return;
-    const taskIndex = req.dataCollectionTasks.findIndex((t: DataCollectionTask) => t.id === taskId);
-    if (taskIndex === -1) return;
 
-    req.dataCollectionTasks[taskIndex].status = 'not_found';
-    req.dataCollectionTasks[taskIndex].completedAt = new Date().toISOString();
-    req.dataCollectionTasks[taskIndex].completedBy = activeUser.fullNameTh;
-    req.dataCollectionTasks[taskIndex].dataLineage = `ระบบ ${req.dataCollectionTasks[taskIndex].systemName} -> กวาดค้นหาด้วย SQL / Index -> ไม่พบข้อมูล -> ส่งผู้บริหารตัดสินใจ`;
+    req.dataCollectionTasks.forEach((t: DataCollectionTask) => {
+      if (t.status === 'pending') {
+        t.status = 'not_found';
+        t.completedAt = new Date().toISOString();
+        t.completedBy = activeUser.fullNameTh;
+        t.dataLineage = `ระบบ ${t.systemName} -> กวาดค้นหาด้วย SQL / Index -> ไม่พบข้อมูล -> ส่งผู้บริหารตัดสินใจ`;
+      }
+    });
 
     // Escalate the entire request to Executive Approval
     req.status = 'Executive Approval';
@@ -1417,10 +1424,10 @@ export default function App() {
       status: 'Executive Approval',
       changedAt: new Date().toISOString(),
       changedBy: activeUser.fullNameTh,
-      comment: `ส่งเรื่องให้ผู้บริหารตัดสินใจ เนื่องจากไม่พบข้อมูลในระบบ ${req.dataCollectionTasks[taskIndex].systemName}`
+      comment: `ส่งเรื่องให้ผู้บริหารตัดสินใจ เนื่องจากไม่พบข้อมูลในระบบ`
     });
 
-    updateRequest(req, activeUser, 'ESCALATE_DATA_TASK', `ส่งเรื่องให้ผู้บริหารตัดสินใจ เนื่องจากไม่พบข้อมูลในระบบ ${req.dataCollectionTasks[taskIndex].systemName}`);
+    updateRequest(req, activeUser, 'ESCALATE_DATA_TASK', `ส่งเรื่องให้ผู้บริหารตัดสินใจ เนื่องจากไม่พบข้อมูล`);
     reloadData();
   };
 
@@ -4462,29 +4469,29 @@ export default function App() {
                                       ))}
                                     </div>
                                   )}
-
-                                  {/* System Owner action buttons */}
-                                  {(activeUser.role === 'owner' || activeUser.role === 'admin') && t.status !== 'found' && (
-                                    <div className="flex flex-col gap-2 pt-3 mt-3 border-t border-slate-100">
-                                      <button
-                                        type="button"
-                                        onClick={() => handleOwnerCompleteTask(activeRequestObj.id, t.id, 'found')}
-                                        className="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold py-1.5 px-3 rounded shadow-sm transition"
-                                      >
-                                        ส่งเรื่องไปยัง Flow ต่อไป
-                                      </button>
-                                      
-                                      <button
-                                        type="button"
-                                        onClick={() => handleOwnerEscalateTask(activeRequestObj.id, t.id)}
-                                        className="w-full bg-rose-600 hover:bg-rose-700 text-white text-[11px] font-bold py-1.5 px-3 rounded shadow-sm transition"
-                                      >
-                                        แจ้งว่าไม่พบข้อมูลและส่งเรื่องไปยังผู้บริหาร
-                                      </button>
-                                    </div>
-                                  )}
+                                  </div>
+                                ))}
+                              
+                              {/* System Owner action buttons - Moved to bottom */}
+                              {activeRequestObj.dataCollectionTasks.some((t: any) => t.status === 'pending') && (activeUser.role === 'owner' || activeUser.role === 'admin') && (
+                                <div className="flex flex-col gap-2 mt-6">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleOwnerCompleteFlow(activeRequestObj.id)}
+                                    className="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold py-2.5 px-4 rounded-lg shadow-sm transition"
+                                  >
+                                    ส่งเรื่องไปยัง Flow ต่อไป
+                                  </button>
+                                  
+                                  <button
+                                    type="button"
+                                    onClick={() => handleOwnerEscalateFlow(activeRequestObj.id)}
+                                    className="w-full bg-rose-600 hover:bg-rose-700 text-white text-sm font-bold py-2.5 px-4 rounded-lg shadow-sm transition"
+                                  >
+                                    แจ้งว่าไม่พบข้อมูลและส่งเรื่องไปยังผู้บริหาร
+                                  </button>
                                 </div>
-                              ))}
+                              )}
                             </div>
                           )}
                         </div>
