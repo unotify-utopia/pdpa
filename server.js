@@ -110,6 +110,16 @@ const initDatabase = async () => {
         value TEXT NOT NULL,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
+
+      CREATE TABLE IF NOT EXISTS task_files (
+        id VARCHAR(100) PRIMARY KEY,
+        request_id VARCHAR(100),
+        task_id VARCHAR(100),
+        filename VARCHAR(255),
+        file_data TEXT,
+        uploaded_by VARCHAR(255),
+        uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
     `);
     
     try {
@@ -1631,6 +1641,66 @@ app.get('/api/public/track/:trackingNo', async (req, res) => {
 });
 
 // --- PROTECTED INTERNAL ROUTES ---
+
+// POST /api/requests/:id/tasks/:taskId/upload (Secure file upload for Data Discovery)
+app.post('/api/requests/:id/tasks/:taskId/upload', authenticateJWT, requireRole(['admin', 'owner']), async (req, res) => {
+  try {
+    const { id, taskId } = req.params;
+    const { filename, fileData } = req.body;
+    
+    if (!filename || !fileData) {
+      return res.status(400).json({ success: false, message: 'Missing file data' });
+    }
+    
+    const fileId = `file_${Date.now()}`;
+    
+    await dbPool.query(
+      `INSERT INTO task_files (id, request_id, task_id, filename, file_data, uploaded_by) 
+       VALUES ($1, $2, $3, $4, $5, $6)`,
+      [fileId, id, taskId, filename, fileData, req.user.username]
+    );
+
+    // Also log to audit_logs
+    await dbPool.query(
+      `INSERT INTO audit_logs (id, org_id, actor_id, actor_name, actor_role, action, request_id, details) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+      [`log_${Date.now()}`, req.user.orgId, req.user.id || req.user.username, req.user.fullNameTh || req.user.username, req.user.role, 'UPLOAD_DATA_DISCOVERY_FILE', id, `อัปโหลดไฟล์ ${filename} สำหรับภารกิจ ${taskId}`]
+    );
+    
+    res.json({ success: true, fileId });
+  } catch (err) {
+    console.error('Upload Error:', err);
+    res.status(500).json({ success: false, message: 'Upload failed' });
+  }
+});
+
+// GET /api/requests/:id/tasks/:taskId/files/:fileId (Secure file download)
+app.get('/api/requests/:id/tasks/:taskId/files/:fileId', authenticateJWT, requireRole(['admin', 'owner', 'dpo']), async (req, res) => {
+  try {
+    const { id, taskId, fileId } = req.params;
+    
+    const { rows } = await dbPool.query(
+      `SELECT filename, file_data FROM task_files WHERE id = $1 AND request_id = $2 AND task_id = $3`,
+      [fileId, id, taskId]
+    );
+    
+    if (rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'File not found' });
+    }
+
+    // Log to audit_logs for secure export
+    await dbPool.query(
+      `INSERT INTO audit_logs (id, org_id, actor_id, actor_name, actor_role, action, request_id, details) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+      [`log_${Date.now()}`, req.user.orgId, req.user.id || req.user.username, req.user.fullNameTh || req.user.username, req.user.role, 'EXPORT_DATA_DISCOVERY_FILE', id, `ดาวน์โหลดไฟล์ ${rows[0].filename} ของภารกิจ ${taskId}`]
+    );
+    
+    res.json({ success: true, filename: rows[0].filename, fileData: rows[0].file_data });
+  } catch (err) {
+    console.error('Download Error:', err);
+    res.status(500).json({ success: false, message: 'Download failed' });
+  }
+});
 
 // GET /api/requests (List requests - protected)
 app.get('/api/requests', authenticateJWT, async (req, res) => {

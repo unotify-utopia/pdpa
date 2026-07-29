@@ -12,6 +12,7 @@ import {
   Users,
   Send,
   AlertTriangle,
+  AlertCircle,
   Lock,
   Plus,
   DollarSign,
@@ -538,7 +539,10 @@ export default function App() {
   // Dashboard Interactive Navigation Filter State
   const [statusFilterGroup, setStatusFilterGroup] = useState<RequestStatus[] | null>(null);
 
-
+  const [isExporting, setIsExporting] = useState<boolean>(false);
+  
+  // Download file state
+  const [downloadConfirm, setDownloadConfirm] = useState<{ reqId: string, taskId: string, fileId: string, filename: string } | null>(null);
 
   useEffect(() => {
     recalculateAllSLAs();
@@ -1311,6 +1315,92 @@ export default function App() {
 
     updateRequest(req, activeUser, 'COMPLETE_DATA_TASK', `อัปเดตผลภารกิจค้นหาระบบ ${req.dataCollectionTasks[taskIndex].systemName} เป็น: ${isFound}`);
     reloadData();
+  };
+
+  const handleTaskFileUpload = async (reqId: string, taskId: string, files: FileList | null) => {
+    if (!files || files.length === 0 || !activeUser) return;
+    const file = files[0];
+    
+    if (file.size > 5 * 1024 * 1024) {
+      alert('ขนาดไฟล์เกิน 5MB (File size exceeds 5MB)');
+      return;
+    }
+    
+    if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+      alert('กรุณาอัปโหลดไฟล์ PDF เท่านั้น');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      const fileData = e.target?.result as string;
+      try {
+        const res = await fetch(`/api/requests/${reqId}/tasks/${taskId}/upload`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          },
+          body: JSON.stringify({ filename: file.name, fileData })
+        });
+        const data = await res.json();
+        if (data.success) {
+          const req = getRequestById(reqId);
+          if (req) {
+            const t = req.dataCollectionTasks.find((t: any) => t.id === taskId);
+            if (t) {
+              if (!t.uploadedFiles) t.uploadedFiles = [];
+              t.uploadedFiles.push({
+                id: data.fileId,
+                name: file.name,
+                size: file.size,
+                type: file.type,
+                isMasked: false,
+                watermarkApplied: false,
+                uploadedAt: new Date().toISOString(),
+                fileUrl: data.fileId
+              });
+            }
+            handleOwnerCompleteTask(reqId, taskId, 'found');
+          }
+        } else {
+          alert('อัปโหลดไม่สำเร็จ: ' + data.message);
+        }
+      } catch (err) {
+        alert('เกิดข้อผิดพลาดในการอัปโหลด');
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const executeFileDownload = async () => {
+    if (!downloadConfirm || !activeUser) return;
+    const { reqId, taskId, fileId, filename } = downloadConfirm;
+    
+    try {
+      const res = await fetch(`/api/requests/${reqId}/tasks/${taskId}/files/${fileId}`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      const data = await res.json();
+      if (data.success) {
+        // Create download link from Base64
+        const a = document.createElement('a');
+        a.href = data.fileData;
+        a.download = data.filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setDownloadConfirm(null);
+      } else {
+        alert('ดาวน์โหลดไม่สำเร็จ: ' + data.message);
+        setDownloadConfirm(null);
+      }
+    } catch (err) {
+      alert('เกิดข้อผิดพลาดในการดาวน์โหลด');
+      setDownloadConfirm(null);
+    }
   };
 
   // Redaction applied callback (Section 3.6)
@@ -4242,11 +4332,18 @@ export default function App() {
                                       <div className="flex gap-2 pt-1.5 border-t border-slate-100 justify-end">
                                         <button
                                           type="button"
-                                          onClick={() => handleOwnerCompleteTask(activeRequestObj.id, t.id, 'found')}
-                                          className="bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold py-1 px-2.5 rounded transition"
+                                          onClick={() => document.getElementById(`upload-task-${t.id}`)?.click()}
+                                          className="bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold py-1 px-2.5 rounded transition cursor-pointer"
                                         >
-                                          ✓ อัปโหลดผล (พบข้อมูล)
+                                          ✓ อัปโหลดผล (PDF)
                                         </button>
+                                        <input 
+                                          type="file" 
+                                          id={`upload-task-${t.id}`}
+                                          style={{ display: 'none' }} 
+                                          accept=".pdf"
+                                          onChange={(e) => handleTaskFileUpload(activeRequestObj.id, t.id, e.target.files)}
+                                        />
                                         <button
                                           type="button"
                                           onClick={() => handleOwnerCompleteTask(activeRequestObj.id, t.id, 'not_found')}
@@ -4257,10 +4354,25 @@ export default function App() {
                                       </div>
                                     ) : null
                                   ) : (
-                                    t.uploadedFiles.length > 0 && (
-                                      <div className="flex items-center gap-1.5 text-[10px] text-emerald-700 bg-emerald-50 p-1 rounded font-bold mt-1">
-                                        <FileSpreadsheet className="h-3.5 w-3.5" />
-                                        <span>แนบไฟล์ผลลัพธ์: {t.uploadedFiles[0].name} (พร้อมนำเข้าระบบถมดำ)</span>
+                                    (t.uploadedFiles && t.uploadedFiles.length > 0) && (
+                                      <div className="flex flex-col gap-1.5 mt-1">
+                                        {t.uploadedFiles.map((f: any, idx: number) => (
+                                          <div key={idx} className="flex justify-between items-center bg-emerald-50 p-1.5 rounded border border-emerald-100">
+                                            <div className="flex items-center gap-1.5 text-[10px] text-emerald-800 font-bold">
+                                              <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-600" />
+                                              <span className="truncate max-w-[120px]" title={f.name}>{f.name}</span>
+                                            </div>
+                                            {['admin', 'dpo', 'owner'].includes(activeUser?.role || '') && (
+                                              <button
+                                                type="button"
+                                                onClick={() => setDownloadConfirm({ reqId: activeRequestObj.id, taskId: t.id, fileId: f.id, filename: f.name })}
+                                                className="bg-white border border-emerald-300 text-emerald-700 text-[9px] font-bold py-0.5 px-2 rounded hover:bg-emerald-100 transition"
+                                              >
+                                                ดาวน์โหลด
+                                              </button>
+                                            )}
+                                          </div>
+                                        ))}
                                       </div>
                                     )
                                   )}
@@ -6075,6 +6187,41 @@ export default function App() {
               >
                 <CheckCircle2 className="h-4 w-4" />
                 <span>ยืนยันการขยายเวลา</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- EXPORT CONFIRMATION MODAL --- */}
+      {downloadConfirm && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn">
+          <div className="bg-white rounded-2xl border border-slate-200 p-6 max-w-md w-full space-y-4 shadow-2xl flex flex-col">
+            <div className="text-center space-y-1.5">
+              <div className="w-12 h-12 bg-amber-50 text-amber-600 rounded-full flex items-center justify-center mx-auto border border-amber-200">
+                <AlertCircle className="h-6 w-6" />
+              </div>
+              <h4 className="font-bold text-slate-800 text-base">ยืนยันการนำออกเอกสารความลับ?</h4>
+              <p className="text-xs text-slate-500 leading-relaxed">
+                คุณกำลังจะดาวน์โหลดไฟล์ <strong className="text-slate-800">{downloadConfirm.filename}</strong> ออกจากระบบ<br/>
+                <span className="text-rose-600 font-bold">การกระทำนี้จะถูกบันทึกใน Audit Log เพื่อการตรวจสอบ</span>
+              </p>
+            </div>
+            <div className="flex gap-3 pt-4 mt-auto">
+              <button
+                type="button"
+                onClick={() => setDownloadConfirm(null)}
+                className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2.5 rounded-xl text-xs transition"
+              >
+                ยกเลิก
+              </button>
+              <button
+                type="button"
+                onClick={executeFileDownload}
+                className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-xl text-xs transition shadow-lg shadow-emerald-500/30 flex justify-center items-center gap-2"
+              >
+                <Download className="h-4 w-4" />
+                ยืนยันและดาวน์โหลด
               </button>
             </div>
           </div>
