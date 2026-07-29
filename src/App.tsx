@@ -4822,7 +4822,6 @@ export default function App() {
                               request={activeRequestObj}
                               template={temp}
                               signer={activeUser}
-                              onPrintMock={() => showNotify('จำลองการสั่งพิมพ์เอกสารนำส่งราชการเรียบร้อย')}
                             />
                           );
                         })}

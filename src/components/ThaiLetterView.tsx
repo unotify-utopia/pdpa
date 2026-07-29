@@ -131,7 +131,7 @@ export const ThaiLetterView: React.FC<ThaiLetterViewProps> = ({
         <div className="flex gap-2">
           <button
             type="button"
-            onClick={onPrintMock}
+            onClick={onPrintMock ? onPrintMock : () => window.print()}
             className="bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold py-1.5 px-3 rounded flex items-center gap-1 transition shadow-sm"
           >
             <Printer className="h-3.5 w-3.5" />
@@ -141,7 +141,7 @@ export const ThaiLetterView: React.FC<ThaiLetterViewProps> = ({
       </div>
 
       {/* Official Thai Letter Sheet */}
-      <div className="bg-white border border-slate-300 shadow-md p-10 md:p-14 max-w-2xl mx-auto rounded-md font-sans text-slate-800 leading-relaxed text-sm relative overflow-hidden print:border-0 print:shadow-none print:p-0">
+      <div className="print-area bg-white border border-slate-300 shadow-md p-10 md:p-14 max-w-2xl mx-auto rounded-md font-sans text-slate-800 leading-relaxed text-sm relative overflow-hidden print:border-0 print:shadow-none print:p-0">
         
         {/* Top Header Grid */}
         <div className="flex justify-between items-start border-b border-slate-100 pb-4 mb-6">
