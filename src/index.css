@@ -79,6 +79,16 @@
 }
 
 @media print {
+  @page {
+    margin: 0;
+  }
+  
+  body, html, #root {
+    background-color: white !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
   body * {
     visibility: hidden;
   }
@@ -94,11 +104,13 @@
     width: 100% !important;
     height: auto !important;
     margin: 0 !important;
-    padding: 0 !important;
+    padding: 2cm !important;
     box-shadow: none !important;
   }
 
-  .no-print {
+  .no-print, .no-print * {
     display: none !important;
+    height: 0 !important;
+    overflow: hidden !important;
   }
 }

@@ -183,8 +183,12 @@ export const ThaiLetterView: React.FC<ThaiLetterViewProps> = ({
             เรื่อง: <span className="font-normal text-slate-900">{renderTemplateText(template.subjectTemplate)}</span>
           </div>
 
-          <div className="whitespace-pre-line text-slate-800 text-xs text-justify leading-relaxed font-sans mt-4">
-            {renderTemplateText(template.bodyTemplate)}
+          <div className="text-slate-800 text-xs text-justify leading-relaxed font-sans mt-4 space-y-4">
+            {renderTemplateText(template.bodyTemplate).split('\n').map((para, i) => (
+              <p key={i} className={para.trim() ? "indent-10" : ""}>
+                {para}
+              </p>
+            ))}
           </div>
         </div>
 

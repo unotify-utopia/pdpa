@@ -1864,10 +1864,10 @@ export default function App() {
   const activeRequestObj = selectedRequestId ? filteredRequests.find(r => r.id === selectedRequestId) : null;
 
   return (
-    <div className="min-h-screen flex flex-col font-sans">
+    <div className="min-h-screen print:min-h-0 print:h-auto print:block flex flex-col font-sans">
       
       {/* Header Navigation Bar */}
-      <div className="bg-slate-900 text-slate-200 px-4 py-2 flex flex-wrap items-center justify-between text-xs gap-2 select-none border-b border-slate-800 z-10">
+      <div className="no-print bg-slate-900 text-slate-200 px-4 py-2 flex flex-wrap items-center justify-between text-xs gap-2 select-none border-b border-slate-800 z-10">
         <div className="flex items-center gap-2 font-bold">
           <Shield className="h-4 w-4 text-brand-500" />
           <span>ระบบบริหารคำขอเข้าถึงข้อมูลส่วนบุคคล (PDPA Portal)</span>
@@ -3791,7 +3791,7 @@ export default function App() {
         <div className="flex-1 flex flex-col md:flex-row">
           
           {/* Internal Sidebar Menu */}
-          <aside className="w-full md:w-64 bg-slate-900 text-slate-300 border-r border-slate-800 flex flex-col justify-between shrink-0">
+          <aside className="no-print w-full md:w-64 bg-slate-900 text-slate-300 border-r border-slate-800 flex flex-col justify-between shrink-0">
             <div className="p-4 space-y-6">
               
               <div className="flex items-center gap-2 border-b border-slate-800 pb-4">
@@ -3866,7 +3866,7 @@ export default function App() {
           </aside>
 
           {/* Core Content Area */}
-          <main className="flex-1 p-6 space-y-6 overflow-y-auto">
+          <main className="flex-1 p-6 print:p-0 space-y-6 overflow-y-auto print:overflow-visible">
             
             {/* SOD Compliance Risk Warning Banner */}
             {activeUser.sodWarnings && activeUser.sodWarnings.length > 0 && (
@@ -4830,7 +4830,7 @@ export default function App() {
 
                     {/* Close Request and Delivery management */}
                     {['intake', 'admin'].includes(activeUser.role) && activeRequestObj.status === 'Ready for Delivery' && (
-                      <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-4">
+                      <div className="no-print bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-4">
                         <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider">จัดส่งสำเนาและปิดเรื่อง (Delivery & Archive)</span>
                         <p className="text-xs text-slate-500">ตรวจสอบสถานะชำระค่าธรรมเนียม (ถ้ามี) เรียบร้อยแล้ว กดปุ่มเพื่อบันทึกการส่งมอบข้อมูลปลอดภัย</p>
                         
@@ -4846,7 +4846,7 @@ export default function App() {
 
                     {/* Legal Hold status toggler */}
                     {['admin', 'dpo'].includes(activeUser.role) && (
-                      <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm text-xs flex justify-between items-center">
+                      <div className="no-print bg-white border border-slate-200 rounded-xl p-4 shadow-sm text-xs flex justify-between items-center">
                         <div>
                           <span className="block font-bold text-slate-800">ระงับการทำลายหลักฐาน (Legal Hold)</span>
                           <span className="text-[10px] text-slate-400">ห้ามทำลายไฟล์แม้หมดอายุการเก็บรักษา 2 ปี ในกรณีมีคดีค้างคา</span>
