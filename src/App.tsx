@@ -1425,32 +1425,44 @@ export default function App() {
   };
 
   const executeFileDownload = async () => {
-    if (!downloadConfirm || !activeUser) return;
-    const { reqId, taskId, fileId } = downloadConfirm;
-    
+    // Deprecated: User requested to remove download functionality
+    setDownloadConfirm(null);
+  };
+
+  const handleTaskFileReview = async (reqId: string, taskId: string, file: any) => {
+    if (!activeUser) return;
     try {
-      const res = await fetch(`/api/requests/${reqId}/tasks/${taskId}/files/${fileId}`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
+      const res = await fetch(`/api/requests/${reqId}/tasks/${taskId}/files/${file.id}`, {
+        headers: { 'Authorization': `Bearer ${sessionStorage.getItem('pdpa_jwt_token')}` }
       });
       const data = await res.json();
       if (data.success) {
-        // Create download link from Base64
-        const a = document.createElement('a');
-        a.href = data.fileData;
-        a.download = data.filename;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        setDownloadConfirm(null);
+        setPreviewAttachment({
+          name: data.filename || file.name,
+          fileUrl: data.fileData,
+          size: file.size,
+          isMasked: file.isMasked,
+          watermarkApplied: file.watermarkApplied
+        });
       } else {
-        alert('ดาวน์โหลดไม่สำเร็จ: ' + data.message);
-        setDownloadConfirm(null);
+        alert('ดึงไฟล์ไม่สำเร็จ: ' + data.message);
       }
     } catch (err) {
-      alert('เกิดข้อผิดพลาดในการดาวน์โหลด');
-      setDownloadConfirm(null);
+      alert('เกิดข้อผิดพลาดในการดึงไฟล์');
+    }
+  };
+
+  const handleUnassignTask = (reqId: string, taskId: string) => {
+    if (!activeUser) return;
+    if (!confirm('ยืนยันการยกเลิกการมอบหมายงานสืบค้นนี้?')) return;
+    const req = getRequestById(reqId);
+    if (!req) return;
+    const t = req.dataCollectionTasks.find((t: any) => t.id === taskId);
+    if (t) {
+      t.assignee = '';
+      t.status = 'pending';
+      updateRequest(req, activeUser, 'UNASSIGN_TASK', `ยกเลิกการมอบหมายงานสืบค้นระบบ ${t.systemName}`);
+      reloadData();
     }
   };
 
@@ -4352,9 +4364,20 @@ export default function App() {
                               {activeRequestObj.dataCollectionTasks.map((t) => (
                                 <div key={t.id} className="border border-slate-200 rounded-lg p-3 space-y-2 text-xs bg-white">
                                   <div className="flex justify-between items-center flex-wrap gap-2">
-                                    <div>
+                                    <div className="flex flex-col gap-0.5 max-w-[200px]">
                                       <span className="font-bold text-slate-800">{t.systemName}</span>
-                                      <span className="text-[10px] text-slate-400 block">ผู้รับผิดชอบ: {t.assignee}</span>
+                                      <span className="text-[10px] text-slate-400 block flex items-center gap-1">
+                                        ผู้รับผิดชอบ: {t.assignee}
+                                        {['admin', 'dpo'].includes(activeUser.role) && t.assignee && (
+                                          <button
+                                            type="button"
+                                            onClick={() => handleUnassignTask(activeRequestObj.id, t.id)}
+                                            className="text-rose-500 hover:text-rose-700 underline text-[9px]"
+                                          >
+                                            (ยกเลิก)
+                                          </button>
+                                        )}
+                                      </span>
                                     </div>
                                     <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
                                       t.status === 'found' ? 'bg-emerald-100 text-emerald-800' :
@@ -4418,10 +4441,10 @@ export default function App() {
                                             {(!f.isDeleted && ['admin', 'dpo', 'owner'].includes(activeUser?.role || '')) && (
                                               <button
                                                 type="button"
-                                                onClick={() => setDownloadConfirm({ reqId: activeRequestObj.id, taskId: t.id, fileId: f.id, filename: f.name })}
-                                                className="bg-white border border-emerald-300 text-emerald-700 text-[9px] font-bold py-0.5 px-2 rounded hover:bg-emerald-100 transition"
+                                                onClick={() => handleTaskFileReview(activeRequestObj.id, t.id, f)}
+                                                className="bg-white border border-blue-300 text-blue-700 text-[9px] font-bold py-0.5 px-2 rounded hover:bg-blue-100 transition"
                                               >
-                                                ดาวน์โหลด
+                                                ดูเอกสาร
                                               </button>
                                             )}
                                             {(!f.isDeleted && (activeUser.role === 'owner' || activeUser.role === 'admin')) && (
