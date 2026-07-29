@@ -5385,17 +5385,19 @@ export default function App() {
                         ตารางสืบค้นและดำเนินงานคำร้องขอใช้สิทธิข้อมูลส่วนบุคคล (Data Subject Access Requests) 
                         ({filteredRequests.length} รายการ)
                       </span>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          handleResetWizard();
-                          setInternalTab('manual_entry');
-                        }}
-                        className="bg-brand-600 hover:bg-brand-700 text-white font-bold text-[11px] px-3 py-1.5 rounded transition shadow-sm flex items-center gap-1.5"
-                      >
-                        <Plus className="w-3.5 h-3.5" />
-                        บันทึกคำร้องใหม่ (Manual Entry)
-                      </button>
+                      {['intake', 'admin'].includes(activeUser.role) && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            handleResetWizard();
+                            setInternalTab('manual_entry');
+                          }}
+                          className="bg-brand-600 hover:bg-brand-700 text-white font-bold text-[11px] px-3 py-1.5 rounded transition shadow-sm flex items-center gap-1.5"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          บันทึกคำร้องใหม่ (Manual Entry)
+                        </button>
+                      )}
                     </div>
 
                     <div className="overflow-x-auto">
