@@ -436,6 +436,9 @@ export default function App() {
   // Attachment Document Preview Modal State
   const [previewAttachment, setPreviewAttachment] = useState<{ name: string; fileUrl?: string; size: number; isMasked?: boolean; watermarkApplied?: boolean } | null>(null);
 
+  // Delivery Package Preview Modal State
+  const [showDeliveryPreview, setShowDeliveryPreview] = useState(false);
+
   // Active Selections
   const [selectedTargetOrgId, setSelectedTargetOrgId] = useState<string>('');
   const [tenantSearchQuery, setTenantSearchQuery] = useState<string>('');
@@ -4662,134 +4665,27 @@ export default function App() {
                         )}
                       </div>
                     )}
-                    {/* Module D.5: Consolidated Document Review for DPO */}
+                    {/* Module D.5: ตัวอย่างเอกสารส่งออก (Final Delivery Preview) */}
                     {['dpo', 'admin'].includes(activeUser.role) && (
-                      <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-4">
-                        <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-                          <FileCheck2 className="h-4.5 w-4.5 text-brand-600" />
-                          <span>สรุปแฟ้มเอกสารเตรียมส่งมอบ (Consolidated Document Review)</span>
-                        </span>
-                        
-                        <div className="space-y-4">
-                          {/* Requester Attachments */}
-                          <div className="bg-slate-50 border border-slate-200 p-3 rounded-xl">
-                            <span className="text-xs font-bold text-slate-700 block mb-3 border-b border-slate-200 pb-2">หลักฐานและเอกสารแนบเบื้องต้น (Requester Attachments)</span>
-                            {activeRequestObj.attachments && activeRequestObj.attachments.length > 0 ? (
-                              <div className="space-y-2">
-                                {activeRequestObj.attachments.map((att) => (
-                                  <div key={att.id} className="flex justify-between items-center bg-white p-2 rounded-lg border border-slate-200 shadow-sm hover:border-brand-200 transition">
-                                    <div className="flex items-center gap-2 text-xs text-slate-700">
-                                      <FileText className="h-4 w-4 text-brand-500 shrink-0" />
-                                      <div className="flex flex-col">
-                                        <span className="font-semibold truncate max-w-[200px]" title={att.name}>{att.name}</span>
-                                        <span className="text-[9px] text-slate-400">({Math.round(att.size / 1024)} KB)</span>
-                                      </div>
-                                    </div>
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        addAuditLog('VIEW_FILE', `DPO/Admin เปิดดูเอกสารเบื้องต้น (หน้า Review): ${att.name}`, activeUser, activeRequestObj.id, activeRequestObj.trackingNo);
-                                        setPreviewAttachment(att);
-                                      }}
-                                      className="bg-brand-50 hover:bg-brand-100 text-brand-700 text-[10px] font-bold py-1 px-3 rounded shadow-sm transition"
-                                    >
-                                      ดูเอกสาร
-                                    </button>
-                                  </div>
-                                ))}
-                              </div>
-                            ) : (
-                              <div className="text-center py-4 bg-white rounded border border-dashed border-slate-200 text-xs text-slate-400">ไม่มีเอกสารแนบเบื้องต้น</div>
-                            )}
+                      <div className="bg-gradient-to-r from-slate-50 to-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-4 text-center">
+                        <div className="flex flex-col items-center justify-center gap-2">
+                          <div className="h-12 w-12 rounded-full bg-brand-100 text-brand-600 flex items-center justify-center mb-2">
+                            <FileCheck2 className="h-6 w-6" />
                           </div>
-                          
-                          {/* Discovered Files */}
-                          <div className="bg-slate-50 border border-slate-200 p-3 rounded-xl">
-                            <span className="text-xs font-bold text-slate-700 block mb-3 border-b border-slate-200 pb-2">เอกสารที่ค้นพบจากระบบ (Discovered Data)</span>
-                            {activeRequestObj.dataCollectionTasks.flatMap(t => t.uploadedFiles || []).filter(f => !f.isDeleted).length > 0 ? (
-                              <div className="space-y-2">
-                                {activeRequestObj.dataCollectionTasks.map(t => 
-                                  (t.uploadedFiles || []).filter(f => !f.isDeleted).map((f, i) => (
-                                    <div key={`${t.id}-${i}`} className="flex justify-between items-center bg-white p-2 rounded-lg border border-slate-200 shadow-sm hover:border-brand-200 transition">
-                                      <div className="flex items-center gap-2 text-xs text-slate-700">
-                                        <FileBadge className="h-4 w-4 text-emerald-500" />
-                                        <span className="font-semibold truncate max-w-[200px]" title={f.name}>{f.name}</span>
-                                        <span className="text-slate-400 text-[10px] bg-slate-100 px-1.5 py-0.5 rounded">จาก: {t.systemName}</span>
-                                      </div>
-                                      <button
-                                        type="button"
-                                        onClick={() => handleTaskFileReview(activeRequestObj.id, t.id, f)}
-                                        className="bg-brand-50 hover:bg-brand-100 text-brand-700 text-[10px] font-bold py-1 px-3 rounded shadow-sm transition"
-                                      >
-                                        ดูเอกสารต้นฉบับ
-                                      </button>
-                                    </div>
-                                  ))
-                                )}
-                              </div>
-                            ) : (
-                              <div className="text-center py-4 bg-white rounded border border-dashed border-slate-200 text-xs text-slate-400">ไม่มีเอกสารที่ค้นพบ</div>
-                            )}
-                          </div>
-                          
-                          {/* Redacted Records */}
-                          <div className="bg-slate-50 border border-slate-200 p-3 rounded-xl">
-                            <span className="text-xs font-bold text-slate-700 block mb-3 border-b border-slate-200 pb-2">ประวัติการปกปิดข้อมูล (Redaction Records)</span>
-                            {activeRequestObj.redactionRecords && activeRequestObj.redactionRecords.length > 0 ? (
-                              <div className="space-y-2">
-                                {activeRequestObj.redactionRecords.map((r, idx) => (
-                                  <div key={r.id || idx} className="flex flex-col bg-white p-2.5 rounded-lg border border-slate-200 shadow-sm gap-2">
-                                    <div className="flex justify-between items-start text-xs">
-                                      <div className="font-bold text-slate-800 flex items-center gap-1.5">
-                                        <div className="h-2 w-2 rounded-full bg-rose-500"></div>
-                                        <span>ปกปิด: <span className="text-rose-600 font-mono">{r.itemRedacted}</span></span>
-                                      </div>
-                                      <span className="text-slate-400 text-[10px] bg-slate-50 px-1.5 py-0.5 rounded">{new Date(r.timestamp).toLocaleString('th-TH')}</span>
-                                    </div>
-                                    <div className="text-[11px] text-slate-600 bg-slate-50 p-2 rounded font-mono border border-slate-100">
-                                      <strong>เหตุผล:</strong> {r.reason}
-                                    </div>
-                                    <div className="flex gap-2 mt-1">
-                                      {r.previewUrlBefore && (
-                                        <button
-                                          type="button"
-                                          onClick={() => {
-                                            if (r.previewUrlBefore.match(/^https?:\/\/|^\/|^blob:/)) {
-                                              window.open(r.previewUrlBefore, '_blank');
-                                            } else {
-                                              alert(`ข้อมูลต้นฉบับ (Before):\n${r.previewUrlBefore}`);
-                                            }
-                                          }}
-                                          className="flex-1 bg-white hover:bg-slate-50 border border-slate-300 text-slate-600 text-[10px] font-bold py-1 px-2 rounded transition shadow-sm"
-                                        >
-                                          ดูข้อมูลก่อนแก้ (Before)
-                                        </button>
-                                      )}
-                                      {r.previewUrlAfter && (
-                                        <button
-                                          type="button"
-                                          onClick={() => {
-                                            if (r.previewUrlAfter.match(/^https?:\/\/|^\/|^blob:/)) {
-                                              window.open(r.previewUrlAfter, '_blank');
-                                            } else {
-                                              alert(`ผลลัพธ์การปกปิดข้อมูล (After):\n${r.previewUrlAfter}`);
-                                            }
-                                          }}
-                                          className="flex-1 bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 text-[10px] font-bold py-1 px-2 rounded transition shadow-sm"
-                                        >
-                                          ดูผลลัพธ์ (After)
-                                        </button>
-                                      )}
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            ) : (
-                              <div className="text-center py-4 bg-white rounded border border-dashed border-slate-200 text-xs text-slate-400">ไม่มีประวัติการทำ Redaction</div>
-                            )}
-                          </div>
-                          
+                          <span className="block text-sm font-bold text-slate-700">จำลองเอกสารส่งออกฉบับร่าง (Draft Preview)</span>
+                          <p className="text-[11px] text-slate-500 max-w-sm mx-auto">
+                            พรีวิวตรวจสอบความถูกต้องของเนื้อหาในหนังสือราชการที่จะถูกสร้างขึ้น (ข้อความจะสอดคล้องกับผลวินิจฉัยที่คุณกำลังเลือกอยู่)
+                          </p>
                         </div>
+                        
+                        <button
+                          type="button"
+                          onClick={() => setShowDeliveryPreview(true)}
+                          className="bg-brand-600 hover:bg-brand-700 text-white font-bold py-2.5 px-6 rounded-lg text-xs transition shadow-md w-full md:w-auto mx-auto mt-2 inline-flex items-center gap-2"
+                        >
+                          <FileCheck2 className="h-4 w-4" />
+                          จำลองหน้าตาเอกสารส่งมอบ (Preview Delivery Package)
+                        </button>
                       </div>
                     )}
 
@@ -6501,6 +6397,97 @@ export default function App() {
               >
                 <Download className="h-4 w-4" />
                 ยืนยันและดาวน์โหลด
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Final Delivery Preview Modal */}
+      {showDeliveryPreview && activeRequestObj && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto animate-fadeIn">
+          <div className="bg-slate-100 rounded-xl shadow-2xl w-full max-w-4xl flex flex-col max-h-[90vh] overflow-hidden border border-slate-300 relative">
+            <div className="bg-slate-800 p-4 border-b border-slate-700 flex justify-between items-center shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="bg-white/20 p-2 rounded-lg">
+                  <FileCheck2 className="h-5 w-5 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-base font-bold text-white">ตัวอย่างเอกสารส่งมอบฉบับร่าง (Delivery Draft Preview)</h2>
+                  <p className="text-[11px] text-slate-300">นี่คือแบบจำลองเอกสารที่จะถูกส่งออกจริงหลังได้รับการอนุมัติ</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowDeliveryPreview(false)}
+                className="text-slate-400 hover:text-white bg-slate-700/50 hover:bg-slate-700 p-2 rounded-full transition"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="p-4 overflow-y-auto bg-slate-100 flex flex-col items-center gap-6">
+              <div className="w-full max-w-3xl flex justify-between items-center mb-[-10px]">
+                <span className="text-xs font-bold text-slate-500 flex items-center gap-2">
+                  <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse"></span>
+                  สถานะจำลอง: {decisionType === 'approved' ? 'อนุมัติคำขอ' : decisionType === 'partially_approved' ? 'อนุมัติบางส่วน' : 'ปฏิเสธคำขอ'}
+                </span>
+              </div>
+              
+              <div className="w-full max-w-3xl bg-white shadow-lg shadow-slate-300/50 border border-slate-200 rounded-sm relative">
+                {/* Document header badge */}
+                <div className="absolute top-0 right-0 bg-red-500 text-white text-[10px] font-bold px-3 py-1 rounded-bl-lg uppercase tracking-widest shadow-sm z-10">
+                  DRAFT / ฉบับร่าง
+                </div>
+                <div className="scale-[0.95] origin-top">
+                  <ThaiLetterView
+                    request={{
+                      ...activeRequestObj,
+                      decision: {
+                        result: decisionType as any, // Cast since decisionType is tied to the local state
+                        reasons: [config?.rejectionReasons.find(r => r.code === denialBasisCode)?.labelTh || '...เหตุผลจำลอง...'],
+                        legalBasisText: config?.rejectionReasons.find(r => r.code === denialBasisCode)?.labelTh || '...มาตรากฎหมายจำลอง...',
+                        dpoCheckedAt: new Date().toISOString(),
+                        dpoName: activeUser?.fullNameTh || 'DPO Name',
+                      }
+                    }}
+                    template={templates.find(t => t.id === (decisionType === 'denied' ? 'temp_deny' : 'temp_approve')) || templates[0]}
+                    signer={activeUser!}
+                  />
+                </div>
+              </div>
+
+              {/* Attachment summary */}
+              {(decisionType === 'approved' || decisionType === 'partially_approved') && (
+                <div className="w-full max-w-3xl">
+                  <span className="text-xs font-bold text-slate-600 block mb-2">ไฟล์เอกสารแนบ (Attachments in Package):</span>
+                  <div className="bg-white border border-slate-200 rounded-lg p-4 shadow-sm flex items-center gap-4">
+                    <div className="h-12 w-12 bg-rose-100 text-rose-600 rounded flex items-center justify-center shrink-0">
+                      <FileBadge className="h-6 w-6" />
+                    </div>
+                    <div>
+                      <div className="text-sm font-bold text-slate-800">ข้อมูลส่วนบุคคลที่ผ่านการค้นหาและรวบรวมแล้ว.pdf</div>
+                      <div className="text-[11px] text-slate-500">
+                        รวมไฟล์จากระบบ {activeRequestObj.dataCollectionTasks.length} ระบบ (มีลายน้ำกำกับ DRAFT)
+                      </div>
+                    </div>
+                    <div className="ml-auto">
+                      <span className="bg-slate-100 text-slate-500 text-[10px] font-bold px-2 py-1 rounded uppercase">
+                        Auto-Generated
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="bg-white p-4 border-t border-slate-200 flex justify-end shrink-0">
+              <button
+                type="button"
+                onClick={() => setShowDeliveryPreview(false)}
+                className="bg-slate-800 hover:bg-slate-900 text-white font-bold py-2.5 px-6 rounded-lg text-xs transition shadow-sm"
+              >
+                ปิดหน้าต่าง (Close)
               </button>
             </div>
           </div>
