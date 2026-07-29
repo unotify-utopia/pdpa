@@ -1461,14 +1461,14 @@ export default function App() {
 
   const handleUnassignTask = (reqId: string, taskId: string) => {
     if (!activeUser) return;
-    if (!confirm('ยืนยันการยกเลิกการมอบหมายงานสืบค้นนี้?')) return;
+    if (!confirm('ยืนยันการยกเลิกการมอบหมายงานสืบค้นนี้? (ข้อมูลภารกิจนี้จะถูกลบออกจากรายการ)')) return;
     const req = getRequestById(reqId);
     if (!req) return;
-    const t = req.dataCollectionTasks.find((t: any) => t.id === taskId);
-    if (t) {
-      t.assignee = '';
-      t.status = 'pending';
-      updateRequest(req, activeUser, 'UNASSIGN_TASK', `ยกเลิกการมอบหมายงานสืบค้นระบบ ${t.systemName}`);
+    const taskIndex = req.dataCollectionTasks.findIndex((t: any) => t.id === taskId);
+    if (taskIndex !== -1) {
+      const sysName = req.dataCollectionTasks[taskIndex].systemName;
+      req.dataCollectionTasks.splice(taskIndex, 1);
+      updateRequest(req, activeUser, 'UNASSIGN_TASK', `ยกเลิกการมอบหมายและลบภารกิจค้นหาระบบ ${sysName}`);
       reloadData();
     }
   };
@@ -4375,13 +4375,13 @@ export default function App() {
                                       <span className="font-bold text-slate-800">{t.systemName}</span>
                                       <span className="text-[10px] text-slate-400 block flex items-center gap-1">
                                         ผู้รับผิดชอบ: {t.assignee}
-                                        {['admin', 'dpo', 'owner'].includes(activeUser.role) && t.assignee && (
+                                        {['admin', 'dpo', 'owner'].includes(activeUser.role) && (
                                           <button
                                             type="button"
                                             onClick={() => handleUnassignTask(activeRequestObj.id, t.id)}
                                             className="text-rose-500 hover:text-rose-700 underline text-[9px]"
                                           >
-                                            (ยกเลิก)
+                                            (ยกเลิกการมอบหมาย)
                                           </button>
                                         )}
                                       </span>
