@@ -149,7 +149,7 @@ export const ThaiLetterView: React.FC<ThaiLetterViewProps> = ({
       <div className="print-area bg-white font-sarabun text-[12pt] leading-none text-black w-[210mm] min-h-[297mm] mx-auto shadow-md relative pt-[2.5cm] pb-[2cm] pl-[3cm] pr-[2cm] print:shadow-none print:w-[210mm] print:h-[297mm]">
         
         {/* Header Layer */}
-        <div className="relative h-[3cm] mb-4">
+        <div className="relative h-[3cm] mb-2">
           <div className="absolute bottom-4 left-0">
             ที่ ........................................
           </div>
@@ -168,7 +168,7 @@ export const ThaiLetterView: React.FC<ThaiLetterViewProps> = ({
 
         {/* Official Letter Body */}
         <div className="space-y-[6pt]">
-          <div className="mb-4" style={{ marginLeft: '7.5cm' }}>
+          <div className="mb-2" style={{ marginLeft: '7.5cm' }}>
             วันที่ {convertToThaiDate(new Date().toISOString())}
           </div>
 
@@ -209,10 +209,10 @@ export const ThaiLetterView: React.FC<ThaiLetterViewProps> = ({
         </div>
 
         {/* Signature Line */}
-        <div className="mt-8 flex flex-col items-center" style={{ marginLeft: '7.5cm', width: '8.5cm' }}>
-          <div className="mb-12">ขอแสดงความนับถือ</div>
+        <div className="mt-4 flex flex-col items-center" style={{ marginLeft: '7.5cm', width: '8.5cm' }}>
+          <div className="mb-6">ขอแสดงความนับถือ</div>
           
-          <div className="flex flex-col items-center mt-8">
+          <div className="flex flex-col items-center mt-4">
             <div>({signer.fullNameTh})</div>
             <div>{signer.department || 'ผู้อนุมัติมีอำนาจสั่งการ'}</div>
           </div>
