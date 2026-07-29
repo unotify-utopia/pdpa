@@ -160,6 +160,10 @@ const initDatabase = async () => {
       await dbPool.query('ALTER TABLE audit_logs ADD COLUMN checksum VARCHAR(100)');
     } catch(e) {}
     
+    try {
+      await dbPool.query('ALTER TABLE audit_logs ALTER COLUMN performed_by DROP NOT NULL');
+    } catch(e) {}
+    
     console.log('✅ Added missing columns to audit_logs');
 
     try {
