@@ -4368,7 +4368,7 @@ export default function App() {
                                       <span className="font-bold text-slate-800">{t.systemName}</span>
                                       <span className="text-[10px] text-slate-400 block flex items-center gap-1">
                                         ผู้รับผิดชอบ: {t.assignee}
-                                        {['admin', 'dpo'].includes(activeUser.role) && t.assignee && (
+                                        {['admin', 'dpo', 'owner'].includes(activeUser.role) && t.assignee && (
                                           <button
                                             type="button"
                                             onClick={() => handleUnassignTask(activeRequestObj.id, t.id)}
@@ -6109,7 +6109,18 @@ export default function App() {
 
             {/* Viewer Content Area */}
             <div className="flex-1 p-6 overflow-y-auto bg-slate-100 flex items-center justify-center min-h-[350px]">
-              {(previewAttachment.fileUrl?.startsWith('data:image') || previewAttachment.fileUrl?.startsWith('blob:') || previewAttachment.name.endsWith('.png') || previewAttachment.name.endsWith('.jpg')) ? (
+              {previewAttachment.fileUrl?.startsWith('data:application/pdf') || previewAttachment.name.toLowerCase().endsWith('.pdf') ? (
+                <div className="w-full h-[70vh] bg-white rounded-xl shadow-md border border-slate-200 overflow-hidden flex flex-col">
+                  <iframe 
+                    src={previewAttachment.fileUrl || ''} 
+                    className="w-full flex-1 border-0"
+                    title={previewAttachment.name}
+                  />
+                  <div className="bg-slate-50 border-t border-slate-200 p-2 text-center">
+                    <span className="text-[10px] text-slate-400 font-mono">✓ แสดงผลเอกสาร PDF (ไม่อนุญาตให้ดาวน์โหลด)</span>
+                  </div>
+                </div>
+              ) : (previewAttachment.fileUrl?.startsWith('data:image') || previewAttachment.fileUrl?.startsWith('blob:') || previewAttachment.name.toLowerCase().endsWith('.png') || previewAttachment.name.toLowerCase().endsWith('.jpg')) ? (
                 <div className="bg-white p-3 rounded-xl shadow-md border border-slate-200 max-w-full text-center space-y-2">
                   <img
                     src={previewAttachment.fileUrl || ''}
@@ -6125,16 +6136,8 @@ export default function App() {
                   <FileText className="h-16 w-16 text-brand-600 mx-auto" />
                   <h4 className="font-bold text-slate-800 text-sm">{previewAttachment.name}</h4>
                   <p className="text-xs text-slate-500 leading-relaxed">
-                    เอกสารประกอบฉบับเต็มถูกจัดเก็บแบบเข้ารหัสตามมาตรฐานความปลอดภัยข้อมูล พ.ร.บ. คุ้มครองข้อมูลส่วนบุคคล
+                    ไม่สามารถแสดงตัวอย่างไฟล์นี้ได้ (รองรับเฉพาะ PDF และรูปภาพ)
                   </p>
-                  <a
-                    href={previewAttachment.fileUrl}
-                    download={previewAttachment.name}
-                    className="inline-flex items-center justify-center gap-2 bg-brand-600 hover:bg-brand-700 text-white font-bold px-4 py-2 rounded-xl text-xs transition shadow-sm"
-                  >
-                    <Download className="h-4 w-4" />
-                    <span>ดาวน์โหลดตรวจสอบไฟล์เต็ม</span>
-                  </a>
                 </div>
               )}
             </div>
