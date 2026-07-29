@@ -186,18 +186,12 @@ export const ThaiLetterView: React.FC<ThaiLetterViewProps> = ({
         </div>
 
         {/* Signature Line */}
-        <div className="mt-8" style={{ marginLeft: '7.5cm', width: '8.5cm' }}>
-          <div className="text-left mb-12">ขอแสดงความนับถือ</div>
+        <div className="mt-8 flex flex-col items-center" style={{ marginLeft: '7.5cm', width: '8.5cm' }}>
+          <div className="mb-12">ขอแสดงความนับถือ</div>
           
-          <div className="flex flex-col items-center">
-            <div className="h-8 flex items-center justify-center relative w-full">
-              <div className="font-mono text-[14pt] italic text-brand-600 select-none">
-                / {signer.username} /
-              </div>
-              <div className="absolute inset-x-0 bottom-0 border-b border-dashed border-slate-300 w-40 mx-auto"></div>
-            </div>
-            <div className="mt-2">({signer.fullNameTh})</div>
-            <div>{signer.role === 'dpo' ? 'เจ้าหน้าที่คุ้มครองข้อมูลส่วนบุคคล (DPO)' : 'ผู้อนุมัติมีอำนาจสั่งการ'}</div>
+          <div className="flex flex-col items-center mt-8">
+            <div>({signer.fullNameTh})</div>
+            <div>{signer.department || 'ผู้อนุมัติมีอำนาจสั่งการ'}</div>
           </div>
         </div>
 
