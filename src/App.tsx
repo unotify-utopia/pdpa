@@ -1282,22 +1282,6 @@ export default function App() {
     req.dataCollectionTasks[taskIndex].completedAt = new Date().toISOString();
     req.dataCollectionTasks[taskIndex].completedBy = activeUser.fullNameTh;
     req.dataCollectionTasks[taskIndex].dataLineage = `ระบบ ${req.dataCollectionTasks[taskIndex].systemName} -> กวาดค้นหาด้วย SQL / Index -> จัดเก็บไฟล์ใน Object Private Container`;
-    
-    if (isFound === 'found') {
-      // Mock uploading data file
-      req.dataCollectionTasks[taskIndex].uploadedFiles = [
-        {
-          id: `att_export_${Date.now()}`,
-          name: `${req.dataCollectionTasks[taskIndex].systemName.replace(/ /g, '_')}_Result.xlsx`,
-          size: 32000,
-          type: 'application/vnd.ms-excel',
-          isMasked: false,
-          watermarkApplied: false,
-          uploadedAt: new Date().toISOString(),
-          fileUrl: 'mock_export_content_url'
-        }
-      ];
-    }
 
     // Auto transition to Data Owner Review if all tasks complete
     const allDone = req.dataCollectionTasks.every((t: DataCollectionTask) => t.status !== 'pending');
