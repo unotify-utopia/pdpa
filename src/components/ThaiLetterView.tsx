@@ -8,6 +8,7 @@ interface ThaiLetterViewProps {
   template: DocumentTemplate;
   signer: User;
   onPrintMock?: () => void;
+  orgData?: any;
 }
 
 // Helper: Convert Gregorian date to Thai Buddhist Era Date & Time (e.g., 22 กรกฎาคม พ.ศ. 2569 เวลา 22:49 น.)
@@ -37,16 +38,20 @@ export const ThaiLetterView: React.FC<ThaiLetterViewProps> = ({
   template,
   signer,
   onPrintMock,
+  orgData,
 }) => {
-  let org = initialOrganizations.find(o => o.id === request.orgId);
-  try {
-    const savedOrgs = JSON.parse(localStorage.getItem('organizations') || '[]');
-    if (savedOrgs && savedOrgs.length > 0) {
-      const found = savedOrgs.find((o: any) => o.id === request.orgId);
-      if (found) org = found;
+  let org = orgData;
+  if (!org) {
+    org = initialOrganizations.find(o => o.id === request.orgId);
+    try {
+      const savedOrgs = JSON.parse(localStorage.getItem('organizations') || '[]');
+      if (savedOrgs && savedOrgs.length > 0) {
+        const found = savedOrgs.find((o: any) => o.id === request.orgId);
+        if (found) org = found;
+      }
+    } catch (e) {
+      // ignore
     }
-  } catch (e) {
-    // ignore
   }
   if (!org) org = initialOrganizations[0];
   
@@ -136,7 +141,7 @@ export const ThaiLetterView: React.FC<ThaiLetterViewProps> = ({
       </div>
 
       {/* Official Thai Letter Sheet */}
-      <div className="print-area bg-white font-sarabun text-[14pt] leading-none text-black w-[210mm] min-h-[297mm] mx-auto shadow-md relative pt-[2.5cm] pb-[2cm] pl-[3cm] pr-[2cm] print:shadow-none print:w-[210mm] print:h-[297mm]">
+      <div className="print-area bg-white font-sarabun text-[12pt] leading-none text-black w-[210mm] min-h-[297mm] mx-auto shadow-md relative pt-[2.5cm] pb-[2cm] pl-[3cm] pr-[2cm] print:shadow-none print:w-[210mm] print:h-[297mm]">
         
         {/* Header Layer */}
         <div className="relative h-[3cm] mb-4">

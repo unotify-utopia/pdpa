@@ -4822,6 +4822,7 @@ export default function App() {
                               request={activeRequestObj}
                               template={temp}
                               signer={activeUser}
+                              orgData={organizations.find((o: any) => o.id === activeRequestObj.orgId) || null}
                             />
                           );
                         })}
@@ -6462,6 +6463,7 @@ export default function App() {
                       }}
                       template={templates.find(t => t.id === templateId) || templates[0]}
                       signer={activeUser!}
+                      orgData={organizations.find((o: any) => o.id === activeRequestObj.orgId) || null}
                     />
                   </div>
                 </div>
