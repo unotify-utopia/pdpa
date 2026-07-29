@@ -1351,9 +1351,12 @@ export default function App() {
                   uploadedAt: new Date().toISOString(),
                   fileUrl: data.fileId
                 });
+                t.status = 'found';
+                t.completedAt = new Date().toISOString();
+                t.completedBy = activeUser?.fullNameTh;
+                t.dataLineage = `ระบบ ${t.systemName} -> กวาดค้นหาด้วย SQL / Index -> จัดเก็บไฟล์ใน Object Private Container`;
               }
-              // Do NOT complete task automatically anymore
-              updateRequest(req, activeUser, 'UPLOAD_FILE', 'อัปโหลดเอกสารใหม่เข้าสู่ระบบ');
+              updateRequest(req, activeUser, 'UPLOAD_FILE', 'อัปโหลดเอกสารใหม่เข้าสู่ระบบ และอัปเดตสถานะเป็นพบข้อมูล');
               reloadData();
             }
           } else {
@@ -1374,6 +1377,22 @@ export default function App() {
       }
     };
     reader.readAsDataURL(file);
+  };
+
+  const handleMarkTaskNotFound = (reqId: string, taskId: string) => {
+    if (!activeUser) return;
+    const req = getRequestById(reqId);
+    if (!req) return;
+    const t = req.dataCollectionTasks.find((t: any) => t.id === taskId);
+    if (t) {
+      if (!confirm(`คุณแน่ใจหรือไม่ที่จะแจ้งว่า "ไม่พบข้อมูล" สำหรับระบบ ${t.systemName}?`)) return;
+      t.status = 'not_found';
+      t.completedAt = new Date().toISOString();
+      t.completedBy = activeUser.fullNameTh;
+      t.dataLineage = `ระบบ ${t.systemName} -> กวาดค้นหาด้วย SQL / Index -> ไม่พบข้อมูล`;
+      updateRequest(req, activeUser, 'MARK_NOT_FOUND', `เจ้าหน้าที่แจ้งว่าไม่พบข้อมูลในระบบ ${t.systemName}`);
+      reloadData();
+    }
   };
 
   const handleTaskFileDelete = async (reqId: string, taskId: string, fileId: string) => {
@@ -4414,13 +4433,24 @@ export default function App() {
                                         <Plus className="h-3 w-3 text-emerald-600" />
                                         <span>แนบไฟล์เอกสารสำหรับงานสืบค้นนี้ (PDF)</span>
                                       </div>
-                                      <button
-                                        type="button"
-                                        onClick={() => document.getElementById(`upload-task-${t.id}`)?.click()}
-                                        className="bg-slate-700 hover:bg-slate-800 text-white text-[10px] font-bold py-1 px-3 rounded shadow-sm transition cursor-pointer"
-                                      >
-                                        อัปโหลดเอกสาร
-                                      </button>
+                                      <div className="flex items-center gap-2">
+                                        {t.status === 'pending' && (
+                                          <button
+                                            type="button"
+                                            onClick={() => handleMarkTaskNotFound(activeRequestObj.id, t.id)}
+                                            className="bg-rose-100 hover:bg-rose-200 text-rose-700 text-[10px] font-bold py-1 px-3 rounded shadow-sm transition cursor-pointer"
+                                          >
+                                            แจ้งไม่พบข้อมูล
+                                          </button>
+                                        )}
+                                        <button
+                                          type="button"
+                                          onClick={() => document.getElementById(`upload-task-${t.id}`)?.click()}
+                                          className="bg-slate-700 hover:bg-slate-800 text-white text-[10px] font-bold py-1 px-3 rounded shadow-sm transition cursor-pointer"
+                                        >
+                                          อัปโหลดเอกสาร
+                                        </button>
+                                      </div>
                                       <input 
                                         type="file" 
                                         id={`upload-task-${t.id}`}
@@ -4473,23 +4503,25 @@ export default function App() {
                                 ))}
                               
                               {/* System Owner action buttons - Moved to bottom */}
-                              {activeRequestObj.status === 'Data Collection' && activeRequestObj.dataCollectionTasks.length > 0 && (activeUser.role === 'owner' || activeUser.role === 'admin') && (
+                              {activeRequestObj.status === 'Data Collection' && activeRequestObj.dataCollectionTasks.length > 0 && activeRequestObj.dataCollectionTasks.every((t: any) => t.status !== 'pending') && (activeUser.role === 'owner' || activeUser.role === 'admin') && (
                                 <div className="flex flex-col gap-2 mt-6">
-                                  <button
-                                    type="button"
-                                    onClick={() => handleOwnerCompleteFlow(activeRequestObj.id)}
-                                    className="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold py-2.5 px-4 rounded-lg shadow-sm transition"
-                                  >
-                                    ส่งเรื่องไปยัง Flow ต่อไป
-                                  </button>
-                                  
-                                  <button
-                                    type="button"
-                                    onClick={() => handleOwnerEscalateFlow(activeRequestObj.id)}
-                                    className="w-full bg-rose-600 hover:bg-rose-700 text-white text-sm font-bold py-2.5 px-4 rounded-lg shadow-sm transition"
-                                  >
-                                    แจ้งว่าไม่พบข้อมูลและส่งเรื่องไปยังผู้บริหาร
-                                  </button>
+                                  {!activeRequestObj.dataCollectionTasks.some((t: any) => t.status === 'not_found') ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleOwnerCompleteFlow(activeRequestObj.id)}
+                                      className="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold py-2.5 px-4 rounded-lg shadow-sm transition"
+                                    >
+                                      ส่งเรื่องไปยัง Flow ต่อไป
+                                    </button>
+                                  ) : (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleOwnerEscalateFlow(activeRequestObj.id)}
+                                      className="w-full bg-rose-600 hover:bg-rose-700 text-white text-sm font-bold py-2.5 px-4 rounded-lg shadow-sm transition"
+                                    >
+                                      แจ้งว่าไม่พบข้อมูลและส่งเรื่องไปยังผู้บริหาร
+                                    </button>
+                                  )}
                                 </div>
                               )}
                             </div>
