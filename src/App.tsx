@@ -539,8 +539,6 @@ export default function App() {
   // Dashboard Interactive Navigation Filter State
   const [statusFilterGroup, setStatusFilterGroup] = useState<RequestStatus[] | null>(null);
 
-  const [isExporting, setIsExporting] = useState<boolean>(false);
-  
   // Download file state
   const [downloadConfirm, setDownloadConfirm] = useState<{ reqId: string, taskId: string, fileId: string, filename: string } | null>(null);
 
@@ -1375,7 +1373,7 @@ export default function App() {
 
   const executeFileDownload = async () => {
     if (!downloadConfirm || !activeUser) return;
-    const { reqId, taskId, fileId, filename } = downloadConfirm;
+    const { reqId, taskId, fileId } = downloadConfirm;
     
     try {
       const res = await fetch(`/api/requests/${reqId}/tasks/${taskId}/files/${fileId}`, {
