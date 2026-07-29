@@ -4721,16 +4721,28 @@ export default function App() {
                                       {r.previewUrlBefore && (
                                         <button
                                           type="button"
-                                          onClick={() => window.open(r.previewUrlBefore, '_blank')}
+                                          onClick={() => {
+                                            if (r.previewUrlBefore.match(/^https?:\/\/|^\/|^blob:/)) {
+                                              window.open(r.previewUrlBefore, '_blank');
+                                            } else {
+                                              alert(`ข้อมูลต้นฉบับ (Before):\n${r.previewUrlBefore}`);
+                                            }
+                                          }}
                                           className="flex-1 bg-white hover:bg-slate-50 border border-slate-300 text-slate-600 text-[10px] font-bold py-1 px-2 rounded transition shadow-sm"
                                         >
-                                          ดูรูปก่อนแก้ (Before)
+                                          ดูข้อมูลก่อนแก้ (Before)
                                         </button>
                                       )}
                                       {r.previewUrlAfter && (
                                         <button
                                           type="button"
-                                          onClick={() => window.open(r.previewUrlAfter, '_blank')}
+                                          onClick={() => {
+                                            if (r.previewUrlAfter.match(/^https?:\/\/|^\/|^blob:/)) {
+                                              window.open(r.previewUrlAfter, '_blank');
+                                            } else {
+                                              alert(`ผลลัพธ์การปกปิดข้อมูล (After):\n${r.previewUrlAfter}`);
+                                            }
+                                          }}
                                           className="flex-1 bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 text-[10px] font-bold py-1 px-2 rounded transition shadow-sm"
                                         >
                                           ดูผลลัพธ์ (After)
