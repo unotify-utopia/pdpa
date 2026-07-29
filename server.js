@@ -133,6 +133,10 @@ const initDatabase = async () => {
     } catch (e) {}
 
     try {
+      await dbPool.query('ALTER TABLE task_files ADD COLUMN is_deleted BOOLEAN DEFAULT false');
+    } catch(e) {}
+    
+    try {
       await dbPool.query('ALTER TABLE audit_logs ADD COLUMN actor_id VARCHAR(50)');
     } catch(e) {}
     try {
@@ -1708,15 +1712,47 @@ app.post('/api/requests/:id/tasks/:taskId/upload', authenticateJWT, requireRole(
   }
 });
 
-// GET /api/requests/:id/tasks/:taskId/files/:fileId (Secure file download)
-app.get('/api/requests/:id/tasks/:taskId/files/:fileId', authenticateJWT, requireRole(['admin', 'owner', 'dpo']), async (req, res) => {
+// DELETE /api/requests/:id/tasks/:taskId/files/:fileId (Soft Delete file)
+app.delete('/api/requests/:id/tasks/:taskId/files/:fileId', authenticateJWT, requireRole(['admin', 'owner', 'superadmin']), async (req, res) => {
   try {
     const { id, taskId, fileId } = req.params;
     
-    const { rows } = await dbPool.query(
-      `SELECT filename, file_data FROM task_files WHERE id = $1 AND request_id = $2 AND task_id = $3`,
+    // Update is_deleted to true
+    const { rowCount } = await dbPool.query(
+      `UPDATE task_files SET is_deleted = true WHERE id = $1 AND request_id = $2 AND task_id = $3`,
       [fileId, id, taskId]
     );
+
+    if (rowCount === 0) {
+      return res.status(404).json({ success: false, message: 'File not found' });
+    }
+
+    // Log to audit_logs
+    await dbPool.query(
+      `INSERT INTO audit_logs (id, org_id, actor_id, actor_name, actor_role, action, request_id, details) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+      [`log_${Date.now()}`, req.user.orgId, req.user.id || req.user.username, req.user.fullNameTh || req.user.username, req.user.role, 'DELETE_DATA_DISCOVERY_FILE', id, `ลบไฟล์ ${fileId} ของภารกิจ ${taskId}`]
+    );
+    
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Delete File Error:', err);
+    res.status(500).json({ success: false, message: err.message || 'Delete failed' });
+  }
+});
+
+// GET /api/requests/:id/tasks/:taskId/files/:fileId (Secure file download)
+app.get('/api/requests/:id/tasks/:taskId/files/:fileId', authenticateJWT, requireRole(['admin', 'owner', 'dpo', 'superadmin']), async (req, res) => {
+  try {
+    const { id, taskId, fileId } = req.params;
+    
+    let query = `SELECT filename, file_data FROM task_files WHERE id = $1 AND request_id = $2 AND task_id = $3`;
+    // If not superadmin, ensure file is not deleted
+    if (req.user.role !== 'superadmin') {
+      query += ` AND (is_deleted = false OR is_deleted IS NULL)`;
+    }
+    
+    const { rows } = await dbPool.query(query, [fileId, id, taskId]);
     
     if (rows.length === 0) {
       return res.status(404).json({ success: false, message: 'File not found' });

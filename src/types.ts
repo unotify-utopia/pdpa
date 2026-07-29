@@ -41,6 +41,7 @@ export type RequestStatus =
   | 'Data Owner Review'
   | 'DPO or Legal Review'
   | 'Redaction Required'
+  | 'Executive Approval'
   | 'Approval Pending'
   | 'Fee Notification'
   | 'Awaiting Payment'
@@ -97,10 +98,11 @@ export interface Attachment {
   name: string;
   size: number;
   type: string; // e.g., image/png, application/pdf
-  isMasked: boolean;
-  watermarkApplied: boolean;
+  isMasked?: boolean;
+  isDeleted?: boolean;
+  watermarkApplied?: boolean;
   uploadedAt: string;
-  fileUrl: string; // Base64 or object URL mock
+  fileUrl?: string; // Optional, mapping to internal storage ID
   retentionExpiryDate?: string;
 }
 

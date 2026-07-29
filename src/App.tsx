@@ -434,7 +434,7 @@ export default function App() {
   const [submissionOtpCode, setSubmissionOtpCode] = useState('');
 
   // Attachment Document Preview Modal State
-  const [previewAttachment, setPreviewAttachment] = useState<{ name: string; fileUrl: string; size: number; isMasked?: boolean; watermarkApplied?: boolean } | null>(null);
+  const [previewAttachment, setPreviewAttachment] = useState<{ name: string; fileUrl?: string; size: number; isMasked?: boolean; watermarkApplied?: boolean } | null>(null);
 
   // Active Selections
   const [selectedTargetOrgId, setSelectedTargetOrgId] = useState<string>('');
@@ -1340,13 +1340,16 @@ export default function App() {
                   name: file.name,
                   size: file.size,
                   type: file.type,
+                  isDeleted: false,
                   isMasked: false,
                   watermarkApplied: false,
                   uploadedAt: new Date().toISOString(),
                   fileUrl: data.fileId
                 });
               }
-              handleOwnerCompleteTask(reqId, taskId, 'found');
+              // Do NOT complete task automatically anymore
+              updateRequest(req, activeUser, 'UPLOAD_FILE', 'อัปโหลดเอกสารใหม่เข้าสู่ระบบ');
+              reloadData();
             }
           } else {
             alert('อัปโหลดไม่สำเร็จ: ' + data.message);
@@ -1366,6 +1369,59 @@ export default function App() {
       }
     };
     reader.readAsDataURL(file);
+  };
+
+  const handleTaskFileDelete = async (reqId: string, taskId: string, fileId: string) => {
+    if (!activeUser) return;
+    if (!confirm('ยืนยันการลบไฟล์นี้? (ไฟล์จะถูกลบออกจากหน้าจอผู้ใช้ แต่ยังคงเก็บประวัติไว้ในระบบ)')) return;
+    try {
+      const res = await fetch(`/api/requests/${reqId}/tasks/${taskId}/files/${fileId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${sessionStorage.getItem('pdpa_jwt_token')}` }
+      });
+      if (res.ok) {
+        const req = getRequestById(reqId);
+        if (req) {
+          const t = req.dataCollectionTasks.find((t: any) => t.id === taskId);
+          if (t && t.uploadedFiles) {
+            const f = t.uploadedFiles.find((f: any) => f.id === fileId);
+            if (f) f.isDeleted = true;
+          }
+          updateRequest(req, activeUser, 'DELETE_FILE', 'ลบเอกสารออกจากระบบ');
+          reloadData();
+        }
+      } else {
+        alert('ลบไม่สำเร็จ');
+      }
+    } catch (e) {
+      alert('เกิดข้อผิดพลาดในการลบไฟล์');
+    }
+  };
+
+  const handleOwnerEscalateTask = (reqId: string, taskId: string) => {
+    if (!activeUser) return;
+    if (!confirm('คุณแน่ใจหรือไม่ที่จะแจ้งว่าไม่พบข้อมูล และส่งเรื่องนี้ข้ามไปยังผู้บริหารโดยตรง?')) return;
+    const req = getRequestById(reqId);
+    if (!req) return;
+    const taskIndex = req.dataCollectionTasks.findIndex((t: DataCollectionTask) => t.id === taskId);
+    if (taskIndex === -1) return;
+
+    req.dataCollectionTasks[taskIndex].status = 'not_found';
+    req.dataCollectionTasks[taskIndex].completedAt = new Date().toISOString();
+    req.dataCollectionTasks[taskIndex].completedBy = activeUser.fullNameTh;
+    req.dataCollectionTasks[taskIndex].dataLineage = `ระบบ ${req.dataCollectionTasks[taskIndex].systemName} -> กวาดค้นหาด้วย SQL / Index -> ไม่พบข้อมูล -> ส่งผู้บริหารตัดสินใจ`;
+
+    // Escalate the entire request to Executive Approval
+    req.status = 'Executive Approval';
+    req.statusHistory.push({
+      status: 'Executive Approval',
+      changedAt: new Date().toISOString(),
+      changedBy: activeUser.fullNameTh,
+      comment: `ส่งเรื่องให้ผู้บริหารตัดสินใจ เนื่องจากไม่พบข้อมูลในระบบ ${req.dataCollectionTasks[taskIndex].systemName}`
+    });
+
+    updateRequest(req, activeUser, 'ESCALATE_DATA_TASK', `ส่งเรื่องให้ผู้บริหารตัดสินใจ เนื่องจากไม่พบข้อมูลในระบบ ${req.dataCollectionTasks[taskIndex].systemName}`);
+    reloadData();
   };
 
   const executeFileDownload = async () => {
@@ -4321,38 +4377,19 @@ export default function App() {
                                     </div>
                                   )}
 
-                                  {/* Uploaded Files List */}
-                                  {(t.uploadedFiles && t.uploadedFiles.length > 0) && (
-                                    <div className="flex flex-col gap-1.5 mt-1">
-                                      {t.uploadedFiles.map((f: any, idx: number) => (
-                                        <div key={idx} className="flex justify-between items-center bg-emerald-50 p-1.5 rounded border border-emerald-100">
-                                          <div className="flex items-center gap-1.5 text-[10px] text-emerald-800 font-bold">
-                                            <FileBadge className="h-3.5 w-3.5 text-emerald-600" />
-                                            <span className="truncate max-w-[120px]" title={f.name}>{f.name}</span>
-                                          </div>
-                                          {['admin', 'dpo', 'owner'].includes(activeUser?.role || '') && (
-                                            <button
-                                              type="button"
-                                              onClick={() => setDownloadConfirm({ reqId: activeRequestObj.id, taskId: t.id, fileId: f.id, filename: f.name })}
-                                              className="bg-white border border-emerald-300 text-emerald-700 text-[9px] font-bold py-0.5 px-2 rounded hover:bg-emerald-100 transition"
-                                            >
-                                              ดาวน์โหลด
-                                            </button>
-                                          )}
-                                        </div>
-                                      ))}
-                                    </div>
-                                  )}
-
-                                  {/* System Owner task completion action */}
+                                  {/* Upload Section (Always visible for owner/admin) */}
                                   {(activeUser.role === 'owner' || activeUser.role === 'admin') && (
-                                    <div className="flex gap-2 pt-2 mt-2 border-t border-slate-100 justify-end">
+                                    <div className="mt-2 mb-2 flex items-center justify-between bg-slate-50 p-2 rounded border border-slate-200">
+                                      <div className="text-[10px] text-slate-500 flex items-center gap-1.5">
+                                        <Plus className="h-3 w-3 text-emerald-600" />
+                                        <span>แนบไฟล์เอกสารสำหรับงานสืบค้นนี้ (PDF)</span>
+                                      </div>
                                       <button
                                         type="button"
                                         onClick={() => document.getElementById(`upload-task-${t.id}`)?.click()}
-                                        className="bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold py-1 px-2.5 rounded transition cursor-pointer"
+                                        className="bg-slate-700 hover:bg-slate-800 text-white text-[10px] font-bold py-1 px-3 rounded shadow-sm transition cursor-pointer"
                                       >
-                                        ✓ อัปโหลดผล (PDF)
+                                        อัปโหลดเอกสาร
                                       </button>
                                       <input 
                                         type="file" 
@@ -4361,12 +4398,65 @@ export default function App() {
                                         accept=".pdf"
                                         onChange={(e) => handleTaskFileUpload(activeRequestObj.id, t.id, e.target.files)}
                                       />
+                                    </div>
+                                  )}
+
+                                  {/* Uploaded Files List */}
+                                  {(t.uploadedFiles && t.uploadedFiles.length > 0) && (
+                                    <div className="flex flex-col gap-1.5 mt-1">
+                                      {t.uploadedFiles
+                                        .filter((f: any) => !f.isDeleted || activeUser.role === 'superadmin')
+                                        .map((f: any, idx: number) => (
+                                        <div key={idx} className={`flex justify-between items-center p-1.5 rounded border ${f.isDeleted ? 'bg-rose-50 border-rose-100 opacity-70' : 'bg-emerald-50 border-emerald-100'}`}>
+                                          <div className="flex items-center gap-1.5 text-[10px] text-emerald-800 font-bold">
+                                            <FileBadge className={`h-3.5 w-3.5 ${f.isDeleted ? 'text-rose-600' : 'text-emerald-600'}`} />
+                                            <span className={`truncate max-w-[120px] ${f.isDeleted ? 'line-through text-rose-700' : ''}`} title={f.name}>
+                                              {f.name} {f.isDeleted && '(Deleted)'}
+                                            </span>
+                                          </div>
+                                          <div className="flex gap-1">
+                                            {(!f.isDeleted && ['admin', 'dpo', 'owner'].includes(activeUser?.role || '')) && (
+                                              <button
+                                                type="button"
+                                                onClick={() => setDownloadConfirm({ reqId: activeRequestObj.id, taskId: t.id, fileId: f.id, filename: f.name })}
+                                                className="bg-white border border-emerald-300 text-emerald-700 text-[9px] font-bold py-0.5 px-2 rounded hover:bg-emerald-100 transition"
+                                              >
+                                                ดาวน์โหลด
+                                              </button>
+                                            )}
+                                            {(!f.isDeleted && (activeUser.role === 'owner' || activeUser.role === 'admin')) && (
+                                              <button
+                                                type="button"
+                                                onClick={() => handleTaskFileDelete(activeRequestObj.id, t.id, f.id)}
+                                                className="bg-white border border-rose-300 text-rose-600 p-0.5 rounded hover:bg-rose-50 transition"
+                                                title="ลบไฟล์นี้"
+                                              >
+                                                <Trash2 className="h-3 w-3" />
+                                              </button>
+                                            )}
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+
+                                  {/* System Owner action buttons */}
+                                  {(activeUser.role === 'owner' || activeUser.role === 'admin') && t.status !== 'found' && (
+                                    <div className="flex flex-col gap-2 pt-3 mt-3 border-t border-slate-100">
                                       <button
                                         type="button"
-                                        onClick={() => handleOwnerCompleteTask(activeRequestObj.id, t.id, 'not_found')}
-                                        className="bg-rose-600 hover:bg-rose-700 text-white text-[10px] font-bold py-1 px-2.5 rounded transition"
+                                        onClick={() => handleOwnerCompleteTask(activeRequestObj.id, t.id, 'found')}
+                                        className="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold py-1.5 px-3 rounded shadow-sm transition"
                                       >
-                                        ✗ อัปเดตไม่พบข้อมูล
+                                        ส่งเรื่องไปยัง Flow ต่อไป
+                                      </button>
+                                      
+                                      <button
+                                        type="button"
+                                        onClick={() => handleOwnerEscalateTask(activeRequestObj.id, t.id)}
+                                        className="w-full bg-rose-600 hover:bg-rose-700 text-white text-[11px] font-bold py-1.5 px-3 rounded shadow-sm transition"
+                                      >
+                                        แจ้งว่าไม่พบข้อมูลและส่งเรื่องไปยังผู้บริหาร
                                       </button>
                                     </div>
                                   )}
@@ -5996,10 +6086,10 @@ export default function App() {
 
             {/* Viewer Content Area */}
             <div className="flex-1 p-6 overflow-y-auto bg-slate-100 flex items-center justify-center min-h-[350px]">
-              {previewAttachment.fileUrl.startsWith('data:image') || previewAttachment.fileUrl.startsWith('blob:') || previewAttachment.name.endsWith('.png') || previewAttachment.name.endsWith('.jpg') ? (
+              {(previewAttachment.fileUrl?.startsWith('data:image') || previewAttachment.fileUrl?.startsWith('blob:') || previewAttachment.name.endsWith('.png') || previewAttachment.name.endsWith('.jpg')) ? (
                 <div className="bg-white p-3 rounded-xl shadow-md border border-slate-200 max-w-full text-center space-y-2">
                   <img
-                    src={previewAttachment.fileUrl}
+                    src={previewAttachment.fileUrl || ''}
                     alt={previewAttachment.name}
                     className="max-h-[60vh] mx-auto object-contain rounded-lg border border-slate-100"
                   />
