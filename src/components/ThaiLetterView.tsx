@@ -218,20 +218,18 @@ export const ThaiLetterView: React.FC<ThaiLetterViewProps> = ({
           </div>
         </div>
 
-        {/* Footer info & Audit tracking token */}
-        <div className="absolute bottom-[2cm] left-[3cm] text-[14pt] leading-tight">
+        {/* Footer info (Left) */}
+        <div className="absolute bottom-[2cm] left-[3cm] text-[12pt] leading-tight">
           {org.nameTh}<br/>
           {org.address && <>{org.address}<br/></>}
-          โทร. {org.contactPhone || '-'}<br/>
-          <div className="mt-2 text-[10pt] text-slate-400 flex items-center gap-2 border border-slate-100 p-1 w-[fit-content] rounded bg-slate-50">
-            <QrCode className="h-6 w-6 text-slate-500" />
-            <span className="font-mono text-[8pt]">{request.uuid.substr(0, 15)}</span>
-          </div>
+          โทร. {org.contactPhone || '-'}
         </div>
 
-        <div className="absolute bottom-[2cm] right-[2cm] text-[10pt] text-slate-400 text-right leading-tight">
-          สิทธิและสำเนาข้อมูลผู้ควบคุม<br/>PDPA Sec 30 Suite v1.0<br/>
-          <span className="font-mono">CHECKSUM: {request.trackingNo} - OK</span>
+        {/* QR Code for download (Right) */}
+        <div className="absolute bottom-[2cm] right-[2cm] flex flex-col items-center text-slate-800">
+          <QrCode className="h-16 w-16" strokeWidth={1.5} />
+          <span className="text-[10pt] mt-1 font-bold">สแกนเพื่อดาวน์โหลดเอกสาร</span>
+          <span className="text-[9pt] font-mono">REF: {request.trackingNo}</span>
         </div>
       </div>
     </div>
