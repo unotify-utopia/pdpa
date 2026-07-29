@@ -114,6 +114,11 @@ export const ThaiLetterView: React.FC<ThaiLetterViewProps> = ({
     output = output.replace(/{{signerName}}/g, signer.fullNameTh);
     output = output.replace(/{{signerPosition}}/g, signer.role === 'dpo' ? 'เจ้าหน้าที่คุ้มครองข้อมูลส่วนบุคคล (DPO)' : signer.role === 'approver' ? 'กรรมการผู้จัดการใหญ่ / ผู้มีอำนาจลงนาม' : 'เจ้าหน้าที่คุ้มครองข้อมูลส่วนบุคคล');
 
+    // Replace generic word "องค์กร" with the actual organization name
+    if (org && org.nameTh) {
+      output = output.replace(/องค์กร/g, org.nameTh);
+    }
+
     return output;
   };
 
