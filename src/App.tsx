@@ -4662,6 +4662,92 @@ export default function App() {
                         )}
                       </div>
                     )}
+                    {/* Module D.5: Consolidated Document Review for DPO */}
+                    {['dpo', 'admin'].includes(activeUser.role) && (
+                      <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-4">
+                        <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                          <FileCheck2 className="h-4.5 w-4.5 text-brand-600" />
+                          <span>สรุปแฟ้มเอกสารเตรียมส่งมอบ (Consolidated Document Review)</span>
+                        </span>
+                        
+                        <div className="space-y-4">
+                          {/* Discovered Files */}
+                          <div className="bg-slate-50 border border-slate-200 p-3 rounded-xl">
+                            <span className="text-xs font-bold text-slate-700 block mb-3 border-b border-slate-200 pb-2">เอกสารที่ค้นพบจากระบบ (Discovered Data)</span>
+                            {activeRequestObj.dataCollectionTasks.flatMap(t => t.uploadedFiles || []).filter(f => !f.isDeleted).length > 0 ? (
+                              <div className="space-y-2">
+                                {activeRequestObj.dataCollectionTasks.map(t => 
+                                  (t.uploadedFiles || []).filter(f => !f.isDeleted).map((f, i) => (
+                                    <div key={`${t.id}-${i}`} className="flex justify-between items-center bg-white p-2 rounded-lg border border-slate-200 shadow-sm hover:border-brand-200 transition">
+                                      <div className="flex items-center gap-2 text-xs text-slate-700">
+                                        <FileBadge className="h-4 w-4 text-emerald-500" />
+                                        <span className="font-semibold truncate max-w-[200px]" title={f.name}>{f.name}</span>
+                                        <span className="text-slate-400 text-[10px] bg-slate-100 px-1.5 py-0.5 rounded">จาก: {t.systemName}</span>
+                                      </div>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleTaskFileReview(activeRequestObj.id, t.id, f)}
+                                        className="bg-brand-50 hover:bg-brand-100 text-brand-700 text-[10px] font-bold py-1 px-3 rounded shadow-sm transition"
+                                      >
+                                        ดูเอกสารต้นฉบับ
+                                      </button>
+                                    </div>
+                                  ))
+                                )}
+                              </div>
+                            ) : (
+                              <div className="text-center py-4 bg-white rounded border border-dashed border-slate-200 text-xs text-slate-400">ไม่มีเอกสารที่ค้นพบ</div>
+                            )}
+                          </div>
+                          
+                          {/* Redacted Records */}
+                          <div className="bg-slate-50 border border-slate-200 p-3 rounded-xl">
+                            <span className="text-xs font-bold text-slate-700 block mb-3 border-b border-slate-200 pb-2">ประวัติการปกปิดข้อมูล (Redaction Records)</span>
+                            {activeRequestObj.redactionRecords && activeRequestObj.redactionRecords.length > 0 ? (
+                              <div className="space-y-2">
+                                {activeRequestObj.redactionRecords.map((r, idx) => (
+                                  <div key={r.id || idx} className="flex flex-col bg-white p-2.5 rounded-lg border border-slate-200 shadow-sm gap-2">
+                                    <div className="flex justify-between items-start text-xs">
+                                      <div className="font-bold text-slate-800 flex items-center gap-1.5">
+                                        <div className="h-2 w-2 rounded-full bg-rose-500"></div>
+                                        <span>ปกปิด: <span className="text-rose-600 font-mono">{r.itemRedacted}</span></span>
+                                      </div>
+                                      <span className="text-slate-400 text-[10px] bg-slate-50 px-1.5 py-0.5 rounded">{new Date(r.timestamp).toLocaleString('th-TH')}</span>
+                                    </div>
+                                    <div className="text-[11px] text-slate-600 bg-slate-50 p-2 rounded font-mono border border-slate-100">
+                                      <strong>เหตุผล:</strong> {r.reason}
+                                    </div>
+                                    <div className="flex gap-2 mt-1">
+                                      {r.previewUrlBefore && (
+                                        <button
+                                          type="button"
+                                          onClick={() => window.open(r.previewUrlBefore, '_blank')}
+                                          className="flex-1 bg-white hover:bg-slate-50 border border-slate-300 text-slate-600 text-[10px] font-bold py-1 px-2 rounded transition shadow-sm"
+                                        >
+                                          ดูรูปก่อนแก้ (Before)
+                                        </button>
+                                      )}
+                                      {r.previewUrlAfter && (
+                                        <button
+                                          type="button"
+                                          onClick={() => window.open(r.previewUrlAfter, '_blank')}
+                                          className="flex-1 bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 text-[10px] font-bold py-1 px-2 rounded transition shadow-sm"
+                                        >
+                                          ดูผลลัพธ์ (After)
+                                        </button>
+                                      )}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <div className="text-center py-4 bg-white rounded border border-dashed border-slate-200 text-xs text-slate-400">ไม่มีประวัติการทำ Redaction</div>
+                            )}
+                          </div>
+                          
+                        </div>
+                      </div>
+                    )}
 
                     {/* Module E: Double-Signed Decision maker (Section 3.7) */}
                     {['dpo', 'approver', 'admin'].includes(activeUser.role) && (
