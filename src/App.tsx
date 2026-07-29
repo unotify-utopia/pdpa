@@ -22,6 +22,7 @@ import {
   ArrowLeft,
   Mail,
   FileCheck2,
+  FileBadge,
   Scale,
   Building2,
   MessageSquare,
@@ -1321,7 +1322,7 @@ export default function App() {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
+            'Authorization': `Bearer ${sessionStorage.getItem('pdpa_jwt_token')}`
           },
           body: JSON.stringify({ filename: file.name, fileData })
         });
@@ -4308,55 +4309,54 @@ export default function App() {
                                     </div>
                                   )}
 
-                                  {/* System Owner task completion action simulation */}
-                                  {t.status === 'pending' || t.status === 'in_progress' ? (
-                                    activeUser.role === 'owner' || activeUser.role === 'admin' ? (
-                                      <div className="flex gap-2 pt-1.5 border-t border-slate-100 justify-end">
-                                        <button
-                                          type="button"
-                                          onClick={() => document.getElementById(`upload-task-${t.id}`)?.click()}
-                                          className="bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold py-1 px-2.5 rounded transition cursor-pointer"
-                                        >
-                                          ✓ อัปโหลดผล (PDF)
-                                        </button>
-                                        <input 
-                                          type="file" 
-                                          id={`upload-task-${t.id}`}
-                                          style={{ display: 'none' }} 
-                                          accept=".pdf"
-                                          onChange={(e) => handleTaskFileUpload(activeRequestObj.id, t.id, e.target.files)}
-                                        />
-                                        <button
-                                          type="button"
-                                          onClick={() => handleOwnerCompleteTask(activeRequestObj.id, t.id, 'not_found')}
-                                          className="bg-rose-600 hover:bg-rose-700 text-white text-[10px] font-bold py-1 px-2.5 rounded transition"
-                                        >
-                                          ✗ อัปเดตไม่พบข้อมูล
-                                        </button>
-                                      </div>
-                                    ) : null
-                                  ) : (
-                                    (t.uploadedFiles && t.uploadedFiles.length > 0) && (
-                                      <div className="flex flex-col gap-1.5 mt-1">
-                                        {t.uploadedFiles.map((f: any, idx: number) => (
-                                          <div key={idx} className="flex justify-between items-center bg-emerald-50 p-1.5 rounded border border-emerald-100">
-                                            <div className="flex items-center gap-1.5 text-[10px] text-emerald-800 font-bold">
-                                              <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-600" />
-                                              <span className="truncate max-w-[120px]" title={f.name}>{f.name}</span>
-                                            </div>
-                                            {['admin', 'dpo', 'owner'].includes(activeUser?.role || '') && (
-                                              <button
-                                                type="button"
-                                                onClick={() => setDownloadConfirm({ reqId: activeRequestObj.id, taskId: t.id, fileId: f.id, filename: f.name })}
-                                                className="bg-white border border-emerald-300 text-emerald-700 text-[9px] font-bold py-0.5 px-2 rounded hover:bg-emerald-100 transition"
-                                              >
-                                                ดาวน์โหลด
-                                              </button>
-                                            )}
+                                  {/* Uploaded Files List */}
+                                  {(t.uploadedFiles && t.uploadedFiles.length > 0) && (
+                                    <div className="flex flex-col gap-1.5 mt-1">
+                                      {t.uploadedFiles.map((f: any, idx: number) => (
+                                        <div key={idx} className="flex justify-between items-center bg-emerald-50 p-1.5 rounded border border-emerald-100">
+                                          <div className="flex items-center gap-1.5 text-[10px] text-emerald-800 font-bold">
+                                            <FileBadge className="h-3.5 w-3.5 text-emerald-600" />
+                                            <span className="truncate max-w-[120px]" title={f.name}>{f.name}</span>
                                           </div>
-                                        ))}
-                                      </div>
-                                    )
+                                          {['admin', 'dpo', 'owner'].includes(activeUser?.role || '') && (
+                                            <button
+                                              type="button"
+                                              onClick={() => setDownloadConfirm({ reqId: activeRequestObj.id, taskId: t.id, fileId: f.id, filename: f.name })}
+                                              className="bg-white border border-emerald-300 text-emerald-700 text-[9px] font-bold py-0.5 px-2 rounded hover:bg-emerald-100 transition"
+                                            >
+                                              ดาวน์โหลด
+                                            </button>
+                                          )}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+
+                                  {/* System Owner task completion action */}
+                                  {(activeUser.role === 'owner' || activeUser.role === 'admin') && (
+                                    <div className="flex gap-2 pt-2 mt-2 border-t border-slate-100 justify-end">
+                                      <button
+                                        type="button"
+                                        onClick={() => document.getElementById(`upload-task-${t.id}`)?.click()}
+                                        className="bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold py-1 px-2.5 rounded transition cursor-pointer"
+                                      >
+                                        ✓ อัปโหลดผล (PDF)
+                                      </button>
+                                      <input 
+                                        type="file" 
+                                        id={`upload-task-${t.id}`}
+                                        style={{ display: 'none' }} 
+                                        accept=".pdf"
+                                        onChange={(e) => handleTaskFileUpload(activeRequestObj.id, t.id, e.target.files)}
+                                      />
+                                      <button
+                                        type="button"
+                                        onClick={() => handleOwnerCompleteTask(activeRequestObj.id, t.id, 'not_found')}
+                                        className="bg-rose-600 hover:bg-rose-700 text-white text-[10px] font-bold py-1 px-2.5 rounded transition"
+                                      >
+                                        ✗ อัปเดตไม่พบข้อมูล
+                                      </button>
+                                    </div>
                                   )}
                                 </div>
                               ))}
