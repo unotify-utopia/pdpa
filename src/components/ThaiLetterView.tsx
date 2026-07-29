@@ -1,7 +1,7 @@
 import React from 'react';
 import { Printer, Shield, QrCode } from 'lucide-react';
 import type { Request, DocumentTemplate, User } from '../types';
-
+import { initialOrganizations } from '../mockData';
 
 interface ThaiLetterViewProps {
   request: Request;
@@ -38,6 +38,7 @@ export const ThaiLetterView: React.FC<ThaiLetterViewProps> = ({
   signer,
   onPrintMock,
 }) => {
+  const org = initialOrganizations.find(o => o.id === request.orgId) || initialOrganizations[0];
   
   // Replace template values dynamically (Section 11)
   const renderTemplateText = (text: string) => {
@@ -130,16 +131,22 @@ export const ThaiLetterView: React.FC<ThaiLetterViewProps> = ({
         {/* Header Layer */}
         <div className="relative h-[3cm] mb-4">
           <div className="absolute bottom-4 left-0">
-            ที่ สก. ๐๐๑ / {new Date().getFullYear() + 543}
+            ที่ ........................................
           </div>
           
-          {/* Garuda Logo */}
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 h-[3cm] w-[3cm] flex items-center justify-center border-2 border-slate-800 text-slate-800 font-bold text-sm rounded-full bg-slate-50">
-            ตราครุฑ
+          {/* Org Logo */}
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 h-[3cm] w-[3cm] flex items-center justify-center rounded-full bg-transparent overflow-hidden">
+            {org.logoUrl ? (
+              <img src={org.logoUrl} alt="Logo" className="w-full h-full object-contain" />
+            ) : (
+              <div className="border-2 border-slate-800 text-slate-800 font-bold text-sm w-full h-full flex items-center justify-center rounded-full bg-slate-50">
+                ตราหน่วยงาน
+              </div>
+            )}
           </div>
           
           <div className="absolute bottom-4 right-0 max-w-[6cm] text-right">
-            สำนักงานคุ้มครองข้อมูลส่วนบุคคล
+            {org.nameTh}
           </div>
         </div>
 
@@ -197,8 +204,9 @@ export const ThaiLetterView: React.FC<ThaiLetterViewProps> = ({
 
         {/* Footer info & Audit tracking token */}
         <div className="absolute bottom-[2cm] left-[3cm] text-[14pt] leading-tight">
-          สำนักงานคุ้มครองข้อมูลส่วนบุคคล<br/>
-          โทร. 02-123-4567<br/>
+          {org.nameTh}<br/>
+          {org.address && <>{org.address}<br/></>}
+          โทร. {org.contactPhone || '-'}<br/>
           <div className="mt-2 text-[10pt] text-slate-400 flex items-center gap-2 border border-slate-100 p-1 w-[fit-content] rounded bg-slate-50">
             <QrCode className="h-6 w-6 text-slate-500" />
             <span className="font-mono text-[8pt]">{request.uuid.substr(0, 15)}</span>
