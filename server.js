@@ -1670,7 +1670,7 @@ app.post('/api/requests/:id/tasks/:taskId/upload', authenticateJWT, requireRole(
     res.json({ success: true, fileId });
   } catch (err) {
     console.error('Upload Error:', err);
-    res.status(500).json({ success: false, message: 'Upload failed' });
+    res.status(500).json({ success: false, message: err.message || 'Upload failed' });
   }
 });
 
