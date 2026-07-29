@@ -4325,7 +4325,7 @@ export default function App() {
                         </span>
 
                         {/* Task assigner form for admin/DPO/owner */}
-                        {['admin', 'intake', 'dpo', 'owner'].includes(activeUser.role) && (
+                        {['admin', 'intake', 'dpo', 'owner'].includes(activeUser.role) && activeRequestObj.status === 'Data Collection' && (
                           <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 space-y-3">
                             <span className="block font-bold text-slate-700 text-xs">สร้างงานค้นหาข้อมูลระบบใหม่</span>
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-2 items-end">
@@ -4394,7 +4394,7 @@ export default function App() {
                                       <span className="font-bold text-slate-800">{t.systemName}</span>
                                       <span className="text-[10px] text-slate-400 block flex items-center gap-1">
                                         ผู้รับผิดชอบ: {t.assignee}
-                                        {['admin', 'dpo', 'owner'].includes(activeUser.role) && (
+                                        {['admin', 'dpo', 'owner'].includes(activeUser.role) && activeRequestObj.status === 'Data Collection' && (
                                           <button
                                             type="button"
                                             onClick={() => handleUnassignTask(activeRequestObj.id, t.id)}
@@ -4426,8 +4426,8 @@ export default function App() {
                                     </div>
                                   )}
 
-                                  {/* Upload Section (Always visible for owner/admin) */}
-                                  {(activeUser.role === 'owner' || activeUser.role === 'admin') && (
+                                  {/* Upload Section (Always visible for owner/admin in Data Collection state) */}
+                                  {(activeUser.role === 'owner' || activeUser.role === 'admin') && activeRequestObj.status === 'Data Collection' && (
                                     <div className="mt-2 mb-2 flex items-center justify-between bg-slate-50 p-2 rounded border border-slate-200">
                                       <div className="text-[10px] text-slate-500 flex items-center gap-1.5">
                                         <Plus className="h-3 w-3 text-emerald-600" />
@@ -4484,7 +4484,7 @@ export default function App() {
                                                 ดูเอกสาร
                                               </button>
                                             )}
-                                            {(!f.isDeleted && (activeUser.role === 'owner' || activeUser.role === 'admin')) && (
+                                            {(!f.isDeleted && (activeUser.role === 'owner' || activeUser.role === 'admin') && activeRequestObj.status === 'Data Collection') && (
                                               <button
                                                 type="button"
                                                 onClick={() => handleTaskFileDelete(activeRequestObj.id, t.id, f.id)}
