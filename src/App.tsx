@@ -541,7 +541,7 @@ export default function App() {
   const [downloadError, setDownloadError] = useState<string | null>(null);
   
   // Dashboard Interactive Navigation Filter State
-  const [statusFilterGroup, setStatusFilterGroup] = useState<RequestStatus[] | null>(null);
+
 
   // Download file state
   const [downloadConfirm, setDownloadConfirm] = useState<{ reqId: string, taskId: string, fileId: string, filename: string } | null>(null);
@@ -4908,7 +4908,6 @@ export default function App() {
                         <div
                           key={i}
                           onClick={() => {
-                            setStatusFilterGroup(card.statuses);
                             setInternalTab('requests');
                             setSelectedRequestId(null);
                           }}
@@ -5381,29 +5380,10 @@ export default function App() {
                 {internalTab === 'requests' && (
                   <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden space-y-0">
                     
-                    {/* Active Filter Banner when navigated from Dashboard Card */}
-                    {statusFilterGroup && (
-                      <div className="bg-brand-50 border-b border-brand-100 p-3 px-4 flex items-center justify-between text-xs text-brand-900">
-                        <div className="flex items-center gap-2">
-                          <span className="font-bold">🎯 กำลังกรองแสดงคำขอตามกลุ่มสถานะ:</span>
-                          <span className="bg-brand-200/60 text-brand-900 px-2 py-0.5 rounded font-bold font-mono text-[11px]">
-                            [{statusFilterGroup.join(', ')}]
-                          </span>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => setStatusFilterGroup(null)}
-                          className="bg-brand-600 hover:bg-brand-700 text-white font-semibold text-[11px] px-2.5 py-1 rounded transition shadow-sm"
-                        >
-                          ✕ ล้างตัวกรอง (แสดงทั้งหมด {filteredRequests.length} คำขอ)
-                        </button>
-                      </div>
-                    )}
-
                     <div className="p-4 border-b border-slate-100 bg-slate-50 flex flex-wrap items-center justify-between gap-4">
                       <span className="text-xs font-bold text-slate-800">
                         ตารางสืบค้นและดำเนินงานคำร้องขอใช้สิทธิข้อมูลส่วนบุคคล (Data Subject Access Requests) 
-                        ({filteredRequests.filter((r) => !statusFilterGroup || statusFilterGroup.includes(r.status)).length} รายการ)
+                        ({filteredRequests.length} รายการ)
                       </span>
                       <button
                         type="button"
@@ -5433,7 +5413,6 @@ export default function App() {
                         </thead>
                         <tbody className="divide-y divide-slate-100 text-slate-700">
                           {filteredRequests
-                            .filter((req) => !statusFilterGroup || statusFilterGroup.includes(req.status))
                             .map((req) => (
                             <tr key={req.id} className="hover:bg-slate-50 transition">
                               <td className="p-3 font-mono font-bold text-brand-600">{req.trackingNo}</td>
