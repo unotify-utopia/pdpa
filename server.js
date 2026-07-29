@@ -133,6 +133,36 @@ const initDatabase = async () => {
     } catch (e) {}
 
     try {
+      await dbPool.query('ALTER TABLE audit_logs ADD COLUMN actor_id VARCHAR(50)');
+    } catch(e) {}
+    try {
+      await dbPool.query('ALTER TABLE audit_logs ADD COLUMN actor_name VARCHAR(255)');
+    } catch(e) {}
+    try {
+      await dbPool.query('ALTER TABLE audit_logs ADD COLUMN actor_role VARCHAR(50)');
+    } catch(e) {}
+    try {
+      await dbPool.query('ALTER TABLE audit_logs ADD COLUMN org_id VARCHAR(50)');
+    } catch(e) {}
+    try {
+      await dbPool.query('ALTER TABLE audit_logs ADD COLUMN request_id VARCHAR(100)');
+    } catch(e) {}
+    try {
+      await dbPool.query('ALTER TABLE audit_logs ADD COLUMN request_tracking_no VARCHAR(100)');
+    } catch(e) {}
+    try {
+      await dbPool.query('ALTER TABLE audit_logs ADD COLUMN ip_address VARCHAR(50)');
+    } catch(e) {}
+    try {
+      await dbPool.query('ALTER TABLE audit_logs ADD COLUMN user_agent TEXT');
+    } catch(e) {}
+    try {
+      await dbPool.query('ALTER TABLE audit_logs ADD COLUMN checksum VARCHAR(100)');
+    } catch(e) {}
+    
+    console.log('✅ Added missing columns to audit_logs');
+
+    try {
       await dbPool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS roles JSONB DEFAULT '[]'::jsonb");
       console.log('✅ Added roles JSONB column to users table');
     } catch (e) {}
