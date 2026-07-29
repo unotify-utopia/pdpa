@@ -1254,8 +1254,8 @@ export default function App() {
 
     req.dataCollectionTasks.push(newTask);
     
-    // Switch state to data collection
-    if (req.status === 'Assigned' || req.status === 'Documents Verified') {
+    // Switch state to data collection unconditionally to support skipping steps during testing
+    if (req.status !== 'Data Collection') {
       req.status = 'Data Collection';
       req.statusHistory.push({
         status: 'Data Collection',
@@ -4503,7 +4503,7 @@ export default function App() {
                                 ))}
                               
                               {/* System Owner action buttons - Moved to bottom */}
-                              {activeRequestObj.status === 'Data Collection' && activeRequestObj.dataCollectionTasks.length > 0 && activeRequestObj.dataCollectionTasks.every((t: any) => t.status !== 'pending') && (activeUser.role === 'owner' || activeUser.role === 'admin') && (
+                              {['Submitted', 'Assigned', 'Documents Verified', 'Data Collection'].includes(activeRequestObj.status) && activeRequestObj.dataCollectionTasks.length > 0 && activeRequestObj.dataCollectionTasks.every((t: any) => t.status !== 'pending') && (activeUser.role === 'owner' || activeUser.role === 'admin') && (
                                 <div className="flex flex-col gap-2 mt-6">
                                   {!activeRequestObj.dataCollectionTasks.some((t: any) => t.status === 'not_found') ? (
                                     <button
