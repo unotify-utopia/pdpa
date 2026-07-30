@@ -70,6 +70,7 @@ import { SignaturePad } from './components/SignaturePad';
 import { WatermarkedUpload } from './components/WatermarkedUpload';
 import { RedactionCanvas } from './components/RedactionCanvas';
 import { ThaiLetterView, convertToThaiDate } from './components/ThaiLetterView';
+import { ThaiDatePicker } from './components/ThaiDatePicker';
 import { DocumentVerificationPortal } from './components/DocumentVerificationPortal';
 import { DashboardCharts } from './components/DashboardCharts';
 import { StaffLoginModal } from './components/StaffLoginModal';
@@ -3267,12 +3268,10 @@ export default function App() {
                               {scopeForm.timeframeEnd ? `ไม่เกิน ${scopeForm.timeframeEnd}` : 'ไม่เกินวันปัจจุบัน'}
                             </span>
                           </label>
-                          <input
-                            type="date"
-                            max={scopeForm.timeframeEnd || new Date().toLocaleDateString('sv-SE')}
+                          <ThaiDatePicker
+                            maxDate={scopeForm.timeframeEnd || new Date().toLocaleDateString('sv-SE')}
                             value={scopeForm.timeframeStart}
-                            onChange={(e) => {
-                              const selected = e.target.value;
+                            onChange={(selected) => {
                               const today = new Date().toLocaleDateString('sv-SE');
                               if (selected > today) {
                                 showNotify('⚠️ ไม่สามารถเลือกวันที่เริ่มต้นเกิน "วันที่ปัจจุบัน" ได้');
@@ -3284,7 +3283,6 @@ export default function App() {
                               }
                               setScopeForm({...scopeForm, timeframeStart: selected});
                             }}
-                            className="w-full text-xs border border-slate-300 rounded-lg p-2 focus:ring-1 focus:ring-brand-500 font-mono"
                           />
                         </div>
                         <div className="space-y-1">
@@ -3294,13 +3292,11 @@ export default function App() {
                               {scopeForm.timeframeStart ? `ตั้งแต่ ${scopeForm.timeframeStart} ถึงปัจจุบัน` : 'ไม่เกินวันปัจจุบัน'}
                             </span>
                           </label>
-                          <input
-                            type="date"
-                            min={scopeForm.timeframeStart || undefined}
-                            max={new Date().toLocaleDateString('sv-SE')}
+                          <ThaiDatePicker
+                            minDate={scopeForm.timeframeStart || undefined}
+                            maxDate={new Date().toLocaleDateString('sv-SE')}
                             value={scopeForm.timeframeEnd}
-                            onChange={(e) => {
-                              const selected = e.target.value;
+                            onChange={(selected) => {
                               const today = new Date().toLocaleDateString('sv-SE');
                               if (selected > today) {
                                 showNotify('⚠️ ไม่สามารถเลือกวันที่สิ้นสุดเกิน "วันที่ปัจจุบัน" ได้');
@@ -3312,7 +3308,6 @@ export default function App() {
                               }
                               setScopeForm({...scopeForm, timeframeEnd: selected});
                             }}
-                            className="w-full text-xs border border-slate-300 rounded-lg p-2 focus:ring-1 focus:ring-brand-500 font-mono"
                           />
                         </div>
                       </div>
