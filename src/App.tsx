@@ -6000,6 +6000,83 @@ export default function App() {
                       </table>
                     </div>
                   </div>
+
+                  {/* Audit Log Modal */}
+                  {selectedAuditLog && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm">
+                      <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
+                        <div className="bg-slate-50 p-4 border-b border-slate-100 flex items-center justify-between">
+                          <h2 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                            <Activity className="h-4 w-4 text-brand-600" />
+                            รายละเอียดการทำงานของระบบ (Audit Log)
+                          </h2>
+                          <button
+                            onClick={() => setSelectedAuditLog(null)}
+                            className="p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-200 rounded-lg transition"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        </div>
+                        <div className="p-6 overflow-y-auto font-mono text-[11px] text-slate-700 space-y-4">
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <span className="text-slate-400 font-sans block mb-1">วันและเวลา (Timestamp)</span>
+                              <span className="font-bold text-slate-800">{new Date(selectedAuditLog.timestamp).toLocaleString('th-TH')}</span>
+                            </div>
+                            <div>
+                              <span className="text-slate-400 font-sans block mb-1">ผู้ปฏิบัติงาน (User)</span>
+                              <span className="font-bold text-slate-800">{selectedAuditLog.actorName}</span>
+                            </div>
+                            <div>
+                              <span className="text-slate-400 font-sans block mb-1">บทบาท (Role)</span>
+                              <span className="uppercase text-brand-600 font-bold">{selectedAuditLog.actorRole}</span>
+                            </div>
+                            <div>
+                              <span className="text-slate-400 font-sans block mb-1">เลขไอพี (IP Address)</span>
+                              <span>{selectedAuditLog.ipAddress}</span>
+                            </div>
+                          </div>
+                          
+                          <div className="border-t border-slate-100 pt-4">
+                            <span className="text-slate-400 font-sans block mb-1">การกระทำ (Action)</span>
+                            <span className="text-brand-700 font-bold text-[12px]">{selectedAuditLog.action}</span>
+                          </div>
+                          
+                          <div className="border-t border-slate-100 pt-4">
+                            <span className="text-slate-400 font-sans block mb-1">รายละเอียด (Details)</span>
+                            <div className="bg-slate-50 p-3 rounded border border-slate-200 whitespace-pre-wrap font-sans text-slate-700 text-sm">
+                              {selectedAuditLog.details}
+                            </div>
+                          </div>
+
+                          <div className="border-t border-slate-100 pt-4 grid grid-cols-2 gap-4">
+                            <div>
+                              <span className="text-slate-400 font-sans block mb-1">ตรวจสอบความปลอดภัย (Integrity Check)</span>
+                              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-green-50 text-green-700 border border-green-200 rounded text-[10px] font-bold">
+                                <CheckCircle className="h-3 w-3" />
+                                Verified ({selectedAuditLog.checksum})
+                              </div>
+                            </div>
+                            {selectedAuditLog.requestId && (
+                              <div>
+                                <span className="text-slate-400 font-sans block mb-1">รหัสอ้างอิงคำขอ (Request ID)</span>
+                                <span>{selectedAuditLog.requestTrackingNo || selectedAuditLog.requestId}</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        <div className="bg-slate-50 p-4 border-t border-slate-100 flex justify-end">
+                          <button
+                            onClick={() => setSelectedAuditLog(null)}
+                            className="bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 px-4 py-1.5 rounded font-semibold text-xs transition"
+                          >
+                            ปิดหน้าต่าง
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                 )}
 
               </div>
