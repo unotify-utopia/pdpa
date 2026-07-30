@@ -1884,12 +1884,12 @@ export default function App() {
       const headers = ['วันและเวลา (Timestamp)', 'ผู้ปฏิบัติงาน (User)', 'บทบาท (Role)', 'การกระทำ (Action)', 'รายละเอียด (Details)', 'เลขไอพี (IP Address)', 'ตรวจสอบความปลอดภัย (Checksum)'];
       const rows = auditLogs.map(log => [
         new Date(log.timestamp).toLocaleString('th-TH'),
-        `"${log.actorName}"`,
-        log.actorRole,
-        `"${log.action}"`,
-        `"${log.details.replace(/"/g, '""')}"`,
-        log.ipAddress,
-        log.checksum
+        `"${(log.actorName || '').replace(/"/g, '""')}"`,
+        log.actorRole || '',
+        `"${(log.action || '').replace(/"/g, '""')}"`,
+        `"${(log.details || '').replace(/"/g, '""')}"`,
+        log.ipAddress || '',
+        log.checksum || ''
       ]);
       const csvContent = "\uFEFF" + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
