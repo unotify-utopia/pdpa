@@ -275,7 +275,10 @@ export default function App() {
   useEffect(() => {
     const handleWorkflowNotify = (e: any) => {
       const { title, message } = e.detail || {};
-      showNotify(message || 'ส่งอีเมลแจ้งเตือนความคืบหน้าตาม Workflow เรียบร้อยแล้ว', 'success', title || 'แจ้งเตือนตาม Flow เอกสาร');
+      showNotify(message || 'ส่งอีเมลแจ้งเตือนความคืบหน้าตาม Workflow เรียบร้อยแล้ว', 'success', title || 'แจ้งเตือนตาม Flow เอกสาร', () => {
+        // Automatically close the active request detail view to prevent further actions on completed steps
+        setSelectedRequestId(null);
+      });
     };
     window.addEventListener('workflow-notify', handleWorkflowNotify);
     return () => window.removeEventListener('workflow-notify', handleWorkflowNotify);
