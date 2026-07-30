@@ -283,8 +283,8 @@ const transporter = nodemailer.createTransport({
   port: parseInt(process.env.SMTP_PORT || '465'),
   secure: true,
   auth: {
-    user: process.env.SMTP_USER || 'pdpa.utopia@gmail.com',
-    pass: process.env.SMTP_PASS || 'bxabpsctfsoqihrh',
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASS,
   },
 });
 
