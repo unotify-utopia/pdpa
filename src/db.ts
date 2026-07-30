@@ -124,24 +124,20 @@ export const fetchAuditLogs = async (): Promise<AuditLog[]> => {
       headers: { ...(token ? { 'Authorization': `Bearer ${token}` } : {}) }
     });
     const data = await res.json();
-    if (data.success && data.logs) {
-      return data.logs.map((l: any) => ({
+    if (data.success && data.auditLogs) {
+      return data.auditLogs.map((l: any) => ({
         id: l.id,
         timestamp: l.timestamp,
-        actor: {
-          id: l.actor_id || 'unknown',
-          fullNameTh: l.actor_name,
-          role: l.actor_role,
-          orgId: l.org_id,
-          username: '',
-          email: ''
-        },
+        actorId: l.actorId || 'unknown',
+        actorName: l.actorName || 'Unknown User',
+        actorRole: l.actorRole || '',
+        orgId: l.orgId || '',
         action: l.action,
         details: l.details,
-        requestId: l.request_id,
-        requestTrackingNo: l.request_tracking_no,
-        ipAddress: l.ip_address,
-        userAgent: l.user_agent,
+        requestId: l.requestId,
+        requestTrackingNo: l.requestTrackingNo,
+        ipAddress: l.ipAddress,
+        userAgent: l.userAgent,
         checksum: l.checksum
       }));
     }
