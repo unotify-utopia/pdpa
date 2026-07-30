@@ -494,11 +494,15 @@ const sendWorkflowNotification = async (request, oldStatus, newStatus, eventType
 
   const recipients = [];
   
-  // Helper to add multiple officers of the same role
+  // Helper to add multiple officers of the same role, filtering out mock emails
   const addRecipients = (emails, roleName, actionRequired) => {
     emails.forEach(email => {
-      if (email && !recipients.find(r => r.email === email)) {
+      // Basic check for common mock/dummy domains to prevent SMTP bounce limits
+      const isMockEmail = email.endsWith('@example.com') || email.endsWith('@organization.or.th');
+      if (email && !isMockEmail && !recipients.find(r => r.email === email)) {
         recipients.push({ email, roleName, actionRequired });
+      } else if (isMockEmail) {
+        console.log(`[SMTP] Skipping notification for mock email: ${email}`);
       }
     });
   };
