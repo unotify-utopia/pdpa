@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Printer, Shield, QrCode, Mail, FileText } from 'lucide-react';
 import type { Request, DocumentTemplate, User } from '../types';
 import { initialOrganizations } from '../mockData';

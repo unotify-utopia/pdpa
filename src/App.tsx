@@ -47,7 +47,6 @@ import type {
 
 import {
   getRequests,
-  getComplianceConfig,
   fetchComplianceConfig,
   fetchDocumentTemplates,
   fetchAuditLogs,
@@ -2096,7 +2095,7 @@ export default function App() {
             </div>
 
             <form
-              onSubmit={(e) => {
+              onSubmit={async (e) => {
                 e.preventDefault();
               const updated = templates.map((t) =>
                 t.id === editingTemplate.id ? editingTemplate : t
@@ -2108,7 +2107,7 @@ export default function App() {
                   `แก้ไขแม่แบบหนังสือราชการ: ${editingTemplate.nameTh} (${editingTemplate.id})`,
                   (activeUser || initialUser) as any
                 );
-                setAuditLogs(getAuditLogs());
+                reloadData(); // Reload data async to get updated templates and logs
                 setEditingTemplate(null);
                 showNotify(
                   `บันทึกการแก้ไขแม่แบบ "${editingTemplate.nameTh}" เรียบร้อยแล้ว`,
