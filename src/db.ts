@@ -1,51 +1,17 @@
 import type { Request, ComplianceConfig, DocumentTemplate, AuditLog, User, RequestStatus, SLAEvent } from './types';
-import { initialComplianceConfig, initialDocumentTemplates, seedRequests } from './mockData';
+import { initialComplianceConfig, initialDocumentTemplates } from './mockData';
 
 
 // Storage keys
 const KEYS = {
-  REQUESTS: 'pdpa_req_requests',
   CONFIG: 'pdpa_req_config',
   TEMPLATES: 'pdpa_req_templates',
   AUDIT_LOGS: 'pdpa_req_audit_logs',
   CURRENT_USER: 'pdpa_req_current_user',
 };
 
-// Initialize DB with seed data if not present or empty
+// Initialize DB: Clear any legacy localStorage auth tokens
 export const initializeDB = () => {
-  const existingRequests = localStorage.getItem(KEYS.REQUESTS);
-  if (!existingRequests) {
-    localStorage.setItem(KEYS.REQUESTS, JSON.stringify(seedRequests));
-  } else {
-    try {
-      const parsed: Request[] = JSON.parse(existingRequests);
-      let updated = false;
-      const merged = [...parsed];
-      for (const seed of seedRequests) {
-        const idx = merged.findIndex(r => r.id === seed.id || r.trackingNo === seed.trackingNo);
-        if (idx === -1) {
-          merged.push(seed);
-          updated = true;
-        } else if (!merged[idx].orgId || merged[idx].requester.firstName === 'พงศกร' || merged[idx].requester.firstName === 'somkiat' || (merged[idx].messageThread[0] && merged[idx].messageThread[0].timestamp.endsWith('Z'))) {
-          merged[idx] = seed;
-          updated = true;
-        }
-      }
-      // Clean up legacy duplicate seed request REQ-TECH-2026-0008
-      const filtered = merged.filter(r => r.id !== 'req_tech_008' && r.trackingNo !== 'REQ-TECH-2026-0008');
-      if (filtered.length !== merged.length) {
-        updated = true;
-      }
-      if (updated) {
-        localStorage.setItem(KEYS.REQUESTS, JSON.stringify(filtered));
-      }
-    } catch {
-      localStorage.setItem(KEYS.REQUESTS, JSON.stringify(seedRequests));
-    }
-  }
-
-
-
   // Clean up any legacy persistent login in localStorage so user session is never remembered across browser restarts/tabs
   localStorage.removeItem(KEYS.CURRENT_USER);
   localStorage.removeItem('pdpa_jwt_token');
@@ -63,23 +29,6 @@ const generateChecksum = (data: string): string => {
   return Math.abs(hash).toString(16);
 };
 
-// Core DB Accessors
-export const getRequests = (): Request[] => {
-  initializeDB();
-  const raw = localStorage.getItem(KEYS.REQUESTS);
-  let parsed: Request[] = raw ? JSON.parse(raw) : [];
-  
-  // If storage got cleared or empty array, force re-seed
-  if (!parsed || parsed.length === 0) {
-    localStorage.setItem(KEYS.REQUESTS, JSON.stringify(seedRequests));
-    parsed = seedRequests;
-  }
-  return parsed;
-};
-
-export const saveRequests = (requests: Request[]) => {
-  localStorage.setItem(KEYS.REQUESTS, JSON.stringify(requests));
-};
 
 export const fetchComplianceConfig = async (): Promise<ComplianceConfig> => {
   try {
@@ -270,43 +219,6 @@ export const addAuditLog = async (
   return newLog;
 };
 
-// Request Management Functions
-export const getRequestById = (id: string): Request | undefined => {
-  return getRequests().find((r) => r.id === id);
-};
-
-export const getRequestByTrackingNo = (trackingNo: string): Request | undefined => {
-  return getRequests().find((r) => r.trackingNo.toUpperCase() === trackingNo.trim().toUpperCase());
-};
-
-// Internal Helper for Tracking Number
-export const generateTrackingNumber = (orgId: string = 'org_dopa', isManual: boolean = false): string => {
-  const requests = getRequests();
-  const yearBE = new Date().getFullYear() + 543;
-  const orgCodePrefix = orgId.replace(/^org_/, '').toUpperCase().replace('_TH', '');
-  const manualSuffix = isManual ? 'M' : '';
-  const prefix = `REQ-${orgCodePrefix}${manualSuffix}-${yearBE}-`;
-  
-  // Count existing requests for this specific tenant organization
-  let maxNum = 0;
-  requests.forEach((r) => {
-    if (r.orgId === orgId && r.trackingNo) {
-      const parts = r.trackingNo.split('-');
-      // Must start with REQ-ORG... to filter out old REQ-MANUAL-YYYY-XXXX entries
-      if (parts.length >= 3 && parts[0] === 'REQ' && parts[1].startsWith(orgCodePrefix)) {
-        // The sequential number is always the last part after a dash
-        const num = parseInt(parts[parts.length - 1], 10);
-        // Ensure the parsed number is valid and less than a reasonable threshold to prevent parsing years/random big numbers
-        if (!isNaN(num) && num < 100000 && num > maxNum) {
-          maxNum = num;
-        }
-      }
-    }
-  });
-
-  const nextNum = (maxNum + 1).toString().padStart(4, '0');
-  return `${prefix}${nextNum}`;
-};
 
 // Create New Request (Section 3) - Pure function now
 export const createRequest = (requestData: Omit<Request, 'id' | 'uuid' | 'trackingNo' | 'status' | 'submissionDate' | 'slaRemainingDays' | 'slaDaysUsed' | 'slaPaused' | 'slaExtended' | 'slaEvents' | 'statusHistory' | 'dataCollectionTasks' | 'redactionRecords' | 'feeCalculation' | 'messageThread' | 'legalHold' | 'identityVerification'> & { orgId?: string }): Request => {
