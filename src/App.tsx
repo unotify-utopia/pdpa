@@ -3265,7 +3265,7 @@ export default function App() {
                           <label className="text-xs font-medium text-slate-700 flex justify-between">
                             <span>ขอบเขตวันและเวลาเริ่มต้นข้อมูล</span>
                             <span className="text-[10px] text-slate-400">
-                              {scopeForm.timeframeEnd ? `ไม่เกิน ${scopeForm.timeframeEnd}` : 'ไม่เกินวันปัจจุบัน'}
+                              {scopeForm.timeframeEnd ? `ไม่เกิน ${convertToThaiDate(scopeForm.timeframeEnd)}` : 'ไม่เกินวันปัจจุบัน'}
                             </span>
                           </label>
                           <ThaiDatePicker
@@ -3289,7 +3289,7 @@ export default function App() {
                           <label className="text-xs font-medium text-slate-700 flex justify-between">
                             <span>ขอบเขตวันและเวลาสิ้นสุดข้อมูล</span>
                             <span className="text-[10px] text-slate-400">
-                              {scopeForm.timeframeStart ? `ตั้งแต่ ${scopeForm.timeframeStart} ถึงปัจจุบัน` : 'ไม่เกินวันปัจจุบัน'}
+                              {scopeForm.timeframeStart ? `ตั้งแต่ ${convertToThaiDate(scopeForm.timeframeStart)} ถึงปัจจุบัน` : 'ไม่เกินวันปัจจุบัน'}
                             </span>
                           </label>
                           <ThaiDatePicker
@@ -4093,7 +4093,7 @@ export default function App() {
                         <div className="space-y-1">
                           <span className="text-slate-400 block font-semibold">ช่วงเวลาข้อมูล:</span>
                           <span className="font-bold text-slate-800">
-                            {activeRequestObj.requestDetails.timeframeStart ? `${activeRequestObj.requestDetails.timeframeStart} ถึง ${activeRequestObj.requestDetails.timeframeEnd}` : 'ข้อมูลทั้งหมดที่มีประวัติ'}
+                            {activeRequestObj.requestDetails.timeframeStart ? `${convertToThaiDate(activeRequestObj.requestDetails.timeframeStart)} ถึง ${convertToThaiDate(activeRequestObj.requestDetails.timeframeEnd)}` : 'ข้อมูลทั้งหมดที่มีประวัติ'}
                           </span>
                         </div>
                       </div>
