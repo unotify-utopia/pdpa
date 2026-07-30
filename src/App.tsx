@@ -2748,8 +2748,8 @@ export default function App() {
 
             {/* Submission Form Wizard */}
             {publicTab === 'submit' && (
-              <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden max-w-3xl mx-auto">
-                <div className="bg-slate-50 border-b border-slate-100 p-6 flex justify-between items-center">
+              <div className="bg-white border border-slate-200 rounded-2xl shadow-sm max-w-3xl mx-auto">
+                <div className="bg-slate-50 border-b border-slate-100 p-6 flex justify-between items-center rounded-t-2xl">
                   <div>
                     <h3 className="font-bold text-slate-800 text-base">แบบคำขอรับสิทธิข้อมูลส่วนบุคคลออนไลน์</h3>
                     <p className="text-xs text-slate-500">กรุณากรอกข้อมูลส่วนสำคัญตามขั้นตอนการขอสิทธิ์</p>
