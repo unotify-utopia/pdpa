@@ -3884,8 +3884,7 @@ export default function App() {
                   { id: 'retention', label: 'ทำลายและจัดเก็บข้อมูล', icon: Trash2, roles: ['admin', 'dpo'] },
                   { id: 'audit', label: 'รายงานบันทึกตรวจสอบสิทธิ์', icon: Lock, roles: ['admin', 'auditor', 'dpo'] }
                 ].map((item) => {
-                  const userRoles = activeUser.roles || [activeUser.role];
-                  const hasAccess = activeUser.role === 'superadmin' || item.roles.some((r) => userRoles.includes(r as Role));
+                  const hasAccess = activeUser.role === 'superadmin' || item.roles.includes(activeUser.role);
                   if (!hasAccess) return null;
 
                   const isActive = internalTab === item.id;
