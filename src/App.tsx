@@ -174,6 +174,7 @@ export default function App() {
   const [editingTemplate, setEditingTemplate] = useState<DocumentTemplate | null>(null);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [auditSearchTerm, setAuditSearchTerm] = useState('');
+  const [selectedAuditLog, setSelectedAuditLog] = useState<AuditLog | null>(null);
   const [auditPage, setAuditPage] = useState(1);
   const auditLogsPerPage = 50;
   const [activeUser, setActiveUser] = useState<UserType | null>(initialUser);
@@ -5911,11 +5912,9 @@ export default function App() {
                           <tr className="bg-slate-100/50 border-b border-slate-200 text-slate-500 font-bold">
                             <th className="p-3">วันและเวลา (Timestamp)</th>
                             <th className="p-3">ผู้ปฏิบัติงาน (User)</th>
+                            <th className="p-3">ชื่อเจ้าของข้อมูล (Data Subject Name)</th>
                             <th className="p-3">บทบาท</th>
-                            <th className="p-3">การกระทำ (Action)</th>
-                            <th className="p-3">รายละเอียด (Details)</th>
-                            <th className="p-3">เลขไอพี (IP Address)</th>
-                            <th className="p-3 text-center">ตรวจสอบความปลอดภัย (Integrity Check)</th>
+                            <th className="p-3 text-center">รายละเอียด</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 text-slate-700 font-mono">
@@ -5934,26 +5933,34 @@ export default function App() {
                               <>
                                 {paginated.length === 0 ? (
                                   <tr>
-                                    <td colSpan={7} className="p-8 text-center text-slate-400 font-sans">
+                                    <td colSpan={5} className="p-8 text-center text-slate-400 font-sans">
                                       ไม่พบข้อมูลที่ค้นหา
                                     </td>
                                   </tr>
                                 ) : (
-                                  paginated.map((log) => (
-                                    <tr key={log.id} className="hover:bg-slate-50 transition">
-                                      <td className="p-3 whitespace-nowrap text-slate-500">{new Date(log.timestamp).toLocaleString('th-TH')}</td>
-                                      <td className="p-3 font-sans font-bold text-slate-800">{log.actorName}</td>
-                                      <td className="p-3 font-sans uppercase font-bold text-[9px] text-slate-400">{log.actorRole}</td>
-                                      <td className="p-3 text-brand-600 font-bold">{log.action}</td>
-                                      <td className="p-3 font-sans text-slate-600 max-w-sm truncate" title={log.details}>{log.details}</td>
-                                      <td className="p-3 text-slate-500">{log.ipAddress}</td>
-                                      <td className="p-3 text-center">
-                                        <span className="inline-block bg-emerald-50 text-emerald-800 border border-emerald-200 px-2 py-0.5 rounded text-[10px] font-bold font-sans">
-                                          ✓ Verified ({log.checksum.substr(0, 6)})
-                                        </span>
-                                      </td>
-                                    </tr>
-                                  ))
+                                  paginated.map((log) => {
+                                    // Lookup Request to find the Data Subject Name
+                                    const matchedReq = requests.find(r => r.id === log.requestId || (log.requestTrackingNo && r.trackingNo === log.requestTrackingNo));
+                                    const dataSubjectName = matchedReq ? `${matchedReq.requester.firstName} ${matchedReq.requester.lastName}` : '-';
+
+                                    return (
+                                      <tr key={log.id} className="hover:bg-slate-50 transition">
+                                        <td className="p-3 whitespace-nowrap text-slate-500">{new Date(log.timestamp).toLocaleString('th-TH')}</td>
+                                        <td className="p-3 font-sans font-bold text-slate-800">{log.actorName}</td>
+                                        <td className="p-3 font-sans text-slate-700">{dataSubjectName}</td>
+                                        <td className="p-3 font-sans uppercase font-bold text-[9px] text-slate-400">{log.actorRole}</td>
+                                        <td className="p-3 text-center">
+                                          <button
+                                            onClick={() => setSelectedAuditLog(log)}
+                                            className="text-brand-600 hover:text-brand-700 underline text-[11px] font-sans font-semibold"
+                                          >
+                                            ดูรายละเอียด
+                                          </button>
+                                        </td>
+
+                                      </tr>
+                                    );
+                                  })
                                 )}
                                 
                                 {totalPages > 1 && (
