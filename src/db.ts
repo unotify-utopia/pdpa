@@ -313,7 +313,7 @@ export const createRequest = (requestData: Omit<Request, 'id' | 'uuid' | 'tracki
   const config = getComplianceConfig();
   const targetOrgId = requestData.orgId || 'org_dopa';
   
-  const trackingNo = '';
+  const trackingNo = ''; // Will be assigned by backend API
   const uuid = 'pk-' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
   
   const newRequest: Request = {
@@ -375,12 +375,6 @@ export const updateRequest = async (updatedReq: Request, actor: User, auditActio
   }
 
   // Update local cache only if DB sync succeeds
-  const requests = getRequests();
-  const index = requests.findIndex((r) => r.id === updatedReq.id);
-  if (index !== -1) {
-    requests[index] = updatedReq;
-    saveRequests(requests);
-    
     // Do not block UI for audit log
     addAuditLog(auditAction, auditDetail, actor, updatedReq.id, updatedReq.trackingNo).catch(console.error);
     
@@ -396,13 +390,13 @@ export const updateRequest = async (updatedReq: Request, actor: User, auditActio
 
 // Change Request Status & Manage SLA Events
 export const changeRequestStatus = async (
-  requestId: string,
+  req: Request | undefined,
   newStatus: RequestStatus,
   actor: User,
-  comment?: string
+  comment?: string,
+  configParam?: ComplianceConfig
 ) => {
-  const req = getRequestById(requestId);
-  if (!req) return;
+  if (!req) return undefined;
 
   const prevStatus = req.status;
   req.status = newStatus;
@@ -462,14 +456,12 @@ export const changeRequestStatus = async (
   });
 
   await updateRequest(req, actor, 'UPDATE_STATUS', `เปลี่ยนสถานะคำขอจาก "${prevStatus}" เป็น "${newStatus}"${comment ? ` (ความเห็น: ${comment})` : ''}`);
+  return req;
 };
 
 // SLA Calculations Utility (Section 5)
-export const recalculateAllSLAs = () => {
-  const requests = getRequests();
-  const config = configParam || getComplianceConfig();
+export const recalculateAllSLAs = (requests: Request[], config: ComplianceConfig): Request[] => {
   const now = new Date();
-  let changed = false;
 
   const updatedRequests = requests.map((req) => {
     // If request is closed, resolved, or not yet marked "Complete" (SLA starts on Completeness checked)
@@ -506,13 +498,10 @@ export const recalculateAllSLAs = () => {
     if (req.slaDaysUsed !== daysUsed || req.slaRemainingDays !== remainingDays) {
       req.slaDaysUsed = daysUsed;
       req.slaRemainingDays = remainingDays;
-      changed = true;
     }
 
     return req;
   });
 
-  if (changed) {
-    saveRequests(updatedRequests);
-  }
+  return updatedRequests;
 };

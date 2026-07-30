@@ -56,10 +56,7 @@ import {
   updateRequest,
   recalculateAllSLAs,
   addAuditLog,
-  getRequestById,
   saveComplianceConfig,
-  saveRequests,
-  generateTrackingNumber,
   saveDocumentTemplates,
   resetDocumentTemplates
 } from './db';
@@ -559,12 +556,8 @@ export default function App() {
   const [downloadConfirm, setDownloadConfirm] = useState<{ reqId: string, taskId: string, fileId: string, filename: string } | null>(null);
 
   useEffect(() => {
-    recalculateAllSLAs();
-    const interval = setInterval(() => {
-      recalculateAllSLAs();
-      reloadData();
-    }, 30000); // every 30s
-    return () => clearInterval(interval);
+    // SLA calculation is now applied during reloadData() fetches.
+    // The previous standalone interval here has been removed to avoid stale state and loops.
   }, []);
 
   // 10-Minute Inactivity Session Timeout for Staff Security (PDPA Access Control Rule)
@@ -864,7 +857,7 @@ export default function App() {
       id: `REQ-${Date.now()}`,
       orgId,
       uuid: crypto.randomUUID ? crypto.randomUUID() : `uuid-${Date.now()}`,
-      trackingNo: generateTrackingNumber(orgId, true),
+      trackingNo: '', // Will be assigned by backend API
       requesterType: reqType,
       contactChannel: manualChannel as any,
       refNo: manualChannel !== 'office' ? manualRefNo : undefined,
