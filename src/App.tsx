@@ -4445,7 +4445,7 @@ export default function App() {
                         </span>
 
                         {/* Task assigner form for admin/DPO/owner */}
-                        {['admin', 'intake', 'dpo', 'owner'].includes(activeUser.role) && activeRequestObj.status === 'Data Collection' && (
+                        {['admin', 'intake', 'dpo', 'owner'].includes(activeUser.role) && ['Documents Verified', 'Assigned', 'Data Collection'].includes(activeRequestObj.status) && (
                           <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 space-y-3">
                             <span className="block font-bold text-slate-700 text-xs">สร้างงานค้นหาข้อมูลระบบใหม่</span>
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-2 items-end">
