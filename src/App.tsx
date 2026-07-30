@@ -3879,9 +3879,9 @@ export default function App() {
                   { id: 'requests', label: 'รายการคำขอทั้งหมด', icon: List, roles: ['admin', 'intake', 'dpo', 'approver', 'auditor', 'owner'] },
                   { id: 'kanban', label: 'Kanban บอร์ดสิทธิ์', icon: Layers, roles: ['admin', 'intake', 'dpo', 'approver', 'owner'] },
                   { id: 'users', label: 'จัดการผู้ใช้และสิทธิ์', icon: UserCheck, roles: ['admin'] },
-                  { id: 'compliance', label: 'Compliance ตั้งค่ากฎหมาย', icon: Scale, roles: ['admin', 'dpo'] },
-                  { id: 'templates', label: 'Template หนังสือราชการ', icon: FileCheck2, roles: ['admin', 'dpo'] },
-                  { id: 'retention', label: 'ทำลายและจัดเก็บข้อมูล', icon: Trash2, roles: ['admin', 'dpo'] },
+                  { id: 'compliance', label: 'Compliance ตั้งค่ากฎหมาย', icon: Scale, roles: ['admin'] },
+                  { id: 'templates', label: 'Template หนังสือราชการ', icon: FileCheck2, roles: ['admin'] },
+                  { id: 'retention', label: 'ทำลายและจัดเก็บข้อมูล', icon: Trash2, roles: ['admin'] },
                   { id: 'audit', label: 'รายงานบันทึกตรวจสอบสิทธิ์', icon: Lock, roles: ['admin', 'auditor', 'dpo'] }
                 ].map((item) => {
                   const hasAccess = activeUser.role === 'superadmin' || item.roles.includes(activeUser.role);
