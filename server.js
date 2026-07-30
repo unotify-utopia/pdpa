@@ -120,6 +120,17 @@ const initDatabase = async () => {
         uploaded_by VARCHAR(255),
         uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
+      CREATE TABLE IF NOT EXISTS document_templates (
+        id VARCHAR(100) PRIMARY KEY,
+        type VARCHAR(100),
+        name VARCHAR(255),
+        subject VARCHAR(255),
+        body TEXT,
+        is_active BOOLEAN DEFAULT true,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_by VARCHAR(255)
+      );
+
     `);
     
     try {
@@ -661,6 +672,69 @@ const sendWorkflowNotification = async (request, oldStatus, newStatus, eventType
 };
 
 // --- AUTHENTICATION ROUTES ---
+
+
+// ==========================================
+// NEW CONFIG API (Migrated from LocalStorage)
+// ==========================================
+
+// GET /api/config
+app.get('/api/config', async (req, res) => {
+  try {
+    const { rows } = await dbPool.query("SELECT value FROM system_settings WHERE key = 'app_config'");
+    if (rows.length > 0) {
+      return res.json({ success: true, config: JSON.parse(rows[0].value) });
+    }
+    return res.json({ success: true, config: null }); // Client will use defaults if null
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// PUT /api/config
+app.put('/api/config', authenticateJWT, async (req, res) => {
+  const config = req.body;
+  try {
+    await dbPool.query(
+      "INSERT INTO system_settings (key, value) VALUES ('app_config', $1) ON CONFLICT (key) DO UPDATE SET value = $1, updated_at = CURRENT_TIMESTAMP",
+      [JSON.stringify(config)]
+    );
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+
+// ==========================================
+// NEW TEMPLATES API (Migrated from LocalStorage)
+// ==========================================
+
+// GET /api/templates
+app.get('/api/templates', async (req, res) => {
+  try {
+    const { rows } = await dbPool.query("SELECT * FROM document_templates");
+    res.json({ success: true, templates: rows });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// PUT /api/templates
+app.put('/api/templates', authenticateJWT, async (req, res) => {
+  const templates = req.body.templates || [];
+  try {
+    for (const t of templates) {
+      await dbPool.query(
+        "INSERT INTO document_templates (id, type, name, subject, body, is_active) VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT (id) DO UPDATE SET type = $2, name = $3, subject = $4, body = $5, is_active = $6, updated_at = CURRENT_TIMESTAMP",
+        [t.id, t.type, t.name, t.subject, t.body, t.isActive]
+      );
+    }
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
 
 // POST /api/auth/login
 app.post('/api/auth/login', async (req, res) => {
@@ -1810,7 +1884,7 @@ app.get('/api/requests', authenticateJWT, async (req, res) => {
 });
 
 // GET /api/audit-logs (View audit logs - protected)
-app.get('/api/audit-logs', authenticateJWT, requireRole(['admin', 'auditor', 'dpo']), async (req, res) => {
+app.get('/api/audit-logs', authenticateJWT, requireRole(['superadmin', 'owner', 'admin', 'intake', 'dpo', 'approver', 'auditor']), async (req, res) => {
   try {
     let query = 'SELECT * FROM audit_logs ORDER BY timestamp DESC LIMIT 500';
     let params = [];

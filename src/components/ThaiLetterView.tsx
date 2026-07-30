@@ -40,22 +40,35 @@ export const ThaiLetterView: React.FC<ThaiLetterViewProps> = ({
   onPrintMock,
   orgData,
 }) => {
-  let org = orgData;
-  if (!org) {
-    org = initialOrganizations.find(o => o.id === request.orgId);
-    try {
-      const savedOrgs = JSON.parse(localStorage.getItem('organizations') || '[]');
-      if (savedOrgs && savedOrgs.length > 0) {
-        const found = savedOrgs.find((o: any) => o.id === request.orgId);
-        if (found) org = found;
-      }
-    } catch (e) {
-      // ignore
+  const [org, setOrg] = useState<any>(
+    orgData || 
+    initialOrganizations.find(o => o.id === request.orgId) || 
+    initialOrganizations[0]
+  );
+
+  useEffect(() => {
+    if (!orgData && request.orgId) {
+      fetch('/api/public/tenants')
+        .then(res => res.json())
+        .then(data => {
+          if (data.success && data.tenants) {
+            const found = data.tenants.find((t: any) => t.id === request.orgId);
+            if (found) {
+              setOrg({
+                id: found.id,
+                nameTh: found.name_th,
+                nameEn: found.name_en,
+                shortName: found.short_name,
+                contactEmail: found.email,
+                contactPhone: found.phone
+              });
+            }
+          }
+        })
+        .catch(err => console.error(err));
     }
-  }
-  if (!org) org = initialOrganizations[0];
-  
-  // Replace template values dynamically (Section 11)
+  }, [orgData, request.orgId]);
+// Replace template values dynamically (Section 11)
   const renderTemplateText = (text: string) => {
     let output = text;
     const reqName = `${request.requester.firstName} ${request.requester.lastName}`;

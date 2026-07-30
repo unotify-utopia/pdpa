@@ -43,15 +43,9 @@ export const initializeDB = () => {
       localStorage.setItem(KEYS.REQUESTS, JSON.stringify(seedRequests));
     }
   }
-  if (!localStorage.getItem(KEYS.CONFIG)) {
-    localStorage.setItem(KEYS.CONFIG, JSON.stringify(initialComplianceConfig));
-  }
-  if (!localStorage.getItem(KEYS.TEMPLATES)) {
-    localStorage.setItem(KEYS.TEMPLATES, JSON.stringify(initialDocumentTemplates));
-  }
-  if (!localStorage.getItem(KEYS.AUDIT_LOGS)) {
-    localStorage.setItem(KEYS.AUDIT_LOGS, JSON.stringify(initialAuditLogs));
-  }
+
+
+
   // Clean up any legacy persistent login in localStorage so user session is never remembered across browser restarts/tabs
   localStorage.removeItem(KEYS.CURRENT_USER);
   localStorage.removeItem('pdpa_jwt_token');
@@ -92,35 +86,89 @@ export const getComplianceConfig = (): ComplianceConfig => {
   return JSON.parse(localStorage.getItem(KEYS.CONFIG) || '{}');
 };
 
-export const saveComplianceConfig = (config: ComplianceConfig, user: User, reason: string) => {
-  localStorage.setItem(KEYS.CONFIG, JSON.stringify(config));
-  addAuditLog(
-    'UPDATE_COMPLIANCE_CONFIG',
-    `ปรับปรุงค่ากำหนดกฎหมายและ SLA เป็นเวอร์ชัน ${config.version}. เหตุผล: ${reason}`,
-    user,
-    undefined,
-    undefined
-  );
-};
 
-export const getDocumentTemplates = (): DocumentTemplate[] => {
-  initializeDB();
-  return JSON.parse(localStorage.getItem(KEYS.TEMPLATES) || '[]');
-};
 
-export const saveDocumentTemplates = (templates: DocumentTemplate[]) => {
-  localStorage.setItem(KEYS.TEMPLATES, JSON.stringify(templates));
-};
 
-export const resetDocumentTemplates = (): DocumentTemplate[] => {
-  localStorage.setItem(KEYS.TEMPLATES, JSON.stringify(initialDocumentTemplates));
+export const fetchDocumentTemplates = async (): Promise<DocumentTemplate[]> => {
+  try {
+    const res = await fetch('/api/templates');
+    const data = await res.json();
+    if (data.success && data.templates && data.templates.length > 0) {
+      // Map back database snake_case to camelCase
+      return data.templates.map((t: any) => ({
+        id: t.id,
+        type: t.type,
+        name: t.name,
+        subject: t.subject,
+        body: t.body,
+        isActive: t.is_active
+      }));
+    }
+  } catch (err) {
+    console.error('Failed to fetch templates', err);
+  }
   return initialDocumentTemplates;
 };
 
-export const getAuditLogs = (): AuditLog[] => {
-  initializeDB();
-  return JSON.parse(localStorage.getItem(KEYS.AUDIT_LOGS) || '[]').reverse(); // Newest first
+export const saveDocumentTemplates = async (templates: DocumentTemplate[]) => {
+  const token = sessionStorage.getItem('pdpa_jwt_token') || sessionStorage.getItem('pdpa_token');
+  try {
+    await fetch('/api/templates', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+      },
+      body: JSON.stringify({ templates })
+    });
+  } catch (err) {
+    console.error('Failed to save templates', err);
+  }
 };
+
+
+
+
+export const resetDocumentTemplates = async (): Promise<DocumentTemplate[]> => {
+  await saveDocumentTemplates(initialDocumentTemplates);
+  return initialDocumentTemplates;
+};
+
+
+export const fetchAuditLogs = async (): Promise<AuditLog[]> => {
+  const token = sessionStorage.getItem('pdpa_jwt_token') || sessionStorage.getItem('pdpa_token');
+  try {
+    const res = await fetch('/api/audit-logs', {
+      headers: { ...(token ? { 'Authorization': `Bearer ${token}` } : {}) }
+    });
+    const data = await res.json();
+    if (data.success && data.logs) {
+      return data.logs.map((l: any) => ({
+        id: l.id,
+        timestamp: l.timestamp,
+        actor: {
+          id: l.actor_id || 'unknown',
+          fullNameTh: l.actor_name,
+          role: l.actor_role,
+          orgId: l.org_id,
+          username: '',
+          email: ''
+        },
+        action: l.action,
+        details: l.details,
+        requestId: l.request_id,
+        requestTrackingNo: l.request_tracking_no,
+        ipAddress: l.ip_address,
+        userAgent: l.user_agent,
+        checksum: l.checksum
+      }));
+    }
+  } catch (err) {
+    console.error('Failed to fetch audit logs', err);
+  }
+  return [];
+};
+
 
 export const getCurrentUser = (): User => {
   initializeDB();
@@ -186,10 +234,6 @@ export const addAuditLog = async (
     // Don't throw for audit logs to not block main operations
   }
   
-  const logs = JSON.parse(localStorage.getItem(KEYS.AUDIT_LOGS) || '[]');
-  logs.unshift(newLog);
-  localStorage.setItem(KEYS.AUDIT_LOGS, JSON.stringify(logs));
-
   return newLog;
 };
 

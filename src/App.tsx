@@ -352,11 +352,18 @@ export default function App() {
     return r ? JSON.parse(JSON.stringify(r)) : undefined;
   };
 
-  const reloadData = () => {
+  const reloadData = async () => {
     const currentUser = getCurrentUser();
-    const allLogs = getAuditLogs();
+    
+    // Fetch newly async states
+    const allLogs = await fetchAuditLogs();
+    const serverConfig = await fetchComplianceConfig();
+    const serverTemplates = await fetchDocumentTemplates();
 
-    // Setup Audit Logs from LocalStorage for now
+    setConfig(serverConfig);
+    setTemplates(serverTemplates);
+
+    // Setup Audit Logs from DB
     if (currentUser && currentUser.orgId) {
       setAuditLogs(allLogs.filter((l) => !l.orgId || l.orgId === currentUser.orgId));
     } else {
@@ -394,8 +401,7 @@ export default function App() {
         .catch(console.error);
     }
 
-    setConfig(getComplianceConfig());
-    setTemplates(getDocumentTemplates());
+    // config and templates will be loaded via reloadData()
     reloadUsers();
   };
 
