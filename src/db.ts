@@ -134,11 +134,11 @@ export const fetchAuditLogs = async (): Promise<AuditLog[]> => {
         orgId: l.orgId || '',
         action: l.action,
         details: l.details,
-        requestId: l.requestId,
-        requestTrackingNo: l.requestTrackingNo,
-        ipAddress: l.ipAddress,
-        userAgent: l.userAgent,
-        checksum: l.checksum
+        requestId: l.requestId || '',
+        requestTrackingNo: l.requestTrackingNo || '',
+        ipAddress: l.ipAddress || '',
+        userAgent: l.userAgent || '',
+        checksum: l.checksum || '000000'
       }));
     }
   } catch (err) {
