@@ -179,6 +179,14 @@ const initDatabase = async () => {
       await dbPool.query('ALTER TABLE audit_logs ALTER COLUMN performed_by DROP NOT NULL');
     } catch(e) {}
     
+    // Fix: Upgrade columns to TEXT to prevent 'value too long' errors
+    const colsToText = ['actor_id', 'actor_name', 'actor_role', 'org_id', 'request_id', 'request_tracking_no', 'ip_address', 'action'];
+    for (const col of colsToText) {
+      try {
+        await dbPool.query(`ALTER TABLE audit_logs ALTER COLUMN ${col} TYPE TEXT`);
+      } catch (e) {}
+    }
+    
     console.log('✅ Added missing columns to audit_logs');
 
     try {
@@ -1524,7 +1532,7 @@ app.post('/api/audit-logs', async (req, res) => {
         log.action,
         log.requestId,
         log.requestTrackingNo,
-        req.headers['x-forwarded-for'] || req.socket.remoteAddress || '127.0.0.1',
+        String(req.headers['x-forwarded-for'] || req.socket.remoteAddress || '127.0.0.1').substring(0, 50),
         req.headers['user-agent'] || 'Frontend API',
         log.details,
         log.checksum || ''
