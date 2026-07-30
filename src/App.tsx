@@ -347,6 +347,11 @@ export default function App() {
   };
 
   // Reload local state from DB
+  const getRequestClone = (id: string): Request | undefined => {
+    const r = requests.find(r => r.id === id) || getRequestById(id);
+    return r ? JSON.parse(JSON.stringify(r)) : undefined;
+  };
+
   const reloadData = () => {
     const currentUser = getCurrentUser();
     const allLogs = getAuditLogs();
@@ -1040,7 +1045,7 @@ export default function App() {
     const mockUser: UserType = { id: 'user', orgId: 'org_dopa', username: 'data.subject', fullNameTh: 'ผู้ยื่นคำขอ', fullNameEn: 'Data Subject', email: '', role: 'intake', roles: ['intake'], mfaEnabled: false };
     await changeRequestStatus(reqId, 'Withdrawn', mockUser, `ถอนคำขอเนื่องจาก: ${reason}`);
     // Update active tracked view
-    const req = getRequestById(reqId);
+    const req = getRequestClone(reqId);
     if (req) setTrackedRequest(req);
     reloadData();
   };
@@ -1070,7 +1075,7 @@ export default function App() {
     // Automatically transition status and resume SLA when citizen uploads additional documents
     if (trackedRequest.status === 'Awaiting Additional Information') {
       await changeRequestStatus(trackedRequest.id, 'Completeness Review', mockUser, `ผู้ยื่นอัปโหลดเอกสารแก้ไขเรียบร้อยแล้ว (${fileName}) - ปลดล็อกนับเวลา SLA ต่อไป`);
-      const updatedReq = getRequestById(trackedRequest.id);
+      const updatedReq = getRequestClone(trackedRequest.id);
       if (updatedReq) setTrackedRequest(updatedReq);
     }
     
@@ -1218,7 +1223,7 @@ export default function App() {
 
   const handleVerifyIdentityQuick = async (reqId: string, status: 'verified' | 'rejected', assurance: 'low' | 'medium' | 'high') => {
     if (!activeUser) return;
-    const req = getRequestById(reqId);
+    const req = getRequestClone(reqId);
     if (!req) return;
 
     req.identityVerification = {
@@ -1258,7 +1263,7 @@ export default function App() {
     await changeRequestStatus(reqId, 'Awaiting Additional Information', activeUser, comment);
     
     // Auto-generate notification thread message
-    const req = getRequestById(reqId);
+    const req = getRequestClone(reqId);
     if (req) {
       req.messageThread.push({
         id: `msg_auto_${Date.now()}`,
@@ -1281,7 +1286,7 @@ export default function App() {
 
   const handleCreateSearchTask = (reqId: string) => {
     if (!activeUser || !selectedTaskSystem) return;
-    const req = getRequestById(reqId);
+    const req = getRequestClone(reqId);
     if (!req) return;
 
     const newTask: DataCollectionTask = {
@@ -1314,7 +1319,7 @@ export default function App() {
 
   const handleOwnerCompleteFlow = (reqId: string) => {
     if (!activeUser) return;
-    const req = getRequestById(reqId);
+    const req = getRequestClone(reqId);
     if (!req) return;
 
     let updated = 0;
@@ -1376,7 +1381,7 @@ export default function App() {
         if (res.ok) {
           const data = await res.json();
           if (data.success) {
-            const req = getRequestById(reqId);
+            const req = getRequestClone(reqId);
             if (req) {
               const t = req.dataCollectionTasks.find((t: any) => t.id === taskId);
               if (t) {
@@ -1422,7 +1427,7 @@ export default function App() {
 
   const handleMarkTaskNotFound = (reqId: string, taskId: string) => {
     if (!activeUser) return;
-    const req = getRequestById(reqId);
+    const req = getRequestClone(reqId);
     if (!req) return;
     const t = req.dataCollectionTasks.find((t: any) => t.id === taskId);
     if (t) {
@@ -1445,7 +1450,7 @@ export default function App() {
         headers: { 'Authorization': `Bearer ${sessionStorage.getItem('pdpa_jwt_token')}` }
       });
       if (res.ok) {
-        const req = getRequestById(reqId);
+        const req = getRequestClone(reqId);
         if (req) {
           const t = req.dataCollectionTasks.find((t: any) => t.id === taskId);
           if (t && t.uploadedFiles) {
@@ -1466,7 +1471,7 @@ export default function App() {
   const handleOwnerEscalateFlow = (reqId: string) => {
     if (!activeUser) return;
     if (!confirm('คุณแน่ใจหรือไม่ที่จะแจ้งว่าไม่พบข้อมูล และส่งเรื่องนี้ข้ามไปยังผู้บริหารโดยตรง?')) return;
-    const req = getRequestById(reqId);
+    const req = getRequestClone(reqId);
     if (!req) return;
 
     req.dataCollectionTasks.forEach((t: DataCollectionTask) => {
@@ -1522,7 +1527,7 @@ export default function App() {
   const handleUnassignTask = (reqId: string, taskId: string) => {
     if (!activeUser) return;
     if (!confirm('ยืนยันการยกเลิกการมอบหมายงานสืบค้นนี้? (ข้อมูลภารกิจนี้จะถูกลบออกจากรายการ)')) return;
-    const req = getRequestById(reqId);
+    const req = getRequestClone(reqId);
     if (!req) return;
     const taskIndex = req.dataCollectionTasks.findIndex((t: any) => t.id === taskId);
     if (taskIndex !== -1) {
@@ -1539,7 +1544,7 @@ export default function App() {
     redactRecord: Omit<RedactionRecord, 'id' | 'timestamp' | 'operator'>
   ) => {
     if (!activeUser) return;
-    const req = getRequestById(reqId);
+    const req = getRequestClone(reqId);
     if (!req) return;
 
     const newRecord: RedactionRecord = {
@@ -1567,7 +1572,7 @@ export default function App() {
 
   const handleSaveRedactionAll = async (reqId: string) => {
     if (!activeUser) return;
-    const req = getRequestById(reqId);
+    const req = getRequestClone(reqId);
     if (!req) return;
 
     // Transition to DPO or Legal review
@@ -1588,7 +1593,7 @@ export default function App() {
   const handleFeeSubmit = async (e: React.FormEvent, reqId: string) => {
     e.preventDefault();
     if (!activeUser) return;
-    const req = getRequestById(reqId);
+    const req = getRequestClone(reqId);
     if (!req) return;
 
     const ratePaper = config?.feeRates.paperCopyRate || 1.0;
@@ -1627,7 +1632,7 @@ export default function App() {
   // Simulating Payment Upload / Verification
   const handleMarkAsPaid = async (reqId: string) => {
     if (!activeUser) return;
-    const req = getRequestById(reqId);
+    const req = getRequestClone(reqId);
     if (!req) return;
 
     req.feeCalculation.paymentStatus = 'paid';
@@ -1652,7 +1657,7 @@ export default function App() {
 
   const handleSubmitDecisionProposal = (reqId: string) => {
     if (!activeUser) return;
-    const req = getRequestById(reqId);
+    const req = getRequestClone(reqId);
     if (!req) return;
 
     const reasons: string[] = [];
@@ -1688,7 +1693,7 @@ export default function App() {
 
   const handleApproverSign = async (reqId: string, resultStatus: 'Approved' | 'Partially Approved' | 'Denied' | 'No Data Found') => {
     if (!activeUser) return;
-    const req = getRequestById(reqId);
+    const req = getRequestClone(reqId);
     if (!req) return;
 
     if (req.decision) {
@@ -1731,7 +1736,7 @@ export default function App() {
   // Legal hold toggles (Section 3.11)
   const handleToggleLegalHold = (reqId: string) => {
     if (!activeUser) return;
-    const req = getRequestById(reqId);
+    const req = getRequestClone(reqId);
     if (!req) return;
 
     req.legalHold = !req.legalHold;
@@ -1742,7 +1747,7 @@ export default function App() {
   // Retention & Destruction simulator (Section 3.11)
   const handleSimulateDestruction = (reqId: string) => {
     if (!activeUser) return;
-    const req = getRequestById(reqId);
+    const req = getRequestClone(reqId);
     if (!req) return;
 
     if (req.legalHold) {
@@ -1836,7 +1841,7 @@ export default function App() {
   // SLA extension (Section 5)
   const handleExtendSla = (reqId: string, reason: string) => {
     if (!activeUser) return;
-    const req = getRequestById(reqId);
+    const req = getRequestClone(reqId);
     if (!req) return;
 
     req.slaExtended = true;
@@ -1870,7 +1875,7 @@ export default function App() {
     e.preventDefault();
     if (!chatMessage.trim()) return;
 
-    const req = getRequestById(reqId);
+    const req = getRequestClone(reqId);
     if (!req) return;
 
     const newMsg: MessageThread = {
