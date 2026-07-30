@@ -289,15 +289,73 @@ app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // --- SMTP & OTP Configuration ---
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST || 'smtp.gmail.com',
-  port: parseInt(process.env.SMTP_PORT || '465'),
-  secure: true,
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
+const smtpHost = process.env.SMTP_HOST || 'smtp.gmail.com';
+const smtpPort = parseInt(process.env.SMTP_PORT || '465');
+
+let smtpUsers = [];
+let smtpPasses = [];
+
+if (process.env.SMTP_USERS && process.env.SMTP_PASSWORDS) {
+  smtpUsers = process.env.SMTP_USERS.split(',').map(s => s.trim());
+  smtpPasses = process.env.SMTP_PASSWORDS.split(',').map(s => s.trim());
+} else if (process.env.SMTP_USER && process.env.SMTP_PASS) {
+  smtpUsers = [process.env.SMTP_USER.trim()];
+  smtpPasses = [process.env.SMTP_PASS.trim()];
+} else {
+  console.warn('⚠️ No SMTP credentials configured. Emails will fail to send.');
+}
+
+if (smtpUsers.length !== smtpPasses.length) {
+  console.error('❌ Mismatch in number of SMTP_USERS and SMTP_PASSWORDS in .env');
+}
+
+const transporters = smtpUsers.map((user, i) => {
+  return nodemailer.createTransport({
+    host: smtpHost,
+    port: smtpPort,
+    secure: smtpPort === 465,
+    auth: {
+      user: user,
+      pass: smtpPasses[i],
+    },
+  });
 });
+
+let currentTransporterIndex = 0;
+
+async function sendMailWithFallback(mailOptions) {
+  if (transporters.length === 0) {
+    throw new Error('No SMTP transporters configured');
+  }
+
+  let attempts = 0;
+  let lastError = null;
+
+  while (attempts < transporters.length) {
+    const transporter = transporters[currentTransporterIndex];
+    try {
+      const activeUser = smtpUsers[currentTransporterIndex];
+      // Force "from" to match the active user to prevent auth mapping issues
+      const finalMailOptions = {
+        ...mailOptions,
+        from: mailOptions.from || `"PDPA Center" <${activeUser}>`
+      };
+      const result = await transporter.sendMail(finalMailOptions);
+      console.log(`✅ Email sent successfully via ${activeUser} to ${mailOptions.to}`);
+      return result;
+    } catch (error) {
+      console.error(`❌ Failed to send email via ${smtpUsers[currentTransporterIndex]}: ${error.message}`);
+      lastError = error;
+      attempts++;
+      currentTransporterIndex = (currentTransporterIndex + 1) % transporters.length;
+      if (attempts < transporters.length) {
+        console.log(`🔄 Switching to next SMTP account: ${smtpUsers[currentTransporterIndex]}`);
+      }
+    }
+  }
+
+  throw new Error(`All ${transporters.length} SMTP accounts failed. Last error: ${lastError.message}`);
+}
 
 // In-Memory OTP Cache (Map: email/phone -> { otp, expiresAt })
 const otpCache = new Map();
@@ -654,7 +712,7 @@ const sendWorkflowNotification = async (request, oldStatus, newStatus, eventType
       errorMsg: null
     };
     try {
-      await transporter.sendMail({
+      await sendMailWithFallback({
         from: `"PDPA Access Portal" <${process.env.SMTP_USER || 'pdpa.utopia@gmail.com'}>`,
         to: rcpt.email,
         subject,
@@ -792,7 +850,7 @@ app.post('/api/auth/login', async (req, res) => {
         let emailSent = true;
         let fallbackMessage = '';
         try {
-          await transporter.sendMail({
+          await sendMailWithFallback({
             from: `"PDPA Access Portal" <${process.env.SMTP_USER || 'pdpa.utopia@gmail.com'}>`,
             to: targetEmail,
             subject: 'รหัส OTP สำหรับเข้าสู่ระบบเจ้าหน้าที่ (PDPA System)',
@@ -986,7 +1044,7 @@ app.post('/api/super-admin/login', async (req, res) => {
         let emailSent = true;
         
         // Fire and forget email sending to avoid blocking the login request
-        transporter.sendMail({
+        sendMailWithFallback({
           from: `"PDPA Access Portal" <${process.env.SMTP_USER || 'pdpa.utopia@gmail.com'}>`,
           to: targetEmail,
           subject: 'รหัส OTP สำหรับเข้าสู่ระบบ Super Admin (PDPA System)',
@@ -1620,7 +1678,7 @@ app.post('/api/public/send-otp', async (req, res) => {
 
     // If email is provided, send via SMTP
     if (email) {
-      await transporter.sendMail({
+      await sendMailWithFallback({
         from: `"PDPA Access Portal" <${process.env.SMTP_USER || 'pdpa.utopia@gmail.com'}>`,
         to: email,
         subject: 'รหัส OTP สำหรับยืนยันตัวตน (PDPA Portal)',
