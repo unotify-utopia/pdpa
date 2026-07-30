@@ -4153,9 +4153,11 @@ export default function App() {
                     </div>
 
                     {/* Module A: Identity & Completeness verification (INTAKE ROLE) */}
-                    {['intake', 'admin'].includes(activeUser.role) && (
-                      <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-4 order-3">
-                        <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                    {['intake', 'admin'].includes(activeUser.role) && (() => {
+                      const isIntakeActive = ['Submitted', 'Received', 'Identity Verification', 'Awaiting Identity Evidence', 'Completeness Review', 'Awaiting Additional Information'].includes(activeRequestObj.status);
+                      return (
+                        <div className={`bg-white border ${isIntakeActive ? 'border-slate-200' : 'border-slate-100 opacity-80'} rounded-xl p-5 shadow-sm space-y-4 order-3`}>
+                          <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
                           <UserCheck className="h-4 w-4 text-brand-600" />
                           <span>การตรวจสอบข้อมูลและสิทธิยื่นเรื่อง (Intake Verification & Completeness)</span>
                         </span>
@@ -4169,7 +4171,7 @@ export default function App() {
                             </span>
                           </div>
                           
-                          {activeRequestObj.identityVerification.status !== 'verified' && (
+                          {isIntakeActive && activeRequestObj.identityVerification.status !== 'verified' && (
                             <div className="flex gap-2">
                               <button
                                 type="button"
@@ -4205,13 +4207,16 @@ export default function App() {
                             ].map((item) => (
                               <label
                                 key={item.key}
-                                className="flex items-center gap-2 p-1.5 hover:bg-slate-50 rounded cursor-pointer"
+                                className={`flex items-center gap-2 p-1.5 rounded ${isIntakeActive ? 'hover:bg-slate-50 cursor-pointer' : 'cursor-not-allowed opacity-70'}`}
                               >
                                 <input
                                   type="checkbox"
                                   checked={(checkItems as any)[item.key]}
-                                  onChange={() => handleCheckItemToggle(item.key as any)}
-                                  className="rounded text-brand-600 focus:ring-brand-500"
+                                  onChange={() => {
+                                    if (isIntakeActive) handleCheckItemToggle(item.key as any);
+                                  }}
+                                  disabled={!isIntakeActive}
+                                  className={`rounded text-brand-600 focus:ring-brand-500 ${!isIntakeActive && 'cursor-not-allowed grayscale'}`}
                                 />
                                 <span>{item.label}</span>
                               </label>
@@ -4219,7 +4224,7 @@ export default function App() {
                           </div>
 
                           {/* Completeness submission bar */}
-                          {['intake', 'admin', 'dpo'].includes(activeUser.role) && (
+                          {['intake', 'admin', 'dpo'].includes(activeUser.role) && isIntakeActive && (
                             <div className="pt-4 border-t border-slate-100 flex gap-2">
                               
                               {showIncompletePanel ? (
@@ -4294,7 +4299,8 @@ export default function App() {
                           )}
                         </div>
                       </div>
-                    )}
+                      );
+                    })()}
 
                     {/* Staff Direct Message Board with Citizen */}
                     {['intake', 'admin', 'dpo', 'owner'].includes(activeUser.role) && (
