@@ -1533,7 +1533,7 @@ app.post('/api/audit-logs', async (req, res) => {
     res.status(201).json({ success: true, message: 'Audit log created' });
   } catch (err) {
     console.error('Failed to create audit log via API:', err);
-    res.status(500).json({ success: false, message: 'Database error' });
+    res.status(500).json({ success: false, message: 'Database error: ' + err.message });
   }
 });
 
@@ -1958,6 +1958,7 @@ app.get('/api/audit-logs', authenticateJWT, requireRole(['superadmin', 'owner', 
     // Map db columns back to camelCase for frontend
     const mappedLogs = rows.map(r => ({
       id: r.id,
+      orgId: r.org_id,
       timestamp: r.timestamp,
       actorId: r.actor_id,
       actorName: r.actor_name,
