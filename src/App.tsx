@@ -28,7 +28,8 @@ import {
   MessageSquare,
   CheckCircle2,
   Clock,
-  X
+  X,
+  Activity
 } from 'lucide-react';
 
 import type {
