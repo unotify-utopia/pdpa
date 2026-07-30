@@ -173,6 +173,9 @@ export default function App() {
   const [templates, setTemplates] = useState<DocumentTemplate[]>([]);
   const [editingTemplate, setEditingTemplate] = useState<DocumentTemplate | null>(null);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
+  const [auditSearchTerm, setAuditSearchTerm] = useState('');
+  const [auditPage, setAuditPage] = useState(1);
+  const auditLogsPerPage = 50;
   const [activeUser, setActiveUser] = useState<UserType | null>(initialUser);
   const [impersonatedOrgId, setImpersonatedOrgId] = useState<string | null>(null);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
@@ -5839,14 +5842,28 @@ export default function App() {
                         <p className="text-[10px] text-slate-400 mt-0.5">บันทึกทุกการเปิดดูไฟล์, เปลี่ยนแปลงสถานะ และสิทธิ์เข้าถึงข้อมูลพร้อมลายเซ็นดิจิทัลเช็คซัม</p>
                       </div>
                       
-                      <button
-                        type="button"
-                        onClick={() => showNotify('จำลองการดาวน์โหลดรายงานบันทึกประวัติความปลอดภัยในรูปแบบ CSV เรียบร้อย')}
-                        className="bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold py-1.5 px-3 rounded flex items-center gap-1.5 transition"
-                      >
-                        <FileSpreadsheet className="h-3.5 w-3.5" />
-                        <span>ส่งออก Audit Logs (CSV)</span>
-                      </button>
+                      <div className="flex gap-2 w-full sm:w-auto mt-2 sm:mt-0">
+                        <div className="relative flex-1 sm:w-64">
+                          <input
+                            type="text"
+                            placeholder="ค้นหาชื่อ, การกระทำ, หรือรายละเอียด..."
+                            value={auditSearchTerm}
+                            onChange={(e) => {
+                              setAuditSearchTerm(e.target.value);
+                              setAuditPage(1);
+                            }}
+                            className="w-full text-[11px] border border-slate-300 rounded px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-brand-500"
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => showNotify('จำลองการดาวน์โหลดรายงานบันทึกประวัติความปลอดภัยในรูปแบบ CSV เรียบร้อย')}
+                          className="bg-brand-600 hover:bg-brand-700 text-white text-[11px] font-semibold py-1.5 px-3 rounded flex items-center gap-1.5 transition whitespace-nowrap"
+                        >
+                          <FileSpreadsheet className="h-3.5 w-3.5" />
+                          <span>ส่งออก CSV</span>
+                        </button>
+                      </div>
                     </div>
 
                     <div className="overflow-x-auto">
@@ -5863,21 +5880,76 @@ export default function App() {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 text-slate-700 font-mono">
-                          {auditLogs.map((log) => (
-                            <tr key={log.id} className="hover:bg-slate-50 transition">
-                              <td className="p-3 whitespace-nowrap text-slate-500">{new Date(log.timestamp).toLocaleString('th-TH')}</td>
-                              <td className="p-3 font-sans font-bold text-slate-800">{log.actorName}</td>
-                              <td className="p-3 font-sans uppercase font-bold text-[9px] text-slate-400">{log.actorRole}</td>
-                              <td className="p-3 text-brand-600 font-bold">{log.action}</td>
-                              <td className="p-3 font-sans text-slate-600 max-w-sm truncate" title={log.details}>{log.details}</td>
-                              <td className="p-3 text-slate-500">{log.ipAddress}</td>
-                              <td className="p-3 text-center">
-                                <span className="inline-block bg-emerald-50 text-emerald-800 border border-emerald-200 px-2 py-0.5 rounded text-[10px] font-bold font-sans">
-                                  ✓ Verified ({log.checksum.substr(0, 6)})
-                                </span>
-                              </td>
-                            </tr>
-                          ))}
+                          {(() => {
+                            const filtered = auditLogs.filter(log => 
+                              log.actorName.toLowerCase().includes(auditSearchTerm.toLowerCase()) ||
+                              log.action.toLowerCase().includes(auditSearchTerm.toLowerCase()) ||
+                              log.details.toLowerCase().includes(auditSearchTerm.toLowerCase()) ||
+                              log.ipAddress.toLowerCase().includes(auditSearchTerm.toLowerCase())
+                            );
+                            const totalPages = Math.ceil(filtered.length / auditLogsPerPage);
+                            const startIndex = (auditPage - 1) * auditLogsPerPage;
+                            const paginated = filtered.slice(startIndex, startIndex + auditLogsPerPage);
+
+                            return (
+                              <>
+                                {paginated.length === 0 ? (
+                                  <tr>
+                                    <td colSpan={7} className="p-8 text-center text-slate-400 font-sans">
+                                      ไม่พบข้อมูลที่ค้นหา
+                                    </td>
+                                  </tr>
+                                ) : (
+                                  paginated.map((log) => (
+                                    <tr key={log.id} className="hover:bg-slate-50 transition">
+                                      <td className="p-3 whitespace-nowrap text-slate-500">{new Date(log.timestamp).toLocaleString('th-TH')}</td>
+                                      <td className="p-3 font-sans font-bold text-slate-800">{log.actorName}</td>
+                                      <td className="p-3 font-sans uppercase font-bold text-[9px] text-slate-400">{log.actorRole}</td>
+                                      <td className="p-3 text-brand-600 font-bold">{log.action}</td>
+                                      <td className="p-3 font-sans text-slate-600 max-w-sm truncate" title={log.details}>{log.details}</td>
+                                      <td className="p-3 text-slate-500">{log.ipAddress}</td>
+                                      <td className="p-3 text-center">
+                                        <span className="inline-block bg-emerald-50 text-emerald-800 border border-emerald-200 px-2 py-0.5 rounded text-[10px] font-bold font-sans">
+                                          ✓ Verified ({log.checksum.substr(0, 6)})
+                                        </span>
+                                      </td>
+                                    </tr>
+                                  ))
+                                )}
+                                
+                                {totalPages > 1 && (
+                                  <tr>
+                                    <td colSpan={7} className="p-3 bg-slate-50 border-t border-slate-200 font-sans">
+                                      <div className="flex items-center justify-between text-[11px]">
+                                        <span className="text-slate-500">
+                                          แสดง {startIndex + 1} ถึง {Math.min(startIndex + auditLogsPerPage, filtered.length)} จากทั้งหมด {filtered.length} รายการ
+                                        </span>
+                                        <div className="flex gap-1">
+                                          <button 
+                                            onClick={() => setAuditPage(p => Math.max(1, p - 1))}
+                                            disabled={auditPage === 1}
+                                            className="px-2 py-1 rounded border border-slate-300 bg-white text-slate-600 disabled:opacity-50 hover:bg-slate-50"
+                                          >
+                                            ก่อนหน้า
+                                          </button>
+                                          <span className="px-3 py-1 font-bold text-slate-700">
+                                            หน้าที่ {auditPage} / {totalPages}
+                                          </span>
+                                          <button 
+                                            onClick={() => setAuditPage(p => Math.min(totalPages, p + 1))}
+                                            disabled={auditPage === totalPages}
+                                            className="px-2 py-1 rounded border border-slate-300 bg-white text-slate-600 disabled:opacity-50 hover:bg-slate-50"
+                                          >
+                                            ถัดไป
+                                          </button>
+                                        </div>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                )}
+                              </>
+                            );
+                          })()}
                         </tbody>
                       </table>
                     </div>
