@@ -46,7 +46,6 @@ import type {
 } from './types';
 
 import {
-  getRequests,
   fetchComplianceConfig,
   fetchDocumentTemplates,
   fetchAuditLogs,
@@ -348,7 +347,7 @@ export default function App() {
 
   // Reload local state from DB
   const getRequestClone = (id: string): Request | undefined => {
-    const r = requests.find(r => r.id === id) || getRequestById(id);
+    const r = requests.find(r => r.id === id);
     return r ? JSON.parse(JSON.stringify(r)) : undefined;
   };
 
@@ -385,7 +384,7 @@ export default function App() {
         })
         .then(data => {
           if (data && data.success && Array.isArray(data.requests)) {
-            setRequests(data.requests);
+            setRequests(recalculateAllSLAs(data.requests, serverConfig));
           }
         })
         .catch(console.error);
@@ -395,7 +394,7 @@ export default function App() {
         .then((res) => res.json())
         .then((data) => {
           if (data.success && Array.isArray(data.requests)) {
-            setRequests(data.requests);
+            setRequests(recalculateAllSLAs(data.requests, serverConfig));
           }
         })
         .catch(console.error);
@@ -560,9 +559,21 @@ export default function App() {
   const [downloadConfirm, setDownloadConfirm] = useState<{ reqId: string, taskId: string, fileId: string, filename: string } | null>(null);
 
   useEffect(() => {
-    recalculateAllSLAs();
+    // SLA calculation requires both requests and config to be loaded
+    if (requests.length > 0 && config) {
+      const updated = recalculateAllSLAs(requests, config);
+      // We don't call setRequests(updated) continuously to avoid loops, 
+      // SLA should be updated mostly on server or on explicit fetch.
+      // For now, optimistic update is sufficient.
+    }
     const interval = setInterval(() => {
-      recalculateAllSLAs();
+      // SLA calculation requires both requests and config to be loaded
+    if (requests.length > 0 && config) {
+      const updated = recalculateAllSLAs(requests, config);
+      // We don't call setRequests(updated) continuously to avoid loops, 
+      // SLA should be updated mostly on server or on explicit fetch.
+      // For now, optimistic update is sufficient.
+    }
       reloadData();
     }, 30000); // every 30s
     return () => clearInterval(interval);
@@ -814,11 +825,13 @@ export default function App() {
 
     // Immediately save locally first
     const saveLocal = (req: Request) => {
-      const allLocal = getRequests();
-      const idx = allLocal.findIndex(r => r.id === req.id);
-      if (idx !== -1) allLocal[idx] = req;
-      else allLocal.unshift(req);
-      saveRequests(allLocal);
+      setRequests(prev => {
+        const allLocal = [...prev];
+        const idx = allLocal.findIndex(r => r.id === req.id);
+        if (idx !== -1) allLocal[idx] = req;
+        else allLocal.unshift(req);
+        return allLocal;
+      });
     };
     saveLocal(newReq);
 
@@ -934,11 +947,13 @@ export default function App() {
 
     // Immediately save locally first
     const saveLocal = (req: Request) => {
-      const allLocal = getRequests();
-      const idx = allLocal.findIndex(r => r.id === req.id);
-      if (idx !== -1) allLocal[idx] = req;
-      else allLocal.unshift(req);
-      saveRequests(allLocal);
+      setRequests(prev => {
+        const allLocal = [...prev];
+        const idx = allLocal.findIndex(r => r.id === req.id);
+        if (idx !== -1) allLocal[idx] = req;
+        else allLocal.unshift(req);
+        return allLocal;
+      });
     };
     saveLocal(newReq);
 
@@ -1049,7 +1064,7 @@ export default function App() {
 
   const handleWithdrawRequest = async (reqId: string, reason: string) => {
     const mockUser: UserType = { id: 'user', orgId: 'org_dopa', username: 'data.subject', fullNameTh: 'ผู้ยื่นคำขอ', fullNameEn: 'Data Subject', email: '', role: 'intake', roles: ['intake'], mfaEnabled: false };
-    await changeRequestStatus(reqId, 'Withdrawn', mockUser, `ถอนคำขอเนื่องจาก: ${reason}`);
+    await changeRequestStatus(getRequestClone(reqId), 'Withdrawn', mockUser, `ถอนคำขอเนื่องจาก: ${reason}`, config);
     // Update active tracked view
     const req = getRequestClone(reqId);
     if (req) setTrackedRequest(req);
@@ -1080,7 +1095,7 @@ export default function App() {
     
     // Automatically transition status and resume SLA when citizen uploads additional documents
     if (trackedRequest.status === 'Awaiting Additional Information') {
-      await changeRequestStatus(trackedRequest.id, 'Completeness Review', mockUser, `ผู้ยื่นอัปโหลดเอกสารแก้ไขเรียบร้อยแล้ว (${fileName}) - ปลดล็อกนับเวลา SLA ต่อไป`);
+      await changeRequestStatus(getRequestClone(trackedRequest.id), 'Completeness Review', mockUser, `ผู้ยื่นอัปโหลดเอกสารแก้ไขเรียบร้อยแล้ว (${fileName}, config) - ปลดล็อกนับเวลา SLA ต่อไป`);
       const updatedReq = getRequestClone(trackedRequest.id);
       if (updatedReq) setTrackedRequest(updatedReq);
     }
@@ -1138,7 +1153,7 @@ export default function App() {
       
       // Update status if it was not closed
       if (downloadRequest.status === 'Ready for Delivery') {
-        await changeRequestStatus(downloadRequest.id, 'Delivered', mockSubjectUser, 'ผู้ยื่นดาวน์โหลดข้อมูลผ่านระบบจัดส่งปลอดภัยสำเร็จ');
+        await changeRequestStatus(getRequestClone(downloadRequest.id), 'Delivered', mockSubjectUser, 'ผู้ยื่นดาวน์โหลดข้อมูลผ่านระบบจัดส่งปลอดภัยสำเร็จ', config);
       }
       
       reloadData();
@@ -1174,7 +1189,7 @@ export default function App() {
     
     // Update status if it was not closed
     if (downloadReq.status === 'Ready for Delivery') {
-      await changeRequestStatus(downloadReq.id, 'Delivered', mockSubjectUser, 'ผู้ยื่นดาวน์โหลดข้อมูลผ่านระบบจัดส่งปลอดภัยสำเร็จ');
+      await changeRequestStatus(getRequestClone(downloadReq.id), 'Delivered', mockSubjectUser, 'ผู้ยื่นดาวน์โหลดข้อมูลผ่านระบบจัดส่งปลอดภัยสำเร็จ', config);
       reloadData();
     }
     
@@ -1251,7 +1266,7 @@ export default function App() {
 
   const markCompletenessDone = async (reqId: string) => {
     if (!activeUser) return;
-    await changeRequestStatus(reqId, 'Documents Verified', activeUser, 'ตรวจสอบเอกสารครบถ้วนเรียบร้อย เริ่มนับระยะเวลาดำเนินการ SLA');
+    await changeRequestStatus(getRequestClone(reqId), 'Documents Verified', activeUser, 'ตรวจสอบเอกสารครบถ้วนเรียบร้อย เริ่มนับระยะเวลาดำเนินการ SLA', config);
     reloadData();
   };
 
@@ -1266,7 +1281,7 @@ export default function App() {
     if (!checkItems.repDocs) missing.push('หนังสือมอบอำนาจหรือเอกสารประจำตัวผู้รับมอบอำนาจ');
 
     const comment = `เอกสารหลักฐานขาดความสมบูรณ์: ขอเอกสารเพิ่มเติมสำหรับ ${missing.join(', ')}. ${incompleteComment}`;
-    await changeRequestStatus(reqId, 'Awaiting Additional Information', activeUser, comment);
+    await changeRequestStatus(getRequestClone(reqId), 'Awaiting Additional Information', activeUser, comment, config);
     
     // Auto-generate notification thread message
     const req = getRequestClone(reqId);
@@ -1582,7 +1597,7 @@ export default function App() {
     if (!req) return;
 
     // Transition to DPO or Legal review
-    await changeRequestStatus(reqId, 'DPO or Legal Review', activeUser, 'บันทึกการถมดำและส่งต่อให้กฎหมาย/DPO พิจารณาฐานสิทธิ์และเอกสารแจ้งผล');
+    await changeRequestStatus(getRequestClone(reqId), 'DPO or Legal Review', activeUser, 'บันทึกการถมดำและส่งต่อให้กฎหมาย/DPO พิจารณาฐานสิทธิ์และเอกสารแจ้งผล', config);
     reloadData();
   };
 
@@ -1649,7 +1664,7 @@ export default function App() {
     
     // Automatically advance state
     if (req.status === 'Awaiting Payment' || req.status === 'Fee Notification') {
-      await changeRequestStatus(reqId, 'Ready for Delivery', activeUser, 'ชำระค่าธรรมเนียมแล้ว เตรียมส่งข้อมูลสิทธิ์ทางช่องทางปลอดภัย');
+      await changeRequestStatus(getRequestClone(reqId), 'Ready for Delivery', activeUser, 'ชำระค่าธรรมเนียมแล้ว เตรียมส่งข้อมูลสิทธิ์ทางช่องทางปลอดภัย', config);
     }
     
     reloadData();
@@ -1710,18 +1725,18 @@ export default function App() {
     }
 
     // Change status
-    await changeRequestStatus(reqId, resultStatus, activeUser, `ผู้อนุมัติมีคำสั่งอย่างเป็นทางการ: ${resultStatus}`);
+    await changeRequestStatus(getRequestClone(reqId), resultStatus, activeUser, `ผู้อนุมัติมีคำสั่งอย่างเป็นทางการ: ${resultStatus}`, config);
 
     // If approved and has fees, go to payment. If not, go to Ready for Delivery (digital)
     if (['Approved', 'Partially Approved'].includes(resultStatus)) {
       if (req.feeCalculation && req.feeCalculation.totalCalculated > 0 && req.feeCalculation.paymentStatus === 'pending') {
-        await changeRequestStatus(reqId, 'Fee Notification', activeUser, 'แจ้งเรียกเก็บค่าธรรมเนียมตามใบแจ้งหนี้ก่อนส่งมอบข้อมูล');
+        await changeRequestStatus(getRequestClone(reqId), 'Fee Notification', activeUser, 'แจ้งเรียกเก็บค่าธรรมเนียมตามใบแจ้งหนี้ก่อนส่งมอบข้อมูล', config);
       } else {
-        await changeRequestStatus(reqId, 'Ready for Delivery', activeUser, 'ไม่มีค่าธรรมเนียมหรือยกเว้นแล้ว เตรียมส่งข้อมูลสิทธิ์');
+        await changeRequestStatus(getRequestClone(reqId), 'Ready for Delivery', activeUser, 'ไม่มีค่าธรรมเนียมหรือยกเว้นแล้ว เตรียมส่งข้อมูลสิทธิ์', config);
       }
     } else {
       // Rejections or no data go straight to close or delivery of reject letter
-      await changeRequestStatus(reqId, 'Ready for Delivery', activeUser, 'พร้อมส่งมอบหนังสือชี้แจงคำปฏิเสธ / ไม่พบข้อมูล');
+      await changeRequestStatus(getRequestClone(reqId), 'Ready for Delivery', activeUser, 'พร้อมส่งมอบหนังสือชี้แจงคำปฏิเสธ / ไม่พบข้อมูล', config);
     }
 
     reloadData();
@@ -1730,11 +1745,11 @@ export default function App() {
   // Delivery package (Section 3.9)
   const handleMarkAsDelivered = async (reqId: string) => {
     if (!activeUser) return;
-    await changeRequestStatus(reqId, 'Delivered', activeUser, 'เจ้าหน้าที่ทำการจัดส่งหนังสือราชการและข้อมูลสำเร็จ');
+    await changeRequestStatus(getRequestClone(reqId), 'Delivered', activeUser, 'เจ้าหน้าที่ทำการจัดส่งหนังสือราชการและข้อมูลสำเร็จ', config);
     
     // Automatically close after delivery
     setTimeout(async () => {
-      await changeRequestStatus(reqId, 'Closed', activeUser, 'คำขอสิ้นสุดกระบวนการ บันทึกระยะเวลาดำเนินการเฉลี่ยปิดงาน');
+      await changeRequestStatus(getRequestClone(reqId), 'Closed', activeUser, 'คำขอสิ้นสุดกระบวนการ บันทึกระยะเวลาดำเนินการเฉลี่ยปิดงาน', config);
       reloadData();
     }, 1000);
   };
@@ -4375,7 +4390,7 @@ export default function App() {
                         <button
                           onClick={() => {
                             showNotify('ยืนยันการจัดส่งข้อมูลให้เจ้าของข้อมูลและปิดเรื่องคำขอนี้?', 'confirm', 'ยืนยันการจัดส่งและปิดเรื่อง', async () => {
-                              await changeRequestStatus(activeRequestObj.id, 'Closed', activeUser, 'จัดส่งมอบลิงก์ดาวน์โหลดอย่างปลอดภัยและปิดเรื่องสำเร็จ');
+                              await changeRequestStatus(getRequestClone(activeRequestObj.id), 'Closed', activeUser, 'จัดส่งมอบลิงก์ดาวน์โหลดอย่างปลอดภัยและปิดเรื่องสำเร็จ', config);
                               reloadData();
                               setSelectedRequestId(null);
                             });
@@ -4861,7 +4876,7 @@ export default function App() {
                                     </button>
                                     <button
                                       type="button"
-                                      onClick={async () => await changeRequestStatus(activeRequestObj.id, 'DPO or Legal Review', activeUser, 'ส่งกลับแก้ไขความเห็นพิจารณากฎหมาย')}
+                                      onClick={async () => await changeRequestStatus(getRequestClone(activeRequestObj.id), 'DPO or Legal Review', activeUser, 'ส่งกลับแก้ไขความเห็นพิจารณากฎหมาย', config)}
                                       className="bg-rose-600 hover:bg-rose-700 text-white font-bold py-1.5 px-2 rounded transition"
                                     >
                                       ส่งกลับแก้ไข

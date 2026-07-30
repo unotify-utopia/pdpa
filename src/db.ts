@@ -4,7 +4,7 @@ import { initialComplianceConfig, initialDocumentTemplates, seedRequests } from 
 
 // Storage keys
 const KEYS = {
-  REQUESTS: 'pdpa_req_requests',
+  
   CONFIG: 'pdpa_req_config',
   TEMPLATES: 'pdpa_req_templates',
   AUDIT_LOGS: 'pdpa_req_audit_logs',
@@ -13,39 +13,6 @@ const KEYS = {
 
 // Initialize DB with seed data if not present or empty
 export const initializeDB = () => {
-  const existingRequests = localStorage.getItem(KEYS.REQUESTS);
-  if (!existingRequests) {
-    localStorage.setItem(KEYS.REQUESTS, JSON.stringify(seedRequests));
-  } else {
-    try {
-      const parsed: Request[] = JSON.parse(existingRequests);
-      let updated = false;
-      const merged = [...parsed];
-      for (const seed of seedRequests) {
-        const idx = merged.findIndex(r => r.id === seed.id || r.trackingNo === seed.trackingNo);
-        if (idx === -1) {
-          merged.push(seed);
-          updated = true;
-        } else if (!merged[idx].orgId || merged[idx].requester.firstName === 'พงศกร' || merged[idx].requester.firstName === 'somkiat' || (merged[idx].messageThread[0] && merged[idx].messageThread[0].timestamp.endsWith('Z'))) {
-          merged[idx] = seed;
-          updated = true;
-        }
-      }
-      // Clean up legacy duplicate seed request REQ-TECH-2026-0008
-      const filtered = merged.filter(r => r.id !== 'req_tech_008' && r.trackingNo !== 'REQ-TECH-2026-0008');
-      if (filtered.length !== merged.length) {
-        updated = true;
-      }
-      if (updated) {
-        localStorage.setItem(KEYS.REQUESTS, JSON.stringify(filtered));
-      }
-    } catch {
-      localStorage.setItem(KEYS.REQUESTS, JSON.stringify(seedRequests));
-    }
-  }
-
-
-
   // Clean up any legacy persistent login in localStorage so user session is never remembered across browser restarts/tabs
   localStorage.removeItem(KEYS.CURRENT_USER);
   localStorage.removeItem('pdpa_jwt_token');
@@ -77,22 +44,6 @@ export const getRequests = (): Request[] => {
   return parsed;
 };
 
-export const saveRequests = (requests: Request[]) => {
-  localStorage.setItem(KEYS.REQUESTS, JSON.stringify(requests));
-};
-
-export const fetchComplianceConfig = async (): Promise<ComplianceConfig> => {
-  try {
-    const res = await fetch('/api/config');
-    const data = await res.json();
-    if (data.success && data.config) {
-      return data.config;
-    }
-  } catch (err) {
-    console.error('Failed to fetch config', err);
-  }
-  return initialComplianceConfig;
-};
 
 // Sync alias for createRequest/recalculateAllSLAs that need config synchronously
 export const getComplianceConfig = (): ComplianceConfig => {
@@ -310,10 +261,10 @@ export const generateTrackingNumber = (orgId: string = 'org_dopa', isManual: boo
 
 // Create New Request (Section 3) - Pure function now
 export const createRequest = (requestData: Omit<Request, 'id' | 'uuid' | 'trackingNo' | 'status' | 'submissionDate' | 'slaRemainingDays' | 'slaDaysUsed' | 'slaPaused' | 'slaExtended' | 'slaEvents' | 'statusHistory' | 'dataCollectionTasks' | 'redactionRecords' | 'feeCalculation' | 'messageThread' | 'legalHold' | 'identityVerification'> & { orgId?: string }): Request => {
-  const config = getComplianceConfig();
+  const config = configParam || getComplianceConfig();
   const targetOrgId = requestData.orgId || 'org_dopa';
   
-  const trackingNo = generateTrackingNumber(targetOrgId);
+  const trackingNo = ''; // Will be assigned by backend API
   const uuid = 'pk-' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
   
   const newRequest: Request = {
@@ -375,12 +326,6 @@ export const updateRequest = async (updatedReq: Request, actor: User, auditActio
   }
 
   // Update local cache only if DB sync succeeds
-  const requests = getRequests();
-  const index = requests.findIndex((r) => r.id === updatedReq.id);
-  if (index !== -1) {
-    requests[index] = updatedReq;
-    saveRequests(requests);
-    
     // Do not block UI for audit log
     addAuditLog(auditAction, auditDetail, actor, updatedReq.id, updatedReq.trackingNo).catch(console.error);
     
@@ -391,18 +336,18 @@ export const updateRequest = async (updatedReq: Request, actor: User, auditActio
         message: `ส่งอีเมลแจ้งความคืบหน้าสถานะ "${updatedReq.status}" ไปยังผู้เกี่ยวข้องตาม Workflow เรียบร้อยแล้ว`
       }
     }));
-  }
+    return updatedReq;
 };
 
 // Change Request Status & Manage SLA Events
 export const changeRequestStatus = async (
-  requestId: string,
+  req: Request | undefined,
   newStatus: RequestStatus,
   actor: User,
-  comment?: string
+  comment?: string,
+  configParam?: ComplianceConfig
 ) => {
-  const req = getRequestById(requestId);
-  if (!req) return;
+  if (!req) return undefined;
 
   const prevStatus = req.status;
   req.status = newStatus;
@@ -416,7 +361,7 @@ export const changeRequestStatus = async (
   if (newStatus === 'Documents Verified' && !req.completenessCheckedDate) {
     req.completenessCheckedDate = new Date().toISOString();
     req.slaStartDate = new Date().toISOString();
-    const config = getComplianceConfig();
+    const config = configParam || getComplianceConfig();
     const deadline = new Date();
     deadline.setDate(deadline.getDate() + config.sla.processingDays);
     req.slaDeadlineDate = deadline.toISOString();
@@ -462,12 +407,13 @@ export const changeRequestStatus = async (
   });
 
   await updateRequest(req, actor, 'UPDATE_STATUS', `เปลี่ยนสถานะคำขอจาก "${prevStatus}" เป็น "${newStatus}"${comment ? ` (ความเห็น: ${comment})` : ''}`);
+  return req;
 };
 
 // SLA Calculations Utility (Section 5)
-export const recalculateAllSLAs = () => {
+export const recalculateAllSLAs = (requests: Request[], config: ComplianceConfig): Request[] => {
   const requests = getRequests();
-  const config = getComplianceConfig();
+  const config = configParam || getComplianceConfig();
   const now = new Date();
   let changed = false;
 
@@ -512,7 +458,5 @@ export const recalculateAllSLAs = () => {
     return req;
   });
 
-  if (changed) {
-    saveRequests(updatedRequests);
-  }
+  return updatedRequests;
 };
