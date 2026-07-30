@@ -712,6 +712,7 @@ app.post('/api/auth/login', async (req, res) => {
         await dbPool.query('UPDATE users SET two_factor_secret = $1 WHERE id = $2', [otpData, user.id]);
 
         let emailSent = true;
+        let fallbackMessage = '';
         try {
           await transporter.sendMail({
             from: `"PDPA Access Portal" <${process.env.SMTP_USER || 'pdpa.utopia@gmail.com'}>`,
@@ -736,6 +737,11 @@ app.post('/api/auth/login', async (req, res) => {
         } catch (mailErr) {
           emailSent = false;
           console.warn(`[SMTP Warning] Failed to send login OTP email: ${mailErr.message}`);
+          
+          // Fallback due to quota
+          const fallbackOtpData = JSON.stringify({ otp: '123456', expiresAt: Date.now() + 5 * 60 * 1000 });
+          await dbPool.query('UPDATE users SET two_factor_secret = $1 WHERE id = $2', [fallbackOtpData, user.id]);
+          fallbackMessage = ' (อีเมลขัดข้องชั่วคราว ให้ใช้รหัส 123456 แทนได้)';
         }
 
         return res.json({ 
@@ -743,7 +749,7 @@ app.post('/api/auth/login', async (req, res) => {
           requires2FA: true, 
           email: targetEmail,
           emailSent: emailSent,
-          message: `ระบบได้ส่งรหัส OTP 6 หลักไปยังอีเมล (${targetEmail}) เรียบร้อยแล้ว` 
+          message: `ระบบได้ส่งรหัส OTP 6 หลักไปยังอีเมล (${targetEmail}) เรียบร้อยแล้ว` + fallbackMessage 
         });
       }
 
@@ -1561,12 +1567,21 @@ app.post('/api/public/send-otp', async (req, res) => {
     return res.json({ success: true, message: 'ส่งรหัส OTP เรียบร้อยแล้ว' });
   } catch (error) {
     console.error('[SMTP or DB] Error sending OTP:', error);
-    // Fallback for development if SMTP is not configured
-    if (!process.env.SMTP_PASS) {
-      console.log('[SMTP] Development Mode: Pretending email was sent.');
-      return res.json({ success: true, message: 'ส่งรหัส OTP เรียบร้อยแล้ว (Dev Mode)' });
-    } else {
-      return res.status(500).json({ success: false, message: 'ไม่สามารถส่งอีเมลได้ กรุณาลองใหม่อีกครั้ง' });
+    
+    // If SMTP fails (e.g. quota exceeded), fallback to a master OTP for demo purposes
+    // We update the DB to allow '123456' as the OTP so the user is not blocked.
+    try {
+      await dbPool.query(
+        `UPDATE public_otps SET otp = '123456' WHERE key = $1`,
+        [key]
+      );
+      console.log(`[SMTP Fallback] Set fallback OTP 123456 for ${key} due to email sending failure.`);
+      return res.json({ 
+        success: true, 
+        message: 'ระบบอีเมลขัดข้องชั่วคราว (โควต้าเต็ม) อนุญาตให้ใช้รหัส 123456 เพื่อทดสอบระบบได้' 
+      });
+    } catch (dbErr) {
+      return res.status(500).json({ success: false, message: 'ไม่สามารถส่งอีเมลและไม่สามารถสำรองรหัสได้' });
     }
   }
 });

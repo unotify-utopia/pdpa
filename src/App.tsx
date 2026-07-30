@@ -709,6 +709,8 @@ export default function App() {
       if (!res.ok || !data.success) {
         showNotify(`❌ ${data.message || 'ไม่สามารถส่งรหัส OTP ได้ กรุณาลองใหม่อีกครั้ง'}`);
         return; // Stop and do not show modal
+      } else if (data.message && data.message.includes('123456')) {
+        showNotify(`⚠️ ${data.message}`);
       }
     } catch (err) {
       console.error('Failed to send OTP:', err);
