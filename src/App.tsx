@@ -1879,6 +1879,45 @@ export default function App() {
 
   // Staff manual message post
   const [chatMessage, setChatMessage] = useState('');
+  const handleExportAuditCSV = async () => {
+    try {
+      const headers = ['วันและเวลา (Timestamp)', 'ผู้ปฏิบัติงาน (User)', 'บทบาท (Role)', 'การกระทำ (Action)', 'รายละเอียด (Details)', 'เลขไอพี (IP Address)', 'ตรวจสอบความปลอดภัย (Checksum)'];
+      const rows = auditLogs.map(log => [
+        new Date(log.timestamp).toLocaleString('th-TH'),
+        `"${log.actorName}"`,
+        log.actorRole,
+        `"${log.action}"`,
+        `"${log.details.replace(/"/g, '""')}"`,
+        log.ipAddress,
+        log.checksum
+      ]);
+      const csvContent = "\uFEFF" + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', `pdpa_audit_logs_${new Date().getTime()}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      const user = getCurrentUser();
+      await addAuditLog('EXPORT_AUDIT_CSV', 'ดาวน์โหลดรายงาน Audit Logs เป็นไฟล์ CSV', user);
+      showNotify('ดาวน์โหลดรายงาน Audit Logs (CSV) สำเร็จ');
+      
+      // Refresh audit logs to show this action
+      const allLogs = await fetchAuditLogs();
+      if (user && user.orgId) {
+        setAuditLogs(allLogs.filter((l) => !l.orgId || l.orgId === user.orgId));
+      } else {
+        setAuditLogs(allLogs);
+      }
+    } catch (error) {
+      console.error('Export failed:', error);
+      showNotify('เกิดข้อผิดพลาดในการดาวน์โหลด CSV');
+    }
+  };
+
   const handleSendMessage = (e: React.FormEvent, reqId: string, senderRole: 'staff' | 'user') => {
     e.preventDefault();
     if (!chatMessage.trim()) return;
@@ -5857,7 +5896,7 @@ export default function App() {
                         </div>
                         <button
                           type="button"
-                          onClick={() => showNotify('จำลองการดาวน์โหลดรายงานบันทึกประวัติความปลอดภัยในรูปแบบ CSV เรียบร้อย')}
+                          onClick={handleExportAuditCSV}
                           className="bg-brand-600 hover:bg-brand-700 text-white text-[11px] font-semibold py-1.5 px-3 rounded flex items-center gap-1.5 transition whitespace-nowrap"
                         >
                           <FileSpreadsheet className="h-3.5 w-3.5" />
