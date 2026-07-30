@@ -48,8 +48,9 @@ import type {
 import {
   getRequests,
   getComplianceConfig,
-  getDocumentTemplates,
-  getAuditLogs,
+  fetchComplianceConfig,
+  fetchDocumentTemplates,
+  fetchAuditLogs,
   getCurrentUser,
   setCurrentUser,
   changeRequestStatus,
@@ -1809,7 +1810,7 @@ export default function App() {
     }
   }, [config]);
 
-  const handleSaveConfig = (e: React.FormEvent) => {
+  const handleSaveConfig = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!activeUser || !config) return;
 
@@ -1839,7 +1840,7 @@ export default function App() {
       changeReason: configForm.changeReason
     };
 
-    saveComplianceConfig(updatedConfig, activeUser, configForm.changeReason);
+    await saveComplianceConfig(updatedConfig, activeUser, configForm.changeReason);
     reloadData();
     showNotify('บันทึกค่ากำหนดความสอดคล้องทางกฎหมายเรียบร้อยแล้ว');
   };
@@ -2097,12 +2098,12 @@ export default function App() {
             <form
               onSubmit={(e) => {
                 e.preventDefault();
-                const updated = templates.map((t) =>
-                  t.id === editingTemplate.id ? editingTemplate : t
-                );
-                setTemplates(updated);
-                saveDocumentTemplates(updated);
-                addAuditLog(
+              const updated = templates.map((t) =>
+                t.id === editingTemplate.id ? editingTemplate : t
+              );
+              setTemplates(updated);
+              saveDocumentTemplates(updated);
+              addAuditLog(
                   'UPDATE_TEMPLATE',
                   `แก้ไขแม่แบบหนังสือราชการ: ${editingTemplate.nameTh} (${editingTemplate.id})`,
                   (activeUser || initialUser) as any
@@ -5714,8 +5715,8 @@ export default function App() {
                       <button
                         type="button"
                         onClick={() => {
-                          showNotify('ยืนยันการรีเซ็ตข้อความแม่แบบทั้งหมดกลับเป็นค่าเริ่มต้นมาตรฐานของระบบหรือไม่?', 'confirm', 'ยืนยันการรีเซ็ตแม่แบบ', () => {
-                            const defaults = resetDocumentTemplates();
+                          showNotify('ยืนยันการรีเซ็ตข้อความแม่แบบทั้งหมดกลับเป็นค่าเริ่มต้นมาตรฐานของระบบหรือไม่?', 'confirm', 'ยืนยันการรีเซ็ตแม่แบบ', async () => {
+                            const defaults = await resetDocumentTemplates();
                             setTemplates(defaults);
                             showNotify('รีเซ็ตข้อความแม่แบบหนังสือราชการทั้งหมดกลับเป็นค่าเริ่มต้นเรียบร้อยแล้ว', 'success', 'รีเซ็ตสำเร็จ');
                           });

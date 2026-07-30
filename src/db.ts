@@ -1,5 +1,5 @@
 import type { Request, ComplianceConfig, DocumentTemplate, AuditLog, User, RequestStatus, SLAEvent } from './types';
-import { initialComplianceConfig, initialDocumentTemplates, seedRequests, initialAuditLogs } from './mockData';
+import { initialComplianceConfig, initialDocumentTemplates, seedRequests } from './mockData';
 
 
 // Storage keys
@@ -81,13 +81,46 @@ export const saveRequests = (requests: Request[]) => {
   localStorage.setItem(KEYS.REQUESTS, JSON.stringify(requests));
 };
 
-export const getComplianceConfig = (): ComplianceConfig => {
-  initializeDB();
-  return JSON.parse(localStorage.getItem(KEYS.CONFIG) || '{}');
+export const fetchComplianceConfig = async (): Promise<ComplianceConfig> => {
+  try {
+    const res = await fetch('/api/config');
+    const data = await res.json();
+    if (data.success && data.config) {
+      return data.config;
+    }
+  } catch (err) {
+    console.error('Failed to fetch config', err);
+  }
+  return initialComplianceConfig;
 };
 
+// Sync alias for createRequest/recalculateAllSLAs that need config synchronously
+export const getComplianceConfig = (): ComplianceConfig => {
+  return initialComplianceConfig;
+};
 
-
+export const saveComplianceConfig = async (config: ComplianceConfig, user: User, reason: string): Promise<void> => {
+  const token = sessionStorage.getItem('pdpa_jwt_token') || sessionStorage.getItem('pdpa_token');
+  try {
+    await fetch('/api/config', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+      },
+      body: JSON.stringify(config)
+    });
+    addAuditLog(
+      'UPDATE_COMPLIANCE_CONFIG',
+      `ปรับปรุงค่ากำหนดกฎหมายและ SLA เป็นเวอร์ชัน ${config.version}. เหตุผล: ${reason}`,
+      user,
+      undefined,
+      undefined
+    );
+  } catch (err) {
+    console.error('Failed to save config', err);
+  }
+};
 
 export const fetchDocumentTemplates = async (): Promise<DocumentTemplate[]> => {
   try {
