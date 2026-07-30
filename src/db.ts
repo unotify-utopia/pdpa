@@ -136,8 +136,8 @@ export const fetchAuditLogs = async (): Promise<AuditLog[]> => {
         details: l.details,
         requestId: l.requestId || '',
         requestTrackingNo: l.requestTrackingNo || '',
-        ipAddress: l.ipAddress || '',
-        userAgent: l.userAgent || '',
+        ipAddress: l.ipAddress || '-',
+        userAgent: l.userAgent || '-',
         checksum: l.checksum || '000000'
       }));
     }
