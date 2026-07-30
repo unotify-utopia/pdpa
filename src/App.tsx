@@ -5999,7 +5999,6 @@ export default function App() {
                         </tbody>
                       </table>
                     </div>
-                  </div>
 
                   {/* Audit Log Modal */}
                   {selectedAuditLog && (
@@ -6077,6 +6076,7 @@ export default function App() {
                     </div>
                   )}
 
+                  </div>
                 )}
 
               </div>
