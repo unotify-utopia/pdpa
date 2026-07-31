@@ -332,7 +332,90 @@ const transporters = smtpUsers.map((user, i) => {
 let currentTransporterIndex = 0;
 let lastSwitchTime = Date.now();
 
+let taximailSessionId = null;
+let taximailSessionExpires = 0;
+
+async function getTaximailSessionId() {
+  if (taximailSessionId && Date.now() < taximailSessionExpires) {
+    return taximailSessionId;
+  }
+  
+  const apiKey = process.env.SMTP_USER;
+  const secretKey = process.env.SMTP_PASS;
+  
+  if (!apiKey || !secretKey) {
+    throw new Error('Taximail API key or secret key missing in .env');
+  }
+
+  const response = await fetch('https://api.taximail.com/v2/user/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: `api_key=${encodeURIComponent(apiKey.trim())}&secret_key=${encodeURIComponent(secretKey.trim())}`
+  });
+
+  if (!response.ok) {
+    const errText = await response.text();
+    throw new Error(`Taximail login failed: ${response.status} ${errText}`);
+  }
+
+  const data = await response.json();
+  if (data.status === 'success' && data.data && data.data.session_id) {
+    taximailSessionId = data.data.session_id;
+    taximailSessionExpires = Date.now() + (11 * 60 * 60 * 1000); // cache for 11 hours
+    return taximailSessionId;
+  } else {
+    throw new Error('Taximail login failed, missing session_id');
+  }
+}
+
 async function sendMailWithFallback(mailOptions) {
+  // If Taximail is configured, use the REST API instead of SMTP
+  if (process.env.SMTP_HOST === 'smtp.taximail.com') {
+    try {
+      const sessionId = await getTaximailSessionId();
+      
+      let fromName = "PDPA Access Portal";
+      let fromEmail = process.env.OTP_SENDER_EMAIL || "no-reply@utopia.in.th";
+      
+      // Parse from string if present e.g., "Name" <email@domain.com>
+      if (mailOptions.from) {
+        const match = mailOptions.from.match(/(?:"?([^"]*)"?\s)?<?([^>]+)>?/);
+        if (match) {
+          if (match[1]) fromName = match[1].trim();
+          if (match[2]) fromEmail = match[2].trim();
+        }
+      }
+
+      const payload = {
+        subject: mailOptions.subject,
+        from: { name: fromName, email: fromEmail },
+        to: [{ email: mailOptions.to }],
+        html: mailOptions.html
+      };
+
+      const res = await fetch('https://api.taximail.com/v2/transactional', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${sessionId}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(`Taximail send error: ${res.status} ${errText}`);
+      }
+      
+      console.log(`✉️ Email sent successfully via Taximail API to ${mailOptions.to}`);
+      return await res.json();
+    } catch (error) {
+      console.error(`❌ Failed to send email via Taximail API: ${error.message}`);
+      throw error; // Let caller handle it
+    }
+  }
+
+  // Original fallback logic using nodemailer for Gmail, etc.
   if (transporters.length === 0) {
     throw new Error('No SMTP transporters configured');
   }
