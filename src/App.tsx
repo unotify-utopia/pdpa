@@ -3724,7 +3724,7 @@ export default function App() {
               )}
 
               {/* Withdraw request action */}
-              {!['Closed', 'Withdrawn', 'Destroyed'].includes(trackedRequest.status) && (
+              {!['Ready for Delivery', 'Delivered', 'Receipt Confirmed', 'Closed', 'Withdrawn', 'Destroyed'].includes(trackedRequest.status) && (
                 <div className="bg-white border border-slate-200 rounded-xl p-4 text-center shadow-sm">
                   <button
                     onClick={() => {
