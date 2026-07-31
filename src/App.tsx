@@ -3858,7 +3858,7 @@ export default function App() {
                 <form onSubmit={handleVerifyDownloadOtp} className="space-y-4">
                   <div className="p-3.5 bg-brand-950/40 border border-brand-900 text-brand-300 rounded-xl text-xs leading-relaxed space-y-1">
                     <span className="block font-bold">ยืนยันรหัสเข้าถึง (Two-Factor OTP Verification):</span>
-                    <span>ระบบได้ทดลองส่ง OTP 6 หลัก ไปที่เบอร์โทร {downloadRequest.requester.phone} หรืออีเมล {downloadRequest.requester.email} ของท่านแล้ว</span>
+                    <span>ระบบได้จัดส่งรหัส OTP 6 หลัก ไปที่อีเมล {downloadRequest.requester.email} ของท่านแล้ว</span>
                     <span className="block text-[10px] text-slate-500 font-mono mt-1">TOKEN: {downloadToken}</span>
                   </div>
 
