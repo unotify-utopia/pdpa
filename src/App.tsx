@@ -1125,11 +1125,37 @@ export default function App() {
     e.preventDefault();
     if (!downloadRequest) return;
 
-    const isValid = await verifyRealOtp(downloadRequest.requester.email, downloadRequest.requester.phone, downloadOtpCode, downloadRequest.trackingNo);
-    if (isValid) {
+    // Real file download via API handles OTP validation
+    try {
+      const res = await fetch(`/api/public/requests/${downloadRequest.id}/download-package`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: downloadRequest.requester.email,
+          phone: downloadRequest.requester.phone,
+          otp: downloadOtpCode
+        })
+      });
+      
+      if (!res.ok) {
+          const errorData = await res.json().catch(() => ({}));
+          throw new Error(errorData.message || 'Download failed');
+      }
+      
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `PDPA_Package_${downloadRequest.trackingNo}.zip`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      // If we reach here, OTP was correct and download succeeded
       setShowDownloadOtpModal(false);
-      // Log downloand access
-      const mockSubjectUser: UserType = {
+      
+      const mockSubjectUser = {
         id: 'subject',
         orgId: downloadRequest.orgId || 'org_dopa',
         username: 'data.subject',
@@ -1143,40 +1169,26 @@ export default function App() {
       
       addAuditLog('SECURE_DOWNLOAD_FILE', `ผู้ยื่นยืนยัน OTP สำเร็จและดาวน์โหลดไฟล์ส่งมอบ`, mockSubjectUser, downloadRequest.id, downloadRequest.trackingNo);
       
-      // Update status if it was not closed
       if (downloadRequest.status === 'Ready for Delivery') {
         await changeRequestStatus(getRequestClone(downloadRequest.id), 'Delivered', mockSubjectUser, 'ผู้ยื่นดาวน์โหลดข้อมูลผ่านระบบจัดส่งปลอดภัยสำเร็จ', config || undefined);
       }
       
       reloadData();
+
+      // We must clear the OTP manually since we bypassed verifyRealOtp
+      fetch('/api/public/verify-otp', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: downloadRequest.requester.email,
+            phone: downloadRequest.requester.phone,
+            otp: downloadOtpCode
+          })
+      }).catch(console.error);
       
-              // Real file download via API
-        try {
-          const res = await fetch(`/api/public/requests/${downloadRequest.id}/download-package`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              email: downloadRequest.requester.email,
-              phone: downloadRequest.requester.phone,
-              otp: downloadOtpCode
-            })
-          });
-          
-          if (!res.ok) throw new Error('Download failed');
-          
-          const blob = await res.blob();
-          const url = window.URL.createObjectURL(blob);
-          const link = document.createElement('a');
-          link.href = url;
-          link.download = `PDPA_Package_${downloadRequest.trackingNo}.zip`;
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-          window.URL.revokeObjectURL(url);
-        } catch (e) {
-          console.error('Download error:', e);
-          alert('ไม่สามารถดาวน์โหลดไฟล์ได้ กรุณาลองใหม่อีกครั้ง');
-        }
+    } catch (e) {
+      console.error('Download error:', e);
+      alert('ไม่สามารถดาวน์โหลดไฟล์ได้: รหัส OTP ไม่ถูกต้องหรือหมดอายุ');
     }
   };
 
