@@ -1155,7 +1155,7 @@ export default function App() {
       // If we reach here, OTP was correct and download succeeded
       setShowDownloadOtpModal(false);
       
-      const mockSubjectUser = {
+      const mockSubjectUser: any = {
         id: 'subject',
         orgId: downloadRequest.orgId || 'org_dopa',
         username: 'data.subject',
