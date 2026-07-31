@@ -2035,8 +2035,29 @@ app.post('/api/public/requests/:id/download-package', async (req, res) => {
     const pdpaRequest = reqResult.rows[0];
     const data = typeof pdpaRequest.data === 'string' ? JSON.parse(pdpaRequest.data) : pdpaRequest.data;
 
-    // 3. Fetch all non-deleted files from task_files
-    const filesResult = await dbPool.query('SELECT filename, file_data FROM task_files WHERE request_id = $1 AND (is_deleted = false OR is_deleted IS NULL)', [id]);
+    // 3. Extract active file IDs from JSON data
+    const activeFileIds = [];
+    if (data.dataCollectionTasks && Array.isArray(data.dataCollectionTasks)) {
+      data.dataCollectionTasks.forEach(task => {
+        if (task.uploadedFiles && Array.isArray(task.uploadedFiles)) {
+          task.uploadedFiles.forEach(file => {
+            if (!file.isDeleted && file.id) {
+              activeFileIds.push(file.id);
+            }
+          });
+        }
+      });
+    }
+    
+    let filesResult = { rows: [] };
+    if (activeFileIds.length > 0) {
+      // Fetch only the specific active files
+      const queryParams = activeFileIds.map((_, i) => `$${i + 1}`);
+      filesResult = await dbPool.query(
+        `SELECT filename, file_data FROM task_files WHERE id IN (${queryParams.join(', ')})`,
+        activeFileIds
+      );
+    }
     
     // 4. Compute SHA-256 for integrity
     const exportSummary = {
