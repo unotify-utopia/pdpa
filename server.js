@@ -330,10 +330,17 @@ const transporters = smtpUsers.map((user, i) => {
 });
 
 let currentTransporterIndex = 0;
+let lastSwitchTime = Date.now();
 
 async function sendMailWithFallback(mailOptions) {
   if (transporters.length === 0) {
     throw new Error('No SMTP transporters configured');
+  }
+
+  // Reset to primary account if 24 hours have passed since the last fallback switch
+  if (currentTransporterIndex !== 0 && (Date.now() - lastSwitchTime) > 24 * 60 * 60 * 1000) {
+    console.log('24 hours passed since last SMTP switch. Resetting to primary account (index 0).');
+    currentTransporterIndex = 0;
   }
 
   let attempts = 0;
@@ -349,7 +356,7 @@ async function sendMailWithFallback(mailOptions) {
         from: mailOptions.from || `"PDPA Center" <${activeUser}>`
       };
       const result = await transporter.sendMail(finalMailOptions);
-      console.log(`✅ Email sent successfully via ${activeUser} to ${mailOptions.to}`);
+      console.log(`✉️ Email sent successfully via ${activeUser} to ${mailOptions.to}`);
       return result;
     } catch (error) {
       console.error(`❌ Failed to send email via ${smtpUsers[currentTransporterIndex]}: ${error.message}`);
