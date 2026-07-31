@@ -2050,7 +2050,7 @@ app.post('/api/public/requests/:id/download-package', async (req, res) => {
     const sha256Hash = crypto.createHash('sha256').update(summaryStr).digest('hex');
 
     // 5. Generate PDF Cover Letter
-    const { default: PdfPrinter } = await import('pdfmake');
+    const { default: pdfmake } = await import('pdfmake');
     const fonts = {
       Sarabun: {
         normal: path.join(__dirname, 'fonts', 'Sarabun-Regular.ttf'),
@@ -2059,7 +2059,7 @@ app.post('/api/public/requests/:id/download-package', async (req, res) => {
         bolditalics: path.join(__dirname, 'fonts', 'Sarabun-Bold.ttf')
       }
     };
-    const printer = new PdfPrinter(fonts);
+    pdfmake.setFonts(fonts);
 
     const docDefinition = {
       defaultStyle: { font: 'Sarabun', fontSize: 16 },
@@ -2079,36 +2079,30 @@ app.post('/api/public/requests/:id/download-package', async (req, res) => {
       styles: { header: { fontSize: 22, bold: true } }
     };
 
-    const pdfDoc = printer.createPdfKitDocument(docDefinition);
-    let pdfBuffer = [];
-    pdfDoc.on('data', chunk => pdfBuffer.push(chunk));
-    pdfDoc.on('end', async () => {
-      pdfBuffer = Buffer.concat(pdfBuffer);
-      
-      // 6. Build ZIP
-      const { default: AdmZip } = await import('adm-zip');
-      const zip = new AdmZip();
-      zip.addFile(`Cover_Letter_${data.trackingNo}.pdf`, pdfBuffer);
-      zip.addFile(`Request_Summary_${data.trackingNo}.json`, Buffer.from(summaryStr, 'utf8'));
-      
-      for (const file of filesResult.rows) {
-        // file_data is base64 string like data:image/png;base64,iVBORw0KGgo...
-        const matches = file.file_data.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
-        if (matches && matches.length === 3) {
-          zip.addFile(file.filename, Buffer.from(matches[2], 'base64'));
-        } else {
-          zip.addFile(file.filename, Buffer.from(file.file_data, 'utf8'));
-        }
+    const pdfDoc = pdfmake.createPdf(docDefinition);
+    const pdfBuffer = await pdfDoc.getBuffer();
+    
+    // 6. Build ZIP
+    const { default: AdmZip } = await import('adm-zip');
+    const zip = new AdmZip();
+    zip.addFile(`Cover_Letter_${data.trackingNo}.pdf`, pdfBuffer);
+    zip.addFile(`Request_Summary_${data.trackingNo}.json`, Buffer.from(summaryStr, 'utf8'));
+    
+    for (const file of filesResult.rows) {
+      // file_data is base64 string like data:image/png;base64,iVBORw0KGgo...
+      const matches = file.file_data.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+      if (matches && matches.length === 3) {
+        zip.addFile(file.filename, Buffer.from(matches[2], 'base64'));
+      } else {
+        zip.addFile(file.filename, Buffer.from(file.file_data, 'utf8'));
       }
-      
-      const zipBuffer = zip.toBuffer();
-      res.set('Content-Type', 'application/zip');
-      res.set('Content-Disposition', `attachment; filename="PDPA_Package_${data.trackingNo}.zip"`);
-      res.send(zipBuffer);
-    });
-    pdfDoc.end();
-
-  } catch (err) {
+    }
+    
+    const zipBuffer = zip.toBuffer();
+    res.set('Content-Type', 'application/zip');
+    res.set('Content-Disposition', `attachment; filename="PDPA_Package_${data.trackingNo}.zip"`);
+    res.send(zipBuffer);
+  } catch (error) {
     console.error('Download Package Error:', err);
     res.status(500).json({ success: false, message: err.message });
   }
