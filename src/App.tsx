@@ -1095,7 +1095,10 @@ export default function App() {
 
   // --- SECURE DOWNLOAD VERIFICATION (Section 3.9) ---
   const handleDownloadCheck = async (uuid: string) => {
-    const req = requests.find(r => r.uuid === uuid);
+    let req = requests.find(r => r.uuid === uuid);
+    if (!req && trackedRequest?.trackingNo) {
+      req = requests.find(r => r.trackingNo === trackedRequest.trackingNo);
+    }
     if (!req) {
       setDownloadError('ลิงก์ดาวน์โหลดไม่ถูกต้องหรือหมดอายุการใช้งานแล้ว');
       setView('download');
@@ -1109,7 +1112,7 @@ export default function App() {
     }
 
     setDownloadRequest(req);
-    setDownloadToken(uuid);
+    setDownloadToken(req.uuid);
     setDownloadError(null);
     const success = await triggerRealOtp(req.requester.email, req.requester.phone, req.trackingNo);
     if (success) {
