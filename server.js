@@ -2015,11 +2015,18 @@ app.post('/api/public/requests/:id/download-package', async (req, res) => {
   
   if (!key || !otp) return res.status(400).json({ success: false, message: 'Missing parameters' });
 
+  console.log(`[DOWNLOAD-PACKAGE] Verifying OTP. key=${key}, otp=${otp}, reference=${reference}`);
+
   try {
     // 1. Verify OTP
     const otpResult = await dbPool.query('SELECT * FROM public_otps WHERE key = $1', [key]);
-    if (otpResult.rows.length === 0 || otpResult.rows[0].otp !== otp) {
-      return res.status(400).json({ success: false, message: 'Invalid or Expired OTP' });
+    if (otpResult.rows.length === 0) {
+      console.log(`[DOWNLOAD-PACKAGE] OTP not found for key=${key}`);
+      return res.status(400).json({ success: false, message: 'OTP not found' });
+    }
+    if (otpResult.rows[0].otp !== otp) {
+      console.log(`[DOWNLOAD-PACKAGE] OTP mismatch for key=${key}. Expected ${otpResult.rows[0].otp}, got ${otp}`);
+      return res.status(400).json({ success: false, message: 'Invalid OTP' });
     }
 
     // 2. Fetch Request Data

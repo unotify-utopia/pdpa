@@ -551,7 +551,7 @@ export default function App() {
   const [trackingError, setTrackingError] = useState<string | null>(null);
 
   // Secure download link simulation
-  const [downloadToken, setDownloadToken] = useState<string | null>(null);
+  // downloadToken removed
   const [downloadRequest, setDownloadRequest] = useState<Request | null>(null);
   const [downloadOtpCode, setDownloadOtpCode] = useState('');
   const [showDownloadOtpModal, setShowDownloadOtpModal] = useState(false);
@@ -1112,7 +1112,7 @@ export default function App() {
     }
 
     setDownloadRequest(req);
-    setDownloadToken(req.uuid);
+    // setDownloadToken removed
     setDownloadError(null);
     const success = await triggerRealOtp(req.requester.email, req.requester.phone, req.trackingNo);
     if (success) {
@@ -1190,7 +1190,7 @@ export default function App() {
       
     } catch (e) {
       console.error('Download error:', e);
-      alert('ไม่สามารถดาวน์โหลดไฟล์ได้: รหัส OTP ไม่ถูกต้องหรือหมดอายุ');
+      alert('ไม่สามารถดาวน์โหลดไฟล์ได้: ' + (e instanceof Error ? e.message : 'รหัส OTP ไม่ถูกต้องหรือเกิดข้อผิดพลาดภายในระบบ'));
     }
   };
 
