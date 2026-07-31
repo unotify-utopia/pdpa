@@ -2004,9 +2004,9 @@ app.use('/super-admin', (req, res) => {
 
 
 // POST /api/public/requests/:id/download-package
-const AdmZip = require('adm-zip');
-const crypto = require('crypto');
-const path = require('path');
+
+
+
 
 app.post('/api/public/requests/:id/download-package', async (req, res) => {
   const { id } = req.params;
@@ -2043,7 +2043,7 @@ app.post('/api/public/requests/:id/download-package', async (req, res) => {
     const sha256Hash = crypto.createHash('sha256').update(summaryStr).digest('hex');
 
     // 5. Generate PDF Cover Letter
-    const PdfPrinter = require('pdfmake');
+    const { default: PdfPrinter } = await import('pdfmake');
     const fonts = {
       Sarabun: {
         normal: path.join(__dirname, 'fonts', 'Sarabun-Regular.ttf'),
@@ -2075,10 +2075,11 @@ app.post('/api/public/requests/:id/download-package', async (req, res) => {
     const pdfDoc = printer.createPdfKitDocument(docDefinition);
     let pdfBuffer = [];
     pdfDoc.on('data', chunk => pdfBuffer.push(chunk));
-    pdfDoc.on('end', () => {
+    pdfDoc.on('end', async () => {
       pdfBuffer = Buffer.concat(pdfBuffer);
       
       // 6. Build ZIP
+      const { default: AdmZip } = await import('adm-zip');
       const zip = new AdmZip();
       zip.addFile(`Cover_Letter_${data.trackingNo}.pdf`, pdfBuffer);
       zip.addFile(`Request_Summary_${data.trackingNo}.json`, Buffer.from(summaryStr, 'utf8'));
