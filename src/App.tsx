@@ -118,8 +118,6 @@ export const formatThaiTimeString = (dateStr: string): string => {
   }
 };
 
-let globalIsSendingOtp = false;
-
 export default function App() {
 
   // Notify Modal State
