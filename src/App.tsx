@@ -2685,10 +2685,9 @@ export default function App() {
                       </button>
                       <button
                         onClick={() => {
-                          setTrackNo('REQ-2026-0001');
-                          setTrackedRequest(requests[0]);
-                          setOtpSent(false);
-                          setShowOtpModal(true);
+                          setSearchKeyword('');
+                          setTrackingError(null);
+                          setShowSearchLookupModal(true);
                         }}
                         className="bg-white/10 hover:bg-white/20 text-white border border-white/20 text-xs font-semibold py-2.5 px-5 rounded-lg transition"
                       >

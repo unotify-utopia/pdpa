@@ -286,13 +286,15 @@ export const updateRequest = async (updatedReq: Request, actor: User, auditActio
     // Do not block UI for audit log
     addAuditLog(auditAction, auditDetail, actor, updatedReq.id, updatedReq.trackingNo).catch(console.error);
     
-    // Notify staff UI that email workflow notification was sent
-    window.dispatchEvent(new CustomEvent('workflow-notify', {
-      detail: {
-        title: 'แจ้งเตือนตาม Flow เอกสาร (Email Workflow)',
-        message: `ส่งอีเมลแจ้งความคืบหน้าสถานะ "${updatedReq.status}" ไปยังผู้เกี่ยวข้องตาม Workflow เรียบร้อยแล้ว`
-      }
-    }));
+    // Notify staff UI that email workflow notification was sent ONLY if status changed
+    if (auditAction.startsWith('CHANGE_STATUS_')) {
+      window.dispatchEvent(new CustomEvent('workflow-notify', {
+        detail: {
+          title: 'แจ้งเตือนตาม Flow เอกสาร (Email Workflow)',
+          message: `ส่งอีเมลแจ้งความคืบหน้าสถานะ "${updatedReq.status}" ไปยังผู้เกี่ยวข้องตาม Workflow เรียบร้อยแล้ว`
+        }
+      }));
+    }
     return updatedReq;
 };
 
