@@ -353,7 +353,7 @@ async function sendMailWithFallback(mailOptions) {
       // Force "from" to match the active user to prevent auth mapping issues
       const finalMailOptions = {
         ...mailOptions,
-        from: mailOptions.from || `"PDPA Center" <${activeUser}>`
+        from: mailOptions.from || `"PDPA Center" <${process.env.OTP_SENDER_EMAIL || activeUser}>`
       };
       const result = await transporter.sendMail(finalMailOptions);
       console.log(`✉️ Email sent successfully via ${activeUser} to ${mailOptions.to}`);
@@ -728,7 +728,7 @@ const sendWorkflowNotification = async (request, oldStatus, newStatus, eventType
     };
     try {
       await sendMailWithFallback({
-        from: `"PDPA Access Portal" <${process.env.SMTP_USER || 'pdpa.utopia@gmail.com'}>`,
+        from: `"PDPA Access Portal" <${process.env.OTP_SENDER_EMAIL || process.env.SMTP_USER || 'pdpa.utopia@gmail.com'}>`,
         to: rcpt.email,
         subject,
         html: htmlContent
@@ -866,7 +866,7 @@ app.post('/api/auth/login', async (req, res) => {
         let fallbackMessage = '';
         try {
           await sendMailWithFallback({
-            from: `"PDPA Access Portal" <${process.env.SMTP_USER || 'pdpa.utopia@gmail.com'}>`,
+            from: `"PDPA Access Portal" <${process.env.OTP_SENDER_EMAIL || process.env.SMTP_USER || 'pdpa.utopia@gmail.com'}>`,
             to: targetEmail,
             subject: 'รหัส OTP สำหรับเข้าสู่ระบบเจ้าหน้าที่ (PDPA System)',
             html: `
@@ -1060,7 +1060,7 @@ app.post('/api/super-admin/login', async (req, res) => {
         
         // Fire and forget email sending to avoid blocking the login request
         sendMailWithFallback({
-          from: `"PDPA Access Portal" <${process.env.SMTP_USER || 'pdpa.utopia@gmail.com'}>`,
+          from: `"PDPA Access Portal" <${process.env.OTP_SENDER_EMAIL || process.env.SMTP_USER || 'pdpa.utopia@gmail.com'}>`,
           to: targetEmail,
           subject: 'รหัส OTP สำหรับเข้าสู่ระบบ Super Admin (PDPA System)',
           html: `
@@ -1694,7 +1694,7 @@ app.post('/api/public/send-otp', async (req, res) => {
     // If email is provided, send via SMTP
     if (email) {
       await sendMailWithFallback({
-        from: `"PDPA Access Portal" <${process.env.SMTP_USER || 'pdpa.utopia@gmail.com'}>`,
+        from: `"PDPA Access Portal" <${process.env.OTP_SENDER_EMAIL || process.env.SMTP_USER || 'pdpa.utopia@gmail.com'}>`,
         to: email,
         subject: 'รหัส OTP สำหรับยืนยันตัวตน (PDPA Portal)',
         html: `
