@@ -2010,8 +2010,8 @@ app.use('/super-admin', (req, res) => {
 
 app.post('/api/public/requests/:id/download-package', async (req, res) => {
   const { id } = req.params;
-  const { email, phone, otp } = req.body;
-  const key = email || phone || id;
+  const { email, phone, otp, reference } = req.body;
+  const key = reference || email || phone || id;
   
   if (!key || !otp) return res.status(400).json({ success: false, message: 'Missing parameters' });
 
