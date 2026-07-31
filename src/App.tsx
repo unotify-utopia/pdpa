@@ -1150,13 +1150,33 @@ export default function App() {
       
       reloadData();
       
-      // Simulate file download by creating mockup file
-      const link = document.createElement('a');
-      link.href = 'data:text/plain;charset=utf-8,' + encodeURIComponent(`[CONFIDENTIAL DATA REPORT FOR ${downloadRequest.requester.firstName}]\n\nข้อมูลรายงานการใช้งานของท่าน ได้รับการตรวจสอบและส่งมอบตามสิทธิเรียบร้อยแล้ว.`);
-      link.download = `PDPA_EXPORT_${downloadRequest.trackingNo}.txt`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+              // Real file download via API
+        try {
+          const res = await fetch(`/api/public/requests/${downloadRequest.id}/download-package`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              email: downloadRequest.requester.email,
+              phone: downloadRequest.requester.phone,
+              otp: downloadOtpCode
+            })
+          });
+          
+          if (!res.ok) throw new Error('Download failed');
+          
+          const blob = await res.blob();
+          const url = window.URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = `PDPA_Package_${downloadRequest.trackingNo}.zip`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          window.URL.revokeObjectURL(url);
+        } catch (e) {
+          console.error('Download error:', e);
+          alert('ไม่สามารถดาวน์โหลดไฟล์ได้ กรุณาลองใหม่อีกครั้ง');
+        }
     }
   };
 

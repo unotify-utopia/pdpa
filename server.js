@@ -2002,6 +2002,110 @@ app.use('/super-admin', (req, res) => {
   res.sendFile(path.join(__dirname, 'super-admin-app', 'dist', 'index.html'));
 });
 
+
+// POST /api/public/requests/:id/download-package
+const AdmZip = require('adm-zip');
+const crypto = require('crypto');
+const path = require('path');
+
+app.post('/api/public/requests/:id/download-package', async (req, res) => {
+  const { id } = req.params;
+  const { email, phone, otp } = req.body;
+  const key = email || phone || id;
+  
+  if (!key || !otp) return res.status(400).json({ success: false, message: 'Missing parameters' });
+
+  try {
+    // 1. Verify OTP
+    const otpResult = await dbPool.query('SELECT * FROM public_otps WHERE key = $1', [key]);
+    if (otpResult.rows.length === 0 || otpResult.rows[0].otp !== otp) {
+      return res.status(400).json({ success: false, message: 'Invalid or Expired OTP' });
+    }
+
+    // 2. Fetch Request Data
+    const reqResult = await dbPool.query('SELECT * FROM requests WHERE id = $1', [id]);
+    if (reqResult.rows.length === 0) return res.status(404).json({ success: false, message: 'Request not found' });
+    const pdpaRequest = reqResult.rows[0];
+    const data = typeof pdpaRequest.data === 'string' ? JSON.parse(pdpaRequest.data) : pdpaRequest.data;
+
+    // 3. Fetch all non-deleted files from task_files
+    const filesResult = await dbPool.query('SELECT filename, file_data FROM task_files WHERE request_id = $1 AND (is_deleted = false OR is_deleted IS NULL)', [id]);
+    
+    // 4. Compute SHA-256 for integrity
+    const exportSummary = {
+      trackingNo: data.trackingNo,
+      requesterName: `${data.requester.firstName} ${data.requester.lastName}`,
+      exportedAt: new Date().toISOString(),
+      filesCount: filesResult.rows.length,
+      rawData: data
+    };
+    const summaryStr = JSON.stringify(exportSummary, null, 2);
+    const sha256Hash = crypto.createHash('sha256').update(summaryStr).digest('hex');
+
+    // 5. Generate PDF Cover Letter
+    const PdfPrinter = require('pdfmake');
+    const fonts = {
+      Sarabun: {
+        normal: path.join(__dirname, 'fonts', 'Sarabun-Regular.ttf'),
+        bold: path.join(__dirname, 'fonts', 'Sarabun-Bold.ttf'),
+        italics: path.join(__dirname, 'fonts', 'Sarabun-Regular.ttf'),
+        bolditalics: path.join(__dirname, 'fonts', 'Sarabun-Bold.ttf')
+      }
+    };
+    const printer = new PdfPrinter(fonts);
+
+    const docDefinition = {
+      defaultStyle: { font: 'Sarabun', fontSize: 16 },
+      content: [
+        { text: 'บันทึกการส่งมอบข้อมูลส่วนบุคคล (PDPA Data Handover)', style: 'header', alignment: 'center', margin: [0, 0, 0, 20] },
+        { text: `เลขที่คำร้อง: ${data.trackingNo}`, margin: [0, 0, 0, 10] },
+        { text: `ชื่อผู้ขอใช้สิทธิ: ${data.requester.firstName} ${data.requester.lastName}`, margin: [0, 0, 0, 10] },
+        { text: `วันที่ส่งมอบ: ${new Date().toLocaleDateString('th-TH')}`, margin: [0, 0, 0, 20] },
+        { text: 'รายการไฟล์ที่ส่งมอบ:', bold: true, margin: [0, 0, 0, 10] },
+        ...filesResult.rows.map((f, i) => ({ text: `${i+1}. ${f.filename}`, margin: [10, 0, 0, 5] })),
+        { text: '\nการรับรองความถูกต้องของข้อมูล (Data Integrity Check):', bold: true, margin: [0, 20, 0, 5] },
+        { text: 'เอกสารและชุดข้อมูลนี้ถูกเข้ารหัสเพื่อตรวจสอบความถูกต้อง (SHA-256) เพื่อป้องกันการเปลี่ยนแปลงเนื้อหา', fontSize: 12, margin: [0, 0, 0, 5] },
+        { text: `SHA-256 Checksum: ${sha256Hash}`, fontSize: 10, margin: [0, 0, 0, 20] },
+        { text: 'ลงชื่อ _________________________', alignment: 'right', margin: [0, 40, 40, 5] },
+        { text: '(ผู้ควบคุมข้อมูลส่วนบุคคล)', alignment: 'right', margin: [0, 0, 40, 0] }
+      ],
+      styles: { header: { fontSize: 22, bold: true } }
+    };
+
+    const pdfDoc = printer.createPdfKitDocument(docDefinition);
+    let pdfBuffer = [];
+    pdfDoc.on('data', chunk => pdfBuffer.push(chunk));
+    pdfDoc.on('end', () => {
+      pdfBuffer = Buffer.concat(pdfBuffer);
+      
+      // 6. Build ZIP
+      const zip = new AdmZip();
+      zip.addFile(`Cover_Letter_${data.trackingNo}.pdf`, pdfBuffer);
+      zip.addFile(`Request_Summary_${data.trackingNo}.json`, Buffer.from(summaryStr, 'utf8'));
+      
+      for (const file of filesResult.rows) {
+        // file_data is base64 string like data:image/png;base64,iVBORw0KGgo...
+        const matches = file.file_data.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+        if (matches && matches.length === 3) {
+          zip.addFile(file.filename, Buffer.from(matches[2], 'base64'));
+        } else {
+          zip.addFile(file.filename, Buffer.from(file.file_data, 'utf8'));
+        }
+      }
+      
+      const zipBuffer = zip.toBuffer();
+      res.set('Content-Type', 'application/zip');
+      res.set('Content-Disposition', `attachment; filename="PDPA_Package_${data.trackingNo}.zip"`);
+      res.send(zipBuffer);
+    });
+    pdfDoc.end();
+
+  } catch (err) {
+    console.error('Download Package Error:', err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 // --- MAIN STATIC FRONTEND SERVING (PRODUCTION) ---
 app.use(express.static(path.join(__dirname, 'dist'), { index: false }));
 
