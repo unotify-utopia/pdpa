@@ -2396,7 +2396,7 @@ app.get('/api/requests/:id/preview-attachment-pdf', authenticateJWT, async (req,
             {
               width: '45%',
               alignment: 'center',
-              content: [
+              stack: [
                 { text: 'ลงชื่อ .......................................................', margin: [0, 10, 0, 5] },
                 { text: `(${req.user?.username || 'เจ้าหน้าที่คุ้มครองข้อมูลส่วนบุคคล (DPO)'})`, bold: true },
                 { text: 'ผู้ตรวจสอบและรับรองข้อมูลส่วนบุคคล', fontSize: 12, color: '#64748b' }
