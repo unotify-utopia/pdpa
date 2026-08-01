@@ -2306,7 +2306,7 @@ app.post('/api/public/requests/:id/download-package', async (req, res) => {
 
 // POST /api/requests/:id/generate-download-token
 // Staff generates a 30-day secure download token for a request
-app.post('/api/requests/:id/generate-download-token', authenticateToken, async (req, res) => {
+app.post('/api/requests/:id/generate-download-token', authenticateJWT, async (req, res) => {
   try {
     const requestId = req.params.id;
     const { rows } = await dbPool.query('SELECT * FROM requests WHERE id = $1', [requestId]);
