@@ -1790,13 +1790,42 @@ export default function App() {
   // Delivery package (Section 3.9)
   const handleMarkAsDelivered = async (reqId: string) => {
     if (!activeUser) return;
-    await changeRequestStatus(getRequestClone(reqId), 'Delivered', activeUser, 'เจ้าหน้าที่ทำการจัดส่งหนังสือราชการและข้อมูลสำเร็จ', config || undefined);
-    
-    // Automatically close after delivery
-    setTimeout(async () => {
-      await changeRequestStatus(getRequestClone(reqId), 'Closed', activeUser, 'คำขอสิ้นสุดกระบวนการ บันทึกระยะเวลาดำเนินการเฉลี่ยปิดงาน', config || undefined);
-      reloadData();
-    }, 1000);
+    const req = getRequestClone(reqId);
+    if (!req) return;
+
+    try {
+      showNotify('กำลังส่งอีเมลแจ้งผลการพิจารณา...', 'info');
+      // Call Backend API to send real email
+      const res = await fetch(`/api/requests/${reqId}/deliver`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${sessionStorage.getItem('pdpa_jwt_token')}`
+        },
+        body: JSON.stringify({
+          trackingNo: req.trackingNo,
+          email: req.requester.email,
+          requesterName: req.requester.firstName + ' ' + req.requester.lastName
+        })
+      });
+
+      if (res.ok) {
+        showNotify('ส่งอีเมลแจ้งผลการพิจารณาและข้อมูลให้ผู้ร้องขอเรียบร้อยแล้ว!', 'success');
+      } else {
+        showNotify('เกิดข้อผิดพลาดในการส่งอีเมล (อาจใช้งาน Mockup แทน)', 'error');
+      }
+
+      await changeRequestStatus(getRequestClone(reqId), 'Delivered', activeUser, 'เจ้าหน้าที่ทำการจัดส่งหนังสือราชการและข้อมูลสำเร็จ (พร้อมอีเมล)', config || undefined);
+      
+      // Automatically close after delivery
+      setTimeout(async () => {
+        await changeRequestStatus(getRequestClone(reqId), 'Closed', activeUser, 'คำขอสิ้นสุดกระบวนการ บันทึกระยะเวลาดำเนินการเฉลี่ยปิดงาน', config || undefined);
+        reloadData();
+      }, 1000);
+    } catch (error) {
+      console.error(error);
+      showNotify('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์', 'error');
+    }
   };
 
   // Legal hold toggles (Section 3.11)

@@ -225,7 +225,7 @@ export const ThaiLetterView: React.FC<ThaiLetterViewProps> = ({
           </div>
         </div>
       ) : (
-      <div className="print-area hidden print:block bg-white font-sarabun text-[12pt] leading-normal text-black w-[210mm] min-h-[297mm] mx-auto shadow-md relative pt-[2.5cm] pb-[2cm] pl-[3cm] pr-[2cm] print:shadow-none print:w-[210mm] print:h-[297mm]">
+      <div className="print-area block print:block bg-white font-sarabun text-[12pt] leading-normal text-black w-[210mm] min-h-[297mm] mx-auto shadow-md relative pt-[2.5cm] pb-[2cm] pl-[3cm] pr-[2cm] print:shadow-none print:w-[210mm] print:h-[297mm]">
         
         {/* Header Layer */}
         <div className="relative h-[3cm] mb-2">
