@@ -137,6 +137,111 @@ export const ThaiLetterView: React.FC<ThaiLetterViewProps> = ({
 
   const [viewMode, setViewMode] = useState<'letter' | 'email'>('letter');
 
+  const handlePrintLetter = () => {
+    if (onPrintMock) { onPrintMock(); return; }
+
+    const subject = renderTemplateText(template.subjectTemplate);
+    const body = renderTemplateText(template.bodyTemplate);
+    const dateStr = convertToThaiDate(new Date().toISOString());
+    const logoHtml = org.logoUrl ? `<img src="${org.logoUrl}" style="width:3cm;height:3cm;object-fit:contain;" alt="Logo">` : '';
+
+    // Build body paragraphs, stopping before "ขอแสดงความนับถือ"
+    const lines = body.split('\n');
+    const cleanLines: string[] = [];
+    for (const line of lines) {
+      if (line.trim().includes('ขอแสดงความนับถือ')) break;
+      cleanLines.push(line);
+    }
+    const bodyHtml = cleanLines.map(para => {
+      if (!para.trim()) return '<div style="height:6pt;"></div>';
+      const isHeading = para.trim().startsWith('เรียน') || para.trim().startsWith('อ้างถึง') || para.trim().startsWith('สิ่งที่ส่งมาด้วย');
+      const indent = (!isHeading && !para.trim().startsWith('ลิงก์:') && !para.trim().startsWith('*')) ? 'text-indent:2.5cm;' : '';
+      return `<p style="margin:0 0 4pt 0;${indent}">${para}</p>`;
+    }).join('');
+
+    const html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>หนังสือราชการ - ${request.trackingNo}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    @page { size: A4; margin: 0; }
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Sarabun', 'TH Sarabun New', sans-serif;
+      font-size: 16pt;
+      line-height: 1.6;
+      color: #000;
+      background: white;
+      margin: 0;
+      padding: 0;
+    }
+    .page {
+      width: 210mm;
+      min-height: 297mm;
+      margin: 0 auto;
+      padding: 2.5cm 2cm 2cm 3cm;
+      position: relative;
+    }
+    .header { position: relative; height: 3cm; margin-bottom: 0.5cm; }
+    .header-left { position: absolute; bottom: 0; left: 0; font-size: 16pt; }
+    .header-center { position: absolute; top: 0; left: 50%; transform: translateX(-50%); display: flex; align-items: center; justify-content: center; height: 3cm; }
+    .header-right { position: absolute; bottom: 0; right: 0; text-align: right; max-width: 6cm; font-size: 16pt; }
+    .date { margin-left: 7.5cm; margin-bottom: 0.5cm; }
+    .subject { margin-bottom: 1cm; }
+    .signature { margin-left: 7.5cm; margin-top: 1.5cm; text-align: center; }
+    .footer { position: absolute; bottom: 2cm; left: 3cm; font-size: 12pt; line-height: 1.4; }
+    .qr-area { position: absolute; bottom: 2cm; right: 2cm; text-align: center; font-size: 10pt; }
+    .qr-box { width: 2cm; height: 2cm; border: 2px solid #333; margin: 0 auto 4pt; display: flex; align-items: center; justify-content: center; font-size: 8pt; color: #666; }
+    @media print { body { -webkit-print-color-adjust: exact; } }
+  </style>
+</head>
+<body>
+<div class="page">
+  <div class="header">
+    <div class="header-left">ที่ ........................................</div>
+    <div class="header-center">${logoHtml}</div>
+    <div class="header-right">${org.nameTh || ''}</div>
+  </div>
+  <div class="date">วันที่ ${dateStr}</div>
+  <div class="subject">เรื่อง ${subject}</div>
+  <div>${bodyHtml}</div>
+  <div class="signature">
+    <div style="margin-bottom:2cm;">ขอแสดงความนับถือ</div>
+    <div>(${signer.fullNameTh})</div>
+    <div>${signer.department || 'ผู้อนุมัติมีอำนาจสั่งการ'}</div>
+  </div>
+  <div class="footer">
+    ${org.nameTh || ''}<br>
+    ${org.address ? org.address + '<br>' : ''}
+    โทร. ${org.contactPhone || '-'}
+  </div>
+  <div class="qr-area">
+    <div class="qr-box">QR</div>
+    <div style="font-weight:bold;">สแกนเพื่อดาวน์โหลดเอกสาร</div>
+    <div style="font-family:monospace;">REF: ${request.trackingNo}</div>
+  </div>
+</div>
+<script>
+  window.onload = function() {
+    window.print();
+    setTimeout(function() { window.close(); }, 1000);
+  };
+</script>
+</body>
+</html>`;
+
+    const printWin = window.open('', '_blank', 'width=900,height=700');
+    if (printWin) {
+      printWin.document.write(html);
+      printWin.document.close();
+    }
+  };
+
+
+
   return (
     <div className="w-full space-y-4">
       {/* Action panel above document */}
@@ -170,7 +275,7 @@ export const ThaiLetterView: React.FC<ThaiLetterViewProps> = ({
           {viewMode === 'letter' && (
             <button
               type="button"
-              onClick={onPrintMock ? onPrintMock : () => window.print()}
+              onClick={handlePrintLetter}
               className="bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold py-1.5 px-3 rounded flex items-center gap-1 transition shadow-sm ml-2"
             >
               <Printer className="h-3.5 w-3.5" />
