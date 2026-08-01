@@ -1575,8 +1575,9 @@ export default function App() {
   const handleTaskFileReview = async (reqId: string, taskId: string, file: any) => {
     if (!activeUser) return;
     try {
+      const jwtToken = sessionStorage.getItem('pdpa_token') || sessionStorage.getItem('pdpa_jwt_token') || '';
       const res = await fetch(`/api/requests/${reqId}/tasks/${taskId}/files/${file.id}`, {
-        headers: { 'Authorization': `Bearer ${sessionStorage.getItem('pdpa_jwt_token')}` }
+        headers: { 'Authorization': `Bearer ${jwtToken}` }
       });
       const data = await res.json();
       if (data.success) {
@@ -6850,6 +6851,8 @@ export default function App() {
                         ดาวน์โหลดชุดไฟล์ทั้งหมด (ZIP Package)
                       </button>
                     </div>
+
+                    {/* Auto-Generated Summary Report PDF */}
                     <div className="bg-white border border-slate-200 rounded-lg p-4 shadow-sm flex items-center justify-between gap-4">
                       <div className="flex items-center gap-3">
                         <div className="h-11 w-11 bg-rose-100 text-rose-600 rounded-lg flex items-center justify-center shrink-0">
@@ -6870,15 +6873,69 @@ export default function App() {
                           type="button"
                           onClick={() => {
                             const jwtToken = sessionStorage.getItem('pdpa_token') || sessionStorage.getItem('pdpa_jwt_token') || '';
-                            window.open(`/api/requests/${activeRequestObj.id}/preview-attachment-pdf?token=${jwtToken}`, '_blank');
+                            setPreviewAttachment({
+                              name: 'ข้อมูลส่วนบุคคลที่ผ่านการค้นหาและรวบรวมแล้ว.pdf',
+                              fileUrl: `/api/requests/${activeRequestObj.id}/preview-attachment-pdf?token=${jwtToken}`,
+                              size: 24576,
+                              isMasked: true,
+                              watermarkApplied: previewResult !== 'approved'
+                            });
                           }}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg text-xs font-bold transition"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg text-xs font-bold transition shadow-sm"
                         >
                           <Eye className="h-3.5 w-3.5" />
-                          เปิดดูเอกสาร
+                          เปิดดูเอกสาร (In-App)
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const jwtToken = sessionStorage.getItem('pdpa_token') || sessionStorage.getItem('pdpa_jwt_token') || '';
+                            window.open(`/api/requests/${activeRequestObj.id}/preview-attachment-pdf?token=${jwtToken}`, '_blank');
+                          }}
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold transition"
+                          title="เปิดในแท็บใหม่"
+                        >
+                          ↗ แท็บใหม่
                         </button>
                       </div>
                     </div>
+
+                    {/* List of uploaded files from Data Collection Tasks */}
+                    {activeRequestObj.dataCollectionTasks && activeRequestObj.dataCollectionTasks.some((t: any) => t.uploadedFiles && t.uploadedFiles.length > 0) && (
+                      <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 space-y-2">
+                        <div className="text-[11px] font-bold text-slate-600 uppercase tracking-wide">
+                          ไฟล์เอกสารแนบจากหน่วยงาน ({activeRequestObj.dataCollectionTasks.reduce((acc: number, t: any) => acc + (t.uploadedFiles?.length || 0), 0)} ไฟล์):
+                        </div>
+                        <div className="space-y-1.5">
+                          {activeRequestObj.dataCollectionTasks.map((t: any) =>
+                            t.uploadedFiles?.map((f: any, idx: number) => (
+                              <div key={`${t.id}-${idx}`} className="bg-white border border-slate-200 rounded-md p-2.5 flex items-center justify-between gap-3 shadow-xs">
+                                <div className="flex items-center gap-2.5 min-w-0">
+                                  <FileBadge className="h-5 w-5 text-emerald-600 shrink-0" />
+                                  <div className="min-w-0">
+                                    <div className="text-xs font-bold text-slate-800 truncate" title={f.name}>{f.name}</div>
+                                    <div className="text-[10px] text-slate-500">
+                                      ระบบ: <span className="font-semibold text-slate-700">{t.systemName}</span>
+                                      {f.isMasked && <span className="ml-2 text-emerald-600 font-bold">• ผ่านการ Masked ปิดบังข้อมูล</span>}
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-2 shrink-0">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleTaskFileReview(activeRequestObj.id, t.id, f)}
+                                    className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-md text-xs font-bold transition"
+                                  >
+                                    <Eye className="h-3 w-3" />
+                                    เปิดดูเอกสาร
+                                  </button>
+                                </div>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
