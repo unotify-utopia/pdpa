@@ -9,7 +9,7 @@ const buildDate = new Date().toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' 
 
 // https://vite.dev/config/
 export default defineConfig({
-  base: './',
+  base: '/',
   plugins: [react()],
   define: {
     __APP_VERSION__: JSON.stringify(commitHash),
