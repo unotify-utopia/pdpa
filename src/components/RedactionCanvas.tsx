@@ -35,15 +35,34 @@ export const RedactionCanvas: React.FC<RedactionCanvasProps> = ({
     if (request) {
       setFields(prev => prev.map(f => {
         const r = request.requester;
+        let value = '';
         switch(f.id) {
-          case 'f1': return { ...f, value: `${r.firstName} ${r.lastName} (เจ้าของสิทธิ)` };
-          case 'f2': return { ...f, value: r.idNumber };
-          case 'f3': return { ...f, value: r.email };
-          case 'f4': return { ...f, value: r.phone };
-          case 'f7': return { ...f, value: r.address || 'ไม่ระบุที่อยู่' };
-          default: return f;
+          case 'f1': value = `${r.firstName} ${r.lastName} (เจ้าของสิทธิ)`; break;
+          case 'f2': value = r.idNumber; break;
+          case 'f3': value = r.email; break;
+          case 'f4': value = r.phone; break;
+          case 'f7': value = r.address || 'ไม่ระบุที่อยู่'; break;
+          default: value = f.value; break;
         }
+
+        // Check if there is a saved redaction record for this field
+        const savedRecord = request.redactionRecords.find(rec => rec.itemRedacted.startsWith(f.label));
+        
+        if (savedRecord) {
+          const isMasking = savedRecord.reason.includes('[Partial Masking]');
+          const reasonText = savedRecord.reason.replace('[Partial Masking]', '').replace('[Full Blackout]', '').trim();
+          return {
+            ...f,
+            value,
+            isRedacted: true,
+            redactMode: isMasking ? 'masking' : 'blackout',
+            redactReason: reasonText
+          };
+        }
+
+        return { ...f, value };
       }));
+      setSavedCount(request.redactionRecords.length);
     }
   }, [request]);
 
