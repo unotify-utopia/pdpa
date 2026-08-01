@@ -29,7 +29,8 @@ import {
   CheckCircle2,
   Clock,
   X,
-  Activity
+  Activity,
+  Eye
 } from 'lucide-react';
 
 import type {
@@ -6834,22 +6835,48 @@ export default function App() {
 
                 {/* Attachment summary */}
                 {(previewResult === 'approved' || previewResult === 'partially_approved') && (
-                  <div className="w-full max-w-3xl">
-                    <span className="text-xs font-bold text-slate-600 block mb-2">ไฟล์เอกสารแนบ (Attachments in Package):</span>
-                    <div className="bg-white border border-slate-200 rounded-lg p-4 shadow-sm flex items-center gap-4">
-                      <div className="h-12 w-12 bg-rose-100 text-rose-600 rounded flex items-center justify-center shrink-0">
-                        <FileBadge className="h-6 w-6" />
-                      </div>
-                      <div>
-                        <div className="text-sm font-bold text-slate-800">ข้อมูลส่วนบุคคลที่ผ่านการค้นหาและรวบรวมแล้ว.pdf</div>
-                        <div className="text-[11px] text-slate-500">
-                          รวมไฟล์จากระบบ {activeRequestObj.dataCollectionTasks.length} ระบบ (มีลายน้ำกำกับ DRAFT)
+                  <div className="w-full max-w-3xl space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-slate-700">ไฟล์เอกสารแนบในชุดส่งมอบ (Attachments in Package):</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const jwtToken = sessionStorage.getItem('pdpa_token') || sessionStorage.getItem('pdpa_jwt_token') || '';
+                          window.open(`/api/requests/${activeRequestObj.id}/download-package-admin?token=${jwtToken}`, '_blank');
+                        }}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold shadow-sm transition"
+                      >
+                        <Download className="h-3.5 w-3.5" />
+                        ดาวน์โหลดชุดไฟล์ทั้งหมด (ZIP Package)
+                      </button>
+                    </div>
+                    <div className="bg-white border border-slate-200 rounded-lg p-4 shadow-sm flex items-center justify-between gap-4">
+                      <div className="flex items-center gap-3">
+                        <div className="h-11 w-11 bg-rose-100 text-rose-600 rounded-lg flex items-center justify-center shrink-0">
+                          <FileBadge className="h-6 w-6" />
+                        </div>
+                        <div>
+                          <div className="text-sm font-bold text-slate-800">ข้อมูลส่วนบุคคลที่ผ่านการค้นหาและรวบรวมแล้ว.pdf</div>
+                          <div className="text-[11px] text-slate-500">
+                            รายงานสรุปข้อมูลส่วนบุคคล พร้อมรายการไฟล์แนบจากระบบ {activeRequestObj.dataCollectionTasks?.length || 0} ระบบ (มีลายน้ำกำกับ DRAFT)
+                          </div>
                         </div>
                       </div>
-                      <div className="ml-auto">
-                        <span className="bg-slate-100 text-slate-500 text-[10px] font-bold px-2 py-1 rounded uppercase">
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className="bg-slate-100 text-slate-600 text-[10px] font-bold px-2 py-1 rounded uppercase">
                           Auto-Generated
                         </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const jwtToken = sessionStorage.getItem('pdpa_token') || sessionStorage.getItem('pdpa_jwt_token') || '';
+                            window.open(`/api/requests/${activeRequestObj.id}/preview-attachment-pdf?token=${jwtToken}`, '_blank');
+                          }}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg text-xs font-bold transition"
+                        >
+                          <Eye className="h-3.5 w-3.5" />
+                          เปิดดูเอกสาร
+                        </button>
                       </div>
                     </div>
                   </div>

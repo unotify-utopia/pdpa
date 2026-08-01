@@ -579,7 +579,7 @@ const users = [
 
 // JWT Authentication Middleware
 const authenticateJWT = (req, res, next) => {
-  const authHeader = req.headers.authorization;
+  const authHeader = req.headers.authorization || (req.query && req.query.token ? 'Bearer ' + req.query.token : '');
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return res.status(401).json({ success: false, message: 'Unauthorized: Access token missing' });
   }
@@ -2296,6 +2296,209 @@ app.post('/api/public/requests/:id/download-package', async (req, res) => {
     res.send(zipBuffer);
   } catch (error) {
     console.error('Download Package Error:', err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// GET /api/requests/:id/preview-attachment-pdf — Admin/Staff preview of compiled attachment PDF
+app.get('/api/requests/:id/preview-attachment-pdf', authenticateJWT, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { rows } = await dbPool.query('SELECT * FROM requests WHERE id = $1', [id]);
+    if (rows.length === 0) return res.status(404).json({ success: false, message: 'Request not found' });
+
+    const pdpaRequest = rows[0];
+    const data = typeof pdpaRequest.data === 'string' ? JSON.parse(pdpaRequest.data) : (pdpaRequest.data || {});
+
+    // Collect active file rows from task_files
+    const { rows: taskFiles } = await dbPool.query(
+      'SELECT filename, file_data, uploaded_by, created_at FROM task_files WHERE request_id = $1 AND (is_deleted IS NULL OR is_deleted = false)',
+      [id]
+    );
+
+    // Also check uploadedFiles inside dataCollectionTasks for completeness
+    const allFilesList = [...taskFiles];
+    if (data.dataCollectionTasks && Array.isArray(data.dataCollectionTasks)) {
+      data.dataCollectionTasks.forEach(task => {
+        if (task.uploadedFiles && Array.isArray(task.uploadedFiles)) {
+          task.uploadedFiles.forEach(f => {
+            if (!f.isDeleted && !allFilesList.some(tf => tf.filename === f.filename)) {
+              allFilesList.push({ filename: f.filename || 'Untitled File', uploaded_by: task.assigneeName || task.systemName, created_at: f.uploadedAt || new Date() });
+            }
+          });
+        }
+      });
+    }
+
+    const summaryStr = JSON.stringify({ trackingNo: data.trackingNo, filesCount: allFilesList.length, generatedAt: new Date().toISOString() }, null, 2);
+    const sha256Hash = crypto.createHash('sha256').update(summaryStr).digest('hex');
+
+    const { default: pdfmake } = await import('pdfmake');
+    const fonts = {
+      Sarabun: {
+        normal: path.join(__dirname, 'fonts', 'Sarabun-Regular.ttf'),
+        bold: path.join(__dirname, 'fonts', 'Sarabun-Bold.ttf'),
+        italics: path.join(__dirname, 'fonts', 'Sarabun-Regular.ttf'),
+        bolditalics: path.join(__dirname, 'fonts', 'Sarabun-Bold.ttf')
+      }
+    };
+    pdfmake.setFonts(fonts);
+
+    const isCompleted = pdpaRequest.status === 'completed' || pdpaRequest.status === 'delivered';
+    const docDefinition = {
+      defaultStyle: { font: 'Sarabun', fontSize: 14 },
+      watermark: isCompleted ? null : { text: 'DRAFT', color: 'gray', opacity: 0.15, bold: true, italics: false, angle: 45, fontSize: 72 },
+      content: [
+        { text: 'รายงานสรุปและรวบรวมข้อมูลส่วนบุคคลที่ผ่านการค้นหาแล้ว', style: 'header', alignment: 'center', margin: [0, 0, 0, 15] },
+        { text: '(PDPA Personal Data Discovery & Compilation Report)', fontSize: 12, alignment: 'center', color: '#64748b', margin: [0, 0, 0, 25] },
+        {
+          table: {
+            widths: ['35%', '65%'],
+            body: [
+              [{ text: 'เลขที่คำขอ (Tracking No):', bold: true }, data.trackingNo || id],
+              [{ text: 'ชื่อผู้ยื่นคำขอ:', bold: true }, `${data.requester?.firstName || ''} ${data.requester?.lastName || ''}`.trim() || '-'],
+              [{ text: 'อีเมลผู้ยื่นคำขอ:', bold: true }, data.requester?.email || '-'],
+              [{ text: 'วันที่รวบรวมข้อมูล:', bold: true }, new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' })],
+              [{ text: 'สถานะการตรวจสอบ:', bold: true }, isCompleted ? 'ตรวจสอบและอนุมัติแล้ว (Approved)' : 'ฉบับร่างระหว่างการตรวจสอบ (DRAFT)']
+            ]
+          },
+          layout: 'lightHorizontalLines',
+          margin: [0, 0, 0, 25]
+        },
+        { text: 'รายการระบบงานที่ทำการค้นหาและรวบรวมข้อมูล:', bold: true, fontSize: 16, margin: [0, 10, 0, 10] },
+        ...(data.dataCollectionTasks && data.dataCollectionTasks.length > 0 ? [
+          {
+            table: {
+              widths: ['40%', '35%', '25%'],
+              body: [
+                [{ text: 'ชื่อระบบงาน (System)', bold: true, fillColor: '#f1f5f9' }, { text: 'ผู้รับผิดชอบ (Assignee)', bold: true, fillColor: '#f1f5f9' }, { text: 'สถานะ (Status)', bold: true, fillColor: '#f1f5f9' }],
+                ...data.dataCollectionTasks.map(t => [
+                  t.systemName || '-',
+                  t.assigneeName || '-',
+                  t.status === 'completed' ? 'เสร็จสิ้น (Completed)' : (t.status || 'in_progress')
+                ])
+              ]
+            },
+            margin: [0, 0, 0, 20]
+          }
+        ] : [{ text: 'ไม่มีรายการระบบงาน', color: '#94a3b8', margin: [0, 0, 0, 20] }]),
+        { text: 'รายการไฟล์เอกสารแนบในชุดส่งมอบ (Attachment Files):', bold: true, fontSize: 16, margin: [0, 10, 0, 10] },
+        ...(allFilesList.length > 0 ? allFilesList.map((f, i) => ({
+          text: `${i + 1}. ${f.filename} (ระบบ/ผู้แนบ: ${f.uploaded_by || 'ระบบ'})`,
+          margin: [10, 0, 0, 6]
+        })) : [{ text: 'ยังไม่มีไฟล์เอกสารแนบในชุดข้อมูล', color: '#94a3b8', margin: [10, 0, 0, 10] }]),
+        { text: '\nการรับรองความถูกต้องและความสมบูรณ์ของข้อมูล (Data Integrity Check):', bold: true, fontSize: 15, margin: [0, 25, 0, 5] },
+        { text: 'เอกสารและชุดข้อมูลนี้ถูกเข้ารหัสและคำนวณค่าแฮช (SHA-256 Checksum) เพื่อรับรองความถูกต้องและป้องกันการแก้ไขเปลี่ยนแปลงเนื้อหา', fontSize: 12, color: '#475569', margin: [0, 0, 0, 5] },
+        { text: `SHA-256: ${sha256Hash}`, fontSize: 10, font: 'Sarabun', color: '#0284c7', margin: [0, 0, 0, 30] },
+        {
+          columns: [
+            { width: '*', text: '' },
+            {
+              width: '45%',
+              alignment: 'center',
+              content: [
+                { text: 'ลงชื่อ .......................................................', margin: [0, 10, 0, 5] },
+                { text: `(${req.user?.username || 'เจ้าหน้าที่คุ้มครองข้อมูลส่วนบุคคล (DPO)'})`, bold: true },
+                { text: 'ผู้ตรวจสอบและรับรองข้อมูลส่วนบุคคล', fontSize: 12, color: '#64748b' }
+              ]
+            }
+          ]
+        }
+      ],
+      styles: { header: { fontSize: 22, bold: true } }
+    };
+
+    const pdfDoc = pdfmake.createPdf(docDefinition);
+    const pdfBuffer = await pdfDoc.getBuffer();
+
+    res.set('Content-Type', 'application/pdf');
+    res.set('Content-Disposition', `inline; filename="PDPA_Compiled_Report_${data.trackingNo || id}.pdf"`);
+    res.send(pdfBuffer);
+  } catch (err) {
+    console.error('Preview attachment PDF error:', err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// GET /api/requests/:id/download-package-admin — Admin/Staff download of ZIP package without OTP
+app.get('/api/requests/:id/download-package-admin', authenticateJWT, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { rows } = await dbPool.query('SELECT * FROM requests WHERE id = $1', [id]);
+    if (rows.length === 0) return res.status(404).json({ success: false, message: 'Request not found' });
+
+    const pdpaRequest = rows[0];
+    const data = typeof pdpaRequest.data === 'string' ? JSON.parse(pdpaRequest.data) : (pdpaRequest.data || {});
+
+    // Fetch active files from task_files
+    const { rows: taskFiles } = await dbPool.query(
+      'SELECT filename, file_data FROM task_files WHERE request_id = $1 AND (is_deleted IS NULL OR is_deleted = false)',
+      [id]
+    );
+
+    const exportSummary = {
+      trackingNo: data.trackingNo,
+      requesterName: `${data.requester?.firstName || ''} ${data.requester?.lastName || ''}`.trim(),
+      exportedAt: new Date().toISOString(),
+      filesCount: taskFiles.length,
+      rawData: data
+    };
+    const summaryStr = JSON.stringify(exportSummary, null, 2);
+    const sha256Hash = crypto.createHash('sha256').update(summaryStr).digest('hex');
+
+    // Generate Cover Letter PDF
+    const { default: pdfmake } = await import('pdfmake');
+    const fonts = {
+      Sarabun: {
+        normal: path.join(__dirname, 'fonts', 'Sarabun-Regular.ttf'),
+        bold: path.join(__dirname, 'fonts', 'Sarabun-Bold.ttf'),
+        italics: path.join(__dirname, 'fonts', 'Sarabun-Regular.ttf'),
+        bolditalics: path.join(__dirname, 'fonts', 'Sarabun-Bold.ttf')
+      }
+    };
+    pdfmake.setFonts(fonts);
+
+    const docDefinition = {
+      defaultStyle: { font: 'Sarabun', fontSize: 16 },
+      content: [
+        { text: 'บันทึกการส่งมอบข้อมูลส่วนบุคคล (PDPA Data Handover)', style: 'header', alignment: 'center', margin: [0, 0, 0, 20] },
+        { text: `เลขที่คำร้อง: ${data.trackingNo || id}`, margin: [0, 0, 0, 10] },
+        { text: `ชื่อผู้ขอใช้สิทธิ: ${data.requester?.firstName || ''} ${data.requester?.lastName || ''}`.trim(), margin: [0, 0, 0, 10] },
+        { text: `วันที่ส่งมอบ: ${new Date().toLocaleDateString('th-TH')}`, margin: [0, 0, 0, 20] },
+        { text: 'รายการไฟล์ที่ส่งมอบ:', bold: true, margin: [0, 0, 0, 10] },
+        ...taskFiles.map((f, i) => ({ text: `${i + 1}. ${f.filename}`, margin: [10, 0, 0, 5] })),
+        { text: '\nการรับรองความถูกต้องของข้อมูล (Data Integrity Check):', bold: true, margin: [0, 20, 0, 5] },
+        { text: 'เอกสารและชุดข้อมูลนี้ถูกเข้ารหัสเพื่อตรวจสอบความถูกต้อง (SHA-256) เพื่อป้องกันการเปลี่ยนแปลงเนื้อหา', fontSize: 12, margin: [0, 0, 0, 5] },
+        { text: `SHA-256 Checksum: ${sha256Hash}`, fontSize: 10, margin: [0, 0, 0, 20] },
+        { text: 'ลงชื่อ _________________________', alignment: 'right', margin: [0, 40, 40, 5] },
+        { text: '(ผู้ควบคุมข้อมูลส่วนบุคคล)', alignment: 'right', margin: [0, 0, 40, 0] }
+      ],
+      styles: { header: { fontSize: 22, bold: true } }
+    };
+
+    const pdfDoc = pdfmake.createPdf(docDefinition);
+    const pdfBuffer = await pdfDoc.getBuffer();
+
+    const { default: AdmZip } = await import('adm-zip');
+    const zip = new AdmZip();
+    zip.addFile(`Cover_Letter_${data.trackingNo || id}.pdf`, pdfBuffer);
+    zip.addFile(`Request_Summary_${data.trackingNo || id}.json`, Buffer.from(summaryStr, 'utf8'));
+
+    for (const file of taskFiles) {
+      const matches = file.file_data.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+      if (matches && matches.length === 3) {
+        zip.addFile(file.filename, Buffer.from(matches[2], 'base64'));
+      } else {
+        zip.addFile(file.filename, Buffer.from(file.file_data, 'utf8'));
+      }
+    }
+
+    const zipBuffer = zip.toBuffer();
+    res.set('Content-Type', 'application/zip');
+    res.set('Content-Disposition', `attachment; filename="PDPA_Package_${data.trackingNo || id}.zip"`);
+    res.send(zipBuffer);
+  } catch (err) {
+    console.error('Download package admin error:', err);
     res.status(500).json({ success: false, message: err.message });
   }
 });
