@@ -449,6 +449,7 @@ export default function App() {
   // Submission Email OTP Modal States
   const [showSubmissionOtpModal, setShowSubmissionOtpModal] = useState(false);
   const [submissionOtpCode, setSubmissionOtpCode] = useState('');
+  const [isSendingOtp, setIsSendingOtp] = useState(false);
 
   // Attachment Document Preview Modal State
   const [previewAttachment, setPreviewAttachment] = useState<{ name: string; fileUrl?: string; size: number; isMasked?: boolean; watermarkApplied?: boolean } | null>(null);
@@ -683,9 +684,14 @@ export default function App() {
   const submitPublicRequest = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Guard: prevent double submission while OTP is being sent
+    if (isSendingOtp) return;
+    setIsSendingOtp(true);
+
     // 1. Check mandatory consent checkboxes
     if (!consentAccepted || !accuracyCertified) {
       showNotify('⚠️ กรุณาคลิกยอมรับนโยบายความเป็นส่วนตัวและคำรับรองความถูกต้องก่อนยื่นคำขอ');
+      setIsSendingOtp(false);
       return;
     }
 
@@ -693,6 +699,7 @@ export default function App() {
     if (reqType === 'self') {
       if (uploadedAttachments.length === 0) {
         showNotify('⚠️ กรุณาอัปโหลดสำเนาบัตรประจำตัวประชาชนหรือเอกสารยืนยันตัวตนเจ้าของข้อมูลส่วนบุคคลก่อนยื่นคำขอ');
+        setIsSendingOtp(false);
         return;
       }
     } else if (reqType === 'representative') {
@@ -702,6 +709,7 @@ export default function App() {
 
       if (!hasDelegatorId || !hasRepId || !hasPoa) {
         showNotify('⚠️ กรุณาอัปโหลดเอกสารหลักฐานให้ครบถ้วนทั้ง 3 รายการก่อนยื่นคำขอ:\n1. บัตรประจำตัวประชาชนผู้มอบอำนาจ (เจ้าของข้อมูลส่วนบุคคล)\n2. บัตรประจำตัวประชาชนผู้รับมอบอำนาจ\n3. เอกสารหนังสือมอบอำนาจ (Power of Attorney)');
+        setIsSendingOtp(false);
         return;
       }
     }
@@ -717,8 +725,11 @@ export default function App() {
         body: JSON.stringify({ email: targetEmail, phone: targetPhone })
       });
       const data = await res.json();
+      // 2-second delay to prevent spam and allow server to process
+      await new Promise(resolve => setTimeout(resolve, 2000));
       if (!res.ok || !data.success) {
         showNotify(`❌ ${data.message || 'ไม่สามารถส่งรหัส OTP ได้ กรุณาลองใหม่อีกครั้ง'}`);
+        setIsSendingOtp(false);
         return; // Stop and do not show modal
       } else if (data.message && data.message.includes('123456')) {
         showNotify(`⚠️ ${data.message}`);
@@ -726,11 +737,13 @@ export default function App() {
     } catch (err) {
       console.error('Failed to send OTP:', err);
       showNotify('❌ การเชื่อมต่อล้มเหลว ไม่สามารถส่งรหัส OTP ได้');
+      setIsSendingOtp(false);
       return;
     }
     
     setSubmissionOtpCode('');
     setShowSubmissionOtpModal(true);
+    setIsSendingOtp(false);
   };
 
   const handleFinalizeSubmissionOtp = async (e: React.FormEvent) => {
@@ -1622,9 +1635,15 @@ export default function App() {
     const req = getRequestClone(reqId);
     if (!req) return;
 
-    // Transition to DPO or Legal review
-    await changeRequestStatus(getRequestClone(reqId), 'DPO or Legal Review', activeUser, 'บันทึกการถมดำและส่งต่อให้กฎหมาย/DPO พิจารณาฐานสิทธิ์และเอกสารแจ้งผล', config || undefined);
-    reloadData();
+    try {
+      // Transition to DPO or Legal review
+      await changeRequestStatus(getRequestClone(reqId), 'DPO or Legal Review', activeUser, 'บันทึกการถมดำและส่งต่อให้กฎหมาย/DPO พิจารณาฐานสิทธิ์และเอกสารแจ้งผล', config || undefined);
+      showNotify('บันทึกผลการปกปิดข้อมูลและอัปเดตสถานะเป็น "DPO or Legal Review" เรียบร้อยแล้ว', 'success');
+      reloadData();
+    } catch (error: any) {
+      console.error(error);
+      showNotify(error.message || 'เกิดข้อผิดพลาดในการบันทึกข้อมูล กรุณาลองใหม่อีกครั้ง', 'error');
+    }
   };
 
   // Fee management (Section 3.8)
@@ -3587,9 +3606,17 @@ export default function App() {
                         </button>
                         <button
                           type="submit"
-                          className="bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold py-2.5 px-8 rounded-lg transition shadow-sm"
+                          disabled={isSendingOtp}
+                          className="bg-brand-600 hover:bg-brand-700 disabled:opacity-60 disabled:cursor-not-allowed text-white text-xs font-bold py-2.5 px-8 rounded-lg transition shadow-sm flex items-center gap-2"
                         >
-                          ยืนยันการส่งคำขออย่างเป็นทางการ
+                          {isSendingOtp ? (
+                            <>
+                              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                              <span>กำลังประมวลผล...</span>
+                            </>
+                          ) : (
+                            'ยืนยันการส่งคำขออย่างเป็นทางการ'
+                          )}
                         </button>
                       </div>
 
