@@ -69,6 +69,7 @@ import { RedactionCanvas } from './components/RedactionCanvas';
 import { ThaiLetterView, convertToThaiDate } from './components/ThaiLetterView';
 import { ThaiDatePicker } from './components/ThaiDatePicker';
 import { DocumentVerificationPortal } from './components/DocumentVerificationPortal';
+import { SecureDownloadPage } from './components/SecureDownloadPage';
 import { DashboardCharts } from './components/DashboardCharts';
 import { StaffLoginModal } from './components/StaffLoginModal';
 import { NotifyModal } from './components/NotifyModal';
@@ -162,9 +163,10 @@ export default function App() {
 
   // App context navigation states
   const initialUser = getCurrentUser();
-  const [view, setView] = useState<'public' | 'internal' | 'tracking' | 'download' | 'superadmin' | 'verify'>(
+  const [view, setView] = useState<'public' | 'internal' | 'tracking' | 'download' | 'superadmin' | 'verify' | 'download_qr'>(
     initialUser ? 'internal' : 'public'
   );
+  const [dlToken, setDlToken] = useState<string | null>(null);
   const [publicTab, setPublicTab] = useState<'landing' | 'submit' | 'submitted_success'>('landing');
   const [internalTab, setInternalTab] = useState<'dashboard' | 'requests' | 'kanban' | 'users' | 'compliance' | 'templates' | 'retention' | 'audit' | 'manual_entry'>('dashboard');
 
@@ -246,6 +248,14 @@ export default function App() {
       showNotify(reason);
     }
   };
+
+  useEffect(() => {
+    const match = window.location.pathname.match(/^\/dl\/([a-fA-F0-9]+)$/);
+    if (match && match[1]) {
+      setDlToken(match[1]);
+      setView('download_qr');
+    }
+  }, []);
 
   useEffect(() => {
     let timeoutId: ReturnType<typeof setTimeout>;
@@ -2696,6 +2706,11 @@ export default function App() {
             handleDownloadAction(reqId, otpCodeStr);
           }}
         />
+      )}
+
+      {/* --- RENDER VIEW: SECURE QR CODE DOWNLOAD PAGE --- */}
+      {view === 'download_qr' && dlToken && (
+        <SecureDownloadPage token={dlToken} />
       )}
 
       {/* --- RENDER VIEW 1: PUBLIC REQUEST PORTAL --- */}

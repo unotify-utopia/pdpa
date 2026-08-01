@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Printer, Shield, QrCode, Mail, FileText } from 'lucide-react';
+import QRCode from 'qrcode';
 import type { Request, DocumentTemplate, User } from '../types';
 import { initialOrganizations } from '../mockData';
 
@@ -45,6 +46,17 @@ export const ThaiLetterView: React.FC<ThaiLetterViewProps> = ({
     initialOrganizations.find(o => o.id === request.orgId) || 
     initialOrganizations[0]
   );
+
+  const [qrDataUrl, setQrDataUrl] = useState<string>('');
+
+  useEffect(() => {
+    const downloadUrl = `${window.location.origin}/dl/${(request as any).downloadToken || request.trackingNo}`;
+    QRCode.toDataURL(downloadUrl, { width: 120, margin: 1 }, (err: any, url: string) => {
+      if (!err && url) {
+        setQrDataUrl(url);
+      }
+    });
+  }, [request]);
 
   useEffect(() => {
     if (!orgData && request.orgId) {
@@ -219,7 +231,7 @@ export const ThaiLetterView: React.FC<ThaiLetterViewProps> = ({
     โทร. ${org.contactPhone || '-'}
   </div>
   <div class="qr-area">
-    <div class="qr-box">QR</div>
+    ${qrDataUrl ? `<img src="${qrDataUrl}" style="width:64px;height:64px;margin-bottom:4px;" />` : '<div class="qr-box">QR</div>'}
     <div style="font-weight:bold;">สแกนเพื่อดาวน์โหลดเอกสาร</div>
     <div style="font-family:monospace;">REF: ${request.trackingNo}</div>
   </div>
@@ -411,7 +423,11 @@ export const ThaiLetterView: React.FC<ThaiLetterViewProps> = ({
 
         {/* QR Code for download (Right) */}
         <div className="absolute bottom-[2cm] right-[2cm] flex flex-col items-center text-slate-800">
-          <QrCode className="h-16 w-16" strokeWidth={1.5} />
+          {qrDataUrl ? (
+            <img src={qrDataUrl} alt="Download QR Code" className="h-16 w-16" />
+          ) : (
+            <QrCode className="h-16 w-16" strokeWidth={1.5} />
+          )}
           <span className="text-[10pt] mt-1 font-bold">สแกนเพื่อดาวน์โหลดเอกสาร</span>
           <span className="text-[9pt] font-mono">REF: {request.trackingNo}</span>
         </div>

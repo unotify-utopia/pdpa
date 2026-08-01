@@ -131,6 +131,16 @@ const initDatabase = async () => {
         updated_by VARCHAR(255)
       );
 
+      CREATE TABLE IF NOT EXISTS download_tokens (
+        token VARCHAR(128) PRIMARY KEY,
+        request_id VARCHAR(100) NOT NULL,
+        org_id VARCHAR(50),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        expires_at TIMESTAMP NOT NULL,
+        downloaded_count INTEGER DEFAULT 0,
+        is_revoked BOOLEAN DEFAULT false
+      );
+
     `);
     
     try {
@@ -2286,6 +2296,264 @@ app.post('/api/public/requests/:id/download-package', async (req, res) => {
     res.send(zipBuffer);
   } catch (error) {
     console.error('Download Package Error:', err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// ============================================================
+// QR CODE SECURE DOWNLOAD SYSTEM
+// ============================================================
+
+// POST /api/requests/:id/generate-download-token
+// Staff generates a 30-day secure download token for a request
+app.post('/api/requests/:id/generate-download-token', authenticateToken, async (req, res) => {
+  try {
+    const requestId = req.params.id;
+    const { rows } = await dbPool.query('SELECT * FROM requests WHERE id = $1', [requestId]);
+    if (rows.length === 0) return res.status(404).json({ success: false, message: 'Request not found' });
+
+    const request = rows[0];
+    const data = request.data || {};
+
+    // Revoke old tokens for this request
+    await dbPool.query('UPDATE download_tokens SET is_revoked = true WHERE request_id = $1', [requestId]);
+
+    // Generate a new secure random token
+    const token = crypto.randomBytes(48).toString('hex');
+    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
+
+    await dbPool.query(
+      'INSERT INTO download_tokens (token, request_id, org_id, expires_at) VALUES ($1, $2, $3, $4)',
+      [token, requestId, request.org_id, expiresAt]
+    );
+
+    // Build the public download URL
+    const baseUrl = process.env.APP_BASE_URL || `https://pdpa.numcomputer.com`;
+    const downloadUrl = `${baseUrl}/dl/${token}`;
+
+    // Generate QR code as data URL
+    const qrDataUrl = await QRCode.toDataURL(downloadUrl, {
+      errorCorrectionLevel: 'M',
+      margin: 1,
+      width: 200,
+      color: { dark: '#000000', light: '#ffffff' }
+    });
+
+    console.log(`🔑 Download token generated for request ${request.tracking_no || requestId} by ${req.user?.username}`);
+    res.json({ success: true, token, downloadUrl, qrDataUrl, expiresAt });
+  } catch (err) {
+    console.error('Generate token error:', err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// GET /api/dl/info/:token  — public: check token validity (no auth required)
+app.get('/api/dl/info/:token', async (req, res) => {
+  try {
+    const { token } = req.params;
+    const { rows } = await dbPool.query(
+      `SELECT dt.*, r.tracking_no, r.data as req_data, r.org_id
+       FROM download_tokens dt
+       JOIN requests r ON r.id = dt.request_id
+       WHERE dt.token = $1`,
+      [token]
+    );
+    if (rows.length === 0) return res.status(404).json({ success: false, message: 'ไม่พบลิงก์นี้ในระบบ' });
+    const row = rows[0];
+    if (row.is_revoked) return res.status(410).json({ success: false, message: 'ลิงก์นี้ถูกยกเลิกแล้ว' });
+    if (new Date(row.expires_at) < new Date()) return res.status(410).json({ success: false, message: 'ลิงก์หมดอายุแล้ว (เกิน 30 วัน)' });
+
+    const reqData = row.req_data || {};
+    res.json({
+      success: true,
+      trackingNo: row.tracking_no,
+      requesterEmail: reqData.requester?.email || '',
+      requesterName: `${reqData.requester?.firstName || ''} ${reqData.requester?.lastName || ''}`.trim(),
+      expiresAt: row.expires_at,
+      downloadedCount: row.downloaded_count
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// POST /api/dl/request-otp  — public: send OTP to requester email
+app.post('/api/dl/request-otp', async (req, res) => {
+  try {
+    const { token } = req.body;
+    if (!token) return res.status(400).json({ success: false, message: 'Token required' });
+
+    const { rows } = await dbPool.query(
+      `SELECT dt.*, r.data as req_data, r.tracking_no
+       FROM download_tokens dt
+       JOIN requests r ON r.id = dt.request_id
+       WHERE dt.token = $1`,
+      [token]
+    );
+    if (rows.length === 0) return res.status(404).json({ success: false, message: 'ไม่พบลิงก์นี้' });
+    const row = rows[0];
+    if (row.is_revoked || new Date(row.expires_at) < new Date()) {
+      return res.status(410).json({ success: false, message: 'ลิงก์หมดอายุหรือถูกยกเลิก' });
+    }
+
+    const reqData = row.req_data || {};
+    const email = reqData.requester?.email;
+    if (!email) return res.status(400).json({ success: false, message: 'ไม่พบอีเมลผู้ยื่นคำร้อง' });
+
+    // Generate 6-digit OTP
+    const otp = String(Math.floor(100000 + Math.random() * 900000));
+    const otpKey = `dl_otp:${token}`;
+    const expiresAt = Date.now() + 10 * 60 * 1000; // 10 min
+
+    await dbPool.query(
+      'INSERT INTO public_otps (key, otp, expires_at) VALUES ($1, $2, $3) ON CONFLICT (key) DO UPDATE SET otp = $2, expires_at = $3',
+      [otpKey, otp, expiresAt]
+    );
+
+    // Format expiry for display
+    const expiresDisplay = new Date(row.expires_at).toLocaleDateString('th-TH', {
+      year: 'numeric', month: 'long', day: 'numeric', timeZone: 'Asia/Bangkok'
+    });
+
+    await sendMailWithFallback({
+      to: email,
+      subject: `[PDPA] รหัส OTP สำหรับดาวน์โหลดเอกสาร - ${row.tracking_no}`,
+      html: `
+        <div style="font-family:'Sarabun',Arial,sans-serif;max-width:520px;margin:auto;background:#f8fafc;border-radius:12px;overflow:hidden;border:1px solid #e2e8f0">
+          <div style="background:linear-gradient(135deg,#0284c7,#0369a1);padding:32px 24px;text-align:center">
+            <div style="background:rgba(255,255,255,0.15);border-radius:50%;width:64px;height:64px;margin:0 auto 16px;display:flex;align-items:center;justify-content:center;font-size:28px">🔐</div>
+            <h1 style="color:#fff;margin:0;font-size:22px">รหัส OTP ดาวน์โหลดเอกสาร</h1>
+            <p style="color:#bae6fd;margin:8px 0 0;font-size:14px">Secure Document Download OTP</p>
+          </div>
+          <div style="padding:32px 24px">
+            <p style="color:#334155;font-size:16px">เรียน คุณ ${reqData.requester?.firstName || 'ผู้ยื่นคำขอ'},</p>
+            <p style="color:#64748b;font-size:14px;line-height:1.6">คุณได้ร้องขอ OTP เพื่อดาวน์โหลดเอกสารสำหรับ<br><strong>เลขที่คำขอ: ${row.tracking_no}</strong></p>
+            <div style="background:#fff;border:2px solid #e2e8f0;border-radius:12px;padding:24px;text-align:center;margin:24px 0">
+              <p style="color:#64748b;font-size:13px;margin:0 0 8px">รหัส OTP ของคุณ (มีอายุ 10 นาที)</p>
+              <div style="font-size:42px;font-weight:700;font-family:monospace;letter-spacing:0.3em;color:#0284c7;background:#f0f9ff;border-radius:8px;padding:16px">${otp}</div>
+            </div>
+            <div style="background:#fef9c3;border:1px solid #fde047;border-radius:8px;padding:12px 16px;margin-bottom:16px">
+              <p style="margin:0;color:#854d0e;font-size:13px">⚠️ ลิงก์ดาวน์โหลดนี้จะหมดอายุวันที่ <strong>${expiresDisplay}</strong><br>กรุณาอย่าแชร์รหัสนี้ให้ผู้อื่น</p>
+            </div>
+            <p style="color:#94a3b8;font-size:12px">หากคุณไม่ได้ร้องขอ กรุณาเพิกเฉยต่ออีเมลนี้</p>
+          </div>
+          <div style="background:#f1f5f9;padding:16px 24px;text-align:center;border-top:1px solid #e2e8f0">
+            <p style="color:#94a3b8;font-size:12px;margin:0">PDPA Secure Document System &copy; 2026</p>
+          </div>
+        </div>
+      `
+    });
+
+    const maskedEmail = email.replace(/(.)(.*)(@.*)/, (_, a, b, c) => a + '*'.repeat(Math.min(b.length, 6)) + c);
+    console.log(`📧 Download OTP sent to ${maskedEmail} for token ${token.substring(0, 8)}...`);
+    res.json({ success: true, maskedEmail });
+  } catch (err) {
+    console.error('DL OTP request error:', err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// POST /api/dl/verify-otp  — public: verify OTP and authorize download
+app.post('/api/dl/verify-otp', async (req, res) => {
+  try {
+    const { token, otp } = req.body;
+    if (!token || !otp) return res.status(400).json({ success: false, message: 'Missing params' });
+
+    const otpKey = `dl_otp:${token}`;
+    const { rows: otpRows } = await dbPool.query(
+      'SELECT * FROM public_otps WHERE key = $1',
+      [otpKey]
+    );
+    if (otpRows.length === 0) return res.status(400).json({ success: false, message: 'ไม่พบ OTP กรุณาขอใหม่อีกครั้ง' });
+    const otpRow = otpRows[0];
+    if (Date.now() > Number(otpRow.expires_at)) return res.status(400).json({ success: false, message: 'OTP หมดอายุแล้ว กรุณาขอใหม่อีกครั้ง' });
+    if (otpRow.otp !== otp.trim()) return res.status(400).json({ success: false, message: 'รหัส OTP ไม่ถูกต้อง' });
+
+    // OTP valid — delete it (one-time use)
+    await dbPool.query('DELETE FROM public_otps WHERE key = $1', [otpKey]);
+
+    // Increment download count
+    await dbPool.query(
+      'UPDATE download_tokens SET downloaded_count = downloaded_count + 1 WHERE token = $1',
+      [token]
+    );
+
+    // Issue a short-lived (15 min) signed download session token
+    const sessionToken = jwt.sign({ downloadToken: token, at: Date.now() }, process.env.JWT_SECRET || 'pdpa-secret', { expiresIn: '15m' });
+    res.json({ success: true, sessionToken });
+  } catch (err) {
+    console.error('DL verify OTP error:', err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// GET /api/dl/download/:token?session=<sessionToken>  — authenticated download
+app.get('/api/dl/download/:token', async (req, res) => {
+  try {
+    const { token } = req.params;
+    const { session } = req.query;
+    if (!session) return res.status(401).json({ success: false, message: 'Session token required' });
+
+    // Verify session token
+    let payload;
+    try {
+      payload = jwt.verify(session, process.env.JWT_SECRET || 'pdpa-secret');
+    } catch {
+      return res.status(401).json({ success: false, message: 'Session หมดอายุ กรุณายืนยัน OTP ใหม่' });
+    }
+    if (payload.downloadToken !== token) return res.status(403).json({ success: false, message: 'Token mismatch' });
+
+    // Get token + request data
+    const { rows } = await dbPool.query(
+      `SELECT dt.*, r.data as req_data, r.tracking_no, r.id as request_id
+       FROM download_tokens dt
+       JOIN requests r ON r.id = dt.request_id
+       WHERE dt.token = $1`,
+      [token]
+    );
+    if (rows.length === 0) return res.status(404).json({ success: false, message: 'ไม่พบ Token' });
+    const row = rows[0];
+    if (row.is_revoked || new Date(row.expires_at) < new Date()) {
+      return res.status(410).json({ success: false, message: 'ลิงก์หมดอายุหรือถูกยกเลิก' });
+    }
+
+    // Collect all task_files for this request
+    const { rows: files } = await dbPool.query(
+      'SELECT * FROM task_files WHERE request_id = $1 AND (is_deleted IS NULL OR is_deleted = false)',
+      [row.request_id]
+    );
+
+    const reqData = row.req_data || {};
+    const AdmZip = (await import('adm-zip')).default;
+    const zip = new AdmZip();
+
+    // Add request info JSON
+    const info = {
+      trackingNo: row.tracking_no,
+      requesterName: `${reqData.requester?.firstName || ''} ${reqData.requester?.lastName || ''}`.trim(),
+      downloadedAt: new Date().toISOString(),
+      tokenExpiresAt: row.expires_at
+    };
+    zip.addFile('request_info.json', Buffer.from(JSON.stringify(info, null, 2), 'utf8'));
+
+    // Add each attached file
+    for (const f of files) {
+      try {
+        if (f.file_data) {
+          const buf = Buffer.from(f.file_data, 'base64');
+          zip.addFile(f.filename || `file_${f.id}`, buf);
+        }
+      } catch {}
+    }
+
+    const zipBuffer = zip.toBuffer();
+    res.set('Content-Type', 'application/zip');
+    res.set('Content-Disposition', `attachment; filename="PDPA_${row.tracking_no}.zip"`);
+    res.send(zipBuffer);
+
+    console.log(`⬇️ Download executed for ${row.tracking_no}, session verified`);
+  } catch (err) {
+    console.error('DL download error:', err);
     res.status(500).json({ success: false, message: err.message });
   }
 });
