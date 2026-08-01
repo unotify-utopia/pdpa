@@ -2327,6 +2327,11 @@ app.post('/api/requests/:id/generate-download-token', authenticateJWT, async (re
       [token, requestId, request.org_id, expiresAt]
     );
 
+    try {
+      data.downloadToken = token;
+      await dbPool.query('UPDATE requests SET data = $1 WHERE id = $2', [JSON.stringify(data), requestId]);
+    } catch (e) {}
+
     // Build the public download URL
     const baseUrl = process.env.APP_BASE_URL || `https://pdpa.numcomputer.com`;
     const downloadUrl = `${baseUrl}/dl/${token}`;
@@ -2347,19 +2352,68 @@ app.post('/api/requests/:id/generate-download-token', authenticateJWT, async (re
   }
 });
 
+// Helper to resolve a download token by token string, request_id, OR tracking_no (auto-creates if needed)
+async function resolveDownloadToken(param) {
+  if (!param) return null;
+  // 1. Search in download_tokens table
+  const { rows } = await dbPool.query(
+    `SELECT dt.*, r.tracking_no, r.data as req_data, r.org_id, r.id as req_id
+     FROM download_tokens dt
+     JOIN requests r ON r.id = dt.request_id
+     WHERE dt.token = $1 OR dt.request_id = $1 OR r.tracking_no = $1
+     ORDER BY dt.created_at DESC LIMIT 1`,
+    [param]
+  );
+  if (rows.length > 0) {
+    return rows[0];
+  }
+
+  // 2. If no download_token row exists yet, check if request exists in requests table
+  const { rows: reqRows } = await dbPool.query(
+    `SELECT id, tracking_no, data, org_id FROM requests
+     WHERE tracking_no = $1 OR id = $1 LIMIT 1`,
+    [param]
+  );
+  if (reqRows.length === 0) {
+    return null; // Neither token nor request found
+  }
+
+  const reqRow = reqRows[0];
+  // 3. Auto-generate a secure token for this request with 30 days validity
+  const newToken = crypto.randomBytes(48).toString('hex');
+  const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days from now
+
+  await dbPool.query(
+    'INSERT INTO download_tokens (token, request_id, org_id, expires_at) VALUES ($1, $2, $3, $4)',
+    [newToken, reqRow.id, reqRow.org_id, expiresAt]
+  );
+
+  // Also update request data so it has downloadToken
+  try {
+    const dataObj = reqRow.data || {};
+    dataObj.downloadToken = newToken;
+    await dbPool.query('UPDATE requests SET data = $1 WHERE id = $2', [JSON.stringify(dataObj), reqRow.id]);
+  } catch (e) {}
+
+  return {
+    token: newToken,
+    request_id: reqRow.id,
+    org_id: reqRow.org_id,
+    expires_at: expiresAt,
+    downloaded_count: 0,
+    is_revoked: false,
+    tracking_no: reqRow.tracking_no,
+    req_data: reqRow.data || {},
+    req_id: reqRow.id
+  };
+}
+
 // GET /api/dl/info/:token  — public: check token validity (no auth required)
 app.get('/api/dl/info/:token', async (req, res) => {
   try {
     const { token } = req.params;
-    const { rows } = await dbPool.query(
-      `SELECT dt.*, r.tracking_no, r.data as req_data, r.org_id
-       FROM download_tokens dt
-       JOIN requests r ON r.id = dt.request_id
-       WHERE dt.token = $1`,
-      [token]
-    );
-    if (rows.length === 0) return res.status(404).json({ success: false, message: 'ไม่พบลิงก์นี้ในระบบ' });
-    const row = rows[0];
+    const row = await resolveDownloadToken(token);
+    if (!row) return res.status(404).json({ success: false, message: 'ไม่พบลิงก์นี้ในระบบ' });
     if (row.is_revoked) return res.status(410).json({ success: false, message: 'ลิงก์นี้ถูกยกเลิกแล้ว' });
     if (new Date(row.expires_at) < new Date()) return res.status(410).json({ success: false, message: 'ลิงก์หมดอายุแล้ว (เกิน 30 วัน)' });
 
@@ -2383,15 +2437,8 @@ app.post('/api/dl/request-otp', async (req, res) => {
     const { token } = req.body;
     if (!token) return res.status(400).json({ success: false, message: 'Token required' });
 
-    const { rows } = await dbPool.query(
-      `SELECT dt.*, r.data as req_data, r.tracking_no
-       FROM download_tokens dt
-       JOIN requests r ON r.id = dt.request_id
-       WHERE dt.token = $1`,
-      [token]
-    );
-    if (rows.length === 0) return res.status(404).json({ success: false, message: 'ไม่พบลิงก์นี้' });
-    const row = rows[0];
+    const row = await resolveDownloadToken(token);
+    if (!row) return res.status(404).json({ success: false, message: 'ไม่พบลิงก์นี้' });
     if (row.is_revoked || new Date(row.expires_at) < new Date()) {
       return res.status(410).json({ success: false, message: 'ลิงก์หมดอายุหรือถูกยกเลิก' });
     }
@@ -2402,13 +2449,20 @@ app.post('/api/dl/request-otp', async (req, res) => {
 
     // Generate 6-digit OTP
     const otp = String(Math.floor(100000 + Math.random() * 900000));
-    const otpKey = `dl_otp:${token}`;
+    const otpKey1 = `dl_otp:${row.request_id}`;
+    const otpKey2 = `dl_otp:${token}`;
     const expiresAt = Date.now() + 10 * 60 * 1000; // 10 min
 
     await dbPool.query(
       'INSERT INTO public_otps (key, otp, expires_at) VALUES ($1, $2, $3) ON CONFLICT (key) DO UPDATE SET otp = $2, expires_at = $3',
-      [otpKey, otp, expiresAt]
+      [otpKey1, otp, expiresAt]
     );
+    if (otpKey1 !== otpKey2) {
+      await dbPool.query(
+        'INSERT INTO public_otps (key, otp, expires_at) VALUES ($1, $2, $3) ON CONFLICT (key) DO UPDATE SET otp = $2, expires_at = $3',
+        [otpKey2, otp, expiresAt]
+      );
+    }
 
     // Format expiry for display
     const expiresDisplay = new Date(row.expires_at).toLocaleDateString('th-TH', {
@@ -2459,10 +2513,14 @@ app.post('/api/dl/verify-otp', async (req, res) => {
     const { token, otp } = req.body;
     if (!token || !otp) return res.status(400).json({ success: false, message: 'Missing params' });
 
-    const otpKey = `dl_otp:${token}`;
+    const row = await resolveDownloadToken(token);
+    if (!row) return res.status(404).json({ success: false, message: 'ไม่พบลิงก์นี้' });
+
+    const otpKey1 = `dl_otp:${row.request_id}`;
+    const otpKey2 = `dl_otp:${token}`;
     const { rows: otpRows } = await dbPool.query(
-      'SELECT * FROM public_otps WHERE key = $1',
-      [otpKey]
+      'SELECT * FROM public_otps WHERE key = $1 OR key = $2 LIMIT 1',
+      [otpKey1, otpKey2]
     );
     if (otpRows.length === 0) return res.status(400).json({ success: false, message: 'ไม่พบ OTP กรุณาขอใหม่อีกครั้ง' });
     const otpRow = otpRows[0];
@@ -2470,16 +2528,16 @@ app.post('/api/dl/verify-otp', async (req, res) => {
     if (otpRow.otp !== otp.trim()) return res.status(400).json({ success: false, message: 'รหัส OTP ไม่ถูกต้อง' });
 
     // OTP valid — delete it (one-time use)
-    await dbPool.query('DELETE FROM public_otps WHERE key = $1', [otpKey]);
+    await dbPool.query('DELETE FROM public_otps WHERE key = $1 OR key = $2', [otpKey1, otpKey2]);
 
     // Increment download count
     await dbPool.query(
-      'UPDATE download_tokens SET downloaded_count = downloaded_count + 1 WHERE token = $1',
-      [token]
+      'UPDATE download_tokens SET downloaded_count = downloaded_count + 1 WHERE token = $1 OR request_id = $2',
+      [row.token, row.request_id]
     );
 
     // Issue a short-lived (15 min) signed download session token
-    const sessionToken = jwt.sign({ downloadToken: token, at: Date.now() }, process.env.JWT_SECRET || 'pdpa-secret', { expiresIn: '15m' });
+    const sessionToken = jwt.sign({ request_id: row.request_id, downloadToken: row.token, at: Date.now() }, process.env.JWT_SECRET || 'pdpa-secret', { expiresIn: '15m' });
     res.json({ success: true, sessionToken });
   } catch (err) {
     console.error('DL verify OTP error:', err);
@@ -2501,18 +2559,13 @@ app.get('/api/dl/download/:token', async (req, res) => {
     } catch {
       return res.status(401).json({ success: false, message: 'Session หมดอายุ กรุณายืนยัน OTP ใหม่' });
     }
-    if (payload.downloadToken !== token) return res.status(403).json({ success: false, message: 'Token mismatch' });
 
-    // Get token + request data
-    const { rows } = await dbPool.query(
-      `SELECT dt.*, r.data as req_data, r.tracking_no, r.id as request_id
-       FROM download_tokens dt
-       JOIN requests r ON r.id = dt.request_id
-       WHERE dt.token = $1`,
-      [token]
-    );
-    if (rows.length === 0) return res.status(404).json({ success: false, message: 'ไม่พบ Token' });
-    const row = rows[0];
+    const row = await resolveDownloadToken(token);
+    if (!row) return res.status(404).json({ success: false, message: 'ไม่พบ Token' });
+    if (payload.request_id !== row.request_id && payload.downloadToken !== row.token && payload.downloadToken !== token) {
+      return res.status(403).json({ success: false, message: 'Token mismatch' });
+    }
+
     if (row.is_revoked || new Date(row.expires_at) < new Date()) {
       return res.status(410).json({ success: false, message: 'ลิงก์หมดอายุหรือถูกยกเลิก' });
     }
