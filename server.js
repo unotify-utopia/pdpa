@@ -2304,7 +2304,7 @@ app.post('/api/public/requests/:id/download-package', async (req, res) => {
 app.get('/api/requests/:id/preview-attachment-pdf', authenticateJWT, async (req, res) => {
   try {
     const { id } = req.params;
-    const { rows } = await dbPool.query('SELECT * FROM requests WHERE id = $1', [id]);
+    const { rows } = await dbPool.query('SELECT * FROM requests WHERE id = $1 OR tracking_no = $1 LIMIT 1', [id]);
     if (rows.length === 0) return res.status(404).json({ success: false, message: 'Request not found' });
 
     const pdpaRequest = rows[0];
@@ -2312,8 +2312,8 @@ app.get('/api/requests/:id/preview-attachment-pdf', authenticateJWT, async (req,
 
     // Collect active file rows from task_files
     const { rows: taskFiles } = await dbPool.query(
-      'SELECT filename, file_data, uploaded_by, created_at FROM task_files WHERE request_id = $1 AND (is_deleted IS NULL OR is_deleted = false)',
-      [id]
+      'SELECT filename, file_data, uploaded_by, uploaded_at FROM task_files WHERE (request_id = $1 OR request_id = $2) AND (is_deleted IS NULL OR is_deleted = false)',
+      [pdpaRequest.id, pdpaRequest.tracking_no]
     );
 
     // Also check uploadedFiles inside dataCollectionTasks for completeness
@@ -2424,7 +2424,7 @@ app.get('/api/requests/:id/preview-attachment-pdf', authenticateJWT, async (req,
 app.get('/api/requests/:id/download-package-admin', authenticateJWT, async (req, res) => {
   try {
     const { id } = req.params;
-    const { rows } = await dbPool.query('SELECT * FROM requests WHERE id = $1', [id]);
+    const { rows } = await dbPool.query('SELECT * FROM requests WHERE id = $1 OR tracking_no = $1 LIMIT 1', [id]);
     if (rows.length === 0) return res.status(404).json({ success: false, message: 'Request not found' });
 
     const pdpaRequest = rows[0];
@@ -2432,8 +2432,8 @@ app.get('/api/requests/:id/download-package-admin', authenticateJWT, async (req,
 
     // Fetch active files from task_files
     const { rows: taskFiles } = await dbPool.query(
-      'SELECT filename, file_data FROM task_files WHERE request_id = $1 AND (is_deleted IS NULL OR is_deleted = false)',
-      [id]
+      'SELECT filename, file_data FROM task_files WHERE (request_id = $1 OR request_id = $2) AND (is_deleted IS NULL OR is_deleted = false)',
+      [pdpaRequest.id, pdpaRequest.tracking_no]
     );
 
     const exportSummary = {
@@ -2512,14 +2512,14 @@ app.get('/api/requests/:id/download-package-admin', authenticateJWT, async (req,
 app.post('/api/requests/:id/generate-download-token', authenticateJWT, async (req, res) => {
   try {
     const requestId = req.params.id;
-    const { rows } = await dbPool.query('SELECT * FROM requests WHERE id = $1', [requestId]);
+    const { rows } = await dbPool.query('SELECT * FROM requests WHERE id = $1 OR tracking_no = $1 LIMIT 1', [requestId]);
     if (rows.length === 0) return res.status(404).json({ success: false, message: 'Request not found' });
 
     const request = rows[0];
     const data = request.data || {};
 
     // Revoke old tokens for this request
-    await dbPool.query('UPDATE download_tokens SET is_revoked = true WHERE request_id = $1', [requestId]);
+    await dbPool.query('UPDATE download_tokens SET is_revoked = true WHERE request_id = $1', [request.id]);
 
     // Generate a new secure random token
     const token = crypto.randomBytes(48).toString('hex');
@@ -2775,8 +2775,8 @@ app.get('/api/dl/download/:token', async (req, res) => {
 
     // Collect all task_files for this request
     const { rows: files } = await dbPool.query(
-      'SELECT * FROM task_files WHERE request_id = $1 AND (is_deleted IS NULL OR is_deleted = false)',
-      [row.request_id]
+      'SELECT * FROM task_files WHERE (request_id = $1 OR request_id = $2) AND (is_deleted IS NULL OR is_deleted = false)',
+      [row.request_id, row.tracking_no]
     );
 
     const reqData = row.req_data || {};

@@ -6515,7 +6515,7 @@ export default function App() {
       )}
       {/* --- ENTERPRISE ATTACHMENT DOCUMENT PREVIEW MODAL --- */}
       {previewAttachment && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-fadeIn">
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 z-[80] animate-fadeIn">
           <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-3xl w-full max-h-[90vh] flex flex-col overflow-hidden">
             {/* Header Toolbar */}
             <div className="bg-slate-900 text-white px-6 py-4 flex items-center justify-between">
