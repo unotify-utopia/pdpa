@@ -15,6 +15,18 @@ export default defineConfig({
     __APP_VERSION__: JSON.stringify(commitHash),
     __BUILD_DATE__: JSON.stringify(buildDate),
   },
+  build: {
+    chunkSizeWarningLimit: 2000,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor-react': ['react', 'react-dom'],
+          'vendor-lucide': ['lucide-react'],
+          'vendor-pdfmake': ['pdfmake'],
+        }
+      }
+    }
+  },
   server: {
     proxy: {
       '/api': {
