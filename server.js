@@ -361,7 +361,7 @@ async function getTaximailSessionId() {
   const data = await response.json();
   if (data.status === 'success' && data.data && data.data.session_id) {
     taximailSessionId = data.data.session_id;
-    taximailSessionExpires = Date.now() + (11 * 60 * 60 * 1000); // cache for 11 hours
+    taximailSessionExpires = Date.now() + (12 * 60 * 1000); // cache for 12 mins (session expires in 15 mins)
     return taximailSessionId;
   } else {
     throw new Error('Taximail login failed, missing session_id');
@@ -369,7 +369,42 @@ async function getTaximailSessionId() {
 }
 
 async function sendMailWithFallback(mailOptions) {
-  // If Taximail is configured, use the REST API instead of SMTP
+  // PRIMARY: Use Resend REST API if API key is configured
+  if (process.env.RESEND_API_KEY) {
+    try {
+      const fromEmail = process.env.OTP_SENDER_EMAIL || 'onboarding@resend.dev';
+      const fromName = 'PDPA Access Portal';
+
+      const payload = {
+        from: `${fromName} <${fromEmail}>`,
+        to: [mailOptions.to],
+        subject: mailOptions.subject,
+        html: mailOptions.html
+      };
+
+      const res = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(`Resend error: ${res.status} ${JSON.stringify(data)}`);
+      }
+
+      console.log(`✉️ Email sent successfully via Resend API to ${mailOptions.to} (id: ${data.id})`);
+      return data;
+    } catch (error) {
+      console.error(`❌ Failed to send email via Resend API: ${error.message}`);
+      throw error;
+    }
+  }
+
+  // SECONDARY: Taximail REST API
   if (process.env.SMTP_HOST === 'smtp.taximail.com') {
     try {
       const sessionId = await getTaximailSessionId();
@@ -411,7 +446,7 @@ async function sendMailWithFallback(mailOptions) {
       return await res.json();
     } catch (error) {
       console.error(`❌ Failed to send email via Taximail API: ${error.message}`);
-      throw error; // Let caller handle it
+      throw error;
     }
   }
 
