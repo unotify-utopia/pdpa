@@ -1,6 +1,6 @@
-import { CheckCircle2, AlertCircle, XCircle } from 'lucide-react';
+import { CheckCircle2, AlertCircle, XCircle, Info } from 'lucide-react';
 
-export type NotifyType = 'success' | 'warning' | 'error' | 'confirm';
+export type NotifyType = 'success' | 'warning' | 'error' | 'confirm' | 'info';
 
 interface NotifyModalProps {
   open: boolean;
@@ -28,6 +28,7 @@ export function NotifyModal({ open, title, message, type, onConfirm, onCancel, o
           {type === 'warning' && <AlertCircle className="h-6 w-6 text-amber-600" />}
           {type === 'error' && <XCircle className="h-6 w-6 text-rose-600" />}
           {type === 'confirm' && <AlertCircle className="h-6 w-6 text-blue-600" />}
+          {type === 'info' && <Info className="h-6 w-6 text-blue-600" />}
           <h3 className="font-bold">{title}</h3>
         </div>
         <div className="p-5">
