@@ -250,12 +250,22 @@ export const seedRequests: Request[] = [
       {
         id: 'red_001',
         itemId: 'att_crm_data',
-        itemRedacted: 'เลขบัตรประชาชน และ เบอร์โทรศัพท์ (เจ้าของสิทธิ)',
+        itemRedacted: 'เลขประจำตัวประชาชน (National ID)',
         reason: 'มาตรการรักษาความปลอดภัยและจำกัดข้อมูลให้เท่าที่จำเป็น (Data Minimization - PDPA มาตรา 37)',
         operator: 'dpo.pdpa',
         timestamp: '2026-07-16T10:30:00Z',
-        previewUrlBefore: 'crm_original_view',
-        previewUrlAfter: 'crm_redacted_view'
+        previewUrlBefore: '1-1002-00345-12-4',
+        previewUrlAfter: '1-xxxx-xxxxx-12-4 (Masked กลางและท้าย)'
+      },
+      {
+        id: 'red_002',
+        itemId: 'att_crm_data',
+        itemRedacted: 'เบอร์โทรศัพท์ติดต่อ (Phone Number)',
+        reason: 'มาตรการรักษาความปลอดภัยและจำกัดข้อมูลให้เท่าที่จำเป็น (Data Minimization - PDPA มาตรา 37)',
+        operator: 'dpo.pdpa',
+        timestamp: '2026-07-16T10:31:00Z',
+        previewUrlBefore: '097-123-1584',
+        previewUrlAfter: '097-xxx-1584 (Masked ตัวเลขกลาง)'
       }
     ],
     decision: {

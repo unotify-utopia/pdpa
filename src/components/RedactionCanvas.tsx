@@ -147,7 +147,7 @@ export const RedactionCanvas: React.FC<RedactionCanvasProps> = ({
     // Call callback to record event
     onRedactApplied({
       itemId: 'doc_customer_crm_report',
-      itemRedacted: `${targetField.label} (${targetField.value})`,
+      itemRedacted: targetField.label,
       reason: `${redactMode === 'masking' ? '[Partial Masking]' : '[Full Blackout]'} ${customReason}`,
       previewUrlBefore: targetField.value,
       previewUrlAfter: maskedResult,

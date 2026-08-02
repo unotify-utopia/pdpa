@@ -2170,8 +2170,66 @@ app.use('/super-admin', (req, res) => {
   res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
   res.setHeader('Pragma', 'no-cache');
   res.setHeader('Expires', '0');
-  res.sendFile(path.join(__dirname, 'super-admin-app', 'dist', 'index.html'));
 });
+
+// Helper to deduplicate redaction records and display masked format in PDF reports
+function formatRedactionNoticeTable(records) {
+  if (!Array.isArray(records) || records.length === 0) return null;
+
+  const uniqueMap = new Map();
+  records.forEach(r => {
+    if (!r || !r.itemRedacted) return;
+    let cleanLabel = r.itemRedacted.replace(/\s*\([^)]*\)/g, '').trim() || 'ข้อมูลส่วนบุคคล';
+    if (!uniqueMap.has(cleanLabel)) {
+      let maskedExample = r.previewUrlAfter;
+      if (!maskedExample || maskedExample === 'crm_redacted_view' || maskedExample === 'crm_original_view') {
+        if (cleanLabel.includes('บัตรประชาชน') || cleanLabel.includes('ID')) {
+          maskedExample = '1-xxxx-xxxxx-12-4 (Masked กลางและท้าย)';
+        } else if (cleanLabel.includes('โทรศัพท์') || cleanLabel.includes('Phone')) {
+          maskedExample = '097-xxx-1584 (Masked ตัวเลขกลาง)';
+        } else if (cleanLabel.includes('อีเมล') || cleanLabel.includes('Email')) {
+          maskedExample = '42j****@gmail.com (Masked ตัวอักษรผู้ใช้)';
+        } else if (cleanLabel.includes('ชื่อ') || cleanLabel.includes('Name')) {
+          maskedExample = 'จิดาภา ศ*** (Masked นามสกุลบางส่วน)';
+        } else if (cleanLabel.includes('ที่อยู่') || cleanLabel.includes('Address')) {
+          maskedExample = 'xxx ม.x ต.xxxx (Masked บ้านเลขที่/รายละเอียด)';
+        } else {
+          maskedExample = '[ Partial Masking / ซ่อนข้อมูลส่วนบุคคล ]';
+        }
+      }
+
+      uniqueMap.set(cleanLabel, {
+        cleanLabel,
+        maskedExample,
+        reason: r.reason || 'มาตรการรักษาความปลอดภัยและจำกัดข้อมูลให้เท่าที่จำเป็น (Data Minimization - PDPA มาตรา 37)'
+      });
+    }
+  });
+
+  const uniqueList = Array.from(uniqueMap.values());
+  if (uniqueList.length === 0) return null;
+
+  return {
+    table: {
+      widths: ['30%', '35%', '35%'],
+      body: [
+        [
+          { text: 'รายการข้อมูลส่วนบุคคล', bold: true, fillColor: '#f1f5f9', fontSize: 12 },
+          { text: 'ตัวอย่างการแสดงผลที่ถูกปกปิด (Masked Display)', bold: true, fillColor: '#f1f5f9', fontSize: 12 },
+          { text: 'เหตุผลตามมาตรการความปลอดภัย PDPA', bold: true, fillColor: '#f1f5f9', fontSize: 12 }
+        ],
+        ...uniqueList.map(r => [
+          { text: r.cleanLabel, fontSize: 11, bold: true },
+          { text: r.maskedExample, fontSize: 11, color: '#0284c7' },
+          { text: r.reason, fontSize: 11 }
+        ])
+      ]
+    },
+    layout: 'lightHorizontalLines',
+    margin: [0, 0, 0, 15]
+  };
+}
+
 
 
 // POST /api/public/requests/:id/download-package
@@ -2262,28 +2320,10 @@ app.post('/api/public/requests/:id/download-package', async (req, res) => {
         { text: `วันที่ส่งมอบ: ${new Date().toLocaleDateString('th-TH')}`, margin: [0, 0, 0, 20] },
         { text: 'รายการไฟล์ที่ส่งมอบ:', bold: true, margin: [0, 0, 0, 10] },
         ...filesResult.rows.map((f, i) => ({ text: `${i+1}. ${f.filename}`, margin: [10, 0, 0, 5] })),
-        ...(data.redactionRecords && data.redactionRecords.length > 0 ? [
+        ...(formatRedactionNoticeTable(data.redactionRecords) ? [
           { text: '\nบันทึกการจำกัดและพรางข้อมูลตามมาตรการความปลอดภัย (Data Masking & Redaction Notice):', bold: true, fontSize: 15, margin: [0, 15, 0, 5] },
           { text: 'ข้อมูลบางรายการในรายงานฉบับนี้ถูกพรางบางส่วน (Marking/Masking) ตามมาตรการรักษาความปลอดภัยและจำกัดข้อมูลให้เท่าที่จำเป็น (PDPA มาตรา 37) เพื่อป้องกันความเสี่ยงข้อมูลส่วนบุคคลรั่วไหล', fontSize: 11, color: '#475569', margin: [0, 0, 0, 8] },
-          {
-            table: {
-              widths: ['40%', '40%', '20%'],
-              body: [
-                [
-                  { text: 'รายการข้อมูลที่พราง/จำกัดการแสดงผล', bold: true, fillColor: '#f1f5f9', fontSize: 12 },
-                  { text: 'เหตุผลตามมาตรการความปลอดภัย PDPA', bold: true, fillColor: '#f1f5f9', fontSize: 12 },
-                  { text: 'ผู้ดำเนินการ', bold: true, fillColor: '#f1f5f9', fontSize: 12 }
-                ],
-                ...data.redactionRecords.map(r => [
-                  { text: r.itemRedacted || '-', fontSize: 11 },
-                  { text: r.reason || '-', fontSize: 11 },
-                  { text: r.operator || 'DPO', fontSize: 11 }
-                ])
-              ]
-            },
-            layout: 'lightHorizontalLines',
-            margin: [0, 0, 0, 15]
-          }
+          formatRedactionNoticeTable(data.redactionRecords)
         ] : []),
         { text: '\nการรับรองความถูกต้องของข้อมูล (Data Integrity Check):', bold: true, margin: [0, 20, 0, 5] },
         { text: 'เอกสารและชุดข้อมูลนี้ถูกเข้ารหัสเพื่อตรวจสอบความถูกต้อง (SHA-256) เพื่อป้องกันการเปลี่ยนแปลงเนื้อหา', fontSize: 12, margin: [0, 0, 0, 5] },
@@ -2410,28 +2450,10 @@ app.get('/api/requests/:id/preview-attachment-pdf', authenticateJWT, async (req,
           text: `${i + 1}. ${f.filename} (ระบบ/ผู้แนบ: ${f.uploaded_by || 'ระบบ'})`,
           margin: [10, 0, 0, 6]
         })) : [{ text: 'ยังไม่มีไฟล์เอกสารแนบในชุดข้อมูล', color: '#94a3b8', margin: [10, 0, 0, 10] }]),
-        ...(data.redactionRecords && data.redactionRecords.length > 0 ? [
+        ...(formatRedactionNoticeTable(data.redactionRecords) ? [
           { text: '\nบันทึกการจำกัดและพรางข้อมูลตามมาตรการความปลอดภัย (Data Masking & Redaction Notice):', bold: true, fontSize: 15, margin: [0, 15, 0, 5] },
           { text: 'ข้อมูลบางรายการในรายงานฉบับนี้ถูกพรางบางส่วน (Marking/Masking) ตามมาตรการรักษาความปลอดภัยและจำกัดข้อมูลให้เท่าที่จำเป็น (PDPA มาตรา 37) เพื่อป้องกันความเสี่ยงข้อมูลส่วนบุคคลรั่วไหล', fontSize: 11, color: '#475569', margin: [0, 0, 0, 8] },
-          {
-            table: {
-              widths: ['40%', '40%', '20%'],
-              body: [
-                [
-                  { text: 'รายการข้อมูลที่พราง/จำกัดการแสดงผล', bold: true, fillColor: '#f1f5f9', fontSize: 12 },
-                  { text: 'เหตุผลตามมาตรการความปลอดภัย PDPA', bold: true, fillColor: '#f1f5f9', fontSize: 12 },
-                  { text: 'ผู้ดำเนินการ', bold: true, fillColor: '#f1f5f9', fontSize: 12 }
-                ],
-                ...data.redactionRecords.map(r => [
-                  { text: r.itemRedacted || '-', fontSize: 11 },
-                  { text: r.reason || '-', fontSize: 11 },
-                  { text: r.operator || 'DPO', fontSize: 11 }
-                ])
-              ]
-            },
-            layout: 'lightHorizontalLines',
-            margin: [0, 0, 0, 15]
-          }
+          formatRedactionNoticeTable(data.redactionRecords)
         ] : []),
         { text: '\nการรับรองความถูกต้องและความสมบูรณ์ของข้อมูล (Data Integrity Check):', bold: true, fontSize: 15, margin: [0, 25, 0, 5] },
         { text: 'เอกสารและชุดข้อมูลนี้ถูกเข้ารหัสและคำนวณค่าแฮช (SHA-256 Checksum) เพื่อรับรองความถูกต้องและป้องกันการแก้ไขเปลี่ยนแปลงเนื้อหา', fontSize: 12, color: '#475569', margin: [0, 0, 0, 5] },
@@ -2513,28 +2535,10 @@ app.get('/api/requests/:id/download-package-admin', authenticateJWT, async (req,
         { text: `วันที่ส่งมอบ: ${new Date().toLocaleDateString('th-TH')}`, margin: [0, 0, 0, 20] },
         { text: 'รายการไฟล์ที่ส่งมอบ:', bold: true, margin: [0, 0, 0, 10] },
         ...taskFiles.map((f, i) => ({ text: `${i + 1}. ${f.filename}`, margin: [10, 0, 0, 5] })),
-        ...(data.redactionRecords && data.redactionRecords.length > 0 ? [
+        ...(formatRedactionNoticeTable(data.redactionRecords) ? [
           { text: '\nบันทึกการจำกัดและพรางข้อมูลตามมาตรการความปลอดภัย (Data Masking & Redaction Notice):', bold: true, fontSize: 15, margin: [0, 15, 0, 5] },
           { text: 'ข้อมูลบางรายการในรายงานฉบับนี้ถูกพรางบางส่วน (Marking/Masking) ตามมาตรการรักษาความปลอดภัยและจำกัดข้อมูลให้เท่าที่จำเป็น (PDPA มาตรา 37) เพื่อป้องกันความเสี่ยงข้อมูลส่วนบุคคลรั่วไหล', fontSize: 11, color: '#475569', margin: [0, 0, 0, 8] },
-          {
-            table: {
-              widths: ['40%', '40%', '20%'],
-              body: [
-                [
-                  { text: 'รายการข้อมูลที่พราง/จำกัดการแสดงผล', bold: true, fillColor: '#f1f5f9', fontSize: 12 },
-                  { text: 'เหตุผลตามมาตรการความปลอดภัย PDPA', bold: true, fillColor: '#f1f5f9', fontSize: 12 },
-                  { text: 'ผู้ดำเนินการ', bold: true, fillColor: '#f1f5f9', fontSize: 12 }
-                ],
-                ...data.redactionRecords.map(r => [
-                  { text: r.itemRedacted || '-', fontSize: 11 },
-                  { text: r.reason || '-', fontSize: 11 },
-                  { text: r.operator || 'DPO', fontSize: 11 }
-                ])
-              ]
-            },
-            layout: 'lightHorizontalLines',
-            margin: [0, 0, 0, 15]
-          }
+          formatRedactionNoticeTable(data.redactionRecords)
         ] : []),
         { text: '\nการรับรองความถูกต้องของข้อมูล (Data Integrity Check):', bold: true, margin: [0, 20, 0, 5] },
         { text: 'เอกสารและชุดข้อมูลนี้ถูกเข้ารหัสเพื่อตรวจสอบความถูกต้อง (SHA-256) เพื่อป้องกันการเปลี่ยนแปลงเนื้อหา', fontSize: 12, margin: [0, 0, 0, 5] },

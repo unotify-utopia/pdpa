@@ -1626,7 +1626,16 @@ export default function App() {
       timestamp: new Date().toISOString()
     };
 
-    req.redactionRecords.push(newRecord);
+    const cleanNewItem = newRecord.itemRedacted.replace(/\s*\([^)]*\)/g, '').trim();
+    const existingIdx = req.redactionRecords.findIndex(r => {
+      const cleanExisting = r.itemRedacted.replace(/\s*\([^)]*\)/g, '').trim();
+      return cleanExisting === cleanNewItem;
+    });
+    if (existingIdx >= 0) {
+      req.redactionRecords[existingIdx] = newRecord;
+    } else {
+      req.redactionRecords.push(newRecord);
+    }
     
     if (req.status !== 'Redaction Required') {
       req.status = 'Redaction Required';
