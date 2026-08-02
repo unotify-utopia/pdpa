@@ -68,7 +68,7 @@ export const RedactionCanvas: React.FC<RedactionCanvasProps> = ({
 
   const [selectedFieldId, setSelectedFieldId] = useState<string | null>(null);
   const [redactMode, setRedactMode] = useState<'blackout' | 'masking'>('blackout');
-  const [customReason, setCustomReason] = useState('ปกปิดข้อมูลบุคคลที่สามที่ไม่มีส่วนได้รับสิทธิ');
+  const [customReason, setCustomReason] = useState('มาตรการรักษาความปลอดภัยและจำกัดข้อมูลให้เท่าที่จำเป็น (Data Minimization)');
   const [savedCount, setSavedCount] = useState(0);
 
   // Helper to generate masked string (Masks both first and last names individually)
@@ -284,10 +284,10 @@ export const RedactionCanvas: React.FC<RedactionCanvasProps> = ({
                     onChange={(e) => setCustomReason(e.target.value)}
                     className="w-full text-xs border border-slate-300 rounded p-2 focus:ring-1 focus:ring-brand-500"
                   >
+                    <option value="มาตรการรักษาความปลอดภัยและจำกัดข้อมูลให้เท่าที่จำเป็น (Data Minimization)">จำกัดข้อมูลตามความจำเป็น (Data Minimization)</option>
+                    <option value="ปกปิดบางส่วนเพื่อป้องกันความเสี่ยงข้อมูลรั่วไหล (PDPA มาตรา 37)">ความปลอดภัยข้อมูลส่วนบุคคล (PII Protection)</option>
+                    <option value="ปกปิดข้อมูลความลับทางการค้าและกระบวนการภายในองค์กร">ความลับทางการค้า (Trade Secret)</option>
                     <option value="ปกปิดข้อมูลบุคคลที่สามที่ไม่มีส่วนได้รับสิทธิ">ปกปิดข้อมูลบุคคลที่สาม (Third-party PII)</option>
-                    <option value="ปกปิดข้อมูลความลับทางการค้าขององค์กร">ความลับทางการค้า (Trade Secret)</option>
-                    <option value="ปกปิดลายมือชื่ออิเล็กทรอนิกส์และผู้บันทึกระบบ">ปกปิดลายเซ็นเจ้าหน้าที่ (Signature)</option>
-                    <option value="ปกปิดข้อมูลด้านความมั่นคงปลอดภัยไอที">ข้อมูลความมั่นคงระบบ (System Security)</option>
                   </select>
                 </div>
 
