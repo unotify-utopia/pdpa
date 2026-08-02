@@ -170,7 +170,7 @@ export const RedactionCanvas: React.FC<RedactionCanvasProps> = ({
             <EyeOff className="h-4 w-4 text-brand-600" />
             <span>ระบบปกปิดข้อมูลส่วนบุคคลออนไลน์ (Redaction & Data Masking Suite)</span>
           </h4>
-          <p className="text-xs text-slate-500">คลิกที่ช่องที่มีข้อมูลของบุคคลอื่นเพื่อเลือก ถมดำทึบ (Blackout) หรือ ทำ Marking ซ่อนบางส่วน (Data Masking)</p>
+          <p className="text-xs text-slate-500">คลิกที่ช่องข้อมูลส่วนบุคคลของผู้ขอ (หรือข้อมูลสำคัญ) เพื่อเลือก ถมดำทึบ (Blackout) หรือ ทำ Marking ซ่อนบางส่วน (Data Masking) ตามมาตรการความปลอดภัยและจำกัดข้อมูลให้เท่าที่จำเป็น</p>
         </div>
         <button
           type="button"
@@ -209,7 +209,7 @@ export const RedactionCanvas: React.FC<RedactionCanvasProps> = ({
                   {f.isSensitive && !f.isRedacted && (
                     <span className="bg-amber-100 text-amber-800 text-[10px] px-1.5 py-0.5 rounded font-medium flex items-center gap-0.5">
                       <ShieldAlert className="h-3 w-3" />
-                      เสี่ยงละเมิดสิทธิผู้อื่น
+                      ข้อมูลสำคัญ/ควรพรางเพื่อความปลอดภัย (Sensitive PII)
                     </span>
                   )}
                   {f.isRedacted && (
@@ -284,10 +284,11 @@ export const RedactionCanvas: React.FC<RedactionCanvasProps> = ({
                     onChange={(e) => setCustomReason(e.target.value)}
                     className="w-full text-xs border border-slate-300 rounded p-2 focus:ring-1 focus:ring-brand-500"
                   >
-                    <option value="มาตรการรักษาความปลอดภัยและจำกัดข้อมูลให้เท่าที่จำเป็น (Data Minimization)">จำกัดข้อมูลตามความจำเป็น (Data Minimization)</option>
-                    <option value="ปกปิดบางส่วนเพื่อป้องกันความเสี่ยงข้อมูลรั่วไหล (PDPA มาตรา 37)">ความปลอดภัยข้อมูลส่วนบุคคล (PII Protection)</option>
-                    <option value="ปกปิดข้อมูลความลับทางการค้าและกระบวนการภายในองค์กร">ความลับทางการค้า (Trade Secret)</option>
-                    <option value="ปกปิดข้อมูลบุคคลที่สามที่ไม่มีส่วนได้รับสิทธิ">ปกปิดข้อมูลบุคคลที่สาม (Third-party PII)</option>
+                    <option value="มาตรการรักษาความปลอดภัยและจำกัดข้อมูลให้เท่าที่จำเป็น (Data Minimization)">จำกัดข้อมูลให้เท่าที่จำเป็น (Data Minimization - PDPA มาตรา 37)</option>
+                    <option value="ปกปิดบางส่วนเพื่อป้องกันความเสี่ยงข้อมูลส่วนบุคคลของผู้ขอรั่วไหลระหว่างนำส่ง">ป้องกันความเสี่ยงข้อมูลผู้ขอรั่วไหลระหว่างนำส่ง (Secure Delivery Masking)</option>
+                    <option value="พรางข้อมูลตามความประสงค์และการยินยอมของเจ้าของข้อมูลส่วนบุคคล">พรางตามความประสงค์ของเจ้าของสิทธิ (Data Subject Preference)</option>
+                    <option value="ปกปิดข้อมูลความลับทางการค้าหรือกระบวนการภายในที่ไม่เกี่ยวข้องกับคำขอ">ความลับทางการค้า/กระบวนการภายใน (Trade Secret & Internal Logic)</option>
+                    <option value="ปกปิดข้อมูลบุคคลที่สามที่ปรากฏร่วมในเอกสาร (ในกรณีมีผู้อื่นเกี่ยวข้อง)">ปกปิดข้อมูลบุคคลอื่นที่ปรากฏร่วม (Third-party PII in shared doc)</option>
                   </select>
                 </div>
 

@@ -250,8 +250,8 @@ export const seedRequests: Request[] = [
       {
         id: 'red_001',
         itemId: 'att_crm_data',
-        itemRedacted: 'คอลัมน์ชื่อและเบอร์โทรศัพท์ของผู้แนะนำสินค้า (บุคคลอื่น)',
-        reason: 'ปกปิดข้อมูลบุคคลที่สามที่ไม่มีส่วนได้รับสิทธิ',
+        itemRedacted: 'เลขบัตรประชาชน และ เบอร์โทรศัพท์ (เจ้าของสิทธิ)',
+        reason: 'มาตรการรักษาความปลอดภัยและจำกัดข้อมูลให้เท่าที่จำเป็น (Data Minimization - PDPA มาตรา 37)',
         operator: 'dpo.pdpa',
         timestamp: '2026-07-16T10:30:00Z',
         previewUrlBefore: 'crm_original_view',
@@ -262,7 +262,7 @@ export const seedRequests: Request[] = [
       result: 'approved',
       reasons: ['เป็นข้อมูลส่วนบุคคลของเจ้าของสิทธิโดยแท้จริง', 'ไม่มีผลกระทบต่อสิทธิเสรีภาพผู้อื่น'],
       legalBasisText: 'มาตรา 30 วรรคหนึ่ง แห่งพระราชบัญญัติคุ้มครองข้อมูลส่วนบุคคล พ.ศ. 2562',
-      dpoRecommendation: 'เสนออนุมัติเปิดเผยข้อมูลตามคำขอ โดยปกปิดคอลัมน์ผู้ติดต่อบุคคลอื่นเรียบร้อยแล้ว',
+      dpoRecommendation: 'เสนออนุมัติเปิดเผยข้อมูลตามคำขอ โดยมีการทำ Marking ซ่อนบางส่วนของเลขบัตรประชาชนและเบอร์โทรเพื่อความปลอดภัยในการนำส่ง',
       dpoCheckedAt: '2026-07-18T11:00:00Z',
       dpoName: 'สุรพงษ์ ยุติธรรม',
       approverOpinion: 'อนุมัติให้ส่งมอบข้อมูลที่ผ่านการปกปิดตามคำแนะนำของ DPO ได้',
@@ -639,8 +639,8 @@ export const initialAuditLogs = [
   { id: 'log_005', orgId: 'org_dopa', timestamp: '2026-07-03T10:10:00Z', actorId: 'usr_intake', actorName: 'กิตติพงษ์ รับเรื่อง', actorRole: 'intake', action: 'CREATE_DATA_TASK', requestId: 'req_001', requestTrackingNo: 'REQ-2026-0001', ipAddress: '192.168.10.22', userAgent: 'Mozilla/5.0 Edge/120.0', details: 'มอบหมายภารกิจค้นหาข้อมูลไปที่ ระบบบริหารความสัมพันธ์ลูกค้า (CRM) ผู้รับผิดชอบ ธนาธร ระบบลูกค้า', checksum: 'e5f6g7h8i9j0' },
   { id: 'log_006', orgId: 'org_dopa', timestamp: '2026-07-10T09:02:00Z', actorId: 'usr_owner_crm', actorName: 'ธนาธร ระบบลูกค้า', actorRole: 'owner', action: 'UPLOAD_SEARCH_RESULT', requestId: 'req_001', requestTrackingNo: 'REQ-2026-0001', ipAddress: '192.168.12.140', userAgent: 'Mozilla/5.0 Chrome/120.0', details: 'อัปโหลดรายงานผลการสืบค้น CRM_Customer_Report_Somkiat.xlsx พร้อมระบุสืบค้นด้วยคำค้น email = somkiat.rakthai@example.com', checksum: 'f6g7h8i9j0k1' },
   { id: 'log_007', orgId: 'org_dopa', timestamp: '2026-07-15T14:02:00Z', actorId: 'usr_dpo', actorName: 'สุรพงษ์ ยุติธรรม', actorRole: 'dpo', action: 'VIEW_FILE', requestId: 'req_001', requestTrackingNo: 'REQ-2026-0001', ipAddress: '192.168.10.5', userAgent: 'Mozilla/5.0 Firefox/121.0', details: 'เปิดเข้าดูไฟล์ข้อมูลสืบค้น CRM_Customer_Report_Somkiat.xlsx เพื่อทำการประเมินทางกฎหมาย', checksum: 'g7h8i9j0k1l2' },
-  { id: 'log_008', orgId: 'org_dopa', timestamp: '2026-07-16T10:35:00Z', actorId: 'usr_dpo', actorName: 'สุรพงษ์ ยุติธรรม', actorRole: 'dpo', action: 'REDACT_DOCUMENT', requestId: 'req_001', requestTrackingNo: 'REQ-2026-0001', ipAddress: '192.168.10.5', userAgent: 'Mozilla/5.0 Firefox/121.0', details: 'บันทึกการเซนเซอร์ (Redaction) คอลัมน์ชื่อและเบอร์โทรบุคคลอื่น ด้วยเหตุผล ปกปิดข้อมูลบุคคลที่สามที่ไม่มีส่วนได้รับสิทธิ', checksum: 'h7h8i9j0k1l3' },
-  { id: 'log_009', orgId: 'org_dopa', timestamp: '2026-07-18T11:05:00Z', actorId: 'usr_dpo', actorName: 'สุรพงษ์ ยุติธรรม', actorRole: 'dpo', action: 'SUBMIT_DECISION_PROPOSAL', requestId: 'req_001', requestTrackingNo: 'REQ-2026-0001', ipAddress: '192.168.10.5', userAgent: 'Mozilla/5.0 Firefox/121.0', details: 'ส่งความเห็นทางกฎหมายเสนอผู้อนุมัติ อนุมัติการเผยข้อมูลแบบเปิดเผยบางส่วน (ปกปิดข้อมูลบุคคลที่สาม)', checksum: 'i7h8i9j0k1l4' },
+  { id: 'log_008', orgId: 'org_dopa', timestamp: '2026-07-16T10:35:00Z', actorId: 'usr_dpo', actorName: 'สุรพงษ์ ยุติธรรม', actorRole: 'dpo', action: 'REDACT_DOCUMENT', requestId: 'req_001', requestTrackingNo: 'REQ-2026-0001', ipAddress: '192.168.10.5', userAgent: 'Mozilla/5.0 Firefox/121.0', details: 'บันทึกการทำ Marking พรางข้อมูล (Redaction) เลขบัตรประชาชนและเบอร์โทร เพื่อความปลอดภัยในการนำส่ง (Data Minimization)', checksum: 'h7h8i9j0k1l3' },
+  { id: 'log_009', orgId: 'org_dopa', timestamp: '2026-07-18T11:05:00Z', actorId: 'usr_dpo', actorName: 'สุรพงษ์ ยุติธรรม', actorRole: 'dpo', action: 'SUBMIT_DECISION_PROPOSAL', requestId: 'req_001', requestTrackingNo: 'REQ-2026-0001', ipAddress: '192.168.10.5', userAgent: 'Mozilla/5.0 Firefox/121.0', details: 'ส่งความเห็นทางกฎหมายเสนอผู้อนุมัติ อนุมัติการเผยข้อมูลตามสิทธิ โดยมีการพรางข้อมูลบางส่วนตามมาตรการความปลอดภัยในการนำส่ง', checksum: 'i7h8i9j0k1l4' },
   { id: 'log_010', orgId: 'org_dopa', timestamp: '2026-07-19T15:00:00Z', actorId: 'usr_approver', actorName: 'ดร. ประภาส อนุมัติศักดิ์', actorRole: 'approver', action: 'APPROVE_DECISION', requestId: 'req_001', requestTrackingNo: 'REQ-2026-0001', ipAddress: '192.168.10.2', userAgent: 'Mozilla/5.0 Safari/120.0', details: 'อนุมัติการเปิดเผยข้อมูลตามสิทธิ โดยลงนามอิเล็กทรอนิกส์กำกับใบอนุญาต', checksum: 'j7h8i9j0k1l5' },
   { id: 'log_011', orgId: 'org_dopa', timestamp: '2026-07-20T09:05:00Z', actorId: 'usr_intake', actorName: 'กิตติพงษ์ รับเรื่อง', actorRole: 'intake', action: 'GENERATE_DOCUMENT', requestId: 'req_001', requestTrackingNo: 'REQ-2026-0001', ipAddress: '192.168.10.22', userAgent: 'Mozilla/5.0 Edge/120.0', details: 'สร้างหนังสือทางการไทยใบแจ้งสิทธิและจัดส่งข้อมูล (Template: temp_approve)', checksum: 'k7h8i9j0k1l6' }
 ];

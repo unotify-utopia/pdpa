@@ -2262,6 +2262,29 @@ app.post('/api/public/requests/:id/download-package', async (req, res) => {
         { text: `วันที่ส่งมอบ: ${new Date().toLocaleDateString('th-TH')}`, margin: [0, 0, 0, 20] },
         { text: 'รายการไฟล์ที่ส่งมอบ:', bold: true, margin: [0, 0, 0, 10] },
         ...filesResult.rows.map((f, i) => ({ text: `${i+1}. ${f.filename}`, margin: [10, 0, 0, 5] })),
+        ...(data.redactionRecords && data.redactionRecords.length > 0 ? [
+          { text: '\nบันทึกการจำกัดและพรางข้อมูลตามมาตรการความปลอดภัย (Data Masking & Redaction Notice):', bold: true, fontSize: 15, margin: [0, 15, 0, 5] },
+          { text: 'ข้อมูลบางรายการในรายงานฉบับนี้ถูกพรางบางส่วน (Marking/Masking) ตามมาตรการรักษาความปลอดภัยและจำกัดข้อมูลให้เท่าที่จำเป็น (PDPA มาตรา 37) เพื่อป้องกันความเสี่ยงข้อมูลส่วนบุคคลรั่วไหล', fontSize: 11, color: '#475569', margin: [0, 0, 0, 8] },
+          {
+            table: {
+              widths: ['40%', '40%', '20%'],
+              body: [
+                [
+                  { text: 'รายการข้อมูลที่พราง/จำกัดการแสดงผล', bold: true, fillColor: '#f1f5f9', fontSize: 12 },
+                  { text: 'เหตุผลตามมาตรการความปลอดภัย PDPA', bold: true, fillColor: '#f1f5f9', fontSize: 12 },
+                  { text: 'ผู้ดำเนินการ', bold: true, fillColor: '#f1f5f9', fontSize: 12 }
+                ],
+                ...data.redactionRecords.map(r => [
+                  { text: r.itemRedacted || '-', fontSize: 11 },
+                  { text: r.reason || '-', fontSize: 11 },
+                  { text: r.operator || 'DPO', fontSize: 11 }
+                ])
+              ]
+            },
+            layout: 'lightHorizontalLines',
+            margin: [0, 0, 0, 15]
+          }
+        ] : []),
         { text: '\nการรับรองความถูกต้องของข้อมูล (Data Integrity Check):', bold: true, margin: [0, 20, 0, 5] },
         { text: 'เอกสารและชุดข้อมูลนี้ถูกเข้ารหัสเพื่อตรวจสอบความถูกต้อง (SHA-256) เพื่อป้องกันการเปลี่ยนแปลงเนื้อหา', fontSize: 12, margin: [0, 0, 0, 5] },
         { text: `SHA-256 Checksum: ${sha256Hash}`, fontSize: 10, margin: [0, 0, 0, 20] },
@@ -2387,6 +2410,29 @@ app.get('/api/requests/:id/preview-attachment-pdf', authenticateJWT, async (req,
           text: `${i + 1}. ${f.filename} (ระบบ/ผู้แนบ: ${f.uploaded_by || 'ระบบ'})`,
           margin: [10, 0, 0, 6]
         })) : [{ text: 'ยังไม่มีไฟล์เอกสารแนบในชุดข้อมูล', color: '#94a3b8', margin: [10, 0, 0, 10] }]),
+        ...(data.redactionRecords && data.redactionRecords.length > 0 ? [
+          { text: '\nบันทึกการจำกัดและพรางข้อมูลตามมาตรการความปลอดภัย (Data Masking & Redaction Notice):', bold: true, fontSize: 15, margin: [0, 15, 0, 5] },
+          { text: 'ข้อมูลบางรายการในรายงานฉบับนี้ถูกพรางบางส่วน (Marking/Masking) ตามมาตรการรักษาความปลอดภัยและจำกัดข้อมูลให้เท่าที่จำเป็น (PDPA มาตรา 37) เพื่อป้องกันความเสี่ยงข้อมูลส่วนบุคคลรั่วไหล', fontSize: 11, color: '#475569', margin: [0, 0, 0, 8] },
+          {
+            table: {
+              widths: ['40%', '40%', '20%'],
+              body: [
+                [
+                  { text: 'รายการข้อมูลที่พราง/จำกัดการแสดงผล', bold: true, fillColor: '#f1f5f9', fontSize: 12 },
+                  { text: 'เหตุผลตามมาตรการความปลอดภัย PDPA', bold: true, fillColor: '#f1f5f9', fontSize: 12 },
+                  { text: 'ผู้ดำเนินการ', bold: true, fillColor: '#f1f5f9', fontSize: 12 }
+                ],
+                ...data.redactionRecords.map(r => [
+                  { text: r.itemRedacted || '-', fontSize: 11 },
+                  { text: r.reason || '-', fontSize: 11 },
+                  { text: r.operator || 'DPO', fontSize: 11 }
+                ])
+              ]
+            },
+            layout: 'lightHorizontalLines',
+            margin: [0, 0, 0, 15]
+          }
+        ] : []),
         { text: '\nการรับรองความถูกต้องและความสมบูรณ์ของข้อมูล (Data Integrity Check):', bold: true, fontSize: 15, margin: [0, 25, 0, 5] },
         { text: 'เอกสารและชุดข้อมูลนี้ถูกเข้ารหัสและคำนวณค่าแฮช (SHA-256 Checksum) เพื่อรับรองความถูกต้องและป้องกันการแก้ไขเปลี่ยนแปลงเนื้อหา', fontSize: 12, color: '#475569', margin: [0, 0, 0, 5] },
         { text: `SHA-256: ${sha256Hash}`, fontSize: 10, font: 'Sarabun', color: '#0284c7', margin: [0, 0, 0, 30] },
@@ -2467,6 +2513,29 @@ app.get('/api/requests/:id/download-package-admin', authenticateJWT, async (req,
         { text: `วันที่ส่งมอบ: ${new Date().toLocaleDateString('th-TH')}`, margin: [0, 0, 0, 20] },
         { text: 'รายการไฟล์ที่ส่งมอบ:', bold: true, margin: [0, 0, 0, 10] },
         ...taskFiles.map((f, i) => ({ text: `${i + 1}. ${f.filename}`, margin: [10, 0, 0, 5] })),
+        ...(data.redactionRecords && data.redactionRecords.length > 0 ? [
+          { text: '\nบันทึกการจำกัดและพรางข้อมูลตามมาตรการความปลอดภัย (Data Masking & Redaction Notice):', bold: true, fontSize: 15, margin: [0, 15, 0, 5] },
+          { text: 'ข้อมูลบางรายการในรายงานฉบับนี้ถูกพรางบางส่วน (Marking/Masking) ตามมาตรการรักษาความปลอดภัยและจำกัดข้อมูลให้เท่าที่จำเป็น (PDPA มาตรา 37) เพื่อป้องกันความเสี่ยงข้อมูลส่วนบุคคลรั่วไหล', fontSize: 11, color: '#475569', margin: [0, 0, 0, 8] },
+          {
+            table: {
+              widths: ['40%', '40%', '20%'],
+              body: [
+                [
+                  { text: 'รายการข้อมูลที่พราง/จำกัดการแสดงผล', bold: true, fillColor: '#f1f5f9', fontSize: 12 },
+                  { text: 'เหตุผลตามมาตรการความปลอดภัย PDPA', bold: true, fillColor: '#f1f5f9', fontSize: 12 },
+                  { text: 'ผู้ดำเนินการ', bold: true, fillColor: '#f1f5f9', fontSize: 12 }
+                ],
+                ...data.redactionRecords.map(r => [
+                  { text: r.itemRedacted || '-', fontSize: 11 },
+                  { text: r.reason || '-', fontSize: 11 },
+                  { text: r.operator || 'DPO', fontSize: 11 }
+                ])
+              ]
+            },
+            layout: 'lightHorizontalLines',
+            margin: [0, 0, 0, 15]
+          }
+        ] : []),
         { text: '\nการรับรองความถูกต้องของข้อมูล (Data Integrity Check):', bold: true, margin: [0, 20, 0, 5] },
         { text: 'เอกสารและชุดข้อมูลนี้ถูกเข้ารหัสเพื่อตรวจสอบความถูกต้อง (SHA-256) เพื่อป้องกันการเปลี่ยนแปลงเนื้อหา', fontSize: 12, margin: [0, 0, 0, 5] },
         { text: `SHA-256 Checksum: ${sha256Hash}`, fontSize: 10, margin: [0, 0, 0, 20] },
