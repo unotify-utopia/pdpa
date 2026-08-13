@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { AlertCircle, Clock, CheckCircle, BarChart3, Activity, Loader2, AlertTriangle, Building2 } from 'lucide-react';
 
 interface SLA_Breach {
