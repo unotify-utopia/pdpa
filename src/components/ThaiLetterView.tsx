@@ -316,7 +316,7 @@ export const ThaiLetterView: React.FC<ThaiLetterViewProps> = ({
                 ท่านสามารถคลิกที่ปุ่มด้านล่างเพื่อดาวน์โหลดไฟล์ข้อมูลส่วนบุคคลของท่าน (รหัสอ้างอิง: {request.trackingNo}) ลิงก์นี้จะ<span className="text-rose-600 font-bold">หมดอายุภายใน 30 วัน</span>
               </p>
               
-              <div className="py-4 text-center">
+              <div className="py-4 flex flex-col items-center justify-center space-y-4">
                 <a 
                   href={`https://pdpa.numcomputer.com/dl?ref=${request.trackingNo}`} 
                   target="_blank" 
@@ -325,6 +325,15 @@ export const ThaiLetterView: React.FC<ThaiLetterViewProps> = ({
                 >
                   คลิกที่นี่เพื่อยืนยันและดาวน์โหลดเอกสาร
                 </a>
+                
+                <div className="pt-2 flex flex-col items-center space-y-2">
+                  <span className="text-xs font-semibold text-slate-500">หรือ สแกน QR Code เพื่อดาวน์โหลดผ่านมือถือ</span>
+                  <img 
+                    src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://pdpa.numcomputer.com/dl?ref=${request.trackingNo}`} 
+                    alt="QR Code" 
+                    className="w-[120px] h-[120px] p-2 border border-slate-200 rounded-lg shadow-sm"
+                  />
+                </div>
               </div>
               
               <div className="bg-amber-50 border-l-4 border-amber-400 p-3 rounded text-xs text-amber-800">
