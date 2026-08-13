@@ -1173,6 +1173,14 @@ export default function App() {
       return;
     }
 
+    if (req.downloadExpiresAt) {
+      if (new Date(req.downloadExpiresAt) < new Date()) {
+        setDownloadError('เอกสารหมดอายุการดาวน์โหลดแล้ว (เกิน 30 วัน) กรุณาติดต่อหน่วยงานเพื่อขอต่ออายุการดาวน์โหลด');
+        setView('download');
+        return;
+      }
+    }
+
     setDownloadRequest(req);
     // setDownloadToken removed
     setDownloadError(null);
@@ -1844,6 +1852,30 @@ export default function App() {
     }
 
     reloadData();
+  };
+
+  const handleExtendDownloadExpiration = async (reqId: string) => {
+    if (!activeUser || !['admin', 'dpo', 'owner'].includes(activeUser.role)) return;
+    
+    try {
+      const res = await fetch(`/api/requests/${reqId}/extend-download-expiration`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      const data = await res.json();
+      if (data.success) {
+        showNotify('ต่ออายุการดาวน์โหลดเอกสารเรียบร้อยแล้ว (เพิ่ม 30 วัน)');
+        reloadData();
+      } else {
+        showNotify(`⚠️ ผิดพลาด: ${data.message}`);
+      }
+    } catch (e) {
+      console.error(e);
+      showNotify('⚠️ เกิดข้อผิดพลาดในการต่ออายุการดาวน์โหลด');
+    }
   };
 
   // Delivery package (Section 3.9)
@@ -4013,7 +4045,11 @@ export default function App() {
                   <div className="p-3.5 bg-brand-950/40 border border-brand-900 text-brand-300 rounded-xl text-xs leading-relaxed space-y-1">
                     <span className="block font-bold">ยืนยันรหัสเข้าถึง (Two-Factor OTP Verification):</span>
                     <span>ระบบได้จัดส่งรหัส OTP 6 หลัก ไปที่อีเมล {maskEmail(downloadRequest.requester.email)} ของท่านแล้ว</span>
-                    
+                    {downloadRequest.downloadExpiresAt && (
+                      <span className="block text-amber-400 mt-2">
+                        * เอกสารนี้ดาวน์โหลดได้ถึงวันที่ {new Date(downloadRequest.downloadExpiresAt).toLocaleDateString('th-TH')}
+                      </span>
+                    )}
                   </div>
 
                   <div className="space-y-1 text-slate-300">
@@ -4988,14 +5024,31 @@ export default function App() {
                           </p>
                         </div>
                         
-                        <button
-                          type="button"
-                          onClick={() => setShowDeliveryPreview(true)}
-                          className="bg-brand-600 hover:bg-brand-700 text-white font-bold py-2.5 px-6 rounded-lg text-xs transition shadow-md w-full md:w-auto mx-auto mt-2 inline-flex items-center gap-2"
-                        >
-                          <FileCheck2 className="h-4 w-4" />
-                          {['Ready for Delivery', 'Delivered', 'Closed'].includes(activeRequestObj.status) ? 'เปิดเอกสารส่งมอบ (View Delivery Package)' : 'จำลองหน้าตาเอกสารส่งมอบ (Preview Delivery Package)'}
-                        </button>
+                        <div className="flex flex-col sm:flex-row gap-3 justify-center mt-4">
+                          <button
+                            type="button"
+                            onClick={() => setShowDeliveryPreview(true)}
+                            className="bg-brand-600 hover:bg-brand-700 text-white font-bold py-2.5 px-6 rounded-lg text-xs transition shadow-md w-full sm:w-auto inline-flex items-center justify-center gap-2"
+                          >
+                            <FileCheck2 className="h-4 w-4" />
+                            {['Ready for Delivery', 'Delivered', 'Closed'].includes(activeRequestObj.status) ? 'เปิดเอกสารส่งมอบ' : 'จำลองหน้าตาเอกสารส่งมอบ'}
+                          </button>
+                          
+                          {['Ready for Delivery', 'Delivered', 'Closed'].includes(activeRequestObj.status) && activeRequestObj.downloadExpiresAt && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if(window.confirm('คุณต้องการต่ออายุการดาวน์โหลดเอกสารอีก 30 วันหรือไม่? (สูงสุดไม่เกิน 1 ปีจากวันอนุมัติ)')) {
+                                  handleExtendDownloadExpiration(activeRequestObj.id);
+                                }
+                              }}
+                              className="bg-white hover:bg-slate-50 text-brand-600 border border-brand-200 font-bold py-2.5 px-4 rounded-lg text-xs transition shadow-sm w-full sm:w-auto inline-flex items-center justify-center gap-2"
+                            >
+                              <Clock className="h-4 w-4" />
+                              ต่ออายุ (หมดอายุ {new Date(activeRequestObj.downloadExpiresAt).toLocaleDateString('th-TH')})
+                            </button>
+                          )}
+                        </div>
                       </div>
                     )}
 

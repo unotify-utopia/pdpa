@@ -395,8 +395,17 @@ export function createRequestsRouter(dbPool, authenticateJWT, requireRole, addSe
 
       // Generate a new secure random token
       const token = crypto.randomBytes(48).toString('hex');
-      const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
-
+      
+      // Calculate expiration: 30 days from approval date
+      let approvedAt = new Date();
+      if (data.decision && data.decision.approvedAt) {
+        approvedAt = new Date(data.decision.approvedAt);
+      }
+      let expiresAt = new Date(approvedAt.getTime() + 30 * 24 * 60 * 60 * 1000); 
+      
+      // If already expired at the time of generation (which shouldn't happen usually, but just in case),
+      // we still enforce the 30 days from approval rule.
+      
       await dbPool.query(
         'INSERT INTO download_tokens (token, request_id, org_id, expires_at) VALUES ($1, $2, $3, $4)',
         [token, requestId, request.org_id, expiresAt]
@@ -404,6 +413,7 @@ export function createRequestsRouter(dbPool, authenticateJWT, requireRole, addSe
 
       try {
         data.downloadToken = token;
+        data.downloadExpiresAt = expiresAt.toISOString();
         await dbPool.query('UPDATE requests SET data = $1 WHERE id = $2', [JSON.stringify(data), requestId]);
       } catch (e) {}
 
@@ -423,6 +433,71 @@ export function createRequestsRouter(dbPool, authenticateJWT, requireRole, addSe
       res.json({ success: true, token, downloadUrl, qrDataUrl, expiresAt });
     } catch (err) {
       console.error('Generate token error:', err);
+      res.status(500).json({ success: false, message: err.message });
+    }
+  });
+
+  // POST /api/requests/:id/extend-download-expiration
+  // Admin extends download expiration by up to 30 days, capped at 1 year from approval
+  router.post('/requests/:id/extend-download-expiration', authenticateJWT, requireRole(['admin', 'dpo', 'owner']), async (req, res) => {
+    try {
+      const requestId = req.params.id;
+      const { rows } = await dbPool.query('SELECT * FROM requests WHERE id = $1 OR tracking_no = $1 LIMIT 1', [requestId]);
+      if (rows.length === 0) return res.status(404).json({ success: false, message: 'Request not found' });
+
+      const request = rows[0];
+      const data = request.data || {};
+      
+      let approvedAt = new Date();
+      if (data.decision && data.decision.approvedAt) {
+        approvedAt = new Date(data.decision.approvedAt);
+      }
+      const maxExpiration = new Date(approvedAt.getTime() + 365 * 24 * 60 * 60 * 1000); // 1 year limit
+      
+      // Find active token
+      const tokenResult = await dbPool.query('SELECT * FROM download_tokens WHERE request_id = $1 AND is_revoked = false ORDER BY created_at DESC LIMIT 1', [request.id]);
+      if (tokenResult.rows.length === 0) {
+        return res.status(400).json({ success: false, message: 'No active download token found to extend' });
+      }
+      const currentToken = tokenResult.rows[0];
+      
+      const baseDate = new Date(Math.max(new Date().getTime(), new Date(currentToken.expires_at).getTime()));
+      let newExpiresAt = new Date(baseDate.getTime() + 30 * 24 * 60 * 60 * 1000); // Add 30 days
+      
+      if (newExpiresAt > maxExpiration) {
+        newExpiresAt = maxExpiration;
+      }
+      
+      if (newExpiresAt <= new Date()) {
+        return res.status(400).json({ success: false, message: 'Cannot extend further. Maximum 1 year limit reached.' });
+      }
+      
+      await dbPool.query('UPDATE download_tokens SET expires_at = $1 WHERE token = $2', [newExpiresAt, currentToken.token]);
+      
+      try {
+        data.downloadExpiresAt = newExpiresAt.toISOString();
+        await dbPool.query('UPDATE requests SET data = $1 WHERE id = $2', [JSON.stringify(data), requestId]);
+      } catch (e) {}
+      
+      // Log to audit_logs
+      await dbPool.query(
+        `INSERT INTO audit_logs (id, org_id, actor_id, actor_name, actor_role, action, request_id, details) 
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+        [
+          crypto.randomUUID ? crypto.randomUUID() : \`uuid-\${Date.now()}\`,
+          request.org_id,
+          req.user.id || req.user.userId,
+          req.user.username || 'System',
+          req.user.role || 'system',
+          'EXTEND_DOWNLOAD',
+          request.id,
+          JSON.stringify({ oldExpiration: currentToken.expires_at, newExpiration: newExpiresAt })
+        ]
+      );
+      
+      res.json({ success: true, message: 'Expiration extended successfully', expiresAt: newExpiresAt });
+    } catch (err) {
+      console.error('Extend token error:', err);
       res.status(500).json({ success: false, message: err.message });
     }
   });

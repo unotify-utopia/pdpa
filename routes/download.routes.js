@@ -91,6 +91,15 @@ export function createDownloadRouter(dbPool, authenticateJWT, requireRole, addSe
       if (reqResult.rows.length === 0) return res.status(404).json({ success: false, message: 'Request not found' });
       const pdpaRequest = reqResult.rows[0];
       const data = typeof pdpaRequest.data === 'string' ? JSON.parse(pdpaRequest.data) : pdpaRequest.data;
+      
+      // 2.5 Check Token Expiration
+      const tokenResult = await dbPool.query('SELECT * FROM download_tokens WHERE request_id = $1 AND is_revoked = false ORDER BY created_at DESC LIMIT 1', [id]);
+      if (tokenResult.rows.length > 0) {
+        const tokenRow = tokenResult.rows[0];
+        if (new Date(tokenRow.expires_at) < new Date()) {
+          return res.status(403).json({ success: false, message: 'เอกสารหมดอายุการดาวน์โหลดแล้ว (เกิน 30 วัน) กรุณาติดต่อหน่วยงานเพื่อขอต่ออายุการดาวน์โหลด' });
+        }
+      }
   
       // 3. Extract active file IDs from JSON data
       const activeFileIds = [];
