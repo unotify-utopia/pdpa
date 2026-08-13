@@ -184,7 +184,7 @@ export const ThaiLetterView: React.FC<ThaiLetterViewProps> = ({
     body {
       font-family: 'Sarabun', 'TH Sarabun New', sans-serif;
       font-size: 16pt;
-      line-height: 1.6;
+      line-height: 1.3;
       color: #000;
       background: white;
       margin: 0;
@@ -192,18 +192,19 @@ export const ThaiLetterView: React.FC<ThaiLetterViewProps> = ({
     }
     .page {
       width: 210mm;
-      min-height: 297mm;
+      height: 297mm;
       margin: 0 auto;
       padding: 2.5cm 2cm 2cm 3cm;
       position: relative;
+      overflow: hidden;
     }
-    .header { position: relative; height: 3cm; margin-bottom: 0.5cm; }
+    .header { position: relative; height: 3cm; margin-bottom: 0.2cm; }
     .header-left { position: absolute; bottom: 0; left: 0; font-size: 16pt; }
     .header-center { position: absolute; top: 0; left: 50%; transform: translateX(-50%); display: flex; align-items: center; justify-content: center; height: 3cm; }
     .header-right { position: absolute; bottom: 0; right: 0; text-align: right; max-width: 6cm; font-size: 16pt; }
     .date { margin-left: 7.5cm; margin-bottom: 0.5cm; }
-    .subject { margin-bottom: 1cm; }
-    .signature { margin-left: 7.5cm; margin-top: 1.5cm; text-align: center; }
+    .subject { margin-bottom: 0.5cm; }
+    .signature { margin-left: 7.5cm; margin-top: 1cm; text-align: center; }
     .footer { position: absolute; bottom: 2cm; left: 3cm; font-size: 12pt; line-height: 1.4; }
     .qr-area { position: absolute; bottom: 2cm; right: 2cm; text-align: center; font-size: 10pt; }
     .qr-box { width: 2cm; height: 2cm; border: 2px solid #333; margin: 0 auto 4pt; display: flex; align-items: center; justify-content: center; font-size: 8pt; color: #666; }
@@ -221,7 +222,7 @@ export const ThaiLetterView: React.FC<ThaiLetterViewProps> = ({
   <div class="subject">เรื่อง ${subject}</div>
   <div>${bodyHtml}</div>
   <div class="signature">
-    <div style="margin-bottom:2cm;">ขอแสดงความนับถือ</div>
+    <div style="margin-bottom:1.2cm;">ขอแสดงความนับถือ</div>
     <div>(${signer.fullNameTh})</div>
     <div>${signer.department || 'ผู้อนุมัติมีอำนาจสั่งการ'}</div>
   </div>
@@ -342,10 +343,10 @@ export const ThaiLetterView: React.FC<ThaiLetterViewProps> = ({
           </div>
         </div>
       ) : (
-      <div className="print-area block print:block bg-white font-sarabun text-[12pt] leading-normal text-black w-[210mm] min-h-[297mm] mx-auto shadow-md relative pt-[2.5cm] pb-[2cm] pl-[3cm] pr-[2cm] print:shadow-none print:w-[210mm] print:h-[297mm]">
+      <div className="print-area block print:block bg-white font-sarabun text-[16pt] leading-snug text-black w-[210mm] h-[297mm] overflow-hidden mx-auto shadow-md relative pt-[2.5cm] pb-[2cm] pl-[3cm] pr-[2cm] print:shadow-none print:w-[210mm] print:h-[297mm]">
         
         {/* Header Layer */}
-        <div className="relative h-[3cm] mb-2">
+        <div className="relative h-[3cm] mb-1">
           <div className="absolute bottom-4 left-0">
             ที่ ........................................
           </div>
@@ -405,10 +406,10 @@ export const ThaiLetterView: React.FC<ThaiLetterViewProps> = ({
         </div>
 
         {/* Signature Line */}
-        <div className="mt-4 flex flex-col items-center" style={{ marginLeft: '7.5cm', width: '8.5cm' }}>
-          <div className="mb-6">ขอแสดงความนับถือ</div>
+        <div className="mt-3 flex flex-col items-center" style={{ marginLeft: '7.5cm' }}>
+          <div className="mb-8">ขอแสดงความนับถือ</div>
           
-          <div className="flex flex-col items-center mt-4">
+          <div className="flex flex-col items-center">
             <div>({signer.fullNameTh})</div>
             <div>{signer.department || 'ผู้อนุมัติมีอำนาจสั่งการ'}</div>
           </div>
