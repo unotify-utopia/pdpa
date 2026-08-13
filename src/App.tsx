@@ -1121,8 +1121,8 @@ export default function App() {
   };
 
   // --- SECURE DOWNLOAD VERIFICATION (Section 3.9) ---
-  const handleDownloadCheck = async (uuid: string) => {
-    let req = requests.find(r => r.uuid === uuid);
+  const handleDownloadCheck = async (identifier: string) => {
+    let req = requests.find(r => r.uuid === identifier || r.trackingNo === identifier);
     if (!req && trackedRequest?.trackingNo) {
       req = requests.find(r => r.trackingNo === trackedRequest.trackingNo);
     }
@@ -3972,8 +3972,7 @@ export default function App() {
                   กลับหน้าแรกพอร์ทัล
                 </button>
               </div>
-            ) : (
-              showDownloadOtpModal && downloadRequest && (
+            ) : showDownloadOtpModal && downloadRequest ? (
                 <form onSubmit={handleVerifyDownloadOtp} className="space-y-4">
                   <div className="p-3.5 bg-brand-950/40 border border-brand-900 text-brand-300 rounded-xl text-xs leading-relaxed space-y-1">
                     <span className="block font-bold">ยืนยันรหัสเข้าถึง (Two-Factor OTP Verification):</span>
@@ -4009,7 +4008,38 @@ export default function App() {
                     ยกเลิกกระบวนการ
                   </button>
                 </form>
-              )
+            ) : (
+                <form onSubmit={(e) => {
+                  e.preventDefault();
+                  const target = e.target as typeof e.target & {
+                    trackingNo: { value: string };
+                  };
+                  handleDownloadCheck(target.trackingNo.value.trim());
+                }} className="space-y-4">
+                  <div className="space-y-1 text-slate-300">
+                    <label className="text-xs font-medium">ระบุรหัสอ้างอิง (Tracking Number)</label>
+                    <input
+                      type="text"
+                      name="trackingNo"
+                      required
+                      placeholder="REQ-XXXXXX-XXXX-XXXX"
+                      className="w-full text-center font-mono text-base font-bold bg-slate-800 border border-slate-700 rounded-lg p-2.5 focus:outline-none focus:ring-1 focus:ring-brand-500 text-white"
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    className="w-full bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold py-2.5 px-4 rounded-lg transition shadow-md"
+                  >
+                    ดำเนินการต่อ (Continue)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setView('public')}
+                    className="w-full text-slate-400 hover:text-slate-300 text-xs py-1.5 transition"
+                  >
+                    กลับหน้าแรก (Back to Home)
+                  </button>
+                </form>
             )}
 
             <div className="text-[10px] text-slate-600 text-center">
