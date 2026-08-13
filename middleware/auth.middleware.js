@@ -7,9 +7,15 @@ import jwt from 'jsonwebtoken';
 export function createAuthMiddleware(dbPool, JWT_SECRET) {
   // ── 1. JWT Authentication Middleware ─────────────────────────────────────
   const authenticateJWT = (req, res, next) => {
+    let token = null;
     const authHeader = req.headers.authorization;
     if (authHeader && authHeader.startsWith('Bearer ')) {
-      const token = authHeader.split(' ')[1];
+      token = authHeader.split(' ')[1];
+    } else if (req.query && req.query.token) {
+      token = req.query.token;
+    }
+
+    if (token) {
       jwt.verify(token, JWT_SECRET, (err, user) => {
         if (err) {
           return res.status(403).json({ success: false, message: 'Token is invalid or expired' });
