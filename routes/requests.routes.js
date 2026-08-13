@@ -484,7 +484,7 @@ export function createRequestsRouter(dbPool, authenticateJWT, requireRole, addSe
         `INSERT INTO audit_logs (id, org_id, actor_id, actor_name, actor_role, action, request_id, details) 
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
         [
-          crypto.randomUUID ? crypto.randomUUID() : \`uuid-\${Date.now()}\`,
+          crypto.randomUUID ? crypto.randomUUID() : `uuid-${Date.now()}`,
           request.org_id,
           req.user.id || req.user.userId,
           req.user.username || 'System',
