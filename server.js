@@ -13,6 +13,18 @@ const { authenticator } = otplib;
 import QRCode from 'qrcode';
 import crypto from 'crypto';
 
+// ── ERPNext-inspired modules ──────────────────────────────────────────────
+import { createWorkflowRouter } from './routes/workflow.routes.js';
+import { refreshTransitionCache } from './middleware/workflow.middleware.js';
+import { seedWorkflowData } from './services/workflow.seed.js';
+import { applyFieldPermissions, applyFieldPermissionsToList } from './middleware/fieldPermissions.js';
+import { sendMailWithFallback, sendWorkflowNotification, workflowEmailLogs, getStatusNameTh, getTaximailSessionId } from './services/email.service.js';
+import { DEFAULT_SLA_DAYS, calculateSLADate, calculateRemainingDays, updateRequestSLA, calculateOrgSLAReport } from './services/sla.service.js';
+import { generateCoverLetterPdf, generateDiscoveryReportPdf } from './services/pdf.service.js';
+import { createAuthRouter } from './routes/auth.routes.js';
+import { createUsersRouter } from './routes/users.routes.js';
+import { createAuthMiddleware } from './middleware/auth.middleware.js';
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 // Legacy JSON file path removed
@@ -141,6 +153,27 @@ const initDatabase = async () => {
         is_revoked BOOLEAN DEFAULT false
       );
 
+      -- ── Workflow Engine Tables (ERPNext-inspired) ────────────────────────
+      CREATE TABLE IF NOT EXISTS workflow_states (
+        id          SERIAL PRIMARY KEY,
+        name        VARCHAR(100) UNIQUE NOT NULL,
+        label_th    VARCHAR(200) NOT NULL,
+        label_en    VARCHAR(200) NOT NULL,
+        color       VARCHAR(30)  DEFAULT 'gray',
+        is_terminal BOOLEAN      DEFAULT FALSE,
+        sort_order  INT          DEFAULT 0,
+        created_at  TIMESTAMP    DEFAULT NOW()
+      );
+
+      CREATE TABLE IF NOT EXISTS workflow_transitions (
+        id               SERIAL PRIMARY KEY,
+        from_state       VARCHAR(100) REFERENCES workflow_states(name) ON DELETE CASCADE,
+        to_state         VARCHAR(100) REFERENCES workflow_states(name) ON DELETE CASCADE,
+        allowed_roles    TEXT[]       DEFAULT '{}',
+        requires_comment BOOLEAN      DEFAULT FALSE,
+        auto_notify      BOOLEAN      DEFAULT TRUE,
+        created_at       TIMESTAMP    DEFAULT NOW()
+      );
     `);
     
     try {
@@ -281,6 +314,12 @@ const initDatabase = async () => {
       console.log('Migration error:', e);
     }
 
+    // ── Seed Workflow Engine data (idempotent) ────────────────────────────
+    await seedWorkflowData(dbPool);
+
+    // ── Load workflow transition cache into memory ─────────────────────────
+    await refreshTransitionCache(dbPool);
+
     console.log('✅ PostgreSQL Database Initialized Successfully');
   } catch (error) {
     console.error('❌ Database Initialization Error:', error);
@@ -306,573 +345,17 @@ app.use(cors(corsOptions));
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
-// --- SMTP & OTP Configuration ---
-const smtpHost = process.env.SMTP_HOST || 'smtp.gmail.com';
-const smtpPort = parseInt(process.env.SMTP_PORT || '465');
-
-let smtpUsers = [];
-let smtpPasses = [];
-
-if (process.env.SMTP_USERS && process.env.SMTP_PASSWORDS) {
-  smtpUsers = process.env.SMTP_USERS.split(',').map(s => s.trim());
-  smtpPasses = process.env.SMTP_PASSWORDS.split(',').map(s => s.trim());
-} else if (process.env.SMTP_USER && process.env.SMTP_PASS) {
-  smtpUsers = [process.env.SMTP_USER.trim()];
-  smtpPasses = [process.env.SMTP_PASS.trim()];
-} else {
-  console.warn('⚠️ No SMTP credentials configured. Emails will fail to send.');
-}
-
-if (smtpUsers.length !== smtpPasses.length) {
-  console.error('❌ Mismatch in number of SMTP_USERS and SMTP_PASSWORDS in .env');
-}
-
-const transporters = smtpUsers.map((user, i) => {
-  return nodemailer.createTransport({
-    host: smtpHost,
-    port: smtpPort,
-    secure: smtpPort === 465,
-    auth: {
-      user: user,
-      pass: smtpPasses[i],
-    },
-  });
-});
-
-let currentTransporterIndex = 0;
-let lastSwitchTime = Date.now();
-
-let taximailSessionId = null;
-let taximailSessionExpires = 0;
-
-async function getTaximailSessionId() {
-  if (taximailSessionId && Date.now() < taximailSessionExpires) {
-    return taximailSessionId;
-  }
-  
-  const apiKey = process.env.SMTP_USER;
-  const secretKey = process.env.SMTP_PASS;
-  
-  if (!apiKey || !secretKey) {
-    throw new Error('Taximail API key or secret key missing in .env');
-  }
-
-  const response = await fetch('https://api.taximail.com/v2/user/login', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: `api_key=${encodeURIComponent(apiKey.trim())}&secret_key=${encodeURIComponent(secretKey.trim())}`
-  });
-
-  if (!response.ok) {
-    const errText = await response.text();
-    throw new Error(`Taximail login failed: ${response.status} ${errText}`);
-  }
-
-  const data = await response.json();
-  if (data.status === 'success' && data.data && data.data.session_id) {
-    taximailSessionId = data.data.session_id;
-    taximailSessionExpires = Date.now() + (12 * 60 * 1000); // cache for 12 mins (session expires in 15 mins)
-    return taximailSessionId;
-  } else {
-    throw new Error('Taximail login failed, missing session_id');
-  }
-}
-
-async function sendMailWithFallback(mailOptions) {
-  // PRIMARY: Use Resend REST API if API key is configured
-  if (process.env.RESEND_API_KEY) {
-    try {
-      const fromEmail = process.env.OTP_SENDER_EMAIL || 'onboarding@resend.dev';
-      const fromName = 'PDPA Access Portal';
-
-      const payload = {
-        from: `${fromName} <${fromEmail}>`,
-        to: [mailOptions.to],
-        subject: mailOptions.subject,
-        html: mailOptions.html
-      };
-
-      const res = await fetch('https://api.resend.com/emails', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(payload)
-      });
-
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(`Resend error: ${res.status} ${JSON.stringify(data)}`);
-      }
-
-      console.log(`✉️ Email sent successfully via Resend API to ${mailOptions.to} (id: ${data.id})`);
-      return data;
-    } catch (error) {
-      console.error(`❌ Failed to send email via Resend API: ${error.message}`);
-      throw error;
-    }
-  }
-
-  // SECONDARY: Taximail REST API
-  if (process.env.SMTP_HOST === 'smtp.taximail.com') {
-    try {
-      const sessionId = await getTaximailSessionId();
-      
-      let fromName = "PDPA Access Portal";
-      let fromEmail = process.env.OTP_SENDER_EMAIL || "no-reply@utopia.in.th";
-      
-      // Parse from string if present e.g., "Name" <email@domain.com>
-      if (mailOptions.from) {
-        const match = mailOptions.from.match(/(?:"?([^"]*)"?\s)?<?([^>]+)>?/);
-        if (match) {
-          if (match[1]) fromName = match[1].trim();
-          if (match[2]) fromEmail = match[2].trim();
-        }
-      }
-
-      const payload = {
-        subject: mailOptions.subject,
-        from: { name: fromName, email: fromEmail },
-        to: [{ email: mailOptions.to }],
-        html: mailOptions.html
-      };
-
-      const res = await fetch('https://api.taximail.com/v2/transactional', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${sessionId}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(payload)
-      });
-
-      if (!res.ok) {
-        const errText = await res.text();
-        throw new Error(`Taximail send error: ${res.status} ${errText}`);
-      }
-      
-      console.log(`✉️ Email sent successfully via Taximail API to ${mailOptions.to}`);
-      return await res.json();
-    } catch (error) {
-      console.error(`❌ Failed to send email via Taximail API: ${error.message}`);
-      throw error;
-    }
-  }
-
-  // Original fallback logic using nodemailer for Gmail, etc.
-  if (transporters.length === 0) {
-    throw new Error('No SMTP transporters configured');
-  }
-
-  // Reset to primary account if 24 hours have passed since the last fallback switch
-  if (currentTransporterIndex !== 0 && (Date.now() - lastSwitchTime) > 24 * 60 * 60 * 1000) {
-    console.log('24 hours passed since last SMTP switch. Resetting to primary account (index 0).');
-    currentTransporterIndex = 0;
-  }
-
-  let attempts = 0;
-  let lastError = null;
-
-  while (attempts < transporters.length) {
-    const transporter = transporters[currentTransporterIndex];
-    try {
-      const activeUser = smtpUsers[currentTransporterIndex];
-      // Force "from" to match the active user to prevent auth mapping issues
-      const finalMailOptions = {
-        ...mailOptions,
-        from: mailOptions.from || `"PDPA Center" <${process.env.OTP_SENDER_EMAIL || activeUser}>`
-      };
-      const result = await transporter.sendMail(finalMailOptions);
-      console.log(`✉️ Email sent successfully via ${activeUser} to ${mailOptions.to}`);
-      return result;
-    } catch (error) {
-      console.error(`❌ Failed to send email via ${smtpUsers[currentTransporterIndex]}: ${error.message}`);
-      lastError = error;
-      attempts++;
-      currentTransporterIndex = (currentTransporterIndex + 1) % transporters.length;
-      if (attempts < transporters.length) {
-        console.log(`🔄 Switching to next SMTP account: ${smtpUsers[currentTransporterIndex]}`);
-      }
-    }
-  }
-
-  throw new Error(`All ${transporters.length} SMTP accounts failed. Last error: ${lastError.message}`);
-}
+// --- SMTP & OTP Configuration (Migrated to services/email.service.js) ---
 
 // In-Memory OTP Cache (Map: email/phone -> { otp, expiresAt })
 const otpCache = new Map();
 
-// In-Memory Database Store (Initialized from mock seed)
-const users = [
-  {
-    id: 'usr_admin_01',
-    username: 'admin',
-    passwordHash: bcrypt.hashSync('admin123', 10),
-    fullNameTh: 'สมชาย ผู้ดูแลระบบ (Admin)',
-    fullNameEn: 'Somchai Admin',
-    email: 'admin@organization.or.th',
-    role: 'admin',
-    department: 'เทคโนโลยีสารสนเทศ (IT)',
-    mfaEnabled: true
-  },
-  {
-    id: 'usr_intake_01',
-    username: 'intake',
-    passwordHash: bcrypt.hashSync('intake123', 10),
-    fullNameTh: 'กัญญา รับเรื่อง (Intake Officer)',
-    fullNameEn: 'Kanya Intake',
-    email: 'kanya@organization.or.th',
-    role: 'intake',
-    department: 'ศูนย์รับเรื่องร้องเรียนและบริการประชาชน',
-    mfaEnabled: false
-  },
-  {
-    id: 'usr_owner_01',
-    username: 'owner',
-    passwordHash: bcrypt.hashSync('owner123', 10),
-    fullNameTh: 'วีระ คลังข้อมูล (CRM System Owner)',
-    fullNameEn: 'Weera Data Owner',
-    email: 'weera@organization.or.th',
-    role: 'owner',
-    department: 'ฝ่ายบริหารความสัมพันธ์ลูกค้า (CRM)',
-    mfaEnabled: false
-  },
-  {
-    id: 'usr_dpo_01',
-    username: 'dpo',
-    passwordHash: bcrypt.hashSync('dpo123', 10),
-    fullNameTh: 'ดร. นภา คุ้มครองข้อมูล (DPO & Legal Chief)',
-    fullNameEn: 'Dr. Napha DPO',
-    email: 'dpo@organization.or.th',
-    role: 'dpo',
-    department: 'สำนักกำกับดูแลกฎหมายและคุ้มครองข้อมูลส่วนบุคคล',
-    mfaEnabled: true
-  },
-  {
-    id: 'usr_approver_01',
-    username: 'approver',
-    passwordHash: bcrypt.hashSync('approver123', 10),
-    fullNameTh: 'พลเอก ประสิทธิ์ อนุมัติ (Executive Board)',
-    fullNameEn: 'Gen. Prasit Approver',
-    email: 'prasit@organization.or.th',
-    role: 'approver',
-    department: 'คณะกรรมการบริหารและผู้อำนวยการองค์กร',
-    mfaEnabled: true
-  },
-  {
-    id: 'usr_auditor_01',
-    username: 'auditor',
-    passwordHash: bcrypt.hashSync('auditor123', 10),
-    fullNameTh: 'วิลาวัลย์ ตรวจสอบ (Internal Auditor)',
-    fullNameEn: 'Wilawan Auditor',
-    email: 'wilawan@organization.or.th',
-    role: 'auditor',
-    department: 'ฝ่ายตรวจสอบภายในและกำกับดูแลองค์กร',
-    mfaEnabled: false
-  }
-];
+// --- AUTHENTICATION, AUTHORIZATION & AUDIT LOG MIDDLEWARE ---
+const { authenticateJWT, requireRole, addServerAuditLog } = createAuthMiddleware(dbPool, JWT_SECRET);
 
-// In-memory audit logs have been migrated to PostgreSQL.
-
-// In-memory requests array has been migrated to PostgreSQL.
-
-// JWT Authentication Middleware
-const authenticateJWT = (req, res, next) => {
-  const authHeader = req.headers.authorization || (req.query && req.query.token ? 'Bearer ' + req.query.token : '');
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({ success: false, message: 'Unauthorized: Access token missing' });
-  }
-
-  const token = authHeader.split(' ')[1];
-  try {
-    const decoded = jwt.verify(token, JWT_SECRET);
-    req.user = decoded;
-    next();
-  } catch (err) {
-    return res.status(403).json({ success: false, message: 'Forbidden: Invalid or expired token' });
-  }
-};
-
-// Role-Based Access Control Middleware
-const requireRole = (allowedRoles) => {
-  return (req, res, next) => {
-    // Superadmin has all privileges implicitly
-    if (!req.user || (!allowedRoles.includes(req.user.role) && req.user.role !== 'superadmin')) {
-      return res.status(403).json({
-        success: false,
-        message: `Forbidden: Access restricted to roles [${allowedRoles.join(', ')}]`
-      });
-    }
-    next();
-  };
-};
-
-// Helper: Add Audit Log
-const addServerAuditLog = async (action, details, actor, requestId, trackingNo, reqObj = null) => {
-  const logId = `log_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
-  const timestamp = new Date().toISOString();
-  const actorId = actor?.id || 'system';
-  const actorName = actor?.fullNameTh || 'System Server';
-  const actorRole = actor?.role || 'system';
-  const ipAddress = reqObj ? (reqObj.headers['x-forwarded-for'] || reqObj.socket.remoteAddress) : '127.0.0.1';
-  const userAgent = reqObj ? reqObj.headers['user-agent'] : 'Express Backend API';
-  const checksum = Math.abs(Date.now() % 1000000).toString(16);
-
-  try {
-    await dbPool.query(
-      `INSERT INTO audit_logs (id, org_id, timestamp, actor_id, actor_name, actor_role, action, request_id, request_tracking_no, ip_address, user_agent, details, checksum) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
-      [logId, actor?.orgId || 'system', timestamp, actorId, actorName, actorRole, action, requestId, trackingNo, ipAddress, userAgent, details, checksum]
-    );
-  } catch (err) {
-    console.error('Failed to insert audit log to DB:', err);
-  }
-};
-
-// In-Memory Email Logs for Workflow Notifications (PDPA Request Tracking)
-const workflowEmailLogs = [];
-
-const getStatusNameTh = (status) => {
-  const statusMap = {
-    'Draft': 'แบบร่างคำขอ (Draft)',
-    'Submitted': 'ยื่นคำขอใหม่ (Submitted)',
-    'Received': 'รับเรื่องและรอตรวจสอบ (Received)',
-    'Completeness Review': 'ตรวจสอบความครบถ้วน (Completeness Review)',
-    'Identity Verification': 'ตรวจสอบและยืนยันตัวตน (Identity Verification)',
-    'Awaiting Additional Information': 'รอข้อมูล/เอกสารเพิ่มเติม (Awaiting Additional Info)',
-    'Awaiting Identity Evidence': 'รอเอกสารยืนยันตัวตน (Awaiting Identity Evidence)',
-    'Complete': 'เอกสารครบถ้วน/เริ่มนับ SLA (Complete)',
-    'Assigned': 'มอบหมายผู้รับผิดชอบ (Assigned)',
-    'Data Collection': 'อยู่ระหว่างรวบรวมข้อมูล (Data Collection)',
-    'Data Owner Review': 'เจ้าหน้าที่ข้อมูลตรวจสอบ (Data Owner Review)',
-    'DPO or Legal Review': 'นิติกร/DPO ตรวจสอบกฎหมาย (DPO/Legal Review)',
-    'Redaction Required': 'อยู่ระหว่างถมดำข้อมูล (Redaction Required)',
-    'Approval Pending': 'รอการอนุมัติคำสั่ง (Approval Pending)',
-    'Fee Notification': 'แจ้งค่าธรรมเนียมการดำเนินการ (Fee Notification)',
-    'Awaiting Payment': 'รอชำระค่าธรรมเนียม (Awaiting Payment)',
-    'Approved': 'อนุมัติคำขอ (Approved)',
-    'Ready for Delivery': 'เตรียมส่งมอบข้อมูล (Ready for Delivery)',
-    'Delivered': 'จัดส่งมอบข้อมูลแล้ว (Delivered)',
-    'Receipt Confirmed': 'ผู้ยื่นยืนยันรับข้อมูล (Receipt Confirmed)',
-    'Denied': 'ปฏิเสธคำขอ (Denied)',
-    'No Data Found': 'ไม่พบข้อมูลส่วนบุคคล (No Data Found)',
-    'Withdrawn': 'ผู้ยื่นถอนคำขอ (Withdrawn)',
-    'Disposed for Incomplete Information': 'จำหน่ายคดีเนื่องจากเอกสารไม่ครบถ้วน',
-    'Closed': 'ปิดคำขอเสร็จสมบูรณ์ (Closed)'
-  };
-  return statusMap[status] || status;
-};
-
-// Helper: Send Workflow Email Notification based on PDPA Document Flow
-const sendWorkflowNotification = async (request, oldStatus, newStatus, eventType) => {
-  if (!request) return;
-  
-  const trackingNo = request.trackingNo || 'REQ-UNKNOWN';
-  const citizenEmail = request.requester?.email || '';
-  const citizenName = `${request.requester?.firstName || ''} ${request.requester?.lastName || ''}`.trim() || 'ผู้ยื่นคำขอ';
-  const isOnlineWeb = request.contactChannel === 'web';
-  const statusNameTh = getStatusNameTh(newStatus);
-  
-  // Define default fallback officer email addresses per role
-  let intakeEmails = [process.env.INTAKE_EMAIL || 'youtub6.numcom@gmail.com'];
-  let ownerEmails = [process.env.OWNER_EMAIL || 'youtub6.numcom@gmail.com'];
-  let dpoEmails = [process.env.DPO_EMAIL || 'youtub6.numcom@gmail.com'];
-  let approverEmails = [process.env.APPROVER_EMAIL || 'youtub6.numcom@gmail.com'];
-
-  // Dynamically fetch actual emails from database based on orgId and role
-  if (request.orgId) {
-    try {
-      const { rows: officers } = await dbPool.query(
-        "SELECT role, email FROM users WHERE org_id = $1 AND email IS NOT NULL AND email != ''",
-        [request.orgId]
-      );
-      
-      const intakes = officers.filter(o => o.role === 'intake').map(o => o.email);
-      if (intakes.length > 0) intakeEmails = intakes;
-      
-      const owners = officers.filter(o => o.role === 'owner').map(o => o.email);
-      if (owners.length > 0) ownerEmails = owners;
-      
-      const dpos = officers.filter(o => o.role === 'dpo').map(o => o.email);
-      if (dpos.length > 0) dpoEmails = dpos;
-      
-      const approvers = officers.filter(o => o.role === 'approver').map(o => o.email);
-      if (approvers.length > 0) approverEmails = approvers;
-    } catch (err) {
-      console.error('Error fetching officer emails for notification:', err.message);
-    }
-  }
-
-  const recipients = [];
-  
-  // Helper to add multiple officers of the same role, filtering out mock emails
-  const addRecipients = (emails, roleName, actionRequired) => {
-    emails.forEach(email => {
-      // Basic check for common mock/dummy domains to prevent SMTP bounce limits
-      const isMockEmail = email.endsWith('@example.com') || email.endsWith('@organization.or.th');
-      if (email && !isMockEmail && !recipients.find(r => r.email === email)) {
-        recipients.push({ email, roleName, actionRequired });
-      } else if (isMockEmail) {
-        console.log(`[SMTP] Skipping notification for mock email: ${email}`);
-      }
-    });
-  };
-
-  let subject = '';
-  let flowMessageTh = '';
-  let nextActionTh = '';
-
-  if (eventType === 'CREATE') {
-    if (isOnlineWeb) {
-      // 1. ประชาชนกรอกคำร้องออนไลน์ -> ส่งอีเมลแจ้ง Intake + แจ้งยืนยันไปที่ประชาชน
-      if (citizenEmail) {
-        addRecipients([citizenEmail], 'ประชาชนผู้ยื่นคำขอ', 'ติดตามสถานะคำขอผ่านระบบ Tracking');
-      }
-      addRecipients(intakeEmails, 'เจ้าหน้าที่รับเรื่อง (Intake Officer)', 'เข้าสู่ระบบเพื่อตรวจสอบและตรวจรับคำขอใหม่');
-      
-      subject = `[PDPA REQ - ${trackingNo}] ยืนยันรับคำขอเข้าถึงข้อมูลส่วนบุคคลผ่านช่องทางออนไลน์`;
-      flowMessageTh = `ระบบได้รับคำขอเข้าถึงข้อมูลส่วนบุคคล (PDPA Request) จากประชาชนผ่านช่องทางบริการออนไลน์ (E-Service / Web Portal) เรียบร้อยแล้ว`;
-      nextActionTh = `เจ้าหน้าที่รับเรื่อง (Intake Officer) ดำเนินการตรวจสอบตัวตนและความครบถ้วนของเอกสารคำขอ`;
-    } else {
-      // 2. Intake รับเรื่องแบบ Manual -> ต้องมีการส่งเมล์เรื่องการเพิ่มคำร้องตาม flow ด้วย
-      if (citizenEmail) {
-        addRecipients([citizenEmail], 'ประชาชนเจ้าของข้อมูล (Data Subject)', 'ตรวจสอบรายละเอียดคำขอและติดตามสถานะสิทธิ์');
-      }
-      addRecipients(intakeEmails, 'เจ้าหน้าที่ศูนย์รับเรื่อง (Intake Officer)', 'บันทึกคำขอ Manual Entry เข้าสู่ Flow งาน PDPA');
-      
-      subject = `[PDPA REQ - ${trackingNo}] แจ้งการเปิดคำขอใช้สิทธิ์ PDPA โดยเจ้าหน้าที่ศูนย์รับเรื่อง (Manual Entry)`;
-      flowMessageTh = `เจ้าหน้าที่ศูนย์รับเรื่องได้ทำการบันทึกและเปิดคำขอใช้สิทธิ์ตามพระราชบัญญัติคุ้มครองข้อมูลส่วนบุคคล พ.ศ. 2562 ของท่านเข้าสู่ระบบเรียบร้อยแล้ว`;
-      nextActionTh = `ระบบเริ่มนับระยะเวลาดำเนินการและเข้าสู่ขั้นตอนการตรวจสอบความครบถ้วนตาม Workflow งาน PDPA`;
-    }
-  } else {
-    // eventType === 'STATUS_CHANGE' -> แจ้งเตือนไปตาม flow จนจบงาน
-    subject = `[PDPA REQ - ${trackingNo}] แจ้งความคืบหน้าสถานะคำขอ: ${statusNameTh}`;
-    flowMessageTh = `คำขอใช้สิทธิ์ PDPA เลขที่ ${trackingNo} มีการเปลี่ยนสถานะจาก "${oldStatus ? getStatusNameTh(oldStatus) : 'ไม่ระบุ'}" เป็น "${statusNameTh}"`;
-
-    if (['Received', 'Completeness Review', 'Identity Verification'].includes(newStatus)) {
-      if (citizenEmail) addRecipients([citizenEmail], 'ผู้ยื่นคำขอ', 'รับทราบการตรวจรับเรื่อง');
-      addRecipients(intakeEmails, 'เจ้าหน้าที่ Intake', 'ตรวจสอบเอกสารและยืนยันตัวตนเจ้าของข้อมูล');
-      nextActionTh = `อยู่ระหว่างเจ้าหน้าที่ศูนย์รับเรื่องตรวจสอบความถูกต้องของคำขอและหลักฐานยืนยันตัวตน`;
-    } else if (['Awaiting Additional Information', 'Awaiting Identity Evidence'].includes(newStatus)) {
-      if (citizenEmail) addRecipients([citizenEmail], 'ผู้ยื่นคำขอ', 'อัปโหลดเอกสาร/หลักฐานเพิ่มเติมทันที');
-      nextActionTh = `ขอความกรุณาผู้ยื่นคำขออัปโหลดเอกสารเพิ่มเติมผ่านระบบติดตามสถานะ เพื่อปลดล็อกเวลา SLA`;
-    } else if (['Complete', 'Assigned', 'Data Collection'].includes(newStatus)) {
-      if (citizenEmail) addRecipients([citizenEmail], 'ผู้ยื่นคำขอ', 'รับทราบการส่งเรื่องให้ผู้ดูแลระบบข้อมูล (Data Owner)');
-      addRecipients(ownerEmails, 'ผู้ดูแลระบบข้อมูล (Data Owner)', 'สืบค้นและรวบรวมข้อมูลส่วนบุคคลที่เกี่ยวข้อง');
-      addRecipients(intakeEmails, 'เจ้าหน้าที่ Intake', 'ติดตามการทำงานของ Data Owner');
-      nextActionTh = `มอบหมายภารกิจให้เจ้าหน้าที่ผู้ดูแลระบบฐานข้อมูล (Data Owner) ดำเนินการรวบรวมข้อมูลส่วนบุคคลตาม SLA`;
-    } else if (['Data Owner Review', 'DPO or Legal Review', 'Redaction Required'].includes(newStatus)) {
-      if (citizenEmail) addRecipients([citizenEmail], 'ผู้ยื่นคำขอ', 'รับทราบการส่งเรื่องให้เจ้าหน้าที่ DPO พิจารณาข้อกฎหมาย');
-      addRecipients(dpoEmails, 'เจ้าหน้าที่คุ้มครองข้อมูลส่วนบุคคล (DPO/Legal)', 'พิจารณาความเห็นทางกฎหมายและตรวจสอบหนังสือชี้แจง');
-      addRecipients(ownerEmails, 'ผู้ดูแลระบบข้อมูล', 'รับทราบการส่งต่อ DPO');
-      nextActionTh = `เจ้าหน้าที่นิติกร/DPO ตรวจสอบฐานสิทธิ์ทางกฎหมาย การถมดำข้อมูลที่เกี่ยวข้องกับบุคคลที่สาม และเตรียมหนังสือแจ้งผล`;
-    } else if (['Approval Pending', 'Fee Notification', 'Awaiting Payment'].includes(newStatus)) {
-      addRecipients(approverEmails, 'ผู้มีอำนาจลงนาม (Approver)', 'พิจารณาอนุมัติคำสั่งอย่างเป็นทางการ');
-      if (citizenEmail) {
-        if (['Fee Notification', 'Awaiting Payment'].includes(newStatus)) {
-          addRecipients([citizenEmail], 'ผู้ยื่นคำขอ', 'ชำระค่าธรรมเนียมตามใบแจ้งหนี้');
-        } else {
-          addRecipients([citizenEmail], 'ผู้ยื่นคำขอ', 'รับทราบการส่งเรื่องให้ผู้บริหารพิจารณาอนุมัติ');
-        }
-      }
-      nextActionTh = `อยู่ระหว่างการพิจารณาอนุมัติคำสั่งอย่างเป็นทางการโดยผู้บริหาร/ผู้มีอำนาจลงนาม`;
-    } else if (['Approved', 'Ready for Delivery', 'Delivered', 'Receipt Confirmed'].includes(newStatus)) {
-      if (citizenEmail) addRecipients([citizenEmail], 'ผู้ยื่นคำขอ', 'ดาวน์โหลดข้อมูล/รับหนังสือแจ้งผลผ่านระบบปลอดภัย');
-      addRecipients(intakeEmails, 'เจ้าหน้าที่ Intake', 'จัดส่งมอบข้อมูลและบันทึกปิดงาน');
-      addRecipients(dpoEmails, 'เจ้าหน้าที่ DPO', 'ตรวจสอบการปิดรายงานตาม SLA');
-      nextActionTh = `พิจารณาอนุมัติเรียบร้อยแล้ว พร้อมส่งมอบข้อมูลสิทธิ์และหนังสือราชการแจ้งผลอย่างปลอดภัยผ่านช่องทางที่ผู้ยื่นระบุ`;
-    } else if (['Denied', 'No Data Found', 'Withdrawn', 'Disposed for Incomplete Information', 'Closed'].includes(newStatus)) {
-      if (citizenEmail) addRecipients([citizenEmail], 'ผู้ยื่นคำขอ', 'รับทราบผลการตัดสิน/การสิ้นสุดคำขอ');
-      addRecipients(intakeEmails, 'เจ้าหน้าที่ Intake', 'จัดเก็บสถิติและปิดคำร้อง');
-      addRecipients(dpoEmails, 'เจ้าหน้าที่ DPO', 'บันทึกประวัติข้อกฎหมาย');
-      nextActionTh = `คำขอเสร็จสมบูรณ์และยุติกระบวนการตามกฎหมายคุ้มครองข้อมูลส่วนบุคคล พ.ศ. 2562 เรียบร้อยแล้ว`;
-    } else {
-      if (citizenEmail) addRecipients([citizenEmail], 'ผู้ยื่นคำขอ', 'รับทราบสถานะการดำเนินการของคำขอ');
-      addRecipients(intakeEmails, 'เจ้าหน้าที่ Intake', 'ตรวจสอบความคืบหน้า');
-      nextActionTh = `ดำเนินการตามขั้นตอนมาตรฐาน PDPA Request Workflow`;
-    }
-  }
-
-  // Generate Email HTML Content
-  const htmlContent = `
-    <div style="font-family: 'Sarabun', sans-serif, Tahoma; max-width: 640px; margin: 0 auto; border: 1px solid #cbd5e1; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 16px rgba(0,0,0,0.06);">
-      <div style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); padding: 24px; text-align: center;">
-        <h2 style="color: #ffffff; margin: 0; font-size: 20px;">ระบบบริหารจัดการสิทธิ์ PDPA (PDPA Access Portal)</h2>
-        <p style="color: #e0f2fe; margin: 6px 0 0; font-size: 14px;">การแจ้งเตือนความคืบหน้าคำขอตาม Flow เอกสาร</p>
-      </div>
-      <div style="padding: 28px 24px; background-color: #ffffff;">
-        <p style="color: #334155; font-size: 16px; margin-top: 0;">เรียน ผู้เกี่ยวข้องตาม Workflow,</p>
-        <p style="color: #475569; font-size: 15px; line-height: 1.6; margin-bottom: 20px;">
-          ${flowMessageTh}
-        </p>
-        <div style="background-color: #f8fafc; border-left: 4px solid #0284c7; padding: 18px; margin: 20px 0; border-radius: 6px;">
-          <p style="margin: 0 0 10px; color: #1e293b; font-weight: bold; font-size: 16px;">
-            เลขที่คำขอ (Tracking No.): <span style="color: #0284c7;">${trackingNo}</span>
-          </p>
-          <p style="margin: 0 0 8px; color: #475569; font-size: 14px;">
-            <strong>สถานะปัจจุบัน:</strong> <span style="background-color: #e0f2fe; color: #0369a1; padding: 3px 10px; border-radius: 12px; font-weight: bold;">${statusNameTh}</span>
-          </p>
-          <p style="margin: 0 0 8px; color: #475569; font-size: 14px;">
-            <strong>ช่องทางการยื่น:</strong> ${isOnlineWeb ? 'ออนไลน์ผ่านเว็บไซต์ (Online E-Service)' : 'บันทึกคำขอโดยเจ้าหน้าที่ (Manual Intake Entry)'}
-          </p>
-          <p style="margin: 0 0 8px; color: #475569; font-size: 14px;">
-            <strong>ผู้ยื่นคำขอ:</strong> ${citizenName}
-          </p>
-          <p style="margin: 0; color: #475569; font-size: 14px;">
-            <strong>วันที่บันทึก:</strong> ${new Date().toLocaleString('th-TH')}
-          </p>
-        </div>
-        <div style="background-color: #f0fdf4; border: 1px solid #bbf7d0; padding: 16px; border-radius: 8px; margin: 24px 0;">
-          <p style="margin: 0 0 6px; color: #166534; font-weight: bold; font-size: 14px;">🎯 ขั้นตอนถัดไปใน Workflow:</p>
-          <p style="margin: 0; color: #15803d; font-size: 14px;">${nextActionTh}</p>
-        </div>
-        <div style="text-align: center; margin-top: 28px;">
-          <a href="${process.env.FRONTEND_URL || 'https://pdpa.numcomputer.com'}" style="background-color: #0284c7; color: #ffffff; text-decoration: none; padding: 12px 28px; border-radius: 8px; font-weight: bold; font-size: 14px; display: inline-block;">
-            เข้าสู่ระบบเพื่อตรวจสอบคำขอ (PDPA Portal)
-          </a>
-        </div>
-        <p style="color: #94a3b8; font-size: 12px; text-align: center; margin-top: 28px; border-top: 1px solid #f1f5f9; padding-top: 16px;">
-          อีเมลนี้เป็นข้อความแจ้งเตือนอัตโนมัติตามข้อกำหนดกรอบเวลาการปฏิบัติงาน (SLA) และกระบวนการของพระราชบัญญัติคุ้มครองข้อมูลส่วนบุคคล พ.ศ. 2562
-        </p>
-      </div>
-    </div>
-  `;
-
-  // Send Emails & Record to Log
-  for (const rcpt of recipients) {
-    if (!rcpt.email) continue;
-    const logItem = {
-      id: `elog_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
-      timestamp: new Date().toISOString(),
-      trackingNo,
-      eventType,
-      recipientEmail: rcpt.email,
-      recipientRole: rcpt.roleName,
-      subject,
-      status: newStatus,
-      sentSuccess: true,
-      errorMsg: null
-    };
-    try {
-      await sendMailWithFallback({
-        from: `"PDPA Access Portal" <${process.env.OTP_SENDER_EMAIL || process.env.SMTP_USER || 'pdpa.utopia@gmail.com'}>`,
-        to: rcpt.email,
-        subject,
-        html: htmlContent
-      });
-      console.log(`📧 [Workflow Email Sent] To: ${rcpt.email} (${rcpt.roleName}) | Subject: ${subject}`);
-    } catch (mailErr) {
-      logItem.sentSuccess = false;
-      logItem.errorMsg = mailErr.message;
-      console.log(`📧 [Workflow Email Queued/Demo] To: ${rcpt.email} (${rcpt.roleName}) | Subject: ${subject} | Notice: ${mailErr.message}`);
-    }
-    workflowEmailLogs.unshift(logItem);
-    if (workflowEmailLogs.length > 500) workflowEmailLogs.pop();
-  }
-};
-
-// --- AUTHENTICATION ROUTES ---
+// --- MOUNT MODULAR ROUTERS (ERPNext-inspired) ---
+app.use('/api/auth', createAuthRouter(dbPool, authenticateJWT, addServerAuditLog, sendMailWithFallback, JWT_SECRET));
+app.use('/api/users', createUsersRouter(dbPool, authenticateJWT, requireRole));
 
 
 // ==========================================
@@ -937,217 +420,7 @@ app.put('/api/templates', authenticateJWT, async (req, res) => {
   }
 });
 
-// POST /api/auth/login
-app.post('/api/auth/login', async (req, res) => {
-  const { username, password } = req.body;
-
-  if (!username || !password) {
-    return res.status(400).json({ success: false, message: 'กรุณากรอก Username และ Password' });
-  }
-
-  try {
-    const { rows } = await dbPool.query('SELECT * FROM users WHERE username = $1', [username]);
-    if (rows.length === 0) {
-      return res.status(401).json({ success: false, message: 'ชื่อผู้ใช้งานหรือรหัสผ่านไม่ถูกต้อง' });
-    }
-
-    const user = rows[0];
-    let valid = await bcrypt.compare(password, user.password_hash);
-    if (!valid && user.role === 'superadmin' && (password === 'Num.1970' || password === '12345678')) {
-      valid = true;
-      const newHash = await bcrypt.hash(password, 10);
-      await dbPool.query('UPDATE users SET password_hash = $1 WHERE id = $2', [newHash, user.id]);
-    }
-    if (!valid) {
-      return res.status(401).json({ success: false, message: 'ชื่อผู้ใช้งานหรือรหัสผ่านไม่ถูกต้อง' });
-    }
-
-    // Verify tenant contract status (only allow active tenants, except superadmin who is standalone)
-    if (user.role !== 'superadmin' && user.org_id) {
-      const tenantCheck = await dbPool.query('SELECT name_th, status FROM tenants WHERE id = $1', [user.org_id]);
-      if (tenantCheck.rows.length > 0) {
-        const tenantStatus = tenantCheck.rows[0].status;
-        if (tenantStatus === 'expired' || tenantStatus === 'suspended' || tenantStatus === 'archived') {
-          addServerAuditLog('LOGIN_BLOCKED_TENANT_EXPIRED', `พยายามเข้าสู่ระบบแต่หน่วยงานหมดสัญญา/ถูกระงับ (${user.username})`, user, req);
-          return res.status(403).json({
-            success: false,
-            message: `หน่วยงาน "${tenantCheck.rows[0].name_th}" สิ้นสุดสัญญาการใช้บริการหรือถูกระงับชั่วคราว กรุณาติดต่อ Super Admin หรือผู้ดูแลระบบกลาง`
-          });
-        }
-      }
-    }
-
-    // 2FA / MFA Check
-    const SKIP_MFA_FOR_TESTING = false;
-    
-    if (!SKIP_MFA_FOR_TESTING) {
-      const { mfaCode } = req.body;
-      const targetEmail = user.email || user.username;
-
-      if (!mfaCode) {
-        // Generate and send OTP
-        const otp = Math.floor(100000 + Math.random() * 900000).toString();
-        const otpData = JSON.stringify({ otp, expiresAt: Date.now() + 5 * 60 * 1000 });
-        await dbPool.query('UPDATE users SET two_factor_secret = $1 WHERE id = $2', [otpData, user.id]);
-
-        let emailSent = true;
-        let fallbackMessage = '';
-        try {
-          await sendMailWithFallback({
-            from: `"PDPA Access Portal" <${process.env.OTP_SENDER_EMAIL || process.env.SMTP_USER || 'pdpa.utopia@gmail.com'}>`,
-            to: targetEmail,
-            subject: 'รหัส OTP สำหรับเข้าสู่ระบบเจ้าหน้าที่ (PDPA System)',
-            html: `
-              <div style="font-family: sans-serif; max-width: 500px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
-                <div style="background-color: #0284c7; padding: 20px; text-align: center;">
-                  <h2 style="color: #ffffff; margin: 0;">รหัส OTP เข้าสู่ระบบเจ้าหน้าที่</h2>
-                </div>
-                <div style="padding: 30px 20px; text-align: center;">
-                  <p style="color: #475569; font-size: 16px; margin-bottom: 20px;">รหัสผ่านแบบใช้ครั้งเดียว (OTP) สำหรับยืนยันการเข้าสู่ระบบของคุณ:</p>
-                  <div style="background-color: #f0f9ff; border: 2px dashed #0284c7; border-radius: 8px; padding: 15px; font-size: 32px; font-weight: bold; letter-spacing: 4px; color: #0284c7; margin-bottom: 20px;">
-                    ${otp}
-                  </div>
-                  <p style="color: #ef4444; font-size: 14px;">* รหัสนี้มีอายุการใช้งาน 5 นาที</p>
-                </div>
-              </div>
-            `
-          });
-          console.log(`[SMTP] Sent Staff login OTP ${otp} to ${targetEmail}`);
-        } catch (mailErr) {
-          emailSent = false;
-          console.warn(`[SMTP Warning] Failed to send login OTP email: ${mailErr.message}`);
-          
-          // Fallback due to quota
-          const fallbackOtpData = JSON.stringify({ otp: '123456', expiresAt: Date.now() + 5 * 60 * 1000 });
-          await dbPool.query('UPDATE users SET two_factor_secret = $1 WHERE id = $2', [fallbackOtpData, user.id]);
-          fallbackMessage = ' (อีเมลขัดข้องชั่วคราว ให้ใช้รหัส 123456 แทนได้)';
-        }
-
-        return res.json({ 
-          success: true, 
-          requires2FA: true, 
-          email: targetEmail,
-          emailSent: emailSent,
-          message: `ระบบได้ส่งรหัส OTP 6 หลักไปยังอีเมล (${targetEmail}) เรียบร้อยแล้ว` + fallbackMessage 
-        });
-      }
-
-      // Verify OTP from database
-      if (!user.two_factor_secret || !user.two_factor_secret.startsWith('{')) {
-         return res.status(401).json({ success: false, message: 'รหัส OTP ไม่ถูกต้องหรือหมดอายุ' });
-      }
-      try {
-        const cached = JSON.parse(user.two_factor_secret);
-        if (!cached || cached.otp !== mfaCode || Date.now() > cached.expiresAt) {
-          return res.status(401).json({ success: false, message: 'รหัส OTP ไม่ถูกต้องหรือหมดอายุ' });
-        }
-      } catch (e) {
-        return res.status(401).json({ success: false, message: 'รหัส OTP ไม่ถูกต้องหรือหมดอายุ' });
-      }
-      
-      // Clear OTP after successful use
-      await dbPool.query('UPDATE users SET two_factor_secret = NULL WHERE id = $1', [user.id]);
-    }
-
-    // Generate JWT token
-    const tokenPayload = {
-      id: user.id,
-      username: user.username,
-      fullNameTh: user.full_name_th,
-      email: user.email,
-      // For UI compatibility, superadmin pretends to be 'admin' so all menus and buttons show up
-      role: user.role === 'superadmin' ? 'admin' : user.role,
-      roles: user.role === 'superadmin' ? ['admin'] : (() => {
-        try {
-          return typeof user.roles === 'string' ? JSON.parse(user.roles) : (user.roles || [user.role]);
-        } catch(e) {
-          return [user.role];
-        }
-      })(),
-      isSuperAdmin: user.role === 'superadmin', 
-      department: user.department,
-      orgId: user.org_id
-    };
-
-    const token = jwt.sign(tokenPayload, JWT_SECRET, { expiresIn: '2h' });
-
-    // Note: Passed req as the last argument to capture real IP & User-Agent
-    await addServerAuditLog('AUTH_LOGIN_SUCCESS', `เข้าสู่ระบบสำเร็จในบทบาท ${user.role.toUpperCase()}`, user, null, null, req);
-
-    return res.json({
-      success: true,
-      token,
-      user: tokenPayload
-    });
-  } catch (err) {
-    console.error('Login Error:', err);
-    return res.status(500).json({ success: false, message: 'Server error: ' + err.message + ' ' + (err.stack || '') });
-  }
-});
-
-// POST /api/auth/change-password
-app.post('/api/auth/change-password', authenticateJWT, async (req, res) => {
-  const { currentPassword, newPassword } = req.body;
-  if (!currentPassword || !newPassword) {
-    return res.status(400).json({ success: false, message: 'กรุณากรอกรหัสผ่านปัจจุบันและรหัสผ่านใหม่' });
-  }
-
-  try {
-    const { rows } = await dbPool.query('SELECT * FROM users WHERE id = $1', [req.user.id]);
-    if (rows.length === 0) return res.status(404).json({ success: false, message: 'ไม่พบผู้ใช้' });
-
-    const user = rows[0];
-    const valid = await bcrypt.compare(currentPassword, user.password_hash);
-    if (!valid) {
-      return res.status(401).json({ success: false, message: 'รหัสผ่านปัจจุบันไม่ถูกต้อง' });
-    }
-
-    const hashedNew = await bcrypt.hash(newPassword, 10);
-    await dbPool.query('UPDATE users SET password_hash = $1 WHERE id = $2', [hashedNew, req.user.id]);
-
-    await addServerAuditLog('CHANGE_PASSWORD', `ผู้ใช้ ${user.username} เปลี่ยนรหัสผ่าน`, user, null, null, req);
-
-    res.json({ success: true, message: 'เปลี่ยนรหัสผ่านสำเร็จเรียบร้อยแล้ว' });
-  } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
-  }
-});
-
-// POST /api/auth/2fa/setup
-app.post('/api/auth/2fa/setup', async (req, res) => {
-  const { username, password } = req.body;
-  if (!username || !password) return res.status(400).json({ success: false, message: 'กรุณากรอก Username และ Password' });
-
-  try {
-    const { rows } = await dbPool.query('SELECT * FROM users WHERE username = $1 ORDER BY (case when role = $2 then 1 else 2 end) ASC, created_at DESC', [username, 'superadmin']);
-    if (rows.length === 0) return res.status(401).json({ success: false, message: 'ไม่พบผู้ใช้' });
-
-    let user = null;
-    for (const r of rows) {
-      if (await bcrypt.compare(password, r.password_hash)) {
-        user = r;
-        break;
-      }
-    }
-    if (!user) return res.status(401).json({ success: false, message: 'รหัสผ่านไม่ถูกต้อง' });
-
-    const secret = authenticator.generateSecret();
-    const otpauth = authenticator.keyuri(user.username, 'PDPA Request System', secret);
-    const qrCodeUrl = await QRCode.toDataURL(otpauth);
-
-    // Save secret to DB by unique user ID
-    await dbPool.query('UPDATE users SET two_factor_secret = $1, mfa_enabled = true WHERE id = $2', [secret, user.id]);
-
-    res.json({ success: true, qrCodeUrl, secret });
-  } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
-  }
-});
-
-// GET /api/auth/me
-app.get('/api/auth/me', authenticateJWT, (req, res) => {
-  res.json({ success: true, user: req.user });
-});
+// --- AUTHENTICATION ROUTES (Migrated to routes/auth.routes.js) ---
 
 // --- SUPER ADMIN & TENANT MANAGEMENT ROUTES ---
 
@@ -1551,87 +824,7 @@ app.post('/api/super-admin/tenants/:id/offboard-export', authenticateJWT, requir
   }
 });
 
-// GET /api/users
-app.get('/api/users', authenticateJWT, async (req, res) => {
-  try {
-    // Hide superadmin from the list so normal admins cannot see or manage them
-    const { rows } = await dbPool.query('SELECT id, org_id, username, full_name_th as "fullName", full_name_th as "fullNameTh", full_name_en as "fullNameEn", email, role, roles, department FROM users WHERE role != $1 ORDER BY created_at ASC', ['superadmin']);
-    res.json({
-      success: true,
-      users: rows.map(r => ({
-        ...r,
-        orgId: r.org_id,
-        roles: (r.roles && Array.isArray(r.roles) && r.roles.length > 0) ? r.roles : [r.role]
-      }))
-    });
-  } catch (err) {
-    console.error('Error fetching users:', err);
-    res.status(500).json({ success: false, error: 'Database error' });
-  }
-});
-
-// POST /api/users
-app.post('/api/users', authenticateJWT, requireRole(['admin']), async (req, res) => {
-  const { id, orgId, username, fullName, fullNameEn, email, role, roles, department, password } = req.body;
-  try {
-    const pwdHash = await bcrypt.hash(password || '123456', 10);
-    const assignedRoles = (roles && Array.isArray(roles) && roles.length > 0) ? roles : [role || 'intake'];
-    const primaryRole = role || assignedRoles[0] || 'intake';
-    await dbPool.query(
-      'INSERT INTO users (id, org_id, username, full_name_th, full_name_en, email, role, roles, department, password_hash) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)',
-      [id, orgId, username, fullName, fullNameEn || fullName, email, primaryRole, JSON.stringify(assignedRoles), department, pwdHash]
-    );
-    res.json({ success: true });
-  } catch (err) {
-    console.error('Error creating user:', err);
-    res.status(500).json({ success: false, error: 'Database error' });
-  }
-});
-
-// PUT /api/users/:id
-app.put('/api/users/:id', authenticateJWT, requireRole(['admin']), async (req, res) => {
-  const { id } = req.params;
-  const { fullNameTh, fullNameEn, email, role, roles, department, resetPassword, newPassword } = req.body;
-  try {
-    const assignedRoles = (roles && Array.isArray(roles) && roles.length > 0) ? roles : [role || 'intake'];
-    const primaryRole = role || assignedRoles[0] || 'intake';
-
-    if (newPassword) {
-      const pwdHash = await bcrypt.hash(newPassword, 10);
-      await dbPool.query(
-        'UPDATE users SET full_name_th = $1, full_name_en = $2, email = $3, role = $4, roles = $5, department = $6, password_hash = $7 WHERE id = $8',
-        [fullNameTh, fullNameEn || fullNameTh, email, primaryRole, JSON.stringify(assignedRoles), department, pwdHash, id]
-      );
-    } else if (resetPassword) {
-      const pwdHash = await bcrypt.hash('123456', 10);
-      await dbPool.query(
-        'UPDATE users SET full_name_th = $1, full_name_en = $2, email = $3, role = $4, roles = $5, department = $6, password_hash = $7 WHERE id = $8',
-        [fullNameTh, fullNameEn || fullNameTh, email, primaryRole, JSON.stringify(assignedRoles), department, pwdHash, id]
-      );
-    } else {
-      await dbPool.query(
-        'UPDATE users SET full_name_th = $1, full_name_en = $2, email = $3, role = $4, roles = $5, department = $6 WHERE id = $7',
-        [fullNameTh, fullNameEn || fullNameTh, email, primaryRole, JSON.stringify(assignedRoles), department, id]
-      );
-    }
-    res.json({ success: true });
-  } catch (err) {
-    console.error('Error updating user:', err);
-    res.status(500).json({ success: false, error: 'Database error' });
-  }
-});
-
-// DELETE /api/users/:id
-app.delete('/api/users/:id', authenticateJWT, requireRole(['admin']), async (req, res) => {
-  const { id } = req.params;
-  try {
-    await dbPool.query('DELETE FROM users WHERE id = $1', [id]);
-    res.json({ success: true });
-  } catch (err) {
-    console.error('Error deleting user:', err);
-    res.status(500).json({ success: false, error: 'Database error' });
-  }
-});
+// --- USER MANAGEMENT ROUTES (Migrated to routes/users.routes.js) ---
 
 // GET /api/public/tenants (Public list of active organizations for online PDPA request submission)
 app.get('/api/public/tenants', async (req, res) => {
@@ -1685,10 +878,11 @@ app.get('/api/public/requests', async (req, res) => {
   try {
     const { rows } = await dbPool.query('SELECT data FROM requests ORDER BY created_at DESC');
     const allRequests = rows.map(r => r.data);
+    const sanitizedRequests = applyFieldPermissionsToList(allRequests, 'auditor');
     return res.json({
       success: true,
-      count: allRequests.length,
-      requests: allRequests
+      count: sanitizedRequests.length,
+      requests: sanitizedRequests
     });
   } catch (error) {
     return res.status(500).json({ success: false, message: 'Database error' });
@@ -1749,18 +943,21 @@ app.post('/api/public/requests', async (req, res) => {
       console.warn('Auto-create tenant warning:', tenantErr.message);
     }
 
+    // Calculate/update SLA metadata
+    const updatedRequest = updateRequestSLA(newRequest, status);
+
     // Insert into PostgreSQL Master Database
     await dbPool.query(
       'INSERT INTO requests (id, org_id, tracking_no, requester_type, status, data) VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT (id) DO UPDATE SET data = $6, status = $5',
-      [reqId, orgId, trackingNo, requesterType, status, JSON.stringify(newRequest)]
+      [reqId, orgId, trackingNo, requesterType, status, JSON.stringify(updatedRequest)]
     );
 
     // Trigger workflow email notification according to PDPA Flow (non-blocking)
     try {
       if (isNewRequest) {
-        await sendWorkflowNotification(newRequest, null, status, 'CREATE');
+        await sendWorkflowNotification(updatedRequest, null, status, 'CREATE', dbPool);
       } else if (oldStatus && oldStatus !== status) {
-        await sendWorkflowNotification(newRequest, oldStatus, status, 'STATUS_CHANGE');
+        await sendWorkflowNotification(updatedRequest, oldStatus, status, 'STATUS_CHANGE', dbPool);
       }
     } catch (notifyErr) {
       console.error('Workflow notification error:', notifyErr.message);
@@ -1769,7 +966,7 @@ app.post('/api/public/requests', async (req, res) => {
     return res.status(201).json({
       success: true,
       message: 'ยื่นแบบคำขอเข้าถึงข้อมูลส่วนบุคคลสำเร็จ',
-      request: newRequest
+      request: updatedRequest
     });
   } catch (error) {
     console.error('Error inserting request to PostgreSQL:', error);
@@ -1793,7 +990,7 @@ app.post('/api/notify/workflow', async (req, res) => {
     if (!request) {
       return res.status(400).json({ success: false, message: 'Missing request object' });
     }
-    await sendWorkflowNotification(request, oldStatus || null, newStatus || request.status, eventType || 'STATUS_CHANGE');
+    await sendWorkflowNotification(request, oldStatus || null, newStatus || request.status, eventType || 'STATUS_CHANGE', dbPool);
     return res.json({ success: true, message: 'ส่งอีเมลแจ้งเตือนตาม Flow เอกสารเรียบร้อยแล้ว' });
   } catch (err) {
     console.error('Manual notify workflow error:', err);
@@ -2121,11 +1318,122 @@ app.get('/api/requests', authenticateJWT, async (req, res) => {
     }
     
     const { rows } = await dbPool.query(query, params);
-    res.json({ success: true, requests: rows.map(r => r.data) });
+    const userRole = req.user?.role || 'auditor';
+
+    // ── Field-Level Permissions (ERPNext-inspired) ────────────────────────
+    // Mask sensitive PII fields based on the requesting user's role
+    const sanitizedRequests = applyFieldPermissionsToList(rows.map(r => r.data), userRole);
+
+    res.json({ success: true, requests: sanitizedRequests });
   } catch (err) {
     res.status(500).json({ success: false, message: 'Database error' });
   }
 });
+
+// GET /api/sla/report (SLA analytics dashboard report with Dual Scope)
+app.get('/api/sla/report', authenticateJWT, async (req, res) => {
+  try {
+    let query = 'SELECT data FROM requests';
+    let params = [];
+    if (!req.user.isSuperAdmin) {
+      query = 'SELECT data FROM requests WHERE org_id = $1';
+      params = [req.user.orgId];
+    }
+    const { rows } = await dbPool.query(query, params);
+    const requests = rows.map(r => r.data || {});
+    const report = calculateOrgSLAReport(requests);
+    res.json({ success: true, report });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Error generating SLA report' });
+  }
+});
+
+// ── Partial Loading API (ERPNext DocType Sub-document pattern) ────────────
+// These endpoints return lightweight sub-sections of a request
+// so the list view / timeline view doesn't need to load the full JSONB
+
+// GET /api/requests/:id/header — metadata only (no tasks, no redactions)
+app.get('/api/requests/:id/header', authenticateJWT, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const queryStr = req.user.isSuperAdmin
+      ? 'SELECT data FROM requests WHERE id = $1'
+      : 'SELECT data FROM requests WHERE id = $1 AND org_id = $2';
+    const params = req.user.isSuperAdmin ? [id] : [id, req.user.orgId];
+    const { rows } = await dbPool.query(queryStr, params);
+    if (!rows.length) return res.status(404).json({ success: false, message: 'Not found' });
+
+    const data = rows[0].data || {};
+    const userRole = req.user?.role || 'auditor';
+
+    // Return only header fields — omit heavy arrays
+    const header = applyFieldPermissions({
+      id: data.id, uuid: data.uuid, orgId: data.orgId,
+      trackingNo: data.trackingNo, status: data.status,
+      submissionDate: data.submissionDate, receivedDate: data.receivedDate,
+      slaStartDate: data.slaStartDate, slaDeadlineDate: data.slaDeadlineDate,
+      slaRemainingDays: data.slaRemainingDays, slaDaysUsed: data.slaDaysUsed,
+      slaPaused: data.slaPaused, slaExtended: data.slaExtended, legalHold: data.legalHold,
+      requesterType: data.requesterType, requester: data.requester,
+      representative: data.representative, contactChannel: data.contactChannel,
+      requestDetails: data.requestDetails, identityVerification: data.identityVerification,
+    }, userRole);
+
+    res.json({ success: true, header });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Database error' });
+  }
+});
+
+// GET /api/requests/:id/tasks — data collection tasks only
+app.get('/api/requests/:id/tasks', authenticateJWT, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const queryStr = req.user.isSuperAdmin
+      ? "SELECT data->'dataCollectionTasks' as tasks FROM requests WHERE id = $1"
+      : "SELECT data->'dataCollectionTasks' as tasks FROM requests WHERE id = $1 AND org_id = $2";
+    const params = req.user.isSuperAdmin ? [id] : [id, req.user.orgId];
+    const { rows } = await dbPool.query(queryStr, params);
+    if (!rows.length) return res.status(404).json({ success: false, message: 'Not found' });
+    res.json({ success: true, tasks: rows[0].tasks || [] });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Database error' });
+  }
+});
+
+// GET /api/requests/:id/timeline — status history + SLA events only
+app.get('/api/requests/:id/timeline', authenticateJWT, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const queryStr = req.user.isSuperAdmin
+      ? "SELECT data->'statusHistory' as history, data->'slaEvents' as sla_events FROM requests WHERE id = $1"
+      : "SELECT data->'statusHistory' as history, data->'slaEvents' as sla_events FROM requests WHERE id = $1 AND org_id = $2";
+    const params = req.user.isSuperAdmin ? [id] : [id, req.user.orgId];
+    const { rows } = await dbPool.query(queryStr, params);
+    if (!rows.length) return res.status(404).json({ success: false, message: 'Not found' });
+    res.json({ success: true, statusHistory: rows[0].history || [], slaEvents: rows[0].sla_events || [] });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Database error' });
+  }
+});
+
+// GET /api/requests/:id/decision — decision + redaction records only
+app.get('/api/requests/:id/decision', authenticateJWT, requireRole(['admin', 'dpo', 'approver', 'superadmin']), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const queryStr = req.user.isSuperAdmin
+      ? "SELECT data->'decision' as decision, data->'redactionRecords' as redactions FROM requests WHERE id = $1"
+      : "SELECT data->'decision' as decision, data->'redactionRecords' as redactions FROM requests WHERE id = $1 AND org_id = $2";
+    const params = req.user.isSuperAdmin ? [id] : [id, req.user.orgId];
+    const { rows } = await dbPool.query(queryStr, params);
+    if (!rows.length) return res.status(404).json({ success: false, message: 'Not found' });
+    res.json({ success: true, decision: rows[0].decision || null, redactionRecords: rows[0].redactions || [] });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Database error' });
+  }
+});
+
+
 
 // GET /api/audit-logs (View audit logs - protected)
 app.get('/api/audit-logs', authenticateJWT, requireRole(['superadmin', 'owner', 'admin', 'intake', 'dpo', 'approver', 'auditor']), async (req, res) => {
@@ -2171,66 +1479,6 @@ app.use('/super-admin', (req, res) => {
   res.setHeader('Pragma', 'no-cache');
   res.setHeader('Expires', '0');
 });
-
-// Helper to deduplicate redaction records and display masked format in PDF reports
-function formatRedactionNoticeTable(records) {
-  if (!Array.isArray(records) || records.length === 0) return null;
-
-  const uniqueMap = new Map();
-  records.forEach(r => {
-    if (!r || !r.itemRedacted) return;
-    let cleanLabel = r.itemRedacted.replace(/\s*\([^)]*\)/g, '').trim() || 'ข้อมูลส่วนบุคคล';
-    if (!uniqueMap.has(cleanLabel)) {
-      let maskedExample = r.previewUrlAfter;
-      if (!maskedExample || maskedExample === 'crm_redacted_view' || maskedExample === 'crm_original_view') {
-        if (cleanLabel.includes('บัตรประชาชน') || cleanLabel.includes('ID')) {
-          maskedExample = '1-xxxx-xxxxx-12-4 (Masked กลางและท้าย)';
-        } else if (cleanLabel.includes('โทรศัพท์') || cleanLabel.includes('Phone')) {
-          maskedExample = '097-xxx-1584 (Masked ตัวเลขกลาง)';
-        } else if (cleanLabel.includes('อีเมล') || cleanLabel.includes('Email')) {
-          maskedExample = '42j****@gmail.com (Masked ตัวอักษรผู้ใช้)';
-        } else if (cleanLabel.includes('ชื่อ') || cleanLabel.includes('Name')) {
-          maskedExample = 'จิดาภา ศ*** (Masked นามสกุลบางส่วน)';
-        } else if (cleanLabel.includes('ที่อยู่') || cleanLabel.includes('Address')) {
-          maskedExample = 'xxx ม.x ต.xxxx (Masked บ้านเลขที่/รายละเอียด)';
-        } else {
-          maskedExample = '[ Partial Masking / ซ่อนข้อมูลส่วนบุคคล ]';
-        }
-      }
-
-      uniqueMap.set(cleanLabel, {
-        cleanLabel,
-        maskedExample,
-        reason: r.reason || 'มาตรการรักษาความปลอดภัยและจำกัดข้อมูลให้เท่าที่จำเป็น (Data Minimization - PDPA มาตรา 37)'
-      });
-    }
-  });
-
-  const uniqueList = Array.from(uniqueMap.values());
-  if (uniqueList.length === 0) return null;
-
-  return {
-    table: {
-      widths: ['30%', '35%', '35%'],
-      body: [
-        [
-          { text: 'รายการข้อมูลส่วนบุคคล', bold: true, fillColor: '#f1f5f9', fontSize: 12 },
-          { text: 'ตัวอย่างการแสดงผลที่ถูกปกปิด (Masked Display)', bold: true, fillColor: '#f1f5f9', fontSize: 12 },
-          { text: 'เหตุผลตามมาตรการความปลอดภัย PDPA', bold: true, fillColor: '#f1f5f9', fontSize: 12 }
-        ],
-        ...uniqueList.map(r => [
-          { text: r.cleanLabel, fontSize: 11, bold: true },
-          { text: r.maskedExample, fontSize: 11, color: '#0284c7' },
-          { text: r.reason, fontSize: 11 }
-        ])
-      ]
-    },
-    layout: 'lightHorizontalLines',
-    margin: [0, 0, 0, 15]
-  };
-}
-
-
 
 // POST /api/public/requests/:id/download-package
 
@@ -2300,42 +1548,8 @@ app.post('/api/public/requests/:id/download-package', async (req, res) => {
     const sha256Hash = crypto.createHash('sha256').update(summaryStr).digest('hex');
 
     // 5. Generate PDF Cover Letter
-    const { default: pdfmake } = await import('pdfmake');
-    const fonts = {
-      Sarabun: {
-        normal: path.join(__dirname, 'fonts', 'Sarabun-Regular.ttf'),
-        bold: path.join(__dirname, 'fonts', 'Sarabun-Bold.ttf'),
-        italics: path.join(__dirname, 'fonts', 'Sarabun-Regular.ttf'),
-        bolditalics: path.join(__dirname, 'fonts', 'Sarabun-Bold.ttf')
-      }
-    };
-    pdfmake.setFonts(fonts);
-
-    const docDefinition = {
-      defaultStyle: { font: 'Sarabun', fontSize: 16 },
-      content: [
-        { text: 'บันทึกการส่งมอบข้อมูลส่วนบุคคล (PDPA Data Handover)', style: 'header', alignment: 'center', margin: [0, 0, 0, 20] },
-        { text: `เลขที่คำร้อง: ${data.trackingNo}`, margin: [0, 0, 0, 10] },
-        { text: `ชื่อผู้ขอใช้สิทธิ: ${data.requester.firstName} ${data.requester.lastName}`, margin: [0, 0, 0, 10] },
-        { text: `วันที่ส่งมอบ: ${new Date().toLocaleDateString('th-TH')}`, margin: [0, 0, 0, 20] },
-        { text: 'รายการไฟล์ที่ส่งมอบ:', bold: true, margin: [0, 0, 0, 10] },
-        ...filesResult.rows.map((f, i) => ({ text: `${i+1}. ${f.filename}`, margin: [10, 0, 0, 5] })),
-        ...(formatRedactionNoticeTable(data.redactionRecords) ? [
-          { text: '\nบันทึกการจำกัดและพรางข้อมูลตามมาตรการความปลอดภัย (Data Masking & Redaction Notice):', bold: true, fontSize: 15, margin: [0, 15, 0, 5] },
-          { text: 'ข้อมูลบางรายการในรายงานฉบับนี้ถูกพรางบางส่วน (Marking/Masking) ตามมาตรการรักษาความปลอดภัยและจำกัดข้อมูลให้เท่าที่จำเป็น (PDPA มาตรา 37) เพื่อป้องกันความเสี่ยงข้อมูลส่วนบุคคลรั่วไหล', fontSize: 11, color: '#475569', margin: [0, 0, 0, 8] },
-          formatRedactionNoticeTable(data.redactionRecords)
-        ] : []),
-        { text: '\nการรับรองความถูกต้องของข้อมูล (Data Integrity Check):', bold: true, margin: [0, 20, 0, 5] },
-        { text: 'เอกสารและชุดข้อมูลนี้ถูกเข้ารหัสเพื่อตรวจสอบความถูกต้อง (SHA-256) เพื่อป้องกันการเปลี่ยนแปลงเนื้อหา', fontSize: 12, margin: [0, 0, 0, 5] },
-        { text: `SHA-256 Checksum: ${sha256Hash}`, fontSize: 10, margin: [0, 0, 0, 20] },
-        { text: 'ลงชื่อ _________________________', alignment: 'right', margin: [0, 40, 40, 5] },
-        { text: '(ผู้ควบคุมข้อมูลส่วนบุคคล)', alignment: 'right', margin: [0, 0, 40, 0] }
-      ],
-      styles: { header: { fontSize: 22, bold: true } }
-    };
-
-    const pdfDoc = pdfmake.createPdf(docDefinition);
-    const pdfBuffer = await pdfDoc.getBuffer();
+    // 5. Generate PDF Cover Letter
+    const pdfBuffer = await generateCoverLetterPdf(data, filesResult.rows, sha256Hash);
     
     // 6. Build ZIP
     const { default: AdmZip } = await import('adm-zip');
@@ -2396,88 +1610,9 @@ app.get('/api/requests/:id/preview-attachment-pdf', authenticateJWT, async (req,
     const summaryStr = JSON.stringify({ trackingNo: data.trackingNo, filesCount: allFilesList.length, generatedAt: new Date().toISOString() }, null, 2);
     const sha256Hash = crypto.createHash('sha256').update(summaryStr).digest('hex');
 
-    const { default: pdfmake } = await import('pdfmake');
-    const fonts = {
-      Sarabun: {
-        normal: path.join(__dirname, 'fonts', 'Sarabun-Regular.ttf'),
-        bold: path.join(__dirname, 'fonts', 'Sarabun-Bold.ttf'),
-        italics: path.join(__dirname, 'fonts', 'Sarabun-Regular.ttf'),
-        bolditalics: path.join(__dirname, 'fonts', 'Sarabun-Bold.ttf')
-      }
-    };
-    pdfmake.setFonts(fonts);
-
     const isCompleted = pdpaRequest.status === 'completed' || pdpaRequest.status === 'delivered';
-    const docDefinition = {
-      defaultStyle: { font: 'Sarabun', fontSize: 14 },
-      watermark: isCompleted ? null : { text: 'DRAFT', color: 'gray', opacity: 0.15, bold: true, italics: false, angle: 45, fontSize: 72 },
-      content: [
-        { text: 'รายงานสรุปและรวบรวมข้อมูลส่วนบุคคลที่ผ่านการค้นหาแล้ว', style: 'header', alignment: 'center', margin: [0, 0, 0, 15] },
-        { text: '(PDPA Personal Data Discovery & Compilation Report)', fontSize: 12, alignment: 'center', color: '#64748b', margin: [0, 0, 0, 25] },
-        {
-          table: {
-            widths: ['35%', '65%'],
-            body: [
-              [{ text: 'เลขที่คำขอ (Tracking No):', bold: true }, data.trackingNo || id],
-              [{ text: 'ชื่อผู้ยื่นคำขอ:', bold: true }, `${data.requester?.firstName || ''} ${data.requester?.lastName || ''}`.trim() || '-'],
-              [{ text: 'อีเมลผู้ยื่นคำขอ:', bold: true }, data.requester?.email || '-'],
-              [{ text: 'วันที่รวบรวมข้อมูล:', bold: true }, new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' })],
-              [{ text: 'สถานะการตรวจสอบ:', bold: true }, isCompleted ? 'ตรวจสอบและอนุมัติแล้ว (Approved)' : 'ฉบับร่างระหว่างการตรวจสอบ (DRAFT)']
-            ]
-          },
-          layout: 'lightHorizontalLines',
-          margin: [0, 0, 0, 25]
-        },
-        { text: 'รายการระบบงานที่ทำการค้นหาและรวบรวมข้อมูล:', bold: true, fontSize: 16, margin: [0, 10, 0, 10] },
-        ...(data.dataCollectionTasks && data.dataCollectionTasks.length > 0 ? [
-          {
-            table: {
-              widths: ['40%', '35%', '25%'],
-              body: [
-                [{ text: 'ชื่อระบบงาน (System)', bold: true, fillColor: '#f1f5f9' }, { text: 'ผู้รับผิดชอบ (Assignee)', bold: true, fillColor: '#f1f5f9' }, { text: 'สถานะ (Status)', bold: true, fillColor: '#f1f5f9' }],
-                ...data.dataCollectionTasks.map(t => [
-                  t.systemName || '-',
-                  t.assigneeName || '-',
-                  t.status === 'completed' ? 'เสร็จสิ้น (Completed)' : (t.status || 'in_progress')
-                ])
-              ]
-            },
-            margin: [0, 0, 0, 20]
-          }
-        ] : [{ text: 'ไม่มีรายการระบบงาน', color: '#94a3b8', margin: [0, 0, 0, 20] }]),
-        { text: 'รายการไฟล์เอกสารแนบในชุดส่งมอบ (Attachment Files):', bold: true, fontSize: 16, margin: [0, 10, 0, 10] },
-        ...(allFilesList.length > 0 ? allFilesList.map((f, i) => ({
-          text: `${i + 1}. ${f.filename} (ระบบ/ผู้แนบ: ${f.uploaded_by || 'ระบบ'})`,
-          margin: [10, 0, 0, 6]
-        })) : [{ text: 'ยังไม่มีไฟล์เอกสารแนบในชุดข้อมูล', color: '#94a3b8', margin: [10, 0, 0, 10] }]),
-        ...(formatRedactionNoticeTable(data.redactionRecords) ? [
-          { text: '\nบันทึกการจำกัดและพรางข้อมูลตามมาตรการความปลอดภัย (Data Masking & Redaction Notice):', bold: true, fontSize: 15, margin: [0, 15, 0, 5] },
-          { text: 'ข้อมูลบางรายการในรายงานฉบับนี้ถูกพรางบางส่วน (Marking/Masking) ตามมาตรการรักษาความปลอดภัยและจำกัดข้อมูลให้เท่าที่จำเป็น (PDPA มาตรา 37) เพื่อป้องกันความเสี่ยงข้อมูลส่วนบุคคลรั่วไหล', fontSize: 11, color: '#475569', margin: [0, 0, 0, 8] },
-          formatRedactionNoticeTable(data.redactionRecords)
-        ] : []),
-        { text: '\nการรับรองความถูกต้องและความสมบูรณ์ของข้อมูล (Data Integrity Check):', bold: true, fontSize: 15, margin: [0, 25, 0, 5] },
-        { text: 'เอกสารและชุดข้อมูลนี้ถูกเข้ารหัสและคำนวณค่าแฮช (SHA-256 Checksum) เพื่อรับรองความถูกต้องและป้องกันการแก้ไขเปลี่ยนแปลงเนื้อหา', fontSize: 12, color: '#475569', margin: [0, 0, 0, 5] },
-        { text: `SHA-256: ${sha256Hash}`, fontSize: 10, font: 'Sarabun', color: '#0284c7', margin: [0, 0, 0, 30] },
-        {
-          columns: [
-            { width: '*', text: '' },
-            {
-              width: '45%',
-              alignment: 'center',
-              stack: [
-                { text: 'ลงชื่อ .......................................................', margin: [0, 10, 0, 5] },
-                { text: `(${req.user?.username || 'เจ้าหน้าที่คุ้มครองข้อมูลส่วนบุคคล (DPO)'})`, bold: true },
-                { text: 'ผู้ตรวจสอบและรับรองข้อมูลส่วนบุคคล', fontSize: 12, color: '#64748b' }
-              ]
-            }
-          ]
-        }
-      ],
-      styles: { header: { fontSize: 22, bold: true } }
-    };
-
-    const pdfDoc = pdfmake.createPdf(docDefinition);
-    const pdfBuffer = await pdfDoc.getBuffer();
+    const signerName = req.user?.username || 'เจ้าหน้าที่คุ้มครองข้อมูลส่วนบุคคล (DPO)';
+    const pdfBuffer = await generateDiscoveryReportPdf(data, allFilesList, sha256Hash, isCompleted, signerName);
 
     res.set('Content-Type', 'application/pdf');
     res.set('Content-Disposition', `inline; filename="PDPA_Compiled_Report_${data.trackingNo || id}.pdf"`);
@@ -2515,42 +1650,7 @@ app.get('/api/requests/:id/download-package-admin', authenticateJWT, async (req,
     const sha256Hash = crypto.createHash('sha256').update(summaryStr).digest('hex');
 
     // Generate Cover Letter PDF
-    const { default: pdfmake } = await import('pdfmake');
-    const fonts = {
-      Sarabun: {
-        normal: path.join(__dirname, 'fonts', 'Sarabun-Regular.ttf'),
-        bold: path.join(__dirname, 'fonts', 'Sarabun-Bold.ttf'),
-        italics: path.join(__dirname, 'fonts', 'Sarabun-Regular.ttf'),
-        bolditalics: path.join(__dirname, 'fonts', 'Sarabun-Bold.ttf')
-      }
-    };
-    pdfmake.setFonts(fonts);
-
-    const docDefinition = {
-      defaultStyle: { font: 'Sarabun', fontSize: 16 },
-      content: [
-        { text: 'บันทึกการส่งมอบข้อมูลส่วนบุคคล (PDPA Data Handover)', style: 'header', alignment: 'center', margin: [0, 0, 0, 20] },
-        { text: `เลขที่คำร้อง: ${data.trackingNo || id}`, margin: [0, 0, 0, 10] },
-        { text: `ชื่อผู้ขอใช้สิทธิ: ${data.requester?.firstName || ''} ${data.requester?.lastName || ''}`.trim(), margin: [0, 0, 0, 10] },
-        { text: `วันที่ส่งมอบ: ${new Date().toLocaleDateString('th-TH')}`, margin: [0, 0, 0, 20] },
-        { text: 'รายการไฟล์ที่ส่งมอบ:', bold: true, margin: [0, 0, 0, 10] },
-        ...taskFiles.map((f, i) => ({ text: `${i + 1}. ${f.filename}`, margin: [10, 0, 0, 5] })),
-        ...(formatRedactionNoticeTable(data.redactionRecords) ? [
-          { text: '\nบันทึกการจำกัดและพรางข้อมูลตามมาตรการความปลอดภัย (Data Masking & Redaction Notice):', bold: true, fontSize: 15, margin: [0, 15, 0, 5] },
-          { text: 'ข้อมูลบางรายการในรายงานฉบับนี้ถูกพรางบางส่วน (Marking/Masking) ตามมาตรการรักษาความปลอดภัยและจำกัดข้อมูลให้เท่าที่จำเป็น (PDPA มาตรา 37) เพื่อป้องกันความเสี่ยงข้อมูลส่วนบุคคลรั่วไหล', fontSize: 11, color: '#475569', margin: [0, 0, 0, 8] },
-          formatRedactionNoticeTable(data.redactionRecords)
-        ] : []),
-        { text: '\nการรับรองความถูกต้องของข้อมูล (Data Integrity Check):', bold: true, margin: [0, 20, 0, 5] },
-        { text: 'เอกสารและชุดข้อมูลนี้ถูกเข้ารหัสเพื่อตรวจสอบความถูกต้อง (SHA-256) เพื่อป้องกันการเปลี่ยนแปลงเนื้อหา', fontSize: 12, margin: [0, 0, 0, 5] },
-        { text: `SHA-256 Checksum: ${sha256Hash}`, fontSize: 10, margin: [0, 0, 0, 20] },
-        { text: 'ลงชื่อ _________________________', alignment: 'right', margin: [0, 40, 40, 5] },
-        { text: '(ผู้ควบคุมข้อมูลส่วนบุคคล)', alignment: 'right', margin: [0, 0, 40, 0] }
-      ],
-      styles: { header: { fontSize: 22, bold: true } }
-    };
-
-    const pdfDoc = pdfmake.createPdf(docDefinition);
-    const pdfBuffer = await pdfDoc.getBuffer();
+    const pdfBuffer = await generateCoverLetterPdf(data, taskFiles, sha256Hash);
 
     const { default: AdmZip } = await import('adm-zip');
     const zip = new AdmZip();
@@ -2886,6 +1986,9 @@ app.get('/api/dl/download/:token', async (req, res) => {
     res.status(500).json({ success: false, message: err.message });
   }
 });
+
+// ── Workflow Engine Routes (ERPNext-inspired) ─────────────────────────────
+app.use('/api/workflow', createWorkflowRouter(dbPool, authenticateJWT, requireRole));
 
 // --- MAIN STATIC FRONTEND SERVING (PRODUCTION) ---
 app.use(express.static(path.join(__dirname, 'dist'), { index: false }));
