@@ -257,6 +257,8 @@ export interface Request {
   destroyedDate?: string;
   destroyedBy?: string;
   destroyedWitness?: string;
+  downloadToken?: string;
+  downloadExpiresAt?: string;
 }
 
 export interface AuditLog {
