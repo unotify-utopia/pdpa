@@ -111,15 +111,29 @@ export function createRequestsRouter(dbPool, authenticateJWT, requireRole, addSe
         return res.status(400).json({ success: false, message: 'Missing email address' });
       }
 
+      // Generate QR Code for the direct download link
+      const directDownloadUrl = `https://pdpa.numcomputer.com/dl/${trackingNo}`;
+      const qrDataUrl = await QRCode.toDataURL(directDownloadUrl, {
+        errorCorrectionLevel: 'M',
+        margin: 1,
+        width: 150,
+        color: { dark: '#000000', light: '#ffffff' }
+      });
+
       const emailHtml = `
         <div style="font-family: sans-serif; color: #333; max-width: 600px; margin: 0 auto;">
           <h2 style="color: #0f172a;">แจ้งผลการดำเนินการและส่งมอบข้อมูลส่วนบุคคล</h2>
           <p>เรียน คุณ ${requesterName || 'ผู้ร้องขอ'},</p>
           <p>องค์กรได้พิจารณาอนุมัติการเข้าถึงข้อมูลตามสิทธิของท่านเรียบร้อยแล้ว รายละเอียดข้อมูลของท่านได้รับการตรวจสอบและจัดเตรียมไว้เป็นที่เรียบร้อย</p>
-          <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; padding: 16px; border-radius: 8px; margin: 24px 0;">
+          <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; padding: 16px; border-radius: 8px; margin: 24px 0; text-align: center;">
             <h3 style="margin-top: 0; color: #334155; font-size: 14px;">ช่องทางดาวน์โหลดและตรวจสอบความถูกต้องเอกสาร (ใช้งานได้ 7 วัน):</h3>
-            <p>เข้าสู่เว็บไซต์: <a href="https://pdpa.numcomputer.com/dl" style="color: #2563eb;">pdpa.numcomputer.com/dl</a></p>
-            <p>และระบุรหัสอ้างอิง: <strong>${trackingNo}</strong></p>
+            
+            <div style="margin: 16px 0;">
+              <img src="${qrDataUrl}" alt="QR Code for Download" style="border-radius: 8px; border: 1px solid #cbd5e1; padding: 8px; background: white;" />
+            </div>
+            <p style="font-size: 14px; margin-bottom: 8px;">หรือสแกน QR Code เพื่อดาวน์โหลดเอกสาร</p>
+            <p style="margin: 4px 0;">เข้าสู่เว็บไซต์: <a href="https://pdpa.numcomputer.com/dl" style="color: #2563eb;">pdpa.numcomputer.com/dl</a></p>
+            <p style="margin: 4px 0;">และระบุรหัสอ้างอิง: <strong>${trackingNo}</strong></p>
           </div>
           <p style="font-size: 12px; color: #64748b;">
             *ข้อแนะนำในการเข้าถึงข้อมูล: ท่านต้องกรอกรหัสผ่านแบบใช้ครั้งเดียว (OTP) ที่จะส่งเข้ามือถือหรืออีเมลของท่านเมื่อเข้าสู่หน้าดาวน์โหลด*
