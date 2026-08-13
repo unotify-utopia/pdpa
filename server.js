@@ -397,6 +397,7 @@ app.use('/super-admin', (req, res) => {
   res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
   res.setHeader('Pragma', 'no-cache');
   res.setHeader('Expires', '0');
+  res.sendFile(path.join(__dirname, 'super-admin-app', 'dist', 'index.html'));
 });
 
 
