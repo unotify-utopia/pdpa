@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Edit2, Trash2, Check, X, AlertCircle, RefreshCw, Layers, GitBranch, Save } from 'lucide-react';
+import { Plus, Edit2, Trash2, Check, X, AlertCircle, RefreshCw, Layers, GitBranch, Save, Map } from 'lucide-react';
 
 interface WorkflowState {
   id: number;
@@ -27,7 +27,7 @@ interface Props {
 }
 
 export default function WorkflowAdminPanel({ token, showNotify, isDark }: Props) {
-  const [activeSubTab, setActiveSubTab] = useState<'states' | 'transitions'>('states');
+  const [activeSubTab, setActiveSubTab] = useState<'states' | 'transitions' | 'map'>('states');
   const [states, setStates] = useState<WorkflowState[]>([]);
   const [transitions, setTransitions] = useState<WorkflowTransition[]>([]);
   const [loading, setLoading] = useState(false);
@@ -48,10 +48,19 @@ export default function WorkflowAdminPanel({ token, showNotify, isDark }: Props)
         const res = await fetch('/api/workflow/states', { headers });
         const data = await res.json();
         if (data.success) setStates(data.states);
-      } else {
+      } else if (activeSubTab === 'transitions') {
         const res = await fetch('/api/workflow/transitions', { headers });
         const data = await res.json();
         if (data.success) setTransitions(data.transitions);
+      } else if (activeSubTab === 'map') {
+        const [statesRes, transRes] = await Promise.all([
+          fetch('/api/workflow/states', { headers }),
+          fetch('/api/workflow/transitions', { headers })
+        ]);
+        const statesData = await statesRes.json();
+        const transData = await transRes.json();
+        if (statesData.success) setStates(statesData.states);
+        if (transData.success) setTransitions(transData.transitions);
       }
     } catch (err) {
       showNotify('Failed to fetch workflow data', 'error');
@@ -181,6 +190,13 @@ export default function WorkflowAdminPanel({ token, showNotify, isDark }: Props)
             <GitBranch className="w-4 h-4" />
             Transitions (การเปลี่ยนสถานะ)
           </button>
+          <button 
+            onClick={() => setActiveSubTab('map')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition ${activeSubTab === 'map' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-slate-200'}`}
+          >
+            <Map className="w-4 h-4" />
+            Map (แผนภาพ)
+          </button>
         </div>
       </div>
 
@@ -236,7 +252,7 @@ export default function WorkflowAdminPanel({ token, showNotify, isDark }: Props)
             </table>
           </div>
         </div>
-      ) : (
+      ) : activeSubTab === 'transitions' ? (
         <div className={`p-6 rounded-xl border ${isDark ? 'bg-slate-900/50 border-slate-800' : 'bg-white border-slate-200'}`}>
           <div className="flex justify-between items-center mb-6">
             <h3 className="text-lg font-bold">เงื่อนไขการเปลี่ยนสถานะ ({transitions.length})</h3>
@@ -286,6 +302,92 @@ export default function WorkflowAdminPanel({ token, showNotify, isDark }: Props)
                 ))}
               </tbody>
             </table>
+          </div>
+        </div>
+      ) : (
+        <div className={`p-6 rounded-xl border ${isDark ? 'bg-slate-900/50 border-slate-800' : 'bg-white border-slate-200'} overflow-x-auto`}>
+          <div className="flex justify-between items-center mb-6">
+            <h3 className="text-lg font-bold">แผนภาพ Workflow (Visual Map)</h3>
+          </div>
+          <div className="relative min-w-[800px] h-[450px] border border-dashed border-slate-300 dark:border-slate-700 rounded-lg bg-slate-50/50 dark:bg-slate-900/50 overflow-hidden">
+            <svg className="absolute inset-0 w-full h-full pointer-events-none">
+              <defs>
+                <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                  <polygon points="0 0, 10 3.5, 0 7" fill="#94a3b8" />
+                </marker>
+              </defs>
+              {(() => {
+                const sortedStates = [...states].sort((a, b) => a.sort_order - b.sort_order);
+                const positions: Record<string, {x: number, y: number}> = {};
+                const nodeWidth = 140, nodeHeight = 50, gapX = 60, gapY = 80, startX = 50, startY = 150;
+                
+                sortedStates.forEach((state, index) => {
+                  const row = Math.floor(index / 4);
+                  const col = index % 4;
+                  positions[state.name] = { x: startX + col * (nodeWidth + gapX), y: startY + row * (nodeHeight + gapY) };
+                });
+
+                return transitions.map((tr, idx) => {
+                  const fromPos = positions[tr.from_state];
+                  const toPos = positions[tr.to_state];
+                  if (!fromPos || !toPos) return null;
+                  
+                  const isBackward = sortedStates.findIndex(s => s.name === tr.from_state) > sortedStates.findIndex(s => s.name === tr.to_state);
+                  
+                  let x1 = fromPos.x + (isBackward ? 0 : nodeWidth);
+                  let y1 = fromPos.y + nodeHeight / 2;
+                  let x2 = toPos.x + (isBackward ? nodeWidth : 0);
+                  let y2 = toPos.y + nodeHeight / 2;
+                  
+                  let path;
+                  if (fromPos.y === toPos.y && !isBackward) {
+                     path = `M ${x1} ${y1} L ${x2} ${y2}`;
+                  } else if (isBackward) {
+                     const offset = 40 + (idx % 3) * 20;
+                     y1 = fromPos.y; y2 = toPos.y; x1 = fromPos.x + nodeWidth/2; x2 = toPos.x + nodeWidth/2;
+                     path = `M ${x1} ${y1} Q ${x1} ${y1 - offset}, ${(x1+x2)/2} ${Math.min(y1, y2) - offset} T ${x2} ${y2}`;
+                  } else {
+                     path = `M ${x1} ${y1} C ${x1 + 30} ${y1}, ${x2 - 30} ${y2}, ${x2} ${y2}`;
+                  }
+
+                  return (
+                    <g key={tr.id}>
+                      <path d={path} fill="none" stroke="#94a3b8" strokeWidth="2" markerEnd="url(#arrowhead)" strokeDasharray={tr.requires_comment ? "5,5" : "none"} />
+                      <text x={(x1 + x2) / 2} y={isBackward ? Math.min(y1, y2) - 30 : (y1 + y2) / 2 - 5} fill="#64748b" fontSize="10" textAnchor="middle">
+                        {tr.allowed_roles[0]}{tr.allowed_roles.length > 1 ? '+' : ''}
+                      </text>
+                    </g>
+                  );
+                });
+              })()}
+            </svg>
+            
+            {(() => {
+              const sortedStates = [...states].sort((a, b) => a.sort_order - b.sort_order);
+              const positions: Record<string, {x: number, y: number}> = {};
+              const nodeWidth = 140, nodeHeight = 50, gapX = 60, gapY = 80, startX = 50, startY = 150;
+              const colors: Record<string, string> = {
+                gray: '#64748b', blue: '#3b82f6', amber: '#f59e0b', green: '#10b981', red: '#ef4444', purple: '#8b5cf6'
+              };
+              
+              sortedStates.forEach((state, index) => {
+                const row = Math.floor(index / 4);
+                const col = index % 4;
+                positions[state.name] = { x: startX + col * (nodeWidth + gapX), y: startY + row * (nodeHeight + gapY) };
+              });
+
+              return sortedStates.map(state => {
+                const pos = positions[state.name];
+                return (
+                  <div key={state.id} className="absolute shadow-sm border border-slate-200 dark:border-slate-700 rounded-md flex flex-col justify-center items-center px-2 py-1 bg-white dark:bg-slate-800"
+                    style={{ left: pos.x, top: pos.y, width: nodeWidth, height: nodeHeight, borderTop: `4px solid ${colors[state.color] || colors.gray}` }}>
+                    <span className="text-xs font-bold text-slate-800 dark:text-slate-200 text-center">{state.label_th}</span>
+                    <span className="text-[10px] text-slate-400 font-mono">{state.name}</span>
+                    {state.is_terminal && <Check className="absolute -top-2 -right-2 w-4 h-4 bg-emerald-500 text-white rounded-full p-0.5" />}
+                  </div>
+                );
+              });
+            })()}
           </div>
         </div>
       )}

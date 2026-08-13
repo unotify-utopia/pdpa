@@ -67,3 +67,28 @@ npm --prefix super-admin-app install
 ## 💡 คำแนะนำเพื่อความปลอดภัยไร้รอยต่อ
 1. **อย่าลืมกดปุ่มที่ 2 (`2_เลิกงาน_บันทึกและส่งโค้ด.bat`) ก่อนปิดคอมเสมอ** เพื่อให้คอมอีกเครื่องมีโค้ดล่าสุดไปทำงานต่อได้
 2. **หากมีการตั้งค่า API Keys หรือรหัสผ่านใหม่ใน `.env`** ต้องไม่ลืมนำไปอัปเดตใส่ไฟล์ `.env` ในคอมอีกเครื่องและบน Production Server ด้วยครับ
+
+---
+
+## 🗂️ โครงสร้างไฟล์หลัก (อัปเดต 2026-08 - v2.0 Modular Architecture)
+
+```
+routes/
+  auth.routes.js       ← Login, 2FA
+  users.routes.js      ← User CRUD
+  workflow.routes.js   ← Workflow Engine
+  reports.routes.js    ← DPO Analytics
+  requests.routes.js   ← Request management
+  download.routes.js   ← Secure download
+  superadmin.routes.js ← Tenant & SuperAdmin
+  public.routes.js     ← Public APIs
+migrations/
+  001_workflow_engine.sql      ← รัน UP เพื่อสร้างตาราง
+  001_workflow_engine_down.sql ← รัน DOWN เพื่อ rollback
+```
+
+## 🔧 การรัน DB Migration บน Production (สำหรับโครงสร้างใหม่)
+หากระบบมีการเพิ่มตารางใหม่ (เช่น workflow_states, workflow_transitions) จำเป็นต้องรัน Migration SQL เข้า Database โดยรันคำสั่ง:
+```bash
+psql -U pdpa_admin -d pdpa_prod_db -f migrations/001_workflow_engine.sql
+```

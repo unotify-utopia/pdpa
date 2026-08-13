@@ -1,0 +1,462 @@
+// routes/download.routes.js
+import express from 'express';
+import crypto from 'crypto';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import jwt from 'jsonwebtoken';
+import { generateCoverLetterPdf, generateDiscoveryReportPdf } from '../services/pdf.service.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+export function createDownloadRouter(dbPool, authenticateJWT, requireRole, addServerAuditLog, sendMailFn, otpCache) {
+  const router = express.Router();
+
+  // helper resolveDownloadToken
+  async function resolveDownloadToken(param) {
+    if (!param) return null;
+    const { rows } = await dbPool.query(
+      `SELECT dt.*, r.tracking_no, r.data as req_data, r.org_id, r.id as req_id
+       FROM download_tokens dt
+       JOIN requests r ON r.id = dt.request_id
+       WHERE dt.token = $1 OR dt.request_id = $1 OR r.tracking_no = $1
+       ORDER BY dt.created_at DESC LIMIT 1`,
+      [param]
+    );
+    if (rows.length > 0) {
+      return rows[0];
+    }
+  
+    const { rows: reqRows } = await dbPool.query(
+      `SELECT id, tracking_no, data, org_id FROM requests
+       WHERE tracking_no = $1 OR id = $1 LIMIT 1`,
+      [param]
+    );
+    if (reqRows.length === 0) {
+      return null;
+    }
+  
+    const reqRow = reqRows[0];
+    const newToken = crypto.randomBytes(48).toString('hex');
+    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+  
+    await dbPool.query(
+      'INSERT INTO download_tokens (token, request_id, org_id, expires_at) VALUES ($1, $2, $3, $4)',
+      [newToken, reqRow.id, reqRow.org_id, expiresAt]
+    );
+  
+    try {
+      const dataObj = reqRow.data || {};
+      dataObj.downloadToken = newToken;
+      await dbPool.query('UPDATE requests SET data = $1 WHERE id = $2', [JSON.stringify(dataObj), reqRow.id]);
+    } catch (e) {}
+  
+    return {
+      token: newToken,
+      request_id: reqRow.id,
+      org_id: reqRow.org_id,
+      expires_at: expiresAt,
+      downloaded_count: 0,
+      is_revoked: false,
+      tracking_no: reqRow.tracking_no,
+      req_data: reqRow.data || {},
+      req_id: reqRow.id
+    };
+  }
+
+  // POST /api/public/requests/:id/download-package
+  router.post('/public/requests/:id/download-package', async (req, res) => {
+    const { id } = req.params;
+    const { email, phone, otp, reference } = req.body;
+    const key = reference || email || phone || id;
+    
+    if (!key || !otp) return res.status(400).json({ success: false, message: 'Missing parameters' });
+  
+    console.log(`[DOWNLOAD-PACKAGE] Verifying OTP. key=${key}, otp=${otp}, reference=${reference}`);
+  
+    try {
+      // 1. Verify OTP
+      const otpResult = await dbPool.query('SELECT * FROM public_otps WHERE key = $1', [key]);
+      if (otpResult.rows.length === 0) {
+        console.log(`[DOWNLOAD-PACKAGE] OTP not found for key=${key}`);
+        return res.status(400).json({ success: false, message: 'OTP not found' });
+      }
+      if (otpResult.rows[0].otp !== otp) {
+        console.log(`[DOWNLOAD-PACKAGE] OTP mismatch for key=${key}. Expected ${otpResult.rows[0].otp}, got ${otp}`);
+        return res.status(400).json({ success: false, message: 'Invalid OTP' });
+      }
+  
+      // 2. Fetch Request Data
+      const reqResult = await dbPool.query('SELECT * FROM requests WHERE id = $1', [id]);
+      if (reqResult.rows.length === 0) return res.status(404).json({ success: false, message: 'Request not found' });
+      const pdpaRequest = reqResult.rows[0];
+      const data = typeof pdpaRequest.data === 'string' ? JSON.parse(pdpaRequest.data) : pdpaRequest.data;
+  
+      // 3. Extract active file IDs from JSON data
+      const activeFileIds = [];
+      if (data.dataCollectionTasks && Array.isArray(data.dataCollectionTasks)) {
+        data.dataCollectionTasks.forEach(task => {
+          if (task.uploadedFiles && Array.isArray(task.uploadedFiles)) {
+            task.uploadedFiles.forEach(file => {
+              if (!file.isDeleted && file.id) {
+                activeFileIds.push(file.id);
+              }
+            });
+          }
+        });
+      }
+      
+      let filesResult = { rows: [] };
+      if (activeFileIds.length > 0) {
+        // Fetch only the specific active files
+        const queryParams = activeFileIds.map((_, i) => `$${i + 1}`);
+        filesResult = await dbPool.query(
+          `SELECT filename, file_data FROM task_files WHERE id IN (${queryParams.join(', ')})`,
+          activeFileIds
+        );
+      }
+      
+      // 4. Compute SHA-256 for integrity
+      const exportSummary = {
+        trackingNo: data.trackingNo,
+        requesterName: `${data.requester.firstName} ${data.requester.lastName}`,
+        exportedAt: new Date().toISOString(),
+        filesCount: filesResult.rows.length,
+        rawData: data
+      };
+      const summaryStr = JSON.stringify(exportSummary, null, 2);
+      const sha256Hash = crypto.createHash('sha256').update(summaryStr).digest('hex');
+  
+      // 5. Generate PDF Cover Letter
+      const pdfBuffer = await generateCoverLetterPdf(data, filesResult.rows, sha256Hash);
+      
+      // 6. Build ZIP
+      const { default: AdmZip } = await import('adm-zip');
+      const zip = new AdmZip();
+      zip.addFile(`Cover_Letter_${data.trackingNo}.pdf`, pdfBuffer);
+      zip.addFile(`Request_Summary_${data.trackingNo}.json`, Buffer.from(summaryStr, 'utf8'));
+      
+      for (const file of filesResult.rows) {
+        // file_data is base64 string like data:image/png;base64,iVBORw0KGgo...
+        const matches = file.file_data.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+        if (matches && matches.length === 3) {
+          zip.addFile(file.filename, Buffer.from(matches[2], 'base64'));
+        } else {
+          zip.addFile(file.filename, Buffer.from(file.file_data, 'utf8'));
+        }
+      }
+      
+      const zipBuffer = zip.toBuffer();
+      res.set('Content-Type', 'application/zip');
+      res.set('Content-Disposition', `attachment; filename="PDPA_Package_${data.trackingNo}.zip"`);
+      res.send(zipBuffer);
+    } catch (err) {
+      console.error('Download Package Error:', err);
+      res.status(500).json({ success: false, message: err.message });
+    }
+  });
+
+  // GET /api/requests/:id/preview-attachment-pdf
+  router.get('/requests/:id/preview-attachment-pdf', authenticateJWT, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { rows } = await dbPool.query('SELECT * FROM requests WHERE id = $1 OR tracking_no = $1 LIMIT 1', [id]);
+      if (rows.length === 0) return res.status(404).json({ success: false, message: 'Request not found' });
+  
+      const pdpaRequest = rows[0];
+      const data = typeof pdpaRequest.data === 'string' ? JSON.parse(pdpaRequest.data) : (pdpaRequest.data || {});
+  
+      // Collect active file rows from task_files
+      const { rows: taskFiles } = await dbPool.query(
+        'SELECT filename, file_data, uploaded_by, uploaded_at FROM task_files WHERE (request_id = $1 OR request_id = $2) AND (is_deleted IS NULL OR is_deleted = false)',
+        [pdpaRequest.id, pdpaRequest.tracking_no]
+      );
+  
+      // Also check uploadedFiles inside dataCollectionTasks for completeness
+      const allFilesList = [...taskFiles];
+      if (data.dataCollectionTasks && Array.isArray(data.dataCollectionTasks)) {
+        data.dataCollectionTasks.forEach(task => {
+          if (task.uploadedFiles && Array.isArray(task.uploadedFiles)) {
+            task.uploadedFiles.forEach(f => {
+              if (!f.isDeleted && !allFilesList.some(tf => tf.filename === f.filename)) {
+                allFilesList.push({ filename: f.filename || 'Untitled File', uploaded_by: task.assigneeName || task.systemName, created_at: f.uploadedAt || new Date() });
+              }
+            });
+          }
+        });
+      }
+  
+      const summaryStr = JSON.stringify({ trackingNo: data.trackingNo, filesCount: allFilesList.length, generatedAt: new Date().toISOString() }, null, 2);
+      const sha256Hash = crypto.createHash('sha256').update(summaryStr).digest('hex');
+  
+      const isCompleted = pdpaRequest.status === 'completed' || pdpaRequest.status === 'delivered';
+      const signerName = req.user?.username || 'เจ้าหน้าที่คุ้มครองข้อมูลส่วนบุคคล (DPO)';
+      const pdfBuffer = await generateDiscoveryReportPdf(data, allFilesList, sha256Hash, isCompleted, signerName);
+  
+      res.set('Content-Type', 'application/pdf');
+      res.set('Content-Disposition', `inline; filename="PDPA_Compiled_Report_${data.trackingNo || id}.pdf"`);
+      res.send(pdfBuffer);
+    } catch (err) {
+      console.error('Preview attachment PDF error:', err);
+      res.status(500).json({ success: false, message: err.message });
+    }
+  });
+
+  // GET /api/requests/:id/download-package-admin
+  router.get('/requests/:id/download-package-admin', authenticateJWT, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { rows } = await dbPool.query('SELECT * FROM requests WHERE id = $1 OR tracking_no = $1 LIMIT 1', [id]);
+      if (rows.length === 0) return res.status(404).json({ success: false, message: 'Request not found' });
+  
+      const pdpaRequest = rows[0];
+      const data = typeof pdpaRequest.data === 'string' ? JSON.parse(pdpaRequest.data) : (pdpaRequest.data || {});
+  
+      // Fetch active files from task_files
+      const { rows: taskFiles } = await dbPool.query(
+        'SELECT filename, file_data FROM task_files WHERE (request_id = $1 OR request_id = $2) AND (is_deleted IS NULL OR is_deleted = false)',
+        [pdpaRequest.id, pdpaRequest.tracking_no]
+      );
+  
+      const exportSummary = {
+        trackingNo: data.trackingNo,
+        requesterName: `${data.requester?.firstName || ''} ${data.requester?.lastName || ''}`.trim(),
+        exportedAt: new Date().toISOString(),
+        filesCount: taskFiles.length,
+        rawData: data
+      };
+      const summaryStr = JSON.stringify(exportSummary, null, 2);
+      const sha256Hash = crypto.createHash('sha256').update(summaryStr).digest('hex');
+  
+      // Generate Cover Letter PDF
+      const pdfBuffer = await generateCoverLetterPdf(data, taskFiles, sha256Hash);
+  
+      const { default: AdmZip } = await import('adm-zip');
+      const zip = new AdmZip();
+      zip.addFile(`Cover_Letter_${data.trackingNo || id}.pdf`, pdfBuffer);
+      zip.addFile(`Request_Summary_${data.trackingNo || id}.json`, Buffer.from(summaryStr, 'utf8'));
+  
+      for (const file of taskFiles) {
+        const matches = file.file_data.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+        if (matches && matches.length === 3) {
+          zip.addFile(file.filename, Buffer.from(matches[2], 'base64'));
+        } else {
+          zip.addFile(file.filename, Buffer.from(file.file_data, 'utf8'));
+        }
+      }
+  
+      const zipBuffer = zip.toBuffer();
+      res.set('Content-Type', 'application/zip');
+      res.set('Content-Disposition', `attachment; filename="PDPA_Package_${data.trackingNo || id}.zip"`);
+      res.send(zipBuffer);
+    } catch (err) {
+      console.error('Download package admin error:', err);
+      res.status(500).json({ success: false, message: err.message });
+    }
+  });
+
+  // GET /api/dl/info/:token
+  router.get('/dl/info/:token', async (req, res) => {
+    try {
+      const { token } = req.params;
+      const row = await resolveDownloadToken(token);
+      if (!row) return res.status(404).json({ success: false, message: 'ไม่พบลิงก์นี้ในระบบ' });
+      if (row.is_revoked) return res.status(410).json({ success: false, message: 'ลิงก์นี้ถูกยกเลิกแล้ว' });
+      if (new Date(row.expires_at) < new Date()) return res.status(410).json({ success: false, message: 'ลิงก์หมดอายุแล้ว (เกิน 30 วัน)' });
+  
+      const reqData = row.req_data || {};
+      res.json({
+        success: true,
+        trackingNo: row.tracking_no,
+        requesterEmail: reqData.requester?.email || '',
+        requesterName: `${reqData.requester?.firstName || ''} ${reqData.requester?.lastName || ''}`.trim(),
+        expiresAt: row.expires_at,
+        downloadedCount: row.downloaded_count
+      });
+    } catch (err) {
+      res.status(500).json({ success: false, message: err.message });
+    }
+  });
+  
+  // POST /api/dl/request-otp
+  router.post('/dl/request-otp', async (req, res) => {
+    try {
+      const { token } = req.body;
+      if (!token) return res.status(400).json({ success: false, message: 'Token required' });
+  
+      const row = await resolveDownloadToken(token);
+      if (!row) return res.status(404).json({ success: false, message: 'ไม่พบลิงก์นี้' });
+      if (row.is_revoked || new Date(row.expires_at) < new Date()) {
+        return res.status(410).json({ success: false, message: 'ลิงก์หมดอายุหรือถูกยกเลิก' });
+      }
+  
+      const reqData = row.req_data || {};
+      const email = reqData.requester?.email;
+      if (!email) return res.status(400).json({ success: false, message: 'ไม่พบอีเมลผู้ยื่นคำร้อง' });
+  
+      // Generate 6-digit OTP
+      const otp = String(Math.floor(100000 + Math.random() * 900000));
+      const otpKey1 = `dl_otp:${row.request_id}`;
+      const otpKey2 = `dl_otp:${token}`;
+      const expiresAt = Date.now() + 10 * 60 * 1000; // 10 min
+  
+      await dbPool.query(
+        'INSERT INTO public_otps (key, otp, expires_at) VALUES ($1, $2, $3) ON CONFLICT (key) DO UPDATE SET otp = $2, expires_at = $3',
+        [otpKey1, otp, expiresAt]
+      );
+      if (otpKey1 !== otpKey2) {
+        await dbPool.query(
+          'INSERT INTO public_otps (key, otp, expires_at) VALUES ($1, $2, $3) ON CONFLICT (key) DO UPDATE SET otp = $2, expires_at = $3',
+          [otpKey2, otp, expiresAt]
+        );
+      }
+  
+      // Format expiry for display
+      const expiresDisplay = new Date(row.expires_at).toLocaleDateString('th-TH', {
+        year: 'numeric', month: 'long', day: 'numeric', timeZone: 'Asia/Bangkok'
+      });
+  
+      await sendMailFn({
+        to: email,
+        subject: `[PDPA] รหัส OTP สำหรับดาวน์โหลดเอกสาร - ${row.tracking_no}`,
+        html: `
+          <div style="font-family:'Sarabun',Arial,sans-serif;max-width:520px;margin:auto;background:#f8fafc;border-radius:12px;overflow:hidden;border:1px solid #e2e8f0">
+            <div style="background:linear-gradient(135deg,#0284c7,#0369a1);padding:32px 24px;text-align:center">
+              <div style="background:rgba(255,255,255,0.15);border-radius:50%;width:64px;height:64px;margin:0 auto 16px;display:flex;align-items:center;justify-content:center;font-size:28px">🔐</div>
+              <h1 style="color:#fff;margin:0;font-size:22px">รหัส OTP ดาวน์โหลดเอกสาร</h1>
+              <p style="color:#bae6fd;margin:8px 0 0;font-size:14px">Secure Document Download OTP</p>
+            </div>
+            <div style="padding:32px 24px">
+              <p style="color:#334155;font-size:16px">เรียน คุณ ${reqData.requester?.firstName || 'ผู้ยื่นคำขอ'},</p>
+              <p style="color:#64748b;font-size:14px;line-height:1.6">คุณได้ร้องขอ OTP เพื่อดาวน์โหลดเอกสารสำหรับ<br><strong>เลขที่คำขอ: ${row.tracking_no}</strong></p>
+              <div style="background:#fff;border:2px solid #e2e8f0;border-radius:12px;padding:24px;text-align:center;margin:24px 0">
+                <p style="color:#64748b;font-size:13px;margin:0 0 8px">รหัส OTP ของคุณ (มีอายุ 10 นาที)</p>
+                <div style="font-size:42px;font-weight:700;font-family:monospace;letter-spacing:0.3em;color:#0284c7;background:#f0f9ff;border-radius:8px;padding:16px">${otp}</div>
+              </div>
+              <div style="background:#fef9c3;border:1px solid #fde047;border-radius:8px;padding:12px 16px;margin-bottom:16px">
+                <p style="margin:0;color:#854d0e;font-size:13px">⚠️ ลิงก์ดาวน์โหลดนี้จะหมดอายุวันที่ <strong>${expiresDisplay}</strong><br>กรุณาอย่าแชร์รหัสนี้ให้ผู้อื่น</p>
+              </div>
+              <p style="color:#94a3b8;font-size:12px">หากคุณไม่ได้ร้องขอ กรุณาเพิกเฉยต่ออีเมลนี้</p>
+            </div>
+            <div style="background:#f1f5f9;padding:16px 24px;text-align:center;border-top:1px solid #e2e8f0">
+              <p style="color:#94a3b8;font-size:12px;margin:0">PDPA Secure Document System &copy; 2026</p>
+            </div>
+          </div>
+        `
+      });
+  
+      const maskedEmail = email.replace(/(.)(.*)(@.*)/, (_, a, b, c) => a + '*'.repeat(Math.min(b.length, 6)) + c);
+      console.log(`📧 Download OTP sent to ${maskedEmail} for token ${token.substring(0, 8)}...`);
+      res.json({ success: true, maskedEmail });
+    } catch (err) {
+      console.error('DL OTP request error:', err);
+      res.status(500).json({ success: false, message: err.message });
+    }
+  });
+  
+  // POST /api/dl/verify-otp
+  router.post('/dl/verify-otp', async (req, res) => {
+    try {
+      const { token, otp } = req.body;
+      if (!token || !otp) return res.status(400).json({ success: false, message: 'Missing params' });
+  
+      const row = await resolveDownloadToken(token);
+      if (!row) return res.status(404).json({ success: false, message: 'ไม่พบลิงก์นี้' });
+  
+      const otpKey1 = `dl_otp:${row.request_id}`;
+      const otpKey2 = `dl_otp:${token}`;
+      const { rows: otpRows } = await dbPool.query(
+        'SELECT * FROM public_otps WHERE key = $1 OR key = $2 LIMIT 1',
+        [otpKey1, otpKey2]
+      );
+      if (otpRows.length === 0) return res.status(400).json({ success: false, message: 'ไม่พบ OTP กรุณาขอใหม่อีกครั้ง' });
+      const otpRow = otpRows[0];
+      if (Date.now() > Number(otpRow.expires_at)) return res.status(400).json({ success: false, message: 'OTP หมดอายุแล้ว กรุณาขอใหม่อีกครั้ง' });
+      if (otpRow.otp !== otp.trim()) return res.status(400).json({ success: false, message: 'รหัส OTP ไม่ถูกต้อง' });
+  
+      // OTP valid — delete it (one-time use)
+      await dbPool.query('DELETE FROM public_otps WHERE key = $1 OR key = $2', [otpKey1, otpKey2]);
+  
+      // Increment download count
+      await dbPool.query(
+        'UPDATE download_tokens SET downloaded_count = downloaded_count + 1 WHERE token = $1 OR request_id = $2',
+        [row.token, row.request_id]
+      );
+  
+      // Issue a short-lived (15 min) signed download session token
+      const sessionToken = jwt.sign({ request_id: row.request_id, downloadToken: row.token, at: Date.now() }, process.env.JWT_SECRET || 'pdpa-secret', { expiresIn: '15m' });
+      res.json({ success: true, sessionToken });
+    } catch (err) {
+      console.error('DL verify OTP error:', err);
+      res.status(500).json({ success: false, message: err.message });
+    }
+  });
+  
+  // GET /api/dl/download/:token
+  router.get('/dl/download/:token', async (req, res) => {
+    try {
+      const { token } = req.params;
+      const { session } = req.query;
+      if (!session) return res.status(401).json({ success: false, message: 'Session token required' });
+  
+      // Verify session token
+      let payload;
+      try {
+        payload = jwt.verify(session, process.env.JWT_SECRET || 'pdpa-secret');
+      } catch {
+        return res.status(401).json({ success: false, message: 'Session หมดอายุ กรุณายืนยัน OTP ใหม่' });
+      }
+  
+      const row = await resolveDownloadToken(token);
+      if (!row) return res.status(404).json({ success: false, message: 'ไม่พบ Token' });
+      if (payload.request_id !== row.request_id && payload.downloadToken !== row.token && payload.downloadToken !== token) {
+        return res.status(403).json({ success: false, message: 'Token mismatch' });
+      }
+  
+      if (row.is_revoked || new Date(row.expires_at) < new Date()) {
+        return res.status(410).json({ success: false, message: 'ลิงก์หมดอายุหรือถูกยกเลิก' });
+      }
+  
+      // Collect all task_files for this request
+      const { rows: files } = await dbPool.query(
+        'SELECT * FROM task_files WHERE (request_id = $1 OR request_id = $2) AND (is_deleted IS NULL OR is_deleted = false)',
+        [row.request_id, row.tracking_no]
+      );
+  
+      const reqData = row.req_data || {};
+      const AdmZip = (await import('adm-zip')).default;
+      const zip = new AdmZip();
+  
+      // Add request info JSON
+      const info = {
+        trackingNo: row.tracking_no,
+        requesterName: `${reqData.requester?.firstName || ''} ${reqData.requester?.lastName || ''}`.trim(),
+        downloadedAt: new Date().toISOString(),
+        tokenExpiresAt: row.expires_at
+      };
+      zip.addFile('request_info.json', Buffer.from(JSON.stringify(info, null, 2), 'utf8'));
+  
+      // Add each attached file
+      for (const f of files) {
+        try {
+          if (f.file_data) {
+            const buf = Buffer.from(f.file_data, 'base64');
+            zip.addFile(f.filename || `file_${f.id}`, buf);
+          }
+        } catch {}
+      }
+  
+      const zipBuffer = zip.toBuffer();
+      res.set('Content-Type', 'application/zip');
+      res.set('Content-Disposition', `attachment; filename="PDPA_${row.tracking_no}.zip"`);
+      res.send(zipBuffer);
+  
+      console.log(`⬇️ Download executed for ${row.tracking_no}, session verified`);
+    } catch (err) {
+      console.error('DL download error:', err);
+      res.status(500).json({ success: false, message: err.message });
+    }
+  });
+
+  return router;
+}
