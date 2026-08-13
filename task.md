@@ -29,17 +29,17 @@
 - [x] เพิ่ม GET /api/requests/:id/decision
 
 ### Day 8-9: DPO Analytics Dashboard
-- [ ] สร้าง `routes/reports.routes.js` — summary + sla-breach endpoints
-- [ ] สร้าง `src/components/DPOAnalyticsDashboard.tsx`
-- [ ] Dual scope: DPO เห็น org ตัวเอง, SuperAdmin เห็นทุก org
+- [x] สร้าง `routes/reports.routes.js` — summary + sla-breach endpoints
+- [x] สร้าง `src/components/DPOAnalyticsDashboard.tsx`
+- [x] Dual scope: DPO เห็น org ตัวเอง, SuperAdmin เห็นทุก org
 
 ### Day 10-12: Workflow Admin UI
-- [ ] สร้าง WorkflowAdminPanel component ใน super-admin-app
-- [ ] CRUD สำหรับ workflow_states
-- [ ] CRUD สำหรับ workflow_transitions พร้อม role mapping
+- [x] สร้าง WorkflowAdminPanel component ใน super-admin-app
+- [x] CRUD สำหรับ workflow_states
+- [x] CRUD สำหรับ workflow_transitions พร้อม role mapping
 
 ### Day 13-14: Testing & Deployment
-- [ ] Regression test ทุก 46 API endpoints
-- [ ] Smoke test workflow: Submitted → Delivered
-- [ ] Deploy + DB migration บน production
-- [ ] อัปเดต SETUP_NEW_PC.md
+- [x] Regression test ทุก 46 API endpoints
+- [x] Smoke test workflow: Submitted → Delivered
+- [x] Deploy + DB migration บน production
+- [x] อัปเดต SETUP_NEW_PC.md

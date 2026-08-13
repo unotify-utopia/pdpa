@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ShieldCheck, Building2, UserCheck, Key, Lock, LogOut, Plus, Sun, Moon, CheckCircle2, Trash2, Mail, AlertCircle, Eye, EyeOff, Check, Archive, Download, FileText, CheckCircle, ShieldAlert, RefreshCw, X, Activity, Server, ArrowRight, Sparkles, Shield } from 'lucide-react';
+import WorkflowAdminPanel from './WorkflowAdminPanel';
 
 interface Tenant {
   id: string;
@@ -43,7 +44,7 @@ export default function App() {
   const [password, setPassword] = useState('');
   const [mfaCode, setMfaCode] = useState('');
 
-  const [activeTab, setActiveTab] = useState<'tenants' | 'users' | 'export'>('tenants');
+  const [activeTab, setActiveTab] = useState<'tenants' | 'users' | 'export' | 'workflow'>('tenants');
   const [selectedTenantForUsers, setSelectedTenantForUsers] = useState<string>('');
   const [exportTenantModal, setExportTenantModal] = useState<Tenant | null>(null);
   const [exportFormat, setExportFormat] = useState<'json' | 'csv'>('json');
@@ -1388,6 +1389,16 @@ export default function App() {
               <Archive className="h-4 w-4" />
               <span>3. ส่งมอบข้อมูลหมดสัญญา (Offboarding - {tenants.length})</span>
             </button>
+
+            <button
+              onClick={() => setActiveTab('workflow')}
+              className={`px-4 py-2 rounded-lg text-xs font-bold transition flex items-center gap-2 ${
+                activeTab === 'workflow' ? 'bg-blue-600 text-white shadow-md' : 'bg-slate-800/40 text-slate-400 hover:bg-slate-800'
+              }`}
+            >
+              <Activity className="h-4 w-4" />
+              <span>4. จัดการระบบ Workflow</span>
+            </button>
           </div>
 
           {activeTab === 'tenants' ? (
@@ -1665,6 +1676,14 @@ export default function App() {
               </div>
             </div>
           </div>
+        )}
+
+        {activeTab === 'workflow' && token && (
+          <WorkflowAdminPanel 
+            token={token} 
+            showNotify={showNotify} 
+            isDark={isDark} 
+          />
         )}
 
       </main>
