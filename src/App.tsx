@@ -1135,9 +1135,28 @@ export default function App() {
   // --- SECURE DOWNLOAD VERIFICATION (Section 3.9) ---
   const handleDownloadCheck = async (identifier: string) => {
     let req = requests.find(r => r.uuid === identifier || r.trackingNo === identifier);
+    
+    // Always fetch fresh requests to ensure status is up to date (prevents stale status error)
+    try {
+      const res = await fetch('/api/public/requests', { cache: 'no-store' });
+      const data = await res.json();
+      if (data && data.success && Array.isArray(data.requests)) {
+         setRequests(recalculateAllSLAs(data.requests, config));
+         const freshReq = data.requests.find((r: Request) => r.uuid === identifier || r.trackingNo === identifier);
+         if (freshReq) req = freshReq;
+      }
+    } catch (e) {
+      console.error('Failed to fetch fresh status for download check', e);
+    }
+
     if (!req && trackedRequest?.trackingNo) {
       req = requests.find(r => r.trackingNo === trackedRequest.trackingNo);
+      // Fallback to trackedRequest itself if still not found
+      if (!req && trackedRequest && (trackedRequest.uuid === identifier || trackedRequest.trackingNo === identifier)) {
+        req = trackedRequest;
+      }
     }
+
     if (!req) {
       setDownloadError('ลิงก์ดาวน์โหลดไม่ถูกต้องหรือหมดอายุการใช้งานแล้ว');
       setView('download');
@@ -1805,19 +1824,19 @@ export default function App() {
       await updateRequest(req, activeUser, 'APPROVER_SIGN', 'ผู้บริหารลงนามเห็นชอบ');
     }
 
-    // Change status
-    await changeRequestStatus(getRequestClone(reqId), resultStatus, activeUser, `ผู้อนุมัติมีคำสั่งอย่างเป็นทางการ: ${resultStatus}`, config || undefined);
+    // Change status using the mutated req reference
+    await changeRequestStatus(req, resultStatus, activeUser, `ผู้อนุมัติมีคำสั่งอย่างเป็นทางการ: ${resultStatus}`, config || undefined);
 
     // If approved and has fees, go to payment. If not, go to Ready for Delivery (digital)
     if (['Approved', 'Partially Approved'].includes(resultStatus)) {
       if (req.feeCalculation && req.feeCalculation.totalCalculated > 0 && req.feeCalculation.paymentStatus === 'pending') {
-        await changeRequestStatus(getRequestClone(reqId), 'Fee Notification', activeUser, 'แจ้งเรียกเก็บค่าธรรมเนียมตามใบแจ้งหนี้ก่อนส่งมอบข้อมูล', config || undefined);
+        await changeRequestStatus(req, 'Fee Notification', activeUser, 'แจ้งเรียกเก็บค่าธรรมเนียมตามใบแจ้งหนี้ก่อนส่งมอบข้อมูล', config || undefined);
       } else {
-        await changeRequestStatus(getRequestClone(reqId), 'Ready for Delivery', activeUser, 'ไม่มีค่าธรรมเนียมหรือยกเว้นแล้ว เตรียมส่งข้อมูลสิทธิ์', config || undefined);
+        await changeRequestStatus(req, 'Ready for Delivery', activeUser, 'ไม่มีค่าธรรมเนียมหรือยกเว้นแล้ว เตรียมส่งข้อมูลสิทธิ์', config || undefined);
       }
     } else {
       // Rejections or no data go straight to close or delivery of reject letter
-      await changeRequestStatus(getRequestClone(reqId), 'Ready for Delivery', activeUser, 'พร้อมส่งมอบหนังสือชี้แจงคำปฏิเสธ / ไม่พบข้อมูล', config || undefined);
+      await changeRequestStatus(req, 'Ready for Delivery', activeUser, 'พร้อมส่งมอบหนังสือชี้แจงคำปฏิเสธ / ไม่พบข้อมูล', config || undefined);
     }
 
     reloadData();
