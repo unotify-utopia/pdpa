@@ -8,7 +8,7 @@ console.log('========================================================\n');
 
 conn.on('ready', () => {
   console.log('✅ เชื่อมต่อ Server สำเร็จ! กำลังอัปเดตระบบ...');
-  const cmd = `cd /root/pdpa && git pull && npm run build && (pm2 restart pdpa-backend || pm2 restart all)`;
+  const cmd = `cd /root/pdpa && git fetch --all && git reset --hard origin/main && npm run build && (pm2 restart pdpa-backend || pm2 restart all)`;
   
   conn.exec(cmd, (err, stream) => {
     if (err) {

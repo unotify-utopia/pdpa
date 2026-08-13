@@ -73,6 +73,7 @@ import { DocumentVerificationPortal } from './components/DocumentVerificationPor
 import { SecureDownloadPage } from './components/SecureDownloadPage';
 import { DashboardCharts } from './components/DashboardCharts';
 import { StaffLoginModal } from './components/StaffLoginModal';
+import { ProfileModal } from './components/ProfileModal';
 import { NotifyModal } from './components/NotifyModal';
 import type { NotifyType } from './components/NotifyModal';
 import { ChangePasswordModal } from './components/ChangePasswordModal';
@@ -197,6 +198,7 @@ export default function App() {
   const [impersonatedOrgId, setImpersonatedOrgId] = useState<string | null>(null);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [isChangePasswordModalOpen, setIsChangePasswordModalOpen] = useState(false);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [manualChannel, setManualChannel] = useState<'office' | 'post' | 'email' | 'e-service'>('office');
   const [manualRefNo, setManualRefNo] = useState('');
   const [manualEntrySuccessTrackingNo, setManualEntrySuccessTrackingNo] = useState<string | null>(null);
@@ -1167,7 +1169,7 @@ export default function App() {
       return;
     }
 
-    if (req.status !== 'Ready for Delivery' && req.status !== 'Delivered' && req.status !== 'Receipt Confirmed') {
+    if (req.status !== 'Ready for Delivery' && req.status !== 'Delivered' && req.status !== 'Receipt Confirmed' && req.status !== 'Closed') {
       setDownloadError('เอกสารของคำขอนี้ยังไม่พร้อมส่งมอบ หรือถูกระงับสิทธิ์');
       setView('download');
       return;
@@ -1827,6 +1829,12 @@ export default function App() {
 
   const handleApproverSign = async (reqId: string, resultStatus: 'Approved' | 'Partially Approved' | 'Denied' | 'No Data Found') => {
     if (!activeUser) return;
+    
+    if (!activeUser.signature_image) {
+      showNotify('กรุณาตั้งค่าโปรไฟล์และอัปโหลดลายมือชื่อก่อนทำการอนุมัติคำร้อง', 'warning');
+      return;
+    }
+
     const req = getRequestClone(reqId);
     if (!req) return;
 
@@ -1834,6 +1842,7 @@ export default function App() {
       req.decision.approvedAt = new Date().toISOString();
       req.decision.approverName = activeUser.fullNameTh;
       req.decision.approverOpinion = 'เห็นชอบและยินยอมให้ลงนามหนังสือตามประกาศ DPO';
+      req.decision.approverSignatureImage = activeUser.signature_image || null;
       await updateRequest(req, activeUser, 'APPROVER_SIGN', 'ผู้บริหารลงนามเห็นชอบ');
     }
 
@@ -2276,6 +2285,13 @@ export default function App() {
               )}
 
               <button
+                onClick={() => setIsProfileModalOpen(true)}
+                className="bg-slate-700 hover:bg-slate-600 border border-slate-600 text-slate-200 font-bold px-2.5 py-1 rounded transition text-xs shadow-sm cursor-pointer"
+              >
+                ตั้งค่าโปรไฟล์
+              </button>
+
+              <button
                 onClick={() => setIsChangePasswordModalOpen(true)}
                 className="bg-slate-700 hover:bg-slate-600 border border-slate-600 text-slate-200 font-bold px-2.5 py-1 rounded transition text-xs shadow-sm cursor-pointer"
               >
@@ -2327,6 +2343,18 @@ export default function App() {
       <ChangePasswordModal
         isOpen={isChangePasswordModalOpen}
         onClose={() => setIsChangePasswordModalOpen(false)}
+      />
+
+      {/* Profile Modal */}
+      <ProfileModal
+        isOpen={isProfileModalOpen}
+        onClose={() => setIsProfileModalOpen(false)}
+        currentUser={activeUser}
+        onProfileUpdate={(updatedUser) => {
+          setActiveUser(updatedUser);
+          setCurrentUser(updatedUser);
+        }}
+        showNotify={showNotify}
       />
 
       {/* Document Template Edit Modal */}

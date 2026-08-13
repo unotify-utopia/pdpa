@@ -416,11 +416,20 @@ export const ThaiLetterView: React.FC<ThaiLetterViewProps> = ({
 
         {/* Signature Line */}
         <div className="mt-3 flex flex-col items-center" style={{ marginLeft: '7.5cm' }}>
-          <div className="mb-8">ขอแสดงความนับถือ</div>
+          <div className="mb-4">ขอแสดงความนับถือ</div>
           
-          <div className="flex flex-col items-center">
-            <div>({signer.fullNameTh})</div>
-            <div>{signer.department || 'ผู้อนุมัติมีอำนาจสั่งการ'}</div>
+          <div className="flex flex-col items-center min-h-[60px] justify-end">
+            {(request.decision?.approverSignatureImage || (signer as any).signature_image) ? (
+              <img 
+                src={request.decision?.approverSignatureImage || (signer as any).signature_image} 
+                alt="Signature" 
+                className="max-h-[60px] object-contain mb-2" 
+              />
+            ) : (
+              <div className="h-[40px]"></div>
+            )}
+            <div>({request.decision?.approverName || signer.fullNameTh})</div>
+            <div>{signer.department || 'ผู้ควบคุมข้อมูลส่วนบุคคล'}</div>
           </div>
         </div>
 

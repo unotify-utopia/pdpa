@@ -234,8 +234,45 @@ export function createAuthRouter(dbPool, authenticateJWT, addServerAuditLog, sen
   // GET /api/auth/me
   // Get current logged-in user profile
   // ─────────────────────────────────────────────
-  router.get('/me', authenticateJWT, (req, res) => {
-    res.json({ success: true, user: req.user });
+  router.get('/me', authenticateJWT, async (req, res) => {
+    try {
+      const { rows } = await dbPool.query('SELECT id, username, full_name_th, full_name_en, email, role, department, org_id, signature_image FROM users WHERE id = $1', [req.user.id]);
+      if (rows.length === 0) return res.status(404).json({ success: false, message: 'ไม่พบผู้ใช้' });
+      const user = rows[0];
+      // Map properties to match what frontend expects from token
+      res.json({ 
+        success: true, 
+        user: {
+          id: user.id,
+          username: user.username,
+          fullNameTh: user.full_name_th,
+          fullNameEn: user.full_name_en,
+          email: user.email,
+          role: user.role === 'superadmin' ? 'admin' : user.role,
+          roles: user.role === 'superadmin' ? ['admin'] : [user.role],
+          isSuperAdmin: user.role === 'superadmin',
+          department: user.department,
+          orgId: user.org_id,
+          signature_image: user.signature_image
+        } 
+      });
+    } catch (err) {
+      res.status(500).json({ success: false, message: err.message });
+    }
+  });
+
+  // ─────────────────────────────────────────────
+  // PUT /api/auth/signature
+  // Update user signature image
+  // ─────────────────────────────────────────────
+  router.put('/signature', authenticateJWT, async (req, res) => {
+    const { signatureImage } = req.body;
+    try {
+      await dbPool.query('UPDATE users SET signature_image = $1 WHERE id = $2', [signatureImage, req.user.id]);
+      res.json({ success: true, message: 'บันทึกลายเซ็นสำเร็จ' });
+    } catch (err) {
+      res.status(500).json({ success: false, message: err.message });
+    }
   });
 
   return router;

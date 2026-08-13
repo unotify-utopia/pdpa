@@ -113,9 +113,11 @@ export function formatRedactionNoticeTable(records) {
  * @param {Object} data - Request metadata
  * @param {Array} filesList - List of files included
  * @param {string} sha256Hash - SHA256 Checksum string
+ * @param {string} signerName - Name of the person signing
+ * @param {string} signerSignatureImage - Base64 image of the signature
  * @returns {Promise<Buffer>} - PDF Buffer
  */
-export async function generateCoverLetterPdf(data, filesList = [], sha256Hash = '') {
+export async function generateCoverLetterPdf(data, filesList = [], sha256Hash = '', signerName = '', signerSignatureImage = null) {
   const requesterName = `${data.requester?.firstName || ''} ${data.requester?.lastName || ''}`.trim() || 'ผู้ขอใช้สิทธิ';
   const trackingNo = data.trackingNo || data.id || '-';
   
@@ -136,8 +138,23 @@ export async function generateCoverLetterPdf(data, filesList = [], sha256Hash = 
       { text: '\nการรับรองความถูกต้องของข้อมูล (Data Integrity Check):', bold: true, margin: [0, 20, 0, 5] },
       { text: 'เอกสารและชุดข้อมูลนี้ถูกเข้ารหัสเพื่อตรวจสอบความถูกต้อง (SHA-256) เพื่อป้องกันการเปลี่ยนแปลงเนื้อหา', fontSize: 12, margin: [0, 0, 0, 5] },
       { text: `SHA-256 Checksum: ${sha256Hash}`, fontSize: 10, margin: [0, 0, 0, 20] },
-      { text: 'ลงชื่อ _________________________', alignment: 'right', margin: [0, 40, 40, 5] },
-      { text: '(ผู้ควบคุมข้อมูลส่วนบุคคล)', alignment: 'right', margin: [0, 0, 40, 0] }
+      
+      {
+        columns: [
+          { width: '*', text: '' },
+          {
+            width: '45%',
+            alignment: 'center',
+            stack: [
+              signerSignatureImage 
+                ? { image: signerSignatureImage, width: 100, alignment: 'center', margin: [0, 5, 0, 5] }
+                : { text: 'ลงชื่อ _________________________', margin: [0, 10, 0, 5] },
+              { text: signerName ? `(${signerName})` : '', bold: true },
+              { text: 'ผู้ควบคุมข้อมูลส่วนบุคคล', fontSize: 14 }
+            ]
+          }
+        ]
+      }
     ],
     styles: { header: { fontSize: 22, bold: true } }
   };
@@ -152,9 +169,10 @@ export async function generateCoverLetterPdf(data, filesList = [], sha256Hash = 
  * @param {string} sha256Hash - SHA256 Checksum string
  * @param {boolean} isCompleted - Whether request is in completed/delivered state
  * @param {string} signerName - Name/title of the person signing the report
+ * @param {string} signerSignatureImage - Base64 image string of the signature
  * @returns {Promise<Buffer>} - PDF Buffer
  */
-export async function generateDiscoveryReportPdf(data, allFilesList = [], sha256Hash = '', isCompleted = false, signerName = 'เจ้าหน้าที่คุ้มครองข้อมูลส่วนบุคคล (DPO)') {
+export async function generateDiscoveryReportPdf(data, allFilesList = [], sha256Hash = '', isCompleted = false, signerName = 'เจ้าหน้าที่คุ้มครองข้อมูลส่วนบุคคล (DPO)', signerSignatureImage = null) {
   const requesterName = `${data.requester?.firstName || ''} ${data.requester?.lastName || ''}`.trim() || '-';
   const trackingNo = data.trackingNo || data.id || '-';
 
@@ -215,7 +233,9 @@ export async function generateDiscoveryReportPdf(data, allFilesList = [], sha256
             width: '45%',
             alignment: 'center',
             stack: [
-              { text: 'ลงชื่อ .......................................................', margin: [0, 10, 0, 5] },
+              signerSignatureImage 
+                ? { image: signerSignatureImage, width: 100, alignment: 'center', margin: [0, 5, 0, 5] }
+                : { text: 'ลงชื่อ .......................................................', margin: [0, 10, 0, 5] },
               { text: `(${signerName})`, bold: true },
               { text: 'ผู้ตรวจสอบและรับรองข้อมูลส่วนบุคคล', fontSize: 12, color: '#64748b' }
             ]

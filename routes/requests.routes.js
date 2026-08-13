@@ -111,14 +111,9 @@ export function createRequestsRouter(dbPool, authenticateJWT, requireRole, addSe
         return res.status(400).json({ success: false, message: 'Missing email address' });
       }
 
-      // Generate QR Code for the direct download link
+      // Generate QR Code URL using a public API so it renders in email clients (which often block base64 images)
       const directDownloadUrl = `https://pdpa.numcomputer.com/dl/${trackingNo}`;
-      const qrDataUrl = await QRCode.toDataURL(directDownloadUrl, {
-        errorCorrectionLevel: 'M',
-        margin: 1,
-        width: 150,
-        color: { dark: '#000000', light: '#ffffff' }
-      });
+      const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(directDownloadUrl)}`;
 
       const emailHtml = `
         <div style="font-family: sans-serif; color: #333; max-width: 600px; margin: 0 auto;">
@@ -129,7 +124,7 @@ export function createRequestsRouter(dbPool, authenticateJWT, requireRole, addSe
             <h3 style="margin-top: 0; color: #334155; font-size: 14px;">ช่องทางดาวน์โหลดและตรวจสอบความถูกต้องเอกสาร (ใช้งานได้ 7 วัน):</h3>
             
             <div style="margin: 16px 0;">
-              <img src="${qrDataUrl}" alt="QR Code for Download" style="border-radius: 8px; border: 1px solid #cbd5e1; padding: 8px; background: white;" />
+              <img src="${qrImageUrl}" alt="QR Code for Download" width="150" height="150" style="border-radius: 8px; border: 1px solid #cbd5e1; padding: 8px; background: white;" />
             </div>
             <p style="font-size: 14px; margin-bottom: 8px;">หรือสแกน QR Code เพื่อดาวน์โหลดเอกสาร</p>
             <p style="margin: 4px 0;">เข้าสู่เว็บไซต์: <a href="https://pdpa.numcomputer.com/dl" style="color: #2563eb;">pdpa.numcomputer.com/dl</a></p>

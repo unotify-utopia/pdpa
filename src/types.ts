@@ -25,6 +25,7 @@ export interface User {
   department?: string;
   mfaEnabled: boolean;
   sodWarnings?: string[]; // SOD compliance flags
+  signature_image?: string | null; // Base64 image
 }
 
 export type RequestStatus =
@@ -140,6 +141,7 @@ export interface Decision {
   approverOpinion?: string;
   approvedAt?: string;
   approverName?: string;
+  approverSignatureImage?: string | null;
 }
 
 export interface FeeCalculation {

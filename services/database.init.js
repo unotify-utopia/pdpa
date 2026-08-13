@@ -27,6 +27,7 @@ export const initDatabase = async (dbPool) => {
         department VARCHAR(255),
         mfa_enabled BOOLEAN DEFAULT false,
         two_factor_secret VARCHAR(255),
+        signature_image TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         UNIQUE (org_id, username)
       );
@@ -237,6 +238,18 @@ export const initDatabase = async (dbPool) => {
     try {
       await dbPool.query("UPDATE users SET role = 'superadmin', mfa_enabled = true WHERE username = 'apichat.utopia@gmail.com' OR username = 'super.admin'");
     } catch (e) {}
+
+    // Check and add signature_image column to users table if it doesn't exist
+    try {
+      await dbPool.query('ALTER TABLE users ADD COLUMN signature_image TEXT');
+      console.log('✅ Added signature_image column to users table');
+    } catch (e) {
+      if (e.code === '42701') {
+        console.log('ℹ️ signature_image column already exists in users table');
+      } else {
+        console.error('❌ Error adding signature_image column:', e.message);
+      }
+    }
 
     // Run migration: Update old 'Complete' status to 'Documents Verified' in both column and JSON data
     try {
