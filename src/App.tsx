@@ -1175,7 +1175,8 @@ export default function App() {
 
     if (req.downloadExpiresAt) {
       if (new Date(req.downloadExpiresAt) < new Date()) {
-        setDownloadError('เอกสารหมดอายุการดาวน์โหลดแล้ว (เกิน 30 วัน) กรุณาติดต่อหน่วยงานเพื่อขอต่ออายุการดาวน์โหลด');
+        setDownloadError('เอกสารหมดอายุการดาวน์โหลดแล้ว (เกิน 30 วัน)');
+        setDownloadRequest(req);
         setView('download');
         return;
       }
@@ -1855,7 +1856,7 @@ export default function App() {
   };
 
   const handleExtendDownloadExpiration = async (reqId: string) => {
-    if (!activeUser || !['admin', 'dpo', 'owner'].includes(activeUser.role)) return;
+    if (!activeUser || activeUser.role !== 'admin') return;
     
     try {
       const res = await fetch(`/api/requests/${reqId}/extend-download-expiration`, {
@@ -1875,6 +1876,40 @@ export default function App() {
     } catch (e) {
       console.error(e);
       showNotify('⚠️ เกิดข้อผิดพลาดในการต่ออายุการดาวน์โหลด');
+    }
+  };
+
+  const handleRequestExtensionPublic = async () => {
+    if (!downloadRequest) return;
+    const req = getRequestClone(downloadRequest.id);
+    if (!req) return;
+
+    // Optional: Prevent spamming by checking if a request was already made recently
+    const alreadyRequested = req.messageThread?.some(m => m.message.includes('ขอต่ออายุการดาวน์โหลดเอกสาร') && new Date(m.timestamp).getTime() > Date.now() - 24 * 60 * 60 * 1000);
+    if (alreadyRequested) {
+      showNotify('ท่านได้ส่งคำขอต่ออายุไปแล้ว กรุณารอเจ้าหน้าที่ดำเนินการ', 'warning');
+      return;
+    }
+
+    const newMsg: MessageThread = {
+      id: `msg_${Date.now()}`,
+      sender: 'user',
+      senderName: `${req.requester.firstName} ${req.requester.lastName}`,
+      message: `[ระบบอัตโนมัติ] ผู้ยื่นคำร้องขอต่ออายุการดาวน์โหลดเอกสาร (เนื่องจากหมดอายุเมื่อ: ${req.downloadExpiresAt ? new Date(req.downloadExpiresAt).toLocaleDateString('th-TH') : 'ไม่ระบุ'})`,
+      timestamp: new Date().toISOString()
+    };
+    req.messageThread = req.messageThread || [];
+    req.messageThread.push(newMsg);
+
+    const mockSubjectUser: UserType = { id: 'user', orgId: 'org_dopa', username: 'data.subject', fullNameTh: 'ผู้ยื่นคำขอ', fullNameEn: 'Data Subject', email: '', role: 'intake', roles: ['intake'], mfaEnabled: false };
+    
+    try {
+      await updateRequest(req, mockSubjectUser, 'SEND_MESSAGE', `ผู้ยื่นขอต่ออายุการดาวน์โหลดเอกสาร เลขคำขอ: ${req.trackingNo}`);
+      setDownloadRequest(req); // Update local state so UI can reflect it if needed
+      showNotify('ส่งคำขอต่ออายุไปยังเจ้าหน้าที่เรียบร้อยแล้ว กรุณารอการติดต่อกลับ', 'success');
+    } catch (e) {
+      console.error(e);
+      showNotify('เกิดข้อผิดพลาดในการส่งคำขอต่ออายุ', 'error');
     }
   };
 
@@ -4032,13 +4067,24 @@ export default function App() {
             {downloadError ? (
               <div className="p-4 bg-red-950/50 border border-red-800 text-red-300 rounded-xl text-xs text-center space-y-3">
                 <p>{downloadError}</p>
-                <button
-                  type="button"
-                  onClick={() => setView('public')}
-                  className="bg-red-800 hover:bg-red-700 text-white px-4 py-1.5 rounded text-xs font-semibold"
-                >
-                  กลับหน้าแรกพอร์ทัล
-                </button>
+                <div className="flex flex-col sm:flex-row gap-2 justify-center items-center pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setView('public')}
+                    className="bg-red-800 hover:bg-red-700 text-white px-4 py-2 rounded text-xs font-semibold w-full sm:w-auto"
+                  >
+                    กลับหน้าแรกพอร์ทัล
+                  </button>
+                  {downloadError.includes('หมดอายุ') && downloadRequest && (
+                    <button
+                      type="button"
+                      onClick={handleRequestExtensionPublic}
+                      className="bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded text-xs font-semibold w-full sm:w-auto"
+                    >
+                      ยื่นเรื่องขอต่ออายุการดาวน์โหลด
+                    </button>
+                  )}
+                </div>
               </div>
             ) : showDownloadOtpModal && downloadRequest ? (
                 <form onSubmit={handleVerifyDownloadOtp} className="space-y-4">
@@ -5034,7 +5080,7 @@ export default function App() {
                             {['Ready for Delivery', 'Delivered', 'Closed'].includes(activeRequestObj.status) ? 'เปิดเอกสารส่งมอบ' : 'จำลองหน้าตาเอกสารส่งมอบ'}
                           </button>
                           
-                          {['Ready for Delivery', 'Delivered', 'Closed'].includes(activeRequestObj.status) && activeRequestObj.downloadExpiresAt && (
+                          {['Ready for Delivery', 'Delivered', 'Closed'].includes(activeRequestObj.status) && activeRequestObj.downloadExpiresAt && activeUser.role === 'admin' && (
                             <button
                               type="button"
                               onClick={() => {

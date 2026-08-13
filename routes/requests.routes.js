@@ -439,7 +439,7 @@ export function createRequestsRouter(dbPool, authenticateJWT, requireRole, addSe
 
   // POST /api/requests/:id/extend-download-expiration
   // Admin extends download expiration by up to 30 days, capped at 1 year from approval
-  router.post('/requests/:id/extend-download-expiration', authenticateJWT, requireRole(['admin', 'dpo', 'owner']), async (req, res) => {
+  router.post('/requests/:id/extend-download-expiration', authenticateJWT, requireRole(['admin']), async (req, res) => {
     try {
       const requestId = req.params.id;
       const { rows } = await dbPool.query('SELECT * FROM requests WHERE id = $1 OR tracking_no = $1 LIMIT 1', [requestId]);
