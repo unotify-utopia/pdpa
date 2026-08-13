@@ -1141,7 +1141,11 @@ export default function App() {
       const res = await fetch('/api/public/requests', { cache: 'no-store' });
       const data = await res.json();
       if (data && data.success && Array.isArray(data.requests)) {
-         setRequests(recalculateAllSLAs(data.requests, config));
+         if (config) {
+           setRequests(recalculateAllSLAs(data.requests, config));
+         } else {
+           setRequests(data.requests);
+         }
          const freshReq = data.requests.find((r: Request) => r.uuid === identifier || r.trackingNo === identifier);
          if (freshReq) req = freshReq;
       }
