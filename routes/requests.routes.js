@@ -184,7 +184,7 @@ export function createRequestsRouter(dbPool, authenticateJWT, requireRole, addSe
   });
 
   // GET /api/requests/:id/tasks/:taskId/files/:fileId (Secure file download)
-  router.get('/requests/:id/tasks/:taskId/files/:fileId', authenticateJWT, requireRole(['admin', 'owner', 'dpo', 'superadmin']), async (req, res) => {
+  router.get('/requests/:id/tasks/:taskId/files/:fileId', authenticateJWT, requireRole(['admin', 'owner', 'dpo', 'superadmin', 'approver', 'intake']), async (req, res) => {
     try {
       const { id, taskId, fileId } = req.params;
       
