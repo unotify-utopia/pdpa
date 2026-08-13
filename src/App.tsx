@@ -151,6 +151,18 @@ export default function App() {
     setNotifyState({ open: true, title: title || defaultTitle, message: cleanMessage, type, onConfirm, onCancel });
   };
 
+  // Helper to mask email for OTP display
+  const maskEmail = (email: string | undefined | null) => {
+    if (!email || !email.includes('@')) return email || '';
+    const [name, domain] = email.split('@');
+    if (name.length <= 3) {
+      return `${name.charAt(0)}***@${domain}`;
+    }
+    const first = name.slice(0, 2);
+    const last = name.slice(-2);
+    return `${first}***${last}@${domain}`;
+  };
+
   // Helper to handle strict database mode — declared AFTER showNotify so it can call it on error
   const safeUpdateRequest = async (req: Request, actor: UserType, action: string, detail: string) => {
     try {
@@ -1973,6 +1985,7 @@ export default function App() {
       deadline.setDate(deadline.getDate() + (config?.sla.extensionDays || 30));
       req.slaDeadlineDate = deadline.toISOString();
     }
+
 
     // Add event
     req.slaEvents.push({
@@ -3976,7 +3989,7 @@ export default function App() {
                 <form onSubmit={handleVerifyDownloadOtp} className="space-y-4">
                   <div className="p-3.5 bg-brand-950/40 border border-brand-900 text-brand-300 rounded-xl text-xs leading-relaxed space-y-1">
                     <span className="block font-bold">ยืนยันรหัสเข้าถึง (Two-Factor OTP Verification):</span>
-                    <span>ระบบได้จัดส่งรหัส OTP 6 หลัก ไปที่อีเมล {downloadRequest.requester.email} ของท่านแล้ว</span>
+                    <span>ระบบได้จัดส่งรหัส OTP 6 หลัก ไปที่อีเมล {maskEmail(downloadRequest.requester.email)} ของท่านแล้ว</span>
                     
                   </div>
 
@@ -6276,7 +6289,7 @@ export default function App() {
               <Mail className="h-10 w-10 text-brand-600 mx-auto" />
               <h4 className="font-bold text-slate-800 text-sm">การยืนยันรหัส OTP เพื่อความปลอดภัย</h4>
               <p className="text-xs text-slate-400">
-                ระบบจะส่งรหัส OTP ไปที่ข้อมูลติดต่อ ({getContactInfo(trackedRequest).email})
+                ระบบจะส่งรหัส OTP ไปที่ข้อมูลติดต่อ ({maskEmail(getContactInfo(trackedRequest).email)})
               </p>
             </div>
 
@@ -6414,7 +6427,7 @@ export default function App() {
               >
                 <div className="p-3 bg-rose-50 border border-rose-100 rounded-xl text-center space-y-1">
                   <span className="text-xs font-bold text-rose-900 block">ระบบส่งรหัส OTP 6 หลักไปยังอีเมลเรียบร้อยแล้ว</span>
-                  <span className="text-[11px] text-rose-700 block">ส่งถึง: {getContactInfo(trackedRequest).email}</span>
+                  <span className="text-[11px] text-rose-700 block">ส่งถึง: {maskEmail(getContactInfo(trackedRequest).email)}</span>
                 </div>
 
                 <div className="space-y-1.5">
@@ -6656,7 +6669,7 @@ export default function App() {
               <p className="text-xs text-slate-500 leading-relaxed">
                 ระบบได้ส่งรหัสยืนยันตัวตน OTP (6 หลัก) ไปยังอีเมลของ
                 <strong className="text-brand-700 block text-xs mt-0.5">
-                  {reqType === 'self' ? `เจ้าของข้อมูลส่วนบุคคล (${requesterForm.email})` : `ผู้รับมอบอำนาจ (${repForm.email})`}
+                  {reqType === 'self' ? `เจ้าของข้อมูลส่วนบุคคล (${maskEmail(requesterForm.email)})` : `ผู้รับมอบอำนาจ (${maskEmail(repForm.email)})`}
                 </strong>
               </p>
             </div>
