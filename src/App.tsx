@@ -4935,7 +4935,7 @@ export default function App() {
                         </span>
 
                         {/* DPO input form */}
-                        {(activeUser.role === 'dpo' || activeUser.role === 'admin') && !(activeRequestObj.decision?.approvedAt || ['Ready for Delivery', 'Fee Notification', 'Delivered', 'Closed'].includes(activeRequestObj.status)) ? (
+                        {(activeUser.role === 'dpo' || activeUser.role === 'admin') && !(activeRequestObj.decision?.approvedAt || ['Approval Pending', 'Ready for Delivery', 'Fee Notification', 'Delivered', 'Closed'].includes(activeRequestObj.status)) ? (
                           <div className="space-y-3 text-xs">
                             <div className="space-y-1">
                               <label className="font-semibold text-slate-700">ผลวินิจฉัยข้อเสนอสิทธิ์:</label>
@@ -4999,16 +4999,16 @@ export default function App() {
                           </div>
                         ) : null}
 
-                        {/* Executive Approver action */}
-                        {activeUser.role === 'approver' ? (
+                        {/* Executive Approver action & DPO Read-only view */}
+                        {(activeUser.role === 'approver' || ((activeUser.role === 'dpo' || activeUser.role === 'admin') && ['Approval Pending', 'Ready for Delivery', 'Fee Notification', 'Delivered', 'Closed'].includes(activeRequestObj.status))) ? (
                           <div className="p-3 bg-teal-50 border border-teal-200 rounded-lg space-y-3 text-xs text-teal-900">
-                            <span className="block font-bold">รอผู้มีอำนาจลงนาม (Four-eyes Approval):</span>
+                            <span className="block font-bold">ข้อมูลการวินิจฉัยและพิจารณาอนุมัติ:</span>
                             
                             {activeRequestObj.decision ? (
                               <div className="space-y-2">
                                 <p className="text-[11px] leading-relaxed">
                                   <strong>DPO เสนอวินิจฉัย:</strong> {activeRequestObj.decision.result.toUpperCase()} <br />
-                                  <strong>บันทึกความเห็น:</strong> {activeRequestObj.decision.dpoRecommendation}
+                                  <strong>บันทึกความเห็น:</strong> {activeRequestObj.decision.dpoRecommendation || '-'}
                                 </p>
                                 
                                 {activeRequestObj.decision.approvedAt || ['Ready for Delivery', 'Fee Notification', 'Delivered', 'Closed'].includes(activeRequestObj.status) ? (
@@ -5018,20 +5018,28 @@ export default function App() {
                                   </div>
                                 ) : (
                                   <div className="grid grid-cols-2 gap-2 pt-1">
-                                    <button
-                                      type="button"
-                                      onClick={() => handleApproverSign(activeRequestObj.id, activeRequestObj.decision?.result === 'approved' ? 'Approved' : activeRequestObj.decision?.result === 'partially_approved' ? 'Partially Approved' : 'Denied')}
-                                      className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-1.5 px-2 rounded transition"
-                                    >
-                                      อนุมัติตามเสนอ
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={async () => await changeRequestStatus(getRequestClone(activeRequestObj.id), 'DPO or Legal Review', activeUser, 'ส่งกลับแก้ไขความเห็นพิจารณากฎหมาย', config || undefined)}
-                                      className="bg-rose-600 hover:bg-rose-700 text-white font-bold py-1.5 px-2 rounded transition"
-                                    >
-                                      ส่งกลับแก้ไข
-                                    </button>
+                                    {activeUser.role === 'approver' ? (
+                                      <>
+                                        <button
+                                          type="button"
+                                          onClick={() => handleApproverSign(activeRequestObj.id, activeRequestObj.decision?.result === 'approved' ? 'Approved' : activeRequestObj.decision?.result === 'partially_approved' ? 'Partially Approved' : 'Denied')}
+                                          className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-1.5 px-2 rounded transition"
+                                        >
+                                          อนุมัติตามเสนอ
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={async () => await changeRequestStatus(getRequestClone(activeRequestObj.id), 'DPO or Legal Review', activeUser, 'ส่งกลับแก้ไขความเห็นพิจารณากฎหมาย', config || undefined)}
+                                          className="bg-rose-600 hover:bg-rose-700 text-white font-bold py-1.5 px-2 rounded transition"
+                                        >
+                                          ส่งกลับแก้ไข
+                                        </button>
+                                      </>
+                                    ) : (
+                                      <div className="col-span-2 text-center text-amber-700 font-semibold p-2 bg-amber-50 rounded border border-amber-200">
+                                        ⏳ รอผู้มีอำนาจลงนาม (Four-eyes Approval)
+                                      </div>
+                                    )}
                                   </div>
                                 )}
                               </div>
