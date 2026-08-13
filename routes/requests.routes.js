@@ -394,8 +394,8 @@ export function createRequestsRouter(dbPool, authenticateJWT, requireRole, addSe
       } catch (e) {}
 
       // Build the public download URL
-      const baseUrl = process.env.APP_BASE_URL || \`https://pdpa.numcomputer.com\`;
-      const downloadUrl = \`\${baseUrl}/dl/\${token}\`;
+      const baseUrl = process.env.APP_BASE_URL || `https://pdpa.numcomputer.com`;
+      const downloadUrl = `${baseUrl}/dl/${token}`;
 
       // Generate QR code as data URL
       const qrDataUrl = await QRCode.toDataURL(downloadUrl, {
@@ -405,7 +405,7 @@ export function createRequestsRouter(dbPool, authenticateJWT, requireRole, addSe
         color: { dark: '#000000', light: '#ffffff' }
       });
 
-      console.log(\`🔑 Download token generated for request \${request.tracking_no || requestId} by \${req.user?.username}\`);
+      console.log(`🔑 Download token generated for request ${request.tracking_no || requestId} by ${req.user?.username}`);
       res.json({ success: true, token, downloadUrl, qrDataUrl, expiresAt });
     } catch (err) {
       console.error('Generate token error:', err);
