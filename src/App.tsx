@@ -1742,7 +1742,7 @@ export default function App() {
   const [legalBasisInput, setLegalBasisInput] = useState('มาตรา 30 วรรคหนึ่ง แห่งพระราชบัญญัติคุ้มครองข้อมูลส่วนบุคคล พ.ศ. 2562');
   const [decisionNotes, setDecisionNotes] = useState('');
 
-  const handleSubmitDecisionProposal = (reqId: string) => {
+  const handleSubmitDecisionProposal = async (reqId: string) => {
     if (!activeUser) return;
     const req = getRequestClone(reqId);
     if (!req) return;
@@ -1774,7 +1774,7 @@ export default function App() {
       comment: `DPO ยื่นข้อเสนอมุมมองกฎหมายสรุปผล: ${decisionType === 'approved' ? 'อนุมัติทั้งหมด' : decisionType === 'partially_approved' ? 'อนุมัติบางส่วน' : 'ปฏิเสธคำขอ'}`
     });
 
-    updateRequest(req, activeUser, 'SUBMIT_DPO_DECISION', `บันทึกคำพิจารณาผลและขออนุมัติอย่างเป็นทางการ`);
+    await safeUpdateRequest(req, activeUser, 'SUBMIT_DPO_DECISION', `บันทึกคำพิจารณาผลและขออนุมัติอย่างเป็นทางการ`);
     reloadData();
   };
 
