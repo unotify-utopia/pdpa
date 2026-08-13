@@ -4907,11 +4907,15 @@ export default function App() {
                           <div className="h-12 w-12 rounded-full bg-brand-100 text-brand-600 flex items-center justify-center mb-2">
                             <FileCheck2 className="h-6 w-6" />
                           </div>
-                          <span className="block text-sm font-bold text-slate-700">จำลองเอกสารส่งออกฉบับร่าง (Draft Preview)</span>
+                          <span className="block text-sm font-bold text-slate-700">
+                            {['Ready for Delivery', 'Delivered', 'Closed'].includes(activeRequestObj.status) ? 'เอกสารส่งมอบ (Delivery Package)' : 'จำลองเอกสารส่งออกฉบับร่าง (Draft Preview)'}
+                          </span>
                           <p className="text-[11px] text-slate-500 max-w-sm mx-auto">
-                            {activeUser.role === 'approver' 
-                              ? 'ตรวจสอบเนื้อหาจดหมายฉบับร่างที่ผ่านการร่างโดย DPO ก่อนกดอนุมัติ'
-                              : 'พรีวิวตรวจสอบความถูกต้องของเนื้อหาในหนังสือราชการที่จะถูกสร้างขึ้น (ข้อความจะสอดคล้องกับผลวินิจฉัยที่คุณกำลังเลือกอยู่)'}
+                            {['Ready for Delivery', 'Delivered', 'Closed'].includes(activeRequestObj.status) 
+                              ? 'เปิดดูและพิมพ์เอกสารฉบับสมบูรณ์ที่พร้อมส่งมอบให้ผู้ยื่นคำร้อง'
+                              : activeUser.role === 'approver' 
+                                ? 'ตรวจสอบเนื้อหาจดหมายฉบับร่างที่ผ่านการร่างโดย DPO ก่อนกดอนุมัติ'
+                                : 'พรีวิวตรวจสอบความถูกต้องของเนื้อหาในหนังสือราชการที่จะถูกสร้างขึ้น (ข้อความจะสอดคล้องกับผลวินิจฉัยที่คุณกำลังเลือกอยู่)'}
                           </p>
                         </div>
                         
@@ -4921,7 +4925,7 @@ export default function App() {
                           className="bg-brand-600 hover:bg-brand-700 text-white font-bold py-2.5 px-6 rounded-lg text-xs transition shadow-md w-full md:w-auto mx-auto mt-2 inline-flex items-center gap-2"
                         >
                           <FileCheck2 className="h-4 w-4" />
-                          จำลองหน้าตาเอกสารส่งมอบ (Preview Delivery Package)
+                          {['Ready for Delivery', 'Delivered', 'Closed'].includes(activeRequestObj.status) ? 'เปิดเอกสารส่งมอบ (View Delivery Package)' : 'จำลองหน้าตาเอกสารส่งมอบ (Preview Delivery Package)'}
                         </button>
                       </div>
                     )}
@@ -5059,8 +5063,6 @@ export default function App() {
                         {templates.map((temp) => {
                           // Match the template matching status
                           const isMatch = 
-                            (temp.id === 'temp_approve' && ['Approved', 'Partially Approved', 'Ready for Delivery', 'Delivered', 'Closed'].includes(activeRequestObj.status)) ||
-                            (temp.id === 'temp_deny' && activeRequestObj.status === 'Denied') ||
                             (temp.id === 'temp_more_info' && activeRequestObj.status === 'Awaiting Additional Information') ||
                             (temp.id === 'temp_ack' && activeRequestObj.status === 'Received');
 
@@ -6806,8 +6808,12 @@ export default function App() {
                     <FileCheck2 className="h-5 w-5 text-white" />
                   </div>
                   <div>
-                    <h2 className="text-base font-bold text-white">ตัวอย่างเอกสารส่งมอบฉบับร่าง (Delivery Draft Preview)</h2>
-                    <p className="text-[11px] text-slate-300">นี่คือแบบจำลองเอกสารที่จะถูกส่งออกจริงหลังได้รับการอนุมัติ</p>
+                    <h2 className="text-base font-bold text-white">
+                      {['Ready for Delivery', 'Delivered', 'Closed'].includes(activeRequestObj.status) ? 'เอกสารส่งมอบ (Delivery Package)' : 'ตัวอย่างเอกสารส่งมอบฉบับร่าง (Delivery Draft Preview)'}
+                    </h2>
+                    <p className="text-[11px] text-slate-300">
+                      {['Ready for Delivery', 'Delivered', 'Closed'].includes(activeRequestObj.status) ? 'เอกสารฉบับสมบูรณ์สำหรับส่งมอบให้ผู้ยื่นคำร้อง' : 'นี่คือแบบจำลองเอกสารที่จะถูกส่งออกจริงหลังได้รับการอนุมัติ'}
+                    </p>
                   </div>
                 </div>
                 <button
@@ -6829,9 +6835,11 @@ export default function App() {
                 
                 <div className="w-full max-w-3xl bg-white shadow-lg shadow-slate-300/50 border border-slate-200 rounded-sm relative">
                   {/* Document header badge */}
-                  <div className="absolute top-0 right-0 bg-red-500 text-white text-[10px] font-bold px-3 py-1 rounded-bl-lg uppercase tracking-widest shadow-sm z-10">
-                    DRAFT / ฉบับร่าง
-                  </div>
+                  {!['Ready for Delivery', 'Delivered', 'Closed'].includes(activeRequestObj.status) && (
+                    <div className="absolute top-0 right-0 bg-red-500 text-white text-[10px] font-bold px-3 py-1 rounded-bl-lg uppercase tracking-widest shadow-sm z-10">
+                      DRAFT / ฉบับร่าง
+                    </div>
+                  )}
                   <div className="scale-[0.95] origin-top">
                     <ThaiLetterView
                       request={{
