@@ -198,7 +198,7 @@ export function createDownloadRouter(dbPool, authenticateJWT, requireRole, addSe
       const summaryStr = JSON.stringify({ trackingNo: data.trackingNo, filesCount: allFilesList.length, generatedAt: new Date().toISOString() }, null, 2);
       const sha256Hash = crypto.createHash('sha256').update(summaryStr).digest('hex');
   
-      const isCompleted = pdpaRequest.status === 'completed' || pdpaRequest.status === 'delivered';
+      const isCompleted = ['Ready for Delivery', 'Delivered', 'Receipt Confirmed', 'Closed'].includes(pdpaRequest.status);
       const signerName = req.user?.username || 'เจ้าหน้าที่คุ้มครองข้อมูลส่วนบุคคล (DPO)';
       const pdfBuffer = await generateDiscoveryReportPdf(data, allFilesList, sha256Hash, isCompleted, signerName);
   
