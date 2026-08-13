@@ -251,10 +251,13 @@ export default function App() {
   };
 
   useEffect(() => {
-    const match = window.location.pathname.match(/^\/dl\/([^/]+)$/);
+    const path = window.location.pathname;
+    const match = path.match(/^\/dl\/([^/]+)$/);
     if (match && match[1]) {
       setDlToken(match[1]);
       setView('download_qr');
+    } else if (path === '/dl' || path === '/dl/') {
+      setView('download');
     }
   }, []);
 
