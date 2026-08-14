@@ -1062,16 +1062,7 @@ export default function App() {
         return;
       }
 
-      if (matches.length === 1) {
-        setTrackNo(matches[0].trackingNo);
-        setTrackedRequest(matches[0]);
-        setShowSearchLookupModal(false);
-        setOtpSent(false);
-        setShowOtpModal(true);
-        return;
-      }
-
-      // Multiple matches
+      // Show lookup modal for user to confirm which request to track
       setSearchLookupResults(matches);
       setShowSearchLookupModal(true);
     } catch (err) {
