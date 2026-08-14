@@ -1326,6 +1326,16 @@ export default function App() {
         });
         setIncompleteComment('');
         setShowIncompletePanel(false);
+        
+        // Initialize Fee Form if already assessed
+        setFeeForm({
+          noFee: req.feeCalculation?.noFee || false,
+          paperPages: req.feeCalculation?.paperPages || 0,
+          computerPages: req.feeCalculation?.computerPages || 0,
+          certifications: req.feeCalculation?.certificationsCount || 0,
+          otherItem: req.feeCalculation?.otherCosts?.[0]?.item || '',
+          otherCost: req.feeCalculation?.otherCosts?.[0]?.cost || 0
+        });
       }
     }
   }, [selectedRequestId]);
@@ -5065,9 +5075,13 @@ export default function App() {
 
                           <button
                             type="submit"
-                            className="w-full bg-brand-600 hover:bg-brand-700 text-white font-bold py-2 rounded-lg text-xs transition"
+                            className={`w-full font-bold py-2 rounded-lg text-xs transition ${
+                              activeRequestObj.feeCalculation?.isApproved
+                                ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm'
+                                : 'bg-brand-600 hover:bg-brand-700 text-white'
+                            }`}
                           >
-                            บันทึกการประเมินราคา
+                            {activeRequestObj.feeCalculation?.isApproved ? '✓ ประเมินราคาเรียบร้อย (บันทึกใหม่)' : 'บันทึกการประเมินราคา'}
                           </button>
                         </form>
 
