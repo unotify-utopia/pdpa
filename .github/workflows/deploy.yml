@@ -22,8 +22,8 @@ jobs:
             set -e
             cd /root/pdpa
             echo "⬇️ Pulling latest code..."
-            git reset --hard HEAD
-            git pull https://github.com/unotify-utopia/pdpa.git main
+            git fetch https://github.com/unotify-utopia/pdpa.git main
+            git reset --hard FETCH_HEAD
             echo "📦 Installing dependencies..."
             npm install --legacy-peer-deps
             echo "🔨 Building frontend..."
