@@ -1356,7 +1356,21 @@ export default function App() {
 
   const markCompletenessDone = async (reqId: string) => {
     if (!activeUser) return;
-    await changeRequestStatus(getRequestClone(reqId), 'Documents Verified', activeUser, 'ตรวจสอบเอกสารครบถ้วนเรียบร้อย เริ่มนับระยะเวลาดำเนินการ SLA', config || undefined);
+    const req = getRequestClone(reqId);
+    
+    // Validate identity verification
+    if (req?.identityVerification?.status !== 'verified') {
+      showNotify('⚠️ กรุณากดยืนยันผลยืนยันตนผู้ยื่นคำขอก่อนดำเนินการต่อ', 'warning');
+      return;
+    }
+
+    // Validate completeness checklist
+    if (!checkItems.name || !checkItems.contact || !checkItems.scope || !checkItems.identity || !checkItems.signature) {
+      showNotify('⚠️ กรุณาทำเครื่องหมายเช็คลิสต์ตรวจเอกสารให้ครบถ้วน', 'warning');
+      return;
+    }
+
+    await changeRequestStatus(req, 'Documents Verified', activeUser, 'ตรวจสอบเอกสารครบถ้วนเรียบร้อย เริ่มนับระยะเวลาดำเนินการ SLA', config || undefined);
     reloadData();
   };
 
