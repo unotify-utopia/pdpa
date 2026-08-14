@@ -137,8 +137,8 @@ export function createDownloadRouter(dbPool, authenticateJWT, requireRole, addSe
       const sha256Hash = crypto.createHash('sha256').update(summaryStr).digest('hex');
   
       // 5. Generate PDF Cover Letter
-      const signerName = data.decision?.approverName || '';
-      const signerSignatureImage = data.decision?.approverSignatureImage || null;
+      const signerName = data.decision?.approverName || data.decision?.dpoName || '';
+      const signerSignatureImage = data.decision?.approverSignatureImage || data.decision?.dpoSignatureImage || null;
       const pdfBuffer = await generateCoverLetterPdf(data, filesResult.rows, sha256Hash, signerName, signerSignatureImage);
       
       // 6. Build ZIP
@@ -201,8 +201,8 @@ export function createDownloadRouter(dbPool, authenticateJWT, requireRole, addSe
       const sha256Hash = crypto.createHash('sha256').update(summaryStr).digest('hex');
   
       const isCompleted = ['Ready for Delivery', 'Delivered', 'Receipt Confirmed', 'Closed'].includes(pdpaRequest.status) || !!data.decision?.approvedAt;
-      const signerName = data.decision?.approverName || req.user?.username || 'เจ้าหน้าที่คุ้มครองข้อมูลส่วนบุคคล (DPO)';
-      const signerSignatureImage = data.decision?.approverSignatureImage || null;
+      const signerName = data.decision?.approverName || data.decision?.dpoName || req.user?.username || 'เจ้าหน้าที่คุ้มครองข้อมูลส่วนบุคคล (DPO)';
+      const signerSignatureImage = data.decision?.approverSignatureImage || data.decision?.dpoSignatureImage || null;
       const pdfBuffer = await generateDiscoveryReportPdf(data, allFilesList, sha256Hash, isCompleted, signerName, signerSignatureImage);
   
       res.set('Content-Type', 'application/pdf');
@@ -241,8 +241,8 @@ export function createDownloadRouter(dbPool, authenticateJWT, requireRole, addSe
       const sha256Hash = crypto.createHash('sha256').update(summaryStr).digest('hex');
   
       // Generate Cover Letter PDF
-      const signerName = data.decision?.approverName || req.user?.username || '';
-      const signerSignatureImage = data.decision?.approverSignatureImage || null;
+      const signerName = data.decision?.approverName || data.decision?.dpoName || '';
+      const signerSignatureImage = data.decision?.approverSignatureImage || data.decision?.dpoSignatureImage || null;
       const pdfBuffer = await generateCoverLetterPdf(data, taskFiles, sha256Hash, signerName, signerSignatureImage);
   
       const { default: AdmZip } = await import('adm-zip');
@@ -456,8 +456,8 @@ export function createDownloadRouter(dbPool, authenticateJWT, requireRole, addSe
       zip.addFile(`Request_Summary_${row.tracking_no}.json`, Buffer.from(summaryStr, 'utf8'));
       
       // Generate and add Cover Letter PDF
-      const signerName = reqData.decision?.approverName || '';
-      const signerSignatureImage = reqData.decision?.approverSignatureImage || null;
+      const signerName = reqData.decision?.approverName || reqData.decision?.dpoName || '';
+      const signerSignatureImage = reqData.decision?.approverSignatureImage || reqData.decision?.dpoSignatureImage || null;
       const pdfBuffer = await generateCoverLetterPdf(reqData, files, sha256Hash, signerName, signerSignatureImage);
       zip.addFile(`Cover_Letter_${row.tracking_no}.pdf`, pdfBuffer);
   

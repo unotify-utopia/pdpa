@@ -1799,6 +1799,13 @@ export default function App() {
 
   const handleSubmitDecisionProposal = async (reqId: string) => {
     if (!activeUser) return;
+    
+    // Check DPO Signature
+    if (!activeUser.signature_image) {
+      showNotify('ไม่สามารถดำเนินการได้ เนื่องจากท่านยังไม่ได้อัปโหลดลายมือชื่อ (E-Signature) ในโปรไฟล์ กรุณาไปที่เมนูโปรไฟล์เพื่ออัปโหลดลายมือชื่อก่อนทำการเสนอวินิจฉัย', 'warning');
+      return;
+    }
+
     const req = getRequestClone(reqId);
     if (!req) return;
 
@@ -1818,7 +1825,8 @@ export default function App() {
       legalBasisText: legalBasisInput,
       dpoRecommendation: decisionNotes,
       dpoCheckedAt: new Date().toISOString(),
-      dpoName: activeUser.fullNameTh
+      dpoName: activeUser.fullNameTh,
+      dpoSignatureImage: activeUser.signature_image || null
     };
 
     req.status = 'Approval Pending';
