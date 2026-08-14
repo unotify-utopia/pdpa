@@ -110,7 +110,7 @@ app.use('/api/reports', createReportsRouter(dbPool, authenticateJWT, requireRole
 app.use('/api', createRequestsRouter(dbPool, authenticateJWT, requireRole, addServerAuditLog));
 app.use('/api', createSuperAdminRouter(dbPool, authenticateJWT, requireRole, addServerAuditLog, sendMailWithFallback, otpCache, JWT_SECRET));
 app.use('/api', createPublicRouter(dbPool, addServerAuditLog, authenticateJWT));
-app.use('/api', createDownloadRouter(dbPool, authenticateJWT, sendMailWithFallback, otpCache));
+app.use('/api', createDownloadRouter(dbPool, authenticateJWT, requireRole, addServerAuditLog, sendMailWithFallback, otpCache));
 
 // --- SUPER ADMIN, TENANTS (Migrated to routes/superadmin.routes.js) ---
 // --- USER MANAGEMENT (Migrated to routes/users.routes.js) ---
