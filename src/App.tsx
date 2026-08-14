@@ -217,7 +217,7 @@ export default function App() {
     : requests;
 
   // We let everyone see the requests in the table, but enforce FLOW on who can "manage" them
-  const filteredRequests = baseRequests;
+  const filteredRequests = baseRequests.filter(r => r && r.requester && r.requestDetails);
 
   const canManageRequestFlow = (req: Request, user: UserType): boolean => {
     if (user.isSuperAdmin || user.role === 'superadmin' || user.role === 'admin' || user.role === 'auditor') return true;
@@ -6734,8 +6734,8 @@ export default function App() {
                         </span>
                       </div>
                       <div className="text-xs text-slate-500 flex justify-between mt-1">
-                        <span>ผู้ยื่น: {req.requester.firstName.substring(0, 1)}***** {req.requester.lastName.substring(0, 1)}*****</span>
-                        <span>วันที่: {new Date(req.submissionDate).toLocaleDateString('th-TH')}</span>
+                        <span>ผู้ยื่น: {req.requester?.firstName?.substring(0, 1) || '*'}***** {req.requester?.lastName?.substring(0, 1) || '*'}*****</span>
+                        <span>วันที่: {req.submissionDate ? new Date(req.submissionDate).toLocaleDateString('th-TH') : '-'}</span>
                       </div>
                     </button>
                   ))}
