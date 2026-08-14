@@ -201,8 +201,25 @@ export function createDownloadRouter(dbPool, authenticateJWT, requireRole, addSe
       const sha256Hash = crypto.createHash('sha256').update(summaryStr).digest('hex');
   
       const isCompleted = ['Ready for Delivery', 'Delivered', 'Receipt Confirmed', 'Closed'].includes(pdpaRequest.status) || !!data.decision?.approvedAt;
-      const signerName = data.decision?.approverName || data.decision?.dpoName || req.user?.username || 'เจ้าหน้าที่คุ้มครองข้อมูลส่วนบุคคล (DPO)';
-      const signerSignatureImage = data.decision?.approverSignatureImage || data.decision?.dpoSignatureImage || null;
+      let signerName = data.decision?.approverName || data.decision?.dpoName || req.user?.username || 'เจ้าหน้าที่คุ้มครองข้อมูลส่วนบุคคล (DPO)';
+      let signerSignatureImage = data.decision?.approverSignatureImage || data.decision?.dpoSignatureImage || null;
+      
+      // Fallback: If no signature is found in the request (e.g. previewing DRAFT before signing),
+      // try to use the current logged-in user's signature to render the preview.
+      if (!signerSignatureImage && req.user?.id) {
+        try {
+          const userRes = await dbPool.query('SELECT signature_image, full_name_th FROM users WHERE id = $1', [req.user.id]);
+          if (userRes.rows.length > 0 && userRes.rows[0].signature_image) {
+            signerSignatureImage = userRes.rows[0].signature_image;
+            if (!data.decision?.approverName && !data.decision?.dpoName) {
+              signerName = userRes.rows[0].full_name_th || signerName;
+            }
+          }
+        } catch (e) {
+          console.error('Failed to fetch user signature for preview', e);
+        }
+      }
+
       const pdfBuffer = await generateDiscoveryReportPdf(data, allFilesList, sha256Hash, isCompleted, signerName, signerSignatureImage);
   
       res.set('Content-Type', 'application/pdf');
@@ -241,8 +258,24 @@ export function createDownloadRouter(dbPool, authenticateJWT, requireRole, addSe
       const sha256Hash = crypto.createHash('sha256').update(summaryStr).digest('hex');
   
       // Generate Cover Letter PDF
-      const signerName = data.decision?.approverName || data.decision?.dpoName || '';
-      const signerSignatureImage = data.decision?.approverSignatureImage || data.decision?.dpoSignatureImage || null;
+      let signerName = data.decision?.approverName || data.decision?.dpoName || '';
+      let signerSignatureImage = data.decision?.approverSignatureImage || data.decision?.dpoSignatureImage || null;
+
+      // Fallback to current user signature if missing
+      if (!signerSignatureImage && req.user?.id) {
+        try {
+          const userRes = await dbPool.query('SELECT signature_image, full_name_th FROM users WHERE id = $1', [req.user.id]);
+          if (userRes.rows.length > 0 && userRes.rows[0].signature_image) {
+            signerSignatureImage = userRes.rows[0].signature_image;
+            if (!data.decision?.approverName && !data.decision?.dpoName) {
+              signerName = userRes.rows[0].full_name_th || signerName;
+            }
+          }
+        } catch (e) {
+          console.error('Failed to fetch user signature for admin package', e);
+        }
+      }
+
       const pdfBuffer = await generateCoverLetterPdf(data, taskFiles, sha256Hash, signerName, signerSignatureImage);
   
       const { default: AdmZip } = await import('adm-zip');
