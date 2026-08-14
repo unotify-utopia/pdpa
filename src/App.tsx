@@ -5144,9 +5144,9 @@ export default function App() {
                             <button
                               type="button"
                               onClick={() => {
-                                if(window.confirm('คุณต้องการต่ออายุการดาวน์โหลดเอกสารอีก 30 วันหรือไม่? (สูงสุดไม่เกิน 1 ปีจากวันอนุมัติ)')) {
+                                showNotify('คุณต้องการต่ออายุการดาวน์โหลดเอกสารอีก 30 วันหรือไม่? (สูงสุดไม่เกิน 1 ปีจากวันอนุมัติ)', 'confirm', 'ยืนยันต่ออายุการดาวน์โหลด', () => {
                                   handleExtendDownloadExpiration(activeRequestObj.id);
-                                }
+                                });
                               }}
                               className="bg-white hover:bg-slate-50 text-brand-600 border border-brand-200 font-bold py-2.5 px-4 rounded-lg text-xs transition shadow-sm w-full sm:w-auto inline-flex items-center justify-center gap-2"
                             >
@@ -5333,34 +5333,35 @@ export default function App() {
                         
                         <button
                           type="button"
-                          onClick={async () => {
-                            if (!window.confirm('ต้องการส่งอีเมลแจ้งผลการพิจารณาและลิงก์ดาวน์โหลดไปให้ผู้ร้องขออีกครั้งหรือไม่?')) return;
-                            const jwtToken = sessionStorage.getItem('pdpa_token') || sessionStorage.getItem('pdpa_jwt_token') || '';
-                            const req = getRequestClone(activeRequestObj.id);
-                            if (!req) return;
-                            try {
-                              showNotify('กำลังส่งอีเมลอีกครั้ง...', 'info');
-                              const res = await fetch(`/api/requests/${activeRequestObj.id}/deliver`, {
-                                method: 'POST',
-                                headers: {
-                                  'Content-Type': 'application/json',
-                                  'Authorization': `Bearer ${jwtToken}`
-                                },
-                                body: JSON.stringify({
-                                  trackingNo: req.trackingNo,
-                                  email: req.requester.email,
-                                  requesterName: req.requester.firstName + ' ' + req.requester.lastName
-                                })
-                              });
-                              if (!res.ok) {
-                                const errBody = await res.json().catch(() => ({}));
-                                showNotify(`ส่งไม่สำเร็จ: ${errBody.message || 'เซิร์ฟเวอร์ปฏิเสธการส่งอีเมล'}`, 'error');
-                                return;
+                          onClick={() => {
+                            showNotify('ต้องการส่งอีเมลแจ้งผลการพิจารณาและลิงก์ดาวน์โหลดไปให้ผู้ร้องขออีกครั้งหรือไม่?', 'confirm', 'ยืนยันการส่งอีเมลซ้ำ', async () => {
+                              const jwtToken = sessionStorage.getItem('pdpa_token') || sessionStorage.getItem('pdpa_jwt_token') || '';
+                              const req = getRequestClone(activeRequestObj.id);
+                              if (!req) return;
+                              try {
+                                showNotify('กำลังส่งอีเมลอีกครั้ง...', 'info');
+                                const res = await fetch(`/api/requests/${activeRequestObj.id}/deliver`, {
+                                  method: 'POST',
+                                  headers: {
+                                    'Content-Type': 'application/json',
+                                    'Authorization': `Bearer ${jwtToken}`
+                                  },
+                                  body: JSON.stringify({
+                                    trackingNo: req.trackingNo,
+                                    email: req.requester.email,
+                                    requesterName: req.requester.firstName + ' ' + req.requester.lastName
+                                  })
+                                });
+                                if (!res.ok) {
+                                  const errBody = await res.json().catch(() => ({}));
+                                  showNotify(`ส่งไม่สำเร็จ: ${errBody.message || 'เซิร์ฟเวอร์ปฏิเสธการส่งอีเมล'}`, 'error');
+                                  return;
+                                }
+                                showNotify('ส่งอีเมลแจ้งผลให้ผู้ร้องขออีกครั้งเรียบร้อยแล้ว!', 'success');
+                              } catch(e) {
+                                showNotify('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์', 'error');
                               }
-                              showNotify('ส่งอีเมลแจ้งผลให้ผู้ร้องขออีกครั้งเรียบร้อยแล้ว!', 'success');
-                            } catch(e) {
-                              showNotify('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์', 'error');
-                            }
+                            });
                           }}
                           className="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-2.5 rounded-lg text-xs transition shadow-sm flex items-center justify-center gap-2"
                         >
