@@ -148,10 +148,9 @@ export function createDownloadRouter(dbPool, authenticateJWT, requireRole, addSe
       zip.addFile(`Request_Summary_${data.trackingNo}.json`, Buffer.from(summaryStr, 'utf8'));
       
       for (const file of filesResult.rows) {
-        // file_data is base64 string like data:image/png;base64,iVBORw0KGgo...
-        const matches = file.file_data.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
-        if (matches && matches.length === 3) {
-          zip.addFile(file.filename, Buffer.from(matches[2], 'base64'));
+        if (file.file_data.includes(';base64,')) {
+          const base64Data = file.file_data.split(';base64,')[1];
+          zip.addFile(file.filename, Buffer.from(base64Data, 'base64'));
         } else {
           zip.addFile(file.filename, Buffer.from(file.file_data, 'utf8'));
         }
@@ -284,9 +283,9 @@ export function createDownloadRouter(dbPool, authenticateJWT, requireRole, addSe
       zip.addFile(`Request_Summary_${data.trackingNo || id}.json`, Buffer.from(summaryStr, 'utf8'));
   
       for (const file of taskFiles) {
-        const matches = file.file_data.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
-        if (matches && matches.length === 3) {
-          zip.addFile(file.filename, Buffer.from(matches[2], 'base64'));
+        if (file.file_data.includes(';base64,')) {
+          const base64Data = file.file_data.split(';base64,')[1];
+          zip.addFile(file.filename, Buffer.from(base64Data, 'base64'));
         } else {
           zip.addFile(file.filename, Buffer.from(file.file_data, 'utf8'));
         }
