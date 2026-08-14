@@ -1956,11 +1956,12 @@ export default function App() {
     try {
       showNotify('กำลังส่งอีเมลแจ้งผลการพิจารณา...', 'info');
       // Call Backend API to send real email
+      const jwtToken = sessionStorage.getItem('pdpa_token') || sessionStorage.getItem('pdpa_jwt_token') || '';
       const res = await fetch(`/api/requests/${reqId}/deliver`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${sessionStorage.getItem('pdpa_jwt_token')}`
+          'Authorization': `Bearer ${jwtToken}`
         },
         body: JSON.stringify({
           trackingNo: req.trackingNo,
@@ -1969,11 +1970,13 @@ export default function App() {
         })
       });
 
-      if (res.ok) {
-        showNotify('ส่งอีเมลแจ้งผลการพิจารณาและข้อมูลให้ผู้ร้องขอเรียบร้อยแล้ว!', 'success');
-      } else {
-        showNotify('เกิดข้อผิดพลาดในการส่งอีเมล (อาจใช้งาน Mockup แทน)', 'error');
+      if (!res.ok) {
+        const errBody = await res.json().catch(() => ({}));
+        showNotify(`เกิดข้อผิดพลาดในการส่งอีเมล: ${errBody.message || 'เซิร์ฟเวอร์ปฏิเสธการส่งอีเมล หรือตั้งค่า SMTP ไม่ถูกต้อง'}`, 'error');
+        return; // Halt execution if email fails, do not change status!
       }
+
+      showNotify('ส่งอีเมลแจ้งผลการพิจารณาและข้อมูลพร้อมรหัส QR Code ให้ผู้ร้องขอเรียบร้อยแล้ว!', 'success');
 
       await changeRequestStatus(getRequestClone(reqId), 'Delivered', activeUser, 'เจ้าหน้าที่ทำการจัดส่งหนังสือราชการและข้อมูลสำเร็จ (พร้อมอีเมล)', config || undefined);
       
