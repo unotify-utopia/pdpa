@@ -183,8 +183,8 @@ export const ThaiLetterView: React.FC<ThaiLetterViewProps> = ({
     * { box-sizing: border-box; }
     body {
       font-family: 'Sarabun', 'TH Sarabun New', sans-serif;
-      font-size: 16pt;
-      line-height: 1.3;
+      font-size: 15pt;
+      line-height: 1.2;
       color: #000;
       background: white;
       margin: 0;
@@ -201,7 +201,7 @@ export const ThaiLetterView: React.FC<ThaiLetterViewProps> = ({
     .header { position: relative; height: 3cm; margin-bottom: 0.2cm; }
     .header-left { position: absolute; bottom: 0; left: 0; font-size: 16pt; }
     .header-center { position: absolute; top: 0; left: 50%; transform: translateX(-50%); display: flex; align-items: center; justify-content: center; height: 3cm; }
-    .header-right { position: absolute; bottom: 0; right: 0; text-align: right; max-width: 6cm; font-size: 16pt; }
+    .header-right { position: absolute; bottom: 0; right: 0; text-align: right; max-width: 9cm; font-size: 15pt; }
     .date { margin-left: 7.5cm; margin-bottom: 0.5cm; }
     .subject { margin-bottom: 0.5cm; }
     .signature { margin-left: 7.5cm; margin-top: 1cm; text-align: center; }
@@ -352,7 +352,7 @@ export const ThaiLetterView: React.FC<ThaiLetterViewProps> = ({
           </div>
         </div>
       ) : (
-      <div className="print-area block print:block bg-white font-sarabun text-[16pt] leading-snug text-black w-[210mm] h-[297mm] overflow-hidden mx-auto shadow-md relative pt-[2.5cm] pb-[2cm] pl-[3cm] pr-[2cm] print:shadow-none print:w-[210mm] print:h-[297mm]">
+      <div className="print-area block print:block bg-white font-sarabun text-[15pt] leading-[1.2] text-black w-[210mm] h-[297mm] overflow-hidden mx-auto shadow-md relative pt-[2.5cm] pb-[2cm] pl-[3cm] pr-[2cm] print:shadow-none print:w-[210mm] print:h-[297mm]">
         
         {/* Header Layer */}
         <div className="relative h-[3cm] mb-1">
@@ -367,7 +367,7 @@ export const ThaiLetterView: React.FC<ThaiLetterViewProps> = ({
             ) : null}
           </div>
           
-          <div className="absolute bottom-4 right-0 max-w-[6cm] text-right">
+          <div className="absolute bottom-4 right-0 max-w-[9cm] text-right">
             {org.nameTh}
           </div>
         </div>

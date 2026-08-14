@@ -122,7 +122,7 @@ export async function generateCoverLetterPdf(data, filesList = [], sha256Hash = 
   const trackingNo = data.trackingNo || data.id || '-';
   
   const docDefinition = {
-    defaultStyle: { font: 'Sarabun', fontSize: 16 },
+    defaultStyle: { font: 'Sarabun', fontSize: 15 },
     content: [
       { text: 'บันทึกการส่งมอบข้อมูลส่วนบุคคล (PDPA Data Handover)', style: 'header', alignment: 'center', margin: [0, 0, 0, 20] },
       { text: `เลขที่คำร้อง: ${trackingNo}`, margin: [0, 0, 0, 10] },
