@@ -5,7 +5,7 @@ const pool = new Pool({
   user: 'pdpa_admin',
   host: 'localhost',
   database: 'pdpa_prod_db',
-  password: 'PdpaSecure_Prod2026',
+  password: process.env.DB_PASSWORD,
   port: 5432
 });
 
