@@ -577,6 +577,7 @@ export default function App() {
   const [otpSent, setOtpSent] = useState(false);
   const [otpCode, setOtpCode] = useState('');
   const [trackedRequest, setTrackedRequest] = useState<Request | null>(null);
+  const [showPrivacyModal, setShowPrivacyModal] = useState(false);
   const [trackingError, setTrackingError] = useState<string | null>(null);
 
   // Secure download link simulation
@@ -3776,7 +3777,7 @@ export default function App() {
                             onChange={(e) => setConsentAccepted(e.target.checked)}
                             className="rounded text-brand-600 focus:ring-brand-500 mt-0.5"
                           />
-                          <span>ขอยินยอมให้องค์กรเก็บ รวบรวม และประมวลผลข้อมูลส่วนบุคคลของข้าพเจ้าที่ยื่นในคำขอนี้ เพื่อใช้สำหรับตรวจสอบสิทธิและจัดส่งข้อมูลตามความต้องการของสิทธิตาม <strong className="text-brand-600 hover:underline">นโยบายความเป็นส่วนตัว (Privacy Notice)</strong></span>
+                          <span>ขอยินยอมให้องค์กรเก็บ รวบรวม และประมวลผลข้อมูลส่วนบุคคลของข้าพเจ้าที่ยื่นในคำขอนี้ เพื่อใช้สำหรับตรวจสอบสิทธิและจัดส่งข้อมูลตามความต้องการของสิทธิตาม <button type="button" onClick={() => setShowPrivacyModal(true)} className="text-brand-600 hover:underline font-bold bg-transparent border-none p-0 cursor-pointer">นโยบายความเป็นส่วนตัว (Privacy Notice)</button></span>
                         </label>
                         <label className="flex items-start gap-2.5 cursor-pointer text-xs text-slate-600">
                           <input
@@ -7187,6 +7188,99 @@ export default function App() {
         {...notifyState} 
         onClose={() => setNotifyState(prev => ({ ...prev, open: false }))} 
       />
+
+      {/* --- PRIVACY POLICY MODAL --- */}
+      {showPrivacyModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn">
+          <div className="bg-white rounded-2xl border border-slate-200 w-full max-w-3xl shadow-2xl flex flex-col max-h-[90vh]">
+            <div className="p-6 border-b border-slate-200 flex justify-between items-center bg-slate-50 rounded-t-2xl">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-xl bg-brand-100 text-brand-600 flex items-center justify-center">
+                  <ShieldCheck className="h-5 w-5" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-slate-800">นโยบายความเป็นส่วนตัว (Privacy Notice)</h2>
+                  <p className="text-xs text-slate-500">สำหรับการจัดการคำร้องขอใช้สิทธิของเจ้าของข้อมูลส่วนบุคคล</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowPrivacyModal(false)}
+                className="text-slate-400 hover:text-slate-600 bg-white hover:bg-slate-100 p-2 rounded-lg transition-colors border border-slate-200"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            
+            <div className="p-6 overflow-y-auto font-sans text-sm text-slate-700 space-y-6">
+              <p className="font-semibold text-slate-900">บริษัท ยูโทเปีย เอ็นแอนด์เอ็น จำกัด ("บริษัท" หรือ "เรา") ตระหนักถึงความสำคัญของการคุ้มครองข้อมูลส่วนบุคคลของท่าน เพื่อให้เป็นไปตามพระราชบัญญัติคุ้มครองข้อมูลส่วนบุคคล พ.ศ. 2562 (PDPA) บริษัทจึงได้จัดทำประกาศความเป็นส่วนตัวฉบับนี้ขึ้น เพื่อแจ้งให้ท่านทราบถึงวิธีการที่เราเก็บรวบรวม ใช้ และเปิดเผยข้อมูลส่วนบุคคลของท่าน ในกระบวนการจัดการคำร้องขอใช้สิทธิของเจ้าของข้อมูลส่วนบุคคล</p>
+              
+              <div className="space-y-2">
+                <h3 className="font-bold text-slate-900 text-base">1. ข้อมูลส่วนบุคคลที่บริษัทเก็บรวบรวม</h3>
+                <p>ในการดำเนินการตามคำร้องขอใช้สิทธิของท่าน บริษัทมีความจำเป็นต้องเก็บรวบรวมข้อมูลส่วนบุคคลของท่าน ดังต่อไปนี้:</p>
+                <ul className="list-disc pl-5 space-y-1">
+                  <li><strong>ข้อมูลระบุตัวตน:</strong> เช่น ชื่อ-นามสกุล, สำเนาบัตรประจำตัวประชาชน, รูปถ่าย, ลายมือชื่อ</li>
+                  <li><strong>ข้อมูลการติดต่อ:</strong> เช่น ที่อยู่, หมายเลขโทรศัพท์, อีเมล</li>
+                  <li><strong>ข้อมูลรายละเอียดคำร้อง:</strong> ข้อมูลอื่น ๆ ที่ท่านระบุในแบบฟอร์มคำร้อง หรือหลักฐานเพิ่มเติมที่ท่านนำส่งเพื่อประกอบการพิจารณาตรวจสอบสิทธิ</li>
+                  <li><strong>ข้อมูลระบบ:</strong> ข้อมูลการใช้งานระบบ (Log), IP Address, วันเวลาที่ทำรายการ เพื่อประโยชน์ด้านความปลอดภัยและการตรวจสอบ (Audit)</li>
+                </ul>
+              </div>
+
+              <div className="space-y-2">
+                <h3 className="font-bold text-slate-900 text-base">2. วัตถุประสงค์และฐานทางกฎหมายในการประมวลผลข้อมูล</h3>
+                <p>บริษัทจะเก็บรวบรวม ใช้ และประมวลผลข้อมูลส่วนบุคคลของท่าน ภายใต้ฐานทางกฎหมายดังนี้:</p>
+                <ul className="list-disc pl-5 space-y-1">
+                  <li><strong>ฐานหน้าที่ตามกฎหมาย (Legal Obligation):</strong> เพื่อใช้ในการยืนยันตัวตน พิสูจน์สิทธิ และดำเนินการตอบสนองต่อคำร้องขอใช้สิทธิของท่านตามที่กฎหมาย PDPA กำหนด รวมถึงการเก็บบันทึกประวัติการดำเนินการ (Log/Record of Processing Activities)</li>
+                  <li><strong>ฐานประโยชน์โดยชอบด้วยกฎหมาย (Legitimate Interest):</strong> เพื่อการรักษาความปลอดภัยของระบบ ป้องกันการใช้สิทธิโดยทุจริต และเพื่อใช้เป็นพยานหลักฐานในกรณีที่มีการโต้แย้งหรือดำเนินคดีทางกฎหมายที่เกี่ยวข้องกับคำร้องของท่าน</li>
+                </ul>
+              </div>
+
+              <div className="space-y-2">
+                <h3 className="font-bold text-slate-900 text-base">3. การเปิดเผยข้อมูลส่วนบุคคล</h3>
+                <p>ข้อมูลส่วนบุคคลของท่านในส่วนนี้ จะถูกเข้าถึงและประมวลผลโดยพนักงานของบริษัทที่ได้รับมอบหมายเท่านั้น เช่น เจ้าหน้าที่รับเรื่อง (Intake), เจ้าหน้าที่คุ้มครองข้อมูลส่วนบุคคล (DPO), ผู้บริหาร หรือฝ่ายกฎหมายที่เกี่ยวข้อง โดยบริษัทจะไม่เปิดเผยข้อมูลของท่านแก่บุคคลภายนอก เว้นแต่เป็นไปตามข้อกำหนดทางกฎหมาย หรือมีคำสั่งจากหน่วยงานราชการที่มีอำนาจ</p>
+              </div>
+
+              <div className="space-y-2">
+                <h3 className="font-bold text-slate-900 text-base">4. ระยะเวลาในการเก็บรักษาข้อมูล</h3>
+                <p>บริษัทจะเก็บรักษาข้อมูลส่วนบุคคลของท่าน รวมทั้งเอกสารหลักฐานที่เกี่ยวข้องกับคำร้องขอใช้สิทธิ เป็นระยะเวลา <strong>3 ปี</strong> นับจากวันที่กระบวนการจัดการคำร้องของท่านเสร็จสิ้นสมบูรณ์ เพื่อประโยชน์ในการตรวจสอบและเป็นพยานหลักฐานหากมีข้อพิพาททางกฎหมาย หลังจากพ้นระยะเวลาดังกล่าว บริษัทจะดำเนินการลบ ทำลาย หรือทำให้ข้อมูลของท่านไม่สามารถระบุตัวตนได้</p>
+              </div>
+
+              <div className="space-y-2">
+                <h3 className="font-bold text-slate-900 text-base">5. การรักษาความมั่นคงปลอดภัย</h3>
+                <p>บริษัทได้จัดให้มีมาตรการรักษาความมั่นคงปลอดภัยของข้อมูลส่วนบุคคลอย่างเหมาะสม ทั้งในด้านองค์กรและด้านเทคนิค (Technical and Organizational Measures) เช่น การจำกัดสิทธิการเข้าถึงข้อมูล (Role-based Access Control), การเข้ารหัสข้อมูล (Encryption) และการบันทึกประวัติการเข้าใช้งานระบบ (Audit Trail) เพื่อป้องกันการสูญหาย เข้าถึง ใช้ ดัดแปลง หรือเปิดเผยข้อมูลส่วนบุคคลโดยมิชอบ</p>
+              </div>
+
+              <div className="space-y-2">
+                <h3 className="font-bold text-slate-900 text-base">6. สิทธิของท่านเกี่ยวกับข้อมูลส่วนบุคคล</h3>
+                <p>ท่านยังคงมีสิทธิในข้อมูลส่วนบุคคลที่ท่านได้ให้ไว้ในคำร้องนี้ ตามที่กฎหมาย PDPA กำหนด (เช่น สิทธิขอเข้าถึง สิทธิขอแก้ไข สิทธิขอให้ลบ ฯลฯ) อย่างไรก็ตาม การใช้สิทธิบางประการอาจส่งผลกระทบต่อความสามารถของบริษัทในการดำเนินการตามคำร้องขอใช้สิทธิเดิมที่ท่านได้ยื่นไว้</p>
+              </div>
+
+              <div className="space-y-2">
+                <h3 className="font-bold text-slate-900 text-base">7. ข้อมูลการติดต่อ</h3>
+                <p>หากท่านมีข้อสงสัยเกี่ยวกับประกาศความเป็นส่วนตัวฉบับนี้ หรือต้องการสอบถามข้อมูลเพิ่มเติม สามารถติดต่อได้ที่:</p>
+                <ul className="list-disc pl-5 space-y-1 bg-slate-50 p-4 rounded-xl border border-slate-100">
+                  <li><strong>เจ้าหน้าที่คุ้มครองข้อมูลส่วนบุคคล (Data Protection Officer - DPO)</strong></li>
+                  <li><strong>บริษัท ยูโทเปีย เอ็นแอนด์เอ็น จำกัด</strong></li>
+                  <li><strong>อีเมล:</strong> dpo@utopia.in.th</li>
+                  <li><strong>โทรศัพท์:</strong> 097-9731574</li>
+                </ul>
+              </div>
+              
+              <div className="pt-4 border-t border-slate-100 text-xs text-slate-400 text-right">
+                ประกาศฉบับนี้ ปรับปรุงล่าสุดเมื่อ: 14 สิงหาคม 2569
+              </div>
+            </div>
+            
+            <div className="p-4 border-t border-slate-200 bg-slate-50 rounded-b-2xl flex justify-end">
+              <button
+                onClick={() => setShowPrivacyModal(false)}
+                className="bg-brand-600 hover:bg-brand-700 text-white font-bold py-2.5 px-6 rounded-xl text-sm transition shadow-sm"
+              >
+                รับทราบและปิดหน้าต่าง
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
