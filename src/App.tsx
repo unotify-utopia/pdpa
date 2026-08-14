@@ -2224,37 +2224,23 @@ export default function App() {
               </span>
 
               <button
-                onClick={() => { setView('public'); setPublicTab('landing'); }}
-                className={`px-3 py-1 rounded font-bold transition ${
-                  view === 'public' || view === 'tracking'
-                    ? 'bg-brand-600 text-white'
-                    : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-                }`}
+                onClick={() => {
+                  if (view === 'internal') {
+                    setView('public');
+                    setPublicTab('landing');
+                  } else {
+                    setView('internal');
+                    setInternalTab('dashboard');
+                    setSelectedRequestId(null);
+                  }
+                }}
+                className="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 font-bold px-3 py-1 rounded transition text-xs shadow-sm cursor-pointer flex items-center gap-1.5"
               >
-                หน้าหลักประชาชน
-              </button>
-
-              <button
-                onClick={() => setView('verify')}
-                className={`px-3 py-1 rounded font-bold transition flex items-center gap-1.5 ${
-                  view === 'verify'
-                    ? 'bg-brand-600 text-white'
-                    : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-                }`}
-              >
-                <Shield className="w-3.5 h-3.5" />
-                ตรวจสอบ/ดาวน์โหลดเอกสาร (ประชาชน)
-              </button>
-
-              <button
-                onClick={() => { setView('internal'); setInternalTab('dashboard'); setSelectedRequestId(null); }}
-                className={`px-3 py-1 rounded font-bold transition ${
-                  view === 'internal'
-                    ? 'bg-brand-600 text-white'
-                    : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-                }`}
-              >
-                ระบบงานเจ้าหน้าที่ (Staff Portal)
+                {view === 'internal' ? (
+                  <><span>🌐 หน้าเว็บประชาชน</span><span className="opacity-50">↗</span></>
+                ) : (
+                  <><span>⬅️ กลับหน้า Dashboard</span></>
+                )}
               </button>
 
               {/* Show role switcher dropdown ONLY IF user holds multiple roles */}
