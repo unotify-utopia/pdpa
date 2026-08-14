@@ -6469,7 +6469,9 @@ export default function App() {
             ) : (
               <form onSubmit={handleVerifyOtp} className="space-y-3 pt-2">
                 <div className="space-y-1.5">
-                  <label className="text-xs text-emerald-600 font-bold block text-center">✓ ส่ง OTP สำเร็จแล้ว กรุณาเช็คอีเมล</label>
+                  <label className="text-xs text-emerald-600 font-bold block text-center">
+                    ✓ ส่ง OTP สำเร็จแล้ว กรุณาเช็คอีเมล ({maskEmail(getContactInfo(trackedRequest).email)})
+                  </label>
                   <label className="text-xs text-slate-600 block text-center mt-2">กรอกรหัสยืนยัน OTP 6 หลัก</label>
                   <input
                     type="text"

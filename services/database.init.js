@@ -239,6 +239,19 @@ export const initDatabase = async (dbPool) => {
       await dbPool.query("UPDATE users SET role = 'superadmin', mfa_enabled = true WHERE username = 'apichat.utopia@gmail.com' OR username = 'super.admin'");
     } catch (e) {}
 
+    // ONE-TIME MIGRATION: Clear mockup requests for other organizations except Utopia N&N
+    try {
+      const { rows } = await dbPool.query("SELECT value FROM system_settings WHERE key = 'cleared_mockup_reqs_utopia'");
+      if (rows.length === 0) {
+        console.log('🧹 Clearing mockup requests from other organizations...');
+        await dbPool.query("DELETE FROM requests WHERE org_id != 'org_028384'");
+        await dbPool.query("INSERT INTO system_settings (key, value) VALUES ('cleared_mockup_reqs_utopia', 'true')");
+        console.log('✅ Cleared mockup requests successfully.');
+      }
+    } catch (e) {
+      console.error('Error clearing mockup requests:', e.message);
+    }
+
     // Check and add signature_image column to users table if it doesn't exist
     try {
       await dbPool.query('ALTER TABLE users ADD COLUMN signature_image TEXT');
