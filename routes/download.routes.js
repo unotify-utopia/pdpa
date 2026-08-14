@@ -497,8 +497,14 @@ export function createDownloadRouter(dbPool, authenticateJWT, requireRole, addSe
       for (const f of files) {
         try {
           if (f.file_data) {
-            const buf = Buffer.from(f.file_data, 'base64');
-            zip.addFile(f.filename || `file_${f.id}`, buf);
+            if (f.file_data.includes(';base64,')) {
+              const base64Data = f.file_data.split(';base64,')[1];
+              const buf = Buffer.from(base64Data, 'base64');
+              zip.addFile(f.filename || `file_${f.id}`, buf);
+            } else {
+              const buf = Buffer.from(f.file_data, 'utf8');
+              zip.addFile(f.filename || `file_${f.id}`, buf);
+            }
           }
         } catch {}
       }
