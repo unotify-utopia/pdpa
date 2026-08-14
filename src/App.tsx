@@ -30,7 +30,8 @@ import {
   Clock,
   X,
   Activity,
-  Eye
+  Eye,
+  ShieldCheck
 } from 'lucide-react';
 
 import type {

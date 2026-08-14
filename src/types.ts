@@ -142,6 +142,7 @@ export interface Decision {
   approvedAt?: string;
   approverName?: string;
   approverSignatureImage?: string | null;
+  dpoSignatureImage?: string | null;
 }
 
 export interface FeeCalculation {
