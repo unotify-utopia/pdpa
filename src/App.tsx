@@ -5325,6 +5325,50 @@ export default function App() {
                       </div>
                     )}
 
+                    {/* Closed Status & Resend Delivery Email */}
+                    {['intake', 'admin'].includes(activeUser.role) && ['Closed', 'Delivered'].includes(activeRequestObj.status) && (
+                      <div className="no-print bg-slate-50 border border-slate-200 rounded-xl p-5 shadow-sm space-y-4">
+                        <span className="block text-xs font-bold text-slate-500 uppercase tracking-wider">ยืนยันการปิดเรื่องเสร็จสมบูรณ์</span>
+                        <p className="text-xs text-slate-600">การดำเนินการตามคำร้องสิ้นสุดแล้ว หากผู้ร้องขอไม่ได้รับอีเมลแจ้งผลและลิงก์ดาวน์โหลด คุณสามารถกดส่งซ้ำอีกครั้งได้</p>
+                        
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            if (!window.confirm('ต้องการส่งอีเมลแจ้งผลการพิจารณาและลิงก์ดาวน์โหลดไปให้ผู้ร้องขออีกครั้งหรือไม่?')) return;
+                            const jwtToken = sessionStorage.getItem('pdpa_token') || sessionStorage.getItem('pdpa_jwt_token') || '';
+                            const req = getRequestClone(activeRequestObj.id);
+                            if (!req) return;
+                            try {
+                              showNotify('กำลังส่งอีเมลอีกครั้ง...', 'info');
+                              const res = await fetch(`/api/requests/${activeRequestObj.id}/deliver`, {
+                                method: 'POST',
+                                headers: {
+                                  'Content-Type': 'application/json',
+                                  'Authorization': `Bearer ${jwtToken}`
+                                },
+                                body: JSON.stringify({
+                                  trackingNo: req.trackingNo,
+                                  email: req.requester.email,
+                                  requesterName: req.requester.firstName + ' ' + req.requester.lastName
+                                })
+                              });
+                              if (!res.ok) {
+                                const errBody = await res.json().catch(() => ({}));
+                                showNotify(`ส่งไม่สำเร็จ: ${errBody.message || 'เซิร์ฟเวอร์ปฏิเสธการส่งอีเมล'}`, 'error');
+                                return;
+                              }
+                              showNotify('ส่งอีเมลแจ้งผลให้ผู้ร้องขออีกครั้งเรียบร้อยแล้ว!', 'success');
+                            } catch(e) {
+                              showNotify('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์', 'error');
+                            }
+                          }}
+                          className="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-2.5 rounded-lg text-xs transition shadow-sm flex items-center justify-center gap-2"
+                        >
+                          <Mail className="w-4 h-4" /> ส่งเอกสารทางอีเมลอีกครั้ง (Resend Email)
+                        </button>
+                      </div>
+                    )}
+
                     {/* Legal Hold status toggler */}
                     {['admin', 'dpo'].includes(activeUser.role) && (
                       <div className="no-print bg-white border border-slate-200 rounded-xl p-4 shadow-sm text-xs flex justify-between items-center">
