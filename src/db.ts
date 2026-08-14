@@ -76,15 +76,18 @@ export const fetchDocumentTemplates = async (): Promise<DocumentTemplate[]> => {
     const res = await fetch('/api/templates');
     const data = await res.json();
     if (data.success && data.templates && data.templates.length > 0) {
-      // Map back database snake_case to camelCase
-      return data.templates.map((t: any) => ({
-        id: t.id,
-        type: t.type,
-        name: t.name,
-        subject: t.subject,
-        body: t.body,
-        isActive: t.is_active
-      }));
+      return data.templates.map((t: any) => {
+        const initial = initialDocumentTemplates.find(mock => mock.id === t.id) || {} as Partial<DocumentTemplate>;
+        return {
+          id: t.id,
+          nameTh: t.name || initial.nameTh || '',
+          nameEn: initial.nameEn || '',
+          subjectTemplate: t.subject || initial.subjectTemplate || '',
+          bodyTemplate: t.body || initial.bodyTemplate || '',
+          version: initial.version || '1.0',
+          confidentialityLevel: initial.confidentialityLevel || 'NORMAL'
+        } as DocumentTemplate;
+      });
     }
   } catch (err) {
     console.error('Failed to fetch templates', err);
@@ -95,13 +98,21 @@ export const fetchDocumentTemplates = async (): Promise<DocumentTemplate[]> => {
 export const saveDocumentTemplates = async (templates: DocumentTemplate[]) => {
   const token = sessionStorage.getItem('pdpa_jwt_token') || sessionStorage.getItem('pdpa_token');
   try {
+    const mappedToDb = templates.map(t => ({
+      id: t.id,
+      type: 'email',
+      name: t.nameTh,
+      subject: t.subjectTemplate,
+      body: t.bodyTemplate,
+      isActive: true
+    }));
     await fetch('/api/templates', {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
         ...(token ? { 'Authorization': `Bearer ${token}` } : {})
       },
-      body: JSON.stringify({ templates })
+      body: JSON.stringify({ templates: mappedToDb })
     });
   } catch (err) {
     console.error('Failed to save templates', err);
