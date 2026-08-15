@@ -144,16 +144,20 @@ export const initDatabase = async (dbPool) => {
     
     try {
       await dbPool.query('ALTER TABLE pdpa_files ADD COLUMN IF NOT EXISTS encryption_iv VARCHAR(50);');
+    } catch(e) {}
       
+    try {
       // Auto-migrate users table for reset password feature
       await dbPool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_token VARCHAR(255);');
       await dbPool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_token_expires_at TIMESTAMP;');
+    } catch(e) { console.error('[DB Init] Error adding reset_token columns:', e); }
       
+    try {
       // Auto-migrate users table for password security enhancements
       await dbPool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS force_password_change BOOLEAN DEFAULT true;');
       await dbPool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS password_changed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;');
       await dbPool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS password_history JSONB DEFAULT '[]'::jsonb;");
-    } catch(e) {}
+    } catch(e) { console.error('[DB Init] Error adding password security columns:', e); }
 
     try {
       await dbPool.query('ALTER TABLE audit_logs ADD COLUMN actor_id VARCHAR(50)');
