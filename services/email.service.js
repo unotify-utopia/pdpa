@@ -323,14 +323,22 @@ export const sendWorkflowNotification = async (request, oldStatus, newStatus, ev
       nextActionTh = `ตรวจสอบและมอบหมายคำขอไปยังหน่วยงานผู้เป็นเจ้าของข้อมูล (Data Owner)`;
     }
   } else if (eventType === 'NEW_MESSAGE') {
+    let latestMessage = '';
+    if (request.messageThread && request.messageThread.length > 0) {
+       latestMessage = request.messageThread[request.messageThread.length - 1].message;
+    }
     subject = `[PDPA Portal] มีข้อความใหม่จากประชาชน - คำขอเลขที่ ${trackingNo}`;
-    flowMessageTh = `ประชาชนได้ส่งข้อความสอบถามหรือแจ้งข้อมูลเพิ่มเติมผ่านระบบ Message Board สำหรับคำขอใช้สิทธิ์ PDPA เลขที่ ${trackingNo}`;
+    flowMessageTh = `ประชาชนได้ส่งข้อความสอบถามหรือแจ้งข้อมูลเพิ่มเติมผ่านระบบ Message Board สำหรับคำขอใช้สิทธิ์ PDPA เลขที่ ${trackingNo}<br/><br/><div style="background-color: #f1f5f9; padding: 12px 16px; border-left: 4px solid #64748b; border-radius: 4px;"><strong>ข้อความจากประชาชน:</strong><br/>"${latestMessage}"</div>`;
     nextActionTh = `เจ้าหน้าที่ตรวจสอบข้อความและตอบกลับประชาชนผ่านช่องทาง Message Board ในระบบ`;
     addRecipients(intakeEmails, 'เจ้าหน้าที่ Intake', 'ตรวจสอบข้อความจากประชาชน');
     addRecipients(adminEmails, 'ผู้ดูแลระบบ (Admin)', 'รับทราบการติดต่อจากประชาชน');
   } else if (eventType === 'STAFF_REPLY') {
+    let latestMessage = '';
+    if (request.messageThread && request.messageThread.length > 0) {
+       latestMessage = request.messageThread[request.messageThread.length - 1].message;
+    }
     subject = `[PDPA Portal] เจ้าหน้าที่ได้ตอบกลับข้อความของท่าน - คำขอเลขที่ ${trackingNo}`;
-    flowMessageTh = `เจ้าหน้าที่ได้ตอบกลับข้อความหรือชี้แจงข้อมูลเพิ่มเติมผ่านระบบ Message Board สำหรับคำขอใช้สิทธิ์ PDPA เลขที่ ${trackingNo} เรียบร้อยแล้ว`;
+    flowMessageTh = `เจ้าหน้าที่ได้ตอบกลับข้อความหรือชี้แจงข้อมูลเพิ่มเติมผ่านระบบ Message Board สำหรับคำขอใช้สิทธิ์ PDPA เลขที่ ${trackingNo} เรียบร้อยแล้ว<br/><br/><div style="background-color: #f8fafc; padding: 12px 16px; border-left: 4px solid #0ea5e9; border-radius: 4px;"><strong>ข้อความจากเจ้าหน้าที่:</strong><br/>"${latestMessage}"</div>`;
     nextActionTh = `ท่านสามารถเข้าสู่ระบบเพื่อตรวจสอบข้อความตอบกลับและสนทนากับเจ้าหน้าที่ได้โดยตรง`;
     if (citizenEmail) addRecipients([citizenEmail], 'ผู้ยื่นคำขอ', 'ตรวจสอบข้อความตอบกลับจากเจ้าหน้าที่');
   } else {
