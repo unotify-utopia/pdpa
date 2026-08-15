@@ -7,6 +7,36 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { authenticator } from 'otplib';
 import QRCode from 'qrcode';
+import crypto from 'crypto';
+
+// Password Security Helpers
+const validatePasswordComplexity = (password) => {
+  const minLength = 8;
+  const hasUpper = /[A-Z]/.test(password);
+  const hasLower = /[a-z]/.test(password);
+  const hasDigit = /[0-9]/.test(password);
+  const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+  return password.length >= minLength && hasUpper && hasLower && hasDigit && hasSpecial;
+};
+
+const calculateLevenshteinDistance = (a, b) => {
+  if (a.length === 0) return b.length;
+  if (b.length === 0) return a.length;
+  const matrix = Array(b.length + 1).fill(null).map(() => Array(a.length + 1).fill(null));
+  for (let i = 0; i <= a.length; i++) matrix[0][i] = i;
+  for (let j = 0; j <= b.length; j++) matrix[j][0] = j;
+  for (let j = 1; j <= b.length; j++) {
+    for (let i = 1; i <= a.length; i++) {
+      const indicator = a[i - 1] === b[j - 1] ? 0 : 1;
+      matrix[j][i] = Math.min(
+        matrix[j][i - 1] + 1,
+        matrix[j - 1][i] + 1,
+        matrix[j - 1][i - 1] + indicator
+      );
+    }
+  }
+  return matrix[b.length][a.length];
+};
 
 export function createAuthRouter(dbPool, authenticateJWT, addServerAuditLog, sendMailWithFallback, JWT_SECRET) {
   const router = express.Router();
@@ -128,6 +158,10 @@ export function createAuthRouter(dbPool, authenticateJWT, addServerAuditLog, sen
         await dbPool.query('UPDATE users SET two_factor_secret = NULL WHERE id = $1', [user.id]);
       }
 
+      // Password expiration check (6 months = 180 days)
+      const isExpired = user.password_changed_at ? (new Date() - new Date(user.password_changed_at)) > (180 * 24 * 60 * 60 * 1000) : false;
+      const requiresPasswordChange = user.force_password_change || isExpired;
+
       // Generate JWT token
       const tokenPayload = {
         id: user.id,
@@ -156,11 +190,137 @@ export function createAuthRouter(dbPool, authenticateJWT, addServerAuditLog, sen
       return res.json({
         success: true,
         token,
-        user: tokenPayload
+        user: tokenPayload,
+        requiresPasswordChange
       });
     } catch (err) {
       console.error('Login Error:', err);
       return res.status(500).json({ success: false, message: 'Server error: ' + err.message + ' ' + (err.stack || '') });
+    }
+  });
+
+  // ─────────────────────────────────────────────
+  // POST /api/auth/forgot-password
+  // Generate and send password reset link via email
+  // ─────────────────────────────────────────────
+  router.post('/forgot-password', async (req, res) => {
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({ success: false, message: 'กรุณากรอกอีเมล' });
+    }
+
+    try {
+      const { rows } = await dbPool.query('SELECT * FROM users WHERE email = $1', [email]);
+      if (rows.length === 0) {
+        // Return success even if not found to prevent email enumeration
+        return res.json({ success: true, message: 'หากอีเมลนี้มีอยู่ในระบบ ลิงก์สำหรับรีเซ็ตรหัสผ่านจะถูกส่งไป' });
+      }
+
+      const user = rows[0];
+      const resetToken = crypto.randomBytes(32).toString('hex');
+      const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+
+      await dbPool.query(
+        'UPDATE users SET reset_token = $1, reset_token_expires_at = $2 WHERE id = $3',
+        [resetToken, expiresAt, user.id]
+      );
+
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+      const resetLink = `${frontendUrl}/?reset_token=${resetToken}`;
+
+      await sendMailWithFallback({
+        from: `"PDPA Access Portal" <${process.env.OTP_SENDER_EMAIL || process.env.SMTP_USER || 'pdpa.utopia@gmail.com'}>`,
+        to: user.email,
+        subject: '[PDPA Portal] รีเซ็ตรหัสผ่าน (Password Reset)',
+        html: `
+          <div style="font-family: sans-serif; max-width: 500px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
+            <div style="background-color: #0284c7; padding: 20px; text-align: center;">
+              <h2 style="color: #ffffff; margin: 0;">ตั้งค่ารหัสผ่านใหม่</h2>
+            </div>
+            <div style="padding: 30px 20px; text-align: center;">
+              <p style="color: #475569; font-size: 16px; margin-bottom: 20px;">คุณได้ขอรีเซ็ตรหัสผ่านสำหรับระบบ PDPA Portal กรุณากดปุ่มด้านล่างเพื่อตั้งรหัสผ่านใหม่:</p>
+              <a href="${resetLink}" style="background-color: #0284c7; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-weight: bold; display: inline-block; margin-bottom: 20px;">
+                ตั้งรหัสผ่านใหม่ (Reset Password)
+              </a>
+              <p style="color: #ef4444; font-size: 14px;">* ลิงก์นี้มีอายุการใช้งาน 15 นาที</p>
+              <p style="color: #94a3b8; font-size: 12px; margin-top: 30px; border-top: 1px solid #f1f5f9; padding-top: 15px;">หากคุณไม่ได้ขอเปลี่ยนรหัสผ่าน กรุณาละเว้นอีเมลฉบับนี้</p>
+            </div>
+          </div>
+        `
+      });
+
+      if (addServerAuditLog) {
+        await addServerAuditLog('FORGOT_PASSWORD_REQUEST', \`มีการขอรีเซ็ตรหัสผ่านสำหรับอีเมล \${email}\`, user, null, null, req);
+      }
+
+      res.json({ success: true, message: 'หากอีเมลนี้มีอยู่ในระบบ ลิงก์สำหรับรีเซ็ตรหัสผ่านจะถูกส่งไป' });
+    } catch (err) {
+      console.error('Forgot Password Error:', err);
+      res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง' });
+    }
+  });
+
+  // ─────────────────────────────────────────────
+  // POST /api/auth/reset-password
+  // Reset password using token
+  // ─────────────────────────────────────────────
+  router.post('/reset-password', async (req, res) => {
+    const { token, newPassword } = req.body;
+    if (!token || !newPassword) {
+      return res.status(400).json({ success: false, message: 'ข้อมูลไม่ครบถ้วน' });
+    }
+
+    try {
+      const { rows } = await dbPool.query(
+        'SELECT * FROM users WHERE reset_token = $1 AND reset_token_expires_at > NOW()',
+        [token]
+      );
+
+      if (rows.length === 0) {
+        return res.status(400).json({ success: false, message: 'ลิงก์รีเซ็ตรหัสผ่านไม่ถูกต้องหรือหมดอายุแล้ว' });
+      }
+
+      if (!validatePasswordComplexity(newPassword)) {
+        return res.status(400).json({ success: false, message: 'รหัสผ่านต้องมีความยาวอย่างน้อย 8 ตัวอักษร, มีตัวพิมพ์เล็ก, ตัวพิมพ์ใหญ่, ตัวเลข, และอักขระพิเศษ' });
+      }
+
+      const user = rows[0];
+      
+      // Check if exact match to current hash
+      if (await bcrypt.compare(newPassword, user.password_hash)) {
+        return res.status(400).json({ success: false, message: 'ไม่สามารถใช้รหัสผ่านปัจจุบันได้' });
+      }
+
+      let history = [];
+      try {
+        history = typeof user.password_history === 'string' ? JSON.parse(user.password_history) : (user.password_history || []);
+      } catch(e) {}
+
+      // Check history
+      for (const oldHash of history) {
+        if (await bcrypt.compare(newPassword, oldHash)) {
+          return res.status(400).json({ success: false, message: 'ไม่สามารถใช้รหัสผ่านที่เคยใช้ไปแล้วได้ (ย้อนหลัง 3 ครั้ง)' });
+        }
+      }
+
+      history.push(user.password_hash);
+      if (history.length > 3) history.shift();
+
+      const hashedNew = await bcrypt.hash(newPassword, 10);
+
+      await dbPool.query(
+        'UPDATE users SET password_hash = $1, reset_token = NULL, reset_token_expires_at = NULL, force_password_change = false, password_changed_at = CURRENT_TIMESTAMP, password_history = $2 WHERE id = $3',
+        [hashedNew, JSON.stringify(history), user.id]
+      );
+
+      if (addServerAuditLog) {
+        await addServerAuditLog('RESET_PASSWORD_SUCCESS', \`ผู้ใช้ \${user.username} รีเซ็ตรหัสผ่านสำเร็จผ่านอีเมล\`, user, null, null, req);
+      }
+
+      res.json({ success: true, message: 'ตั้งรหัสผ่านใหม่สำเร็จ สามารถเข้าสู่ระบบด้วยรหัสผ่านใหม่ได้ทันที' });
+    } catch (err) {
+      console.error('Reset Password Error:', err);
+      res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง' });
     }
   });
 
@@ -179,13 +339,39 @@ export function createAuthRouter(dbPool, authenticateJWT, addServerAuditLog, sen
       if (rows.length === 0) return res.status(404).json({ success: false, message: 'ไม่พบผู้ใช้' });
 
       const user = rows[0];
+      if (!validatePasswordComplexity(newPassword)) {
+        return res.status(400).json({ success: false, message: 'รหัสผ่านต้องมีความยาวอย่างน้อย 8 ตัวอักษร, มีตัวพิมพ์เล็ก, ตัวพิมพ์ใหญ่, ตัวเลข, และอักขระพิเศษ' });
+      }
+
+      if (calculateLevenshteinDistance(currentPassword, newPassword) < 3) {
+        return res.status(400).json({ success: false, message: 'รหัสผ่านใหม่คล้ายกับรหัสผ่านเดิมมากเกินไป' });
+      }
+
       const valid = await bcrypt.compare(currentPassword, user.password_hash);
       if (!valid) {
         return res.status(401).json({ success: false, message: 'รหัสผ่านปัจจุบันไม่ถูกต้อง' });
       }
 
+      let history = [];
+      try {
+        history = typeof user.password_history === 'string' ? JSON.parse(user.password_history) : (user.password_history || []);
+      } catch(e) {}
+
+      // Check history
+      for (const oldHash of history) {
+        if (await bcrypt.compare(newPassword, oldHash)) {
+          return res.status(400).json({ success: false, message: 'ไม่สามารถใช้รหัสผ่านที่เคยใช้ไปแล้วได้ (ย้อนหลัง 3 ครั้ง)' });
+        }
+      }
+
+      history.push(user.password_hash);
+      if (history.length > 3) history.shift();
+
       const hashedNew = await bcrypt.hash(newPassword, 10);
-      await dbPool.query('UPDATE users SET password_hash = $1 WHERE id = $2', [hashedNew, req.user.id]);
+      await dbPool.query(
+        'UPDATE users SET password_hash = $1, force_password_change = false, password_changed_at = CURRENT_TIMESTAMP, password_history = $2 WHERE id = $3', 
+        [hashedNew, JSON.stringify(history), req.user.id]
+      );
 
       if (addServerAuditLog) {
         await addServerAuditLog('CHANGE_PASSWORD', `ผู้ใช้ ${user.username} เปลี่ยนรหัสผ่าน`, user, null, null, req);

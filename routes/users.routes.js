@@ -65,13 +65,13 @@ export function createUsersRouter(dbPool, authenticateJWT, requireRole) {
       if (newPassword) {
         const pwdHash = await bcrypt.hash(newPassword, 10);
         await dbPool.query(
-          'UPDATE users SET full_name_th = $1, full_name_en = $2, email = $3, role = $4, roles = $5, department = $6, password_hash = $7 WHERE id = $8',
+          'UPDATE users SET full_name_th = $1, full_name_en = $2, email = $3, role = $4, roles = $5, department = $6, password_hash = $7, force_password_change = true WHERE id = $8',
           [fullNameTh, fullNameEn || fullNameTh, email, primaryRole, JSON.stringify(assignedRoles), department, pwdHash, id]
         );
       } else if (resetPassword) {
         const pwdHash = await bcrypt.hash('123456', 10);
         await dbPool.query(
-          'UPDATE users SET full_name_th = $1, full_name_en = $2, email = $3, role = $4, roles = $5, department = $6, password_hash = $7 WHERE id = $8',
+          'UPDATE users SET full_name_th = $1, full_name_en = $2, email = $3, role = $4, roles = $5, department = $6, password_hash = $7, force_password_change = true WHERE id = $8',
           [fullNameTh, fullNameEn || fullNameTh, email, primaryRole, JSON.stringify(assignedRoles), department, pwdHash, id]
         );
       } else {

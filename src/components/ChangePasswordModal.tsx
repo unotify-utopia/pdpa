@@ -4,9 +4,10 @@ import { X, Lock, Key, Eye, EyeOff, Check } from 'lucide-react';
 interface ChangePasswordModalProps {
   isOpen: boolean;
   onClose: () => void;
+  forceMode?: boolean;
 }
 
-export function ChangePasswordModal({ isOpen, onClose }: ChangePasswordModalProps) {
+export function ChangePasswordModal({ isOpen, onClose, forceMode = false }: ChangePasswordModalProps) {
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -86,9 +87,11 @@ export function ChangePasswordModal({ isOpen, onClose }: ChangePasswordModalProp
               <p className="text-[10px] text-brand-100 font-medium">สำหรับผู้ใช้งานระบบเจ้าหน้าที่</p>
             </div>
           </div>
-          <button onClick={onClose} className="text-brand-100 hover:text-white transition relative z-10 p-1 hover:bg-white/10 rounded">
-            <X className="h-5 w-5" />
-          </button>
+          {!forceMode && (
+            <button onClick={onClose} className="text-brand-100 hover:text-white transition relative z-10 p-1 hover:bg-white/10 rounded">
+              <X className="h-5 w-5" />
+            </button>
+          )}
         </div>
 
         <div className="p-5 relative">
@@ -189,22 +192,24 @@ export function ChangePasswordModal({ isOpen, onClose }: ChangePasswordModalProp
               </div>
             </div>
 
-            <div className="flex gap-2 pt-2">
-              <button
-                type="button"
-                onClick={onClose}
-                className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold py-2.5 rounded-lg transition"
-              >
-                ยกเลิก
-              </button>
-              <button
-                type="submit"
-                disabled={loading}
-                className="flex-1 bg-brand-600 hover:bg-brand-700 disabled:bg-slate-300 text-white text-xs font-bold py-2.5 rounded-lg transition shadow-md flex items-center justify-center gap-1.5"
-              >
-                {loading ? 'กำลังบันทึก...' : 'บันทึกรหัสผ่านใหม่'}
-              </button>
-            </div>
+              <div className="flex gap-2">
+                {!forceMode && (
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    className="w-1/3 py-2 text-xs font-semibold text-slate-700 bg-slate-100 rounded-lg hover:bg-slate-200 transition"
+                  >
+                    ยกเลิก
+                  </button>
+                )}
+                <button
+                  type="submit"
+                  disabled={loading || !isAllValid}
+                  className={`${forceMode ? 'w-full' : 'flex-1'} py-2 text-xs font-bold text-white bg-brand-600 rounded-lg hover:bg-brand-700 transition shadow-md disabled:bg-slate-300 disabled:shadow-none disabled:cursor-not-allowed`}
+                >
+                  {loading ? 'กำลังเปลี่ยนรหัสผ่าน...' : 'บันทึกรหัสผ่านใหม่'}
+                </button>
+              </div>
           </form>
         </div>
       </div>

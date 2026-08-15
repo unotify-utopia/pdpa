@@ -28,6 +28,11 @@ export const initDatabase = async (dbPool) => {
         mfa_enabled BOOLEAN DEFAULT false,
         two_factor_secret VARCHAR(255),
         signature_image TEXT,
+        reset_token VARCHAR(255),
+        reset_token_expires_at TIMESTAMP,
+        force_password_change BOOLEAN DEFAULT true,
+        password_changed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        password_history JSONB DEFAULT '[]'::jsonb,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         UNIQUE (org_id, username)
       );
@@ -137,6 +142,19 @@ export const initDatabase = async (dbPool) => {
       await dbPool.query('ALTER TABLE task_files ADD COLUMN is_deleted BOOLEAN DEFAULT false');
     } catch(e) {}
     
+    try {
+      await dbPool.query('ALTER TABLE pdpa_files ADD COLUMN IF NOT EXISTS encryption_iv VARCHAR(50);');
+      
+      // Auto-migrate users table for reset password feature
+      await dbPool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_token VARCHAR(255);');
+      await dbPool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_token_expires_at TIMESTAMP;');
+      
+      // Auto-migrate users table for password security enhancements
+      await dbPool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS force_password_change BOOLEAN DEFAULT true;');
+      await dbPool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS password_changed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;');
+      await dbPool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS password_history JSONB DEFAULT '[]'::jsonb;");
+    } catch(e) {}
+
     try {
       await dbPool.query('ALTER TABLE audit_logs ADD COLUMN actor_id VARCHAR(50)');
     } catch(e) {}

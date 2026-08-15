@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Lock, User, KeyRound, ShieldCheck, AlertCircle } from 'lucide-react';
+import { ForgotPasswordModal } from './ForgotPasswordModal';
 import type { User as UserType } from '../types';
 
 interface StaffLoginModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onLoginSuccess: (user: UserType) => void;
+  onLoginSuccess: (user: UserType, requiresPasswordChange?: boolean) => void;
 }
 
 export const StaffLoginModal: React.FC<StaffLoginModalProps> = ({
@@ -19,6 +20,7 @@ export const StaffLoginModal: React.FC<StaffLoginModalProps> = ({
   const [mfaStep, setMfaStep] = useState(false);
   const [otpCode, setOtpCode] = useState('');
   const [pendingUser, setPendingUser] = useState<any | null>(null);
+  const [isForgotOpen, setIsForgotOpen] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -28,6 +30,7 @@ export const StaffLoginModal: React.FC<StaffLoginModalProps> = ({
       setPassword('');
       setMfaStep(false);
       setPendingUser(null);
+      setIsForgotOpen(false);
     }
   }, [isOpen]);
 
@@ -80,7 +83,8 @@ export const StaffLoginModal: React.FC<StaffLoginModalProps> = ({
         department: data.user.department,
         mfaEnabled: true
       };
-      onLoginSuccess(user);
+      const requiresChange = data.requiresPasswordChange || false;
+      onLoginSuccess(user, requiresChange);
       onClose();
     } catch (err) {
       setErrorMsg('ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้');
@@ -132,7 +136,9 @@ export const StaffLoginModal: React.FC<StaffLoginModalProps> = ({
         department: data.user.department,
         mfaEnabled: true
       };
-      onLoginSuccess(user);
+      
+      const requiresChange = data.requiresPasswordChange || false;
+      onLoginSuccess(user, requiresChange);
       onClose();
     } catch (err) {
       setErrorMsg('ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้');
@@ -205,6 +211,16 @@ export const StaffLoginModal: React.FC<StaffLoginModalProps> = ({
                 />
               </div>
 
+              <div className="flex justify-end mt-1">
+                <button
+                  type="button"
+                  onClick={() => setIsForgotOpen(true)}
+                  className="text-xs text-brand-600 hover:text-brand-800 font-semibold transition"
+                >
+                  ลืมรหัสผ่าน?
+                </button>
+              </div>
+
               <div className="flex gap-2 pt-2">
                 <button
                   type="button"
@@ -267,6 +283,11 @@ export const StaffLoginModal: React.FC<StaffLoginModalProps> = ({
           )}
         </div>
       </div>
+
+      <ForgotPasswordModal 
+        isOpen={isForgotOpen} 
+        onClose={() => setIsForgotOpen(false)} 
+      />
     </div>
   );
 };

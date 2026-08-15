@@ -78,6 +78,7 @@ import { ProfileModal } from './components/ProfileModal';
 import { NotifyModal } from './components/NotifyModal';
 import type { NotifyType } from './components/NotifyModal';
 import { ChangePasswordModal } from './components/ChangePasswordModal';
+import { ResetPasswordModal } from './components/ResetPasswordModal';
 
 // Helper: Thai Citizen ID Modulus 11 Checksum Validator
 export const validateThaiCitizenId = (id: string): boolean => {
@@ -199,6 +200,8 @@ export default function App() {
   const [impersonatedOrgId, setImpersonatedOrgId] = useState<string | null>(null);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [isChangePasswordModalOpen, setIsChangePasswordModalOpen] = useState(false);
+  const [isForcePasswordChange, setIsForcePasswordChange] = useState(false);
+  const [resetTokenForModal, setResetTokenForModal] = useState<string | null>(null);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [manualChannel, setManualChannel] = useState<'office' | 'post' | 'email' | 'e-service'>('office');
   const [manualRefNo, setManualRefNo] = useState('');
@@ -273,6 +276,14 @@ export default function App() {
       setView('download_qr');
     } else if (path === '/dl' || path === '/dl/') {
       setView('download');
+    }
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const resetToken = urlParams.get('reset_token');
+    if (resetToken) {
+      setResetTokenForModal(resetToken);
+      // Remove token from URL after capturing it to avoid accidental resubmissions
+      window.history.replaceState({}, document.title, window.location.pathname);
     }
   }, []);
 
@@ -2344,19 +2355,31 @@ export default function App() {
       <StaffLoginModal
         isOpen={isLoginModalOpen}
         onClose={() => setIsLoginModalOpen(false)}
-        onLoginSuccess={(user) => {
+        onLoginSuccess={(user, requiresPasswordChange) => {
           setCurrentUser(user);
           setActiveUser(user);
           reloadData();
           setView('internal');
           setInternalTab('dashboard');
+          
+          if (requiresPasswordChange) {
+            setIsForcePasswordChange(true);
+            setIsChangePasswordModalOpen(true);
+            showNotify('คุณจำเป็นต้องเปลี่ยนรหัสผ่านเพื่อความปลอดภัย', 'warning');
+          } else {
+            setIsForcePasswordChange(false);
+          }
         }}
       />
 
       {/* Change Password Modal */}
       <ChangePasswordModal
         isOpen={isChangePasswordModalOpen}
-        onClose={() => setIsChangePasswordModalOpen(false)}
+        onClose={() => {
+          setIsChangePasswordModalOpen(false);
+          setIsForcePasswordChange(false);
+        }}
+        forceMode={isForcePasswordChange}
       />
 
       {/* Profile Modal */}
@@ -7349,6 +7372,17 @@ export default function App() {
           </div>
         );
       })()}
+
+      <ResetPasswordModal
+        isOpen={!!resetTokenForModal}
+        token={resetTokenForModal || ''}
+        onClose={() => setResetTokenForModal(null)}
+        onSuccess={() => {
+          setResetTokenForModal(null);
+          showNotify('เปลี่ยนรหัสผ่านสำเร็จ กรุณาเข้าสู่ระบบด้วยรหัสผ่านใหม่');
+          setTimeout(() => setIsLoginModalOpen(true), 500);
+        }}
+      />
     </div>
   );
 }
