@@ -6,6 +6,7 @@ import express from 'express';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
+import { maskEmailOrUsername, maskIpAddress } from '../services/email.service.js';
 
 const DEFAULT_HANDOVER_MEMO_TEMPLATE = `================================================================================
           หนังสือบันทึกข้อตกลงการส่งมอบข้อมูลและสิ้นสุดสัญญาการใช้บริการ
@@ -103,9 +104,9 @@ export function createSuperAdminRouter(dbPool, authenticateJWT, requireRole, add
 
                   <div style="background-color: #f8fafc; border-radius: 6px; padding: 15px; text-align: left; font-size: 13px; color: #64748b; border: 1px solid #e2e8f0;">
                     <p style="margin: 0 0 8px 0;"><strong>ข้อมูลการทำรายการ:</strong></p>
-                    <p style="margin: 0 0 4px 0;">👤 บัญชี: ${user.username}</p>
+                    <p style="margin: 0 0 4px 0;">👤 บัญชี: ${maskEmailOrUsername(user.username)}</p>
                     <p style="margin: 0 0 4px 0;">⏰ เวลา: ${timestamp}</p>
-                    <p style="margin: 0;">🌐 IP Address: ${userIp}</p>
+                    <p style="margin: 0;">🌐 IP Address: ${maskIpAddress(userIp)}</p>
                   </div>
 
                   <p style="color: #94a3b8; font-size: 12px; margin-top: 20px; border-top: 1px solid #f1f5f9; padding-top: 15px;">⚠️ แจ้งเตือน: หากคุณไม่ได้พยายามเข้าสู่ระบบ กรุณาตรวจสอบความปลอดภัยของบัญชีและระบบเครือข่ายของท่านทันที</p>

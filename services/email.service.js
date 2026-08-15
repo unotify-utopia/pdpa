@@ -460,3 +460,36 @@ export const sendWorkflowNotification = async (request, oldStatus, newStatus, ev
     if (workflowEmailLogs.length > 500) workflowEmailLogs.pop();
   }
 };
+
+
+// Data Masking Utilities for Privacy
+export const maskEmailOrUsername = (str) => {
+  if (!str) return 'Unknown';
+  if (str.includes('@')) {
+    const [name, domain] = str.split('@');
+    if (name.length <= 2) return str;
+    return name.substring(0, 2) + '*'.repeat(name.length - 2) + '@' + domain;
+  } else {
+    if (str.length <= 2) return str;
+    const parts = str.split('.');
+    if (parts.length > 1) {
+      const first = parts[0];
+      const maskedFirst = first.substring(0, 2) + '*'.repeat(first.length - 2);
+      return maskedFirst + '.' + parts.slice(1).join('.');
+    }
+    return str.substring(0, 2) + '*'.repeat(str.length - 2);
+  }
+};
+
+export const maskIpAddress = (ipStr) => {
+  if (!ipStr) return 'Unknown IP';
+  const mainIp = ipStr.split(',')[0].trim();
+  const parts = mainIp.split('.');
+  if (parts.length === 4) {
+    return `${parts[0]}.***.***.${parts[3]}`;
+  }
+  if (mainIp.length > 8) {
+    return mainIp.substring(0, 4) + ':****:****:' + mainIp.substring(mainIp.length - 4);
+  }
+  return '***.***.***.***';
+};

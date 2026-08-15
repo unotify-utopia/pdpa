@@ -4,7 +4,7 @@
 
 import express from 'express';
 import { applyFieldPermissionsToList } from '../middleware/fieldPermissions.js';
-import { sendMailWithFallback, sendWorkflowNotification, workflowEmailLogs } from '../services/email.service.js';
+import { sendMailWithFallback, sendWorkflowNotification, workflowEmailLogs, maskEmailOrUsername, maskIpAddress } from '../services/email.service.js';
 import { updateRequestSLA } from '../services/sla.service.js';
 
 export function createPublicRouter(dbPool, addServerAuditLog, authenticateJWT) {
@@ -277,9 +277,9 @@ export function createPublicRouter(dbPool, addServerAuditLog, authenticateJWT) {
 
                 <div style="background-color: #f8fafc; border-radius: 6px; padding: 15px; text-align: left; font-size: 13px; color: #64748b; border: 1px solid #e2e8f0;">
                   <p style="margin: 0 0 8px 0;"><strong>ข้อมูลการทำรายการ:</strong></p>
-                  <p style="margin: 0 0 4px 0;">อ้างอิง: ${key}</p>
+                  <p style="margin: 0 0 4px 0;">อ้างอิง: ${maskEmailOrUsername(key)}</p>
                   <p style="margin: 0 0 4px 0;">⏰ เวลา: ${timestamp}</p>
-                  <p style="margin: 0;">🌐 IP Address: ${userIp}</p>
+                  <p style="margin: 0;">🌐 IP Address: ${maskIpAddress(userIp)}</p>
                 </div>
                 
                 <p style="color: #94a3b8; font-size: 12px; margin-top: 20px; border-top: 1px solid #f1f5f9; padding-top: 15px;">หากคุณไม่ได้ทำรายการนี้ กรุณาละเว้นอีเมลฉบับนี้</p>
