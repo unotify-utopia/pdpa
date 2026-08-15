@@ -447,7 +447,8 @@ export function createAuthRouter(dbPool, authenticateJWT, addServerAuditLog, sen
 
       res.json({ success: true, message: 'เปลี่ยนรหัสผ่านสำเร็จเรียบร้อยแล้ว' });
     } catch (err) {
-      res.status(500).json({ success: false, message: err.message });
+      console.error('[Change-Password Error]', err);
+      res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง' });
     }
   });
 
@@ -480,7 +481,8 @@ export function createAuthRouter(dbPool, authenticateJWT, addServerAuditLog, sen
 
       res.json({ success: true, qrCodeUrl, secret });
     } catch (err) {
-      res.status(500).json({ success: false, error: err.message });
+      console.error('[2FA Setup Error]', err);
+      res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง' });
     }
   });
 
@@ -511,7 +513,8 @@ export function createAuthRouter(dbPool, authenticateJWT, addServerAuditLog, sen
         } 
       });
     } catch (err) {
-      res.status(500).json({ success: false, message: err.message });
+      console.error('[Auth Me Error]', err);
+      res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง' });
     }
   });
 
