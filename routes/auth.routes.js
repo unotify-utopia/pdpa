@@ -250,7 +250,7 @@ export function createAuthRouter(dbPool, authenticateJWT, addServerAuditLog, sen
       });
 
       if (addServerAuditLog) {
-        await addServerAuditLog('FORGOT_PASSWORD_REQUEST', \`มีการขอรีเซ็ตรหัสผ่านสำหรับอีเมล \${email}\`, user, null, null, req);
+        await addServerAuditLog('FORGOT_PASSWORD_REQUEST', `มีการขอรีเซ็ตรหัสผ่านสำหรับอีเมล ${email}`, user, null, null, req);
       }
 
       res.json({ success: true, message: 'หากอีเมลนี้มีอยู่ในระบบ ลิงก์สำหรับรีเซ็ตรหัสผ่านจะถูกส่งไป' });
@@ -314,7 +314,7 @@ export function createAuthRouter(dbPool, authenticateJWT, addServerAuditLog, sen
       );
 
       if (addServerAuditLog) {
-        await addServerAuditLog('RESET_PASSWORD_SUCCESS', \`ผู้ใช้ \${user.username} รีเซ็ตรหัสผ่านสำเร็จผ่านอีเมล\`, user, null, null, req);
+        await addServerAuditLog('RESET_PASSWORD_SUCCESS', `ผู้ใช้ ${user.username} รีเซ็ตรหัสผ่านสำเร็จผ่านอีเมล`, user, null, null, req);
       }
 
       res.json({ success: true, message: 'ตั้งรหัสผ่านใหม่สำเร็จ สามารถเข้าสู่ระบบด้วยรหัสผ่านใหม่ได้ทันที' });
