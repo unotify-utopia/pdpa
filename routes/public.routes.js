@@ -256,6 +256,9 @@ export function createPublicRouter(dbPool, addServerAuditLog, authenticateJWT) {
       );
 
       if (email) {
+        const userIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'Unknown IP';
+        const timestamp = new Date().toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' });
+
         await sendMailWithFallback({
           from: `"PDPA Access Portal" <${process.env.OTP_SENDER_EMAIL || process.env.SMTP_USER || 'pdpa.utopia@gmail.com'}>`,
           to: email,
@@ -263,14 +266,23 @@ export function createPublicRouter(dbPool, addServerAuditLog, authenticateJWT) {
           html: `
             <div style="font-family: sans-serif; max-width: 500px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
               <div style="background-color: #0f172a; padding: 20px; text-align: center;">
-                <h2 style="color: #ffffff; margin: 0;">รหัส OTP ยืนยันตัวตน</h2>
+                <h2 style="color: #ffffff; margin: 0;">รหัส OTP สำหรับผู้ใช้บริการ</h2>
               </div>
               <div style="padding: 30px 20px; text-align: center;">
-                <p style="color: #475569; font-size: 16px; margin-bottom: 20px;">โปรดใช้รหัสผ่านแบบใช้ครั้งเดียว (OTP) ด้านล่างนี้เพื่อดำเนินการต่อ</p>
+                <p style="color: #475569; font-size: 16px; margin-bottom: 20px;">รหัสผ่านแบบใช้ครั้งเดียว (OTP) สำหรับยืนยันตัวตนเพื่อเข้าถึงแบบฟอร์มหรือติดตามสถานะคำร้องขอใช้สิทธิ (Data Subject Right Request)</p>
                 <div style="background-color: #f8fafc; border: 2px dashed #cbd5e1; border-radius: 8px; padding: 15px; font-size: 32px; font-weight: bold; letter-spacing: 4px; color: #0284c7; margin-bottom: 20px;">
                   ${otp}
                 </div>
-                <p style="color: #ef4444; font-size: 14px;">* รหัสนี้มีอายุการใช้งาน 5 นาที</p>
+                <p style="color: #ef4444; font-size: 14px; margin-bottom: 30px;">* รหัสนี้มีอายุการใช้งาน 5 นาที</p>
+
+                <div style="background-color: #f8fafc; border-radius: 6px; padding: 15px; text-align: left; font-size: 13px; color: #64748b; border: 1px solid #e2e8f0;">
+                  <p style="margin: 0 0 8px 0;"><strong>ข้อมูลการทำรายการ:</strong></p>
+                  <p style="margin: 0 0 4px 0;">อ้างอิง: ${key}</p>
+                  <p style="margin: 0 0 4px 0;">⏰ เวลา: ${timestamp}</p>
+                  <p style="margin: 0;">🌐 IP Address: ${userIp}</p>
+                </div>
+                
+                <p style="color: #94a3b8; font-size: 12px; margin-top: 20px; border-top: 1px solid #f1f5f9; padding-top: 15px;">หากคุณไม่ได้ทำรายการนี้ กรุณาละเว้นอีเมลฉบับนี้</p>
               </div>
             </div>
           `

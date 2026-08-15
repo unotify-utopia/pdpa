@@ -102,25 +102,37 @@ export function createAuthRouter(dbPool, authenticateJWT, addServerAuditLog, sen
           let emailSent = true;
           let fallbackMessage = '';
           try {
-            await sendMailWithFallback({
-              from: `"PDPA Access Portal" <${process.env.OTP_SENDER_EMAIL || process.env.SMTP_USER || 'pdpa.utopia@gmail.com'}>`,
-              to: targetEmail,
-              subject: 'รหัส OTP สำหรับเข้าสู่ระบบเจ้าหน้าที่ (PDPA System)',
-              html: `
-                <div style="font-family: sans-serif; max-width: 500px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
-                  <div style="background-color: #0284c7; padding: 20px; text-align: center;">
-                    <h2 style="color: #ffffff; margin: 0;">รหัส OTP เข้าสู่ระบบเจ้าหน้าที่</h2>
-                  </div>
-                  <div style="padding: 30px 20px; text-align: center;">
-                    <p style="color: #475569; font-size: 16px; margin-bottom: 20px;">รหัสผ่านแบบใช้ครั้งเดียว (OTP) สำหรับยืนยันการเข้าสู่ระบบของคุณ:</p>
-                    <div style="background-color: #f0f9ff; border: 2px dashed #0284c7; border-radius: 8px; padding: 15px; font-size: 32px; font-weight: bold; letter-spacing: 4px; color: #0284c7; margin-bottom: 20px;">
-                      ${otp}
+              const userIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'Unknown IP';
+              const timestamp = new Date().toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' });
+              
+              await sendMailWithFallback({
+                from: `"PDPA Access Portal" <${process.env.OTP_SENDER_EMAIL || process.env.SMTP_USER || 'pdpa.utopia@gmail.com'}>`,
+                to: targetEmail,
+                subject: 'รหัส OTP สำหรับเข้าสู่ระบบเจ้าหน้าที่ (PDPA System)',
+                html: `
+                  <div style="font-family: sans-serif; max-width: 500px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
+                    <div style="background-color: #0284c7; padding: 20px; text-align: center;">
+                      <h2 style="color: #ffffff; margin: 0;">รหัส OTP เข้าสู่ระบบเจ้าหน้าที่</h2>
                     </div>
-                    <p style="color: #ef4444; font-size: 14px;">* รหัสนี้มีอายุการใช้งาน 5 นาที</p>
+                    <div style="padding: 30px 20px; text-align: center;">
+                      <p style="color: #475569; font-size: 16px; margin-bottom: 20px;">รหัสผ่านแบบใช้ครั้งเดียว (OTP) สำหรับยืนยันการเข้าสู่ระบบ PDPA Portal ของคุณ</p>
+                      <div style="background-color: #f0f9ff; border: 2px dashed #0284c7; border-radius: 8px; padding: 15px; font-size: 32px; font-weight: bold; letter-spacing: 4px; color: #0284c7; margin-bottom: 20px;">
+                        ${otp}
+                      </div>
+                      <p style="color: #ef4444; font-size: 14px; margin-bottom: 30px;">* รหัสนี้มีอายุการใช้งาน 5 นาที</p>
+                      
+                      <div style="background-color: #f8fafc; border-radius: 6px; padding: 15px; text-align: left; font-size: 13px; color: #64748b; border: 1px solid #e2e8f0;">
+                        <p style="margin: 0 0 8px 0;"><strong>ข้อมูลการทำรายการ:</strong></p>
+                        <p style="margin: 0 0 4px 0;">👤 บัญชี: ${user.username}</p>
+                        <p style="margin: 0 0 4px 0;">⏰ เวลา: ${timestamp}</p>
+                        <p style="margin: 0;">🌐 IP Address: ${userIp}</p>
+                      </div>
+                      
+                      <p style="color: #94a3b8; font-size: 12px; margin-top: 20px; border-top: 1px solid #f1f5f9; padding-top: 15px;">หากคุณไม่ได้พยายามเข้าสู่ระบบ กรุณาเปลี่ยนรหัสผ่านทันทีเพื่อความปลอดภัยของบัญชีคุณ</p>
+                    </div>
                   </div>
-                </div>
-              `
-            });
+                `
+              });
             console.log(`[SMTP] Sent Staff login OTP ${otp} to ${targetEmail}`);
           } catch (mailErr) {
             emailSent = false;
@@ -228,6 +240,9 @@ export function createAuthRouter(dbPool, authenticateJWT, addServerAuditLog, sen
       const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
       const resetLink = `${frontendUrl}/?reset_token=${resetToken}`;
 
+      const userIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'Unknown IP';
+      const timestamp = new Date().toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' });
+
       await sendMailWithFallback({
         from: `"PDPA Access Portal" <${process.env.OTP_SENDER_EMAIL || process.env.SMTP_USER || 'pdpa.utopia@gmail.com'}>`,
         to: user.email,
@@ -242,8 +257,16 @@ export function createAuthRouter(dbPool, authenticateJWT, addServerAuditLog, sen
               <a href="${resetLink}" style="background-color: #0284c7; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-weight: bold; display: inline-block; margin-bottom: 20px;">
                 ตั้งรหัสผ่านใหม่ (Reset Password)
               </a>
-              <p style="color: #ef4444; font-size: 14px;">* ลิงก์นี้มีอายุการใช้งาน 15 นาที</p>
-              <p style="color: #94a3b8; font-size: 12px; margin-top: 30px; border-top: 1px solid #f1f5f9; padding-top: 15px;">หากคุณไม่ได้ขอเปลี่ยนรหัสผ่าน กรุณาละเว้นอีเมลฉบับนี้</p>
+              <p style="color: #ef4444; font-size: 14px; margin-bottom: 30px;">* ลิงก์นี้มีอายุการใช้งาน 15 นาที</p>
+
+              <div style="background-color: #f8fafc; border-radius: 6px; padding: 15px; text-align: left; font-size: 13px; color: #64748b; border: 1px solid #e2e8f0;">
+                <p style="margin: 0 0 8px 0;"><strong>ข้อมูลการขอรีเซ็ตรหัสผ่าน:</strong></p>
+                <p style="margin: 0 0 4px 0;">👤 บัญชี: ${user.username}</p>
+                <p style="margin: 0 0 4px 0;">⏰ เวลา: ${timestamp}</p>
+                <p style="margin: 0;">🌐 IP Address: ${userIp}</p>
+              </div>
+
+              <p style="color: #94a3b8; font-size: 12px; margin-top: 20px; border-top: 1px solid #f1f5f9; padding-top: 15px;">หากคุณไม่ได้ขอเปลี่ยนรหัสผ่าน กรุณาละเว้นอีเมลฉบับนี้ บัญชีของคุณยังคงปลอดภัย</p>
             </div>
           </div>
         `

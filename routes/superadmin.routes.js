@@ -82,6 +82,9 @@ export function createSuperAdminRouter(dbPool, authenticateJWT, requireRole, add
           await dbPool.query('UPDATE users SET two_factor_secret = $1 WHERE id = $2', [otpData, user.id]);
           otpCache.set(`superadmin_login_${user.username}`, { otp, expiresAt: Date.now() + 5 * 60 * 1000 });
 
+          const userIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'Unknown IP';
+          const timestamp = new Date().toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' });
+
           sendMailWithFallback({
             from: `"PDPA Access Portal" <${process.env.OTP_SENDER_EMAIL || process.env.SMTP_USER || 'pdpa.utopia@gmail.com'}>`,
             to: targetEmail,
@@ -92,11 +95,20 @@ export function createSuperAdminRouter(dbPool, authenticateJWT, requireRole, add
                   <h2 style="color: #ffffff; margin: 0;">รหัส OTP เข้าสู่ระบบ Super Admin</h2>
                 </div>
                 <div style="padding: 30px 20px; text-align: center;">
-                  <p style="color: #475569; font-size: 16px; margin-bottom: 20px;">รหัสผ่านแบบใช้ครั้งเดียว (OTP) สำหรับยืนยันการเข้าสู่ระบบ Gmail ของท่าน:</p>
+                  <p style="color: #475569; font-size: 16px; margin-bottom: 20px;">รหัสผ่านแบบใช้ครั้งเดียว (OTP) สำหรับยืนยันการเข้าสู่ระบบผู้ดูแลสูงสุดของ PDPA Portal:</p>
                   <div style="background-color: #f0fdf4; border: 2px dashed #059669; border-radius: 8px; padding: 15px; font-size: 32px; font-weight: bold; letter-spacing: 4px; color: #059669; margin-bottom: 20px;">
                     ${otp}
                   </div>
-                  <p style="color: #ef4444; font-size: 14px;">* รหัสนี้มีอายุการใช้งาน 5 นาที</p>
+                  <p style="color: #ef4444; font-size: 14px; margin-bottom: 30px;">* รหัสนี้มีอายุการใช้งาน 5 นาที</p>
+
+                  <div style="background-color: #f8fafc; border-radius: 6px; padding: 15px; text-align: left; font-size: 13px; color: #64748b; border: 1px solid #e2e8f0;">
+                    <p style="margin: 0 0 8px 0;"><strong>ข้อมูลการทำรายการ:</strong></p>
+                    <p style="margin: 0 0 4px 0;">👤 บัญชี: ${user.username}</p>
+                    <p style="margin: 0 0 4px 0;">⏰ เวลา: ${timestamp}</p>
+                    <p style="margin: 0;">🌐 IP Address: ${userIp}</p>
+                  </div>
+
+                  <p style="color: #94a3b8; font-size: 12px; margin-top: 20px; border-top: 1px solid #f1f5f9; padding-top: 15px;">⚠️ แจ้งเตือน: หากคุณไม่ได้พยายามเข้าสู่ระบบ กรุณาตรวจสอบความปลอดภัยของบัญชีและระบบเครือข่ายของท่านทันที</p>
                 </div>
               </div>
             `
