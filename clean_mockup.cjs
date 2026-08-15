@@ -10,14 +10,23 @@ const pool = new Pool({
   ssl: { rejectUnauthorized: false }
 });
 
-const TARGET_ORG = 'org_dopa'; // Utopia's Org ID
-
 async function run() {
   console.log('================================================');
   console.log('🧹 PDPA Portal - Mockup Data Cleanup Script 🧹');
   console.log('================================================');
 
   try {
+    // ค้นหา ID ของ Utopia จากฐานข้อมูล
+    const utopiaRes = await pool.query("SELECT id, name_th FROM tenants WHERE name_th LIKE '%ยูโทเปีย%' LIMIT 1");
+    if (utopiaRes.rows.length === 0) {
+      console.log('❌ ข้อผิดพลาด: ไม่พบหน่วยงานที่มีชื่อ "ยูโทเปีย" ในระบบ กรุณาตรวจสอบอีกครั้ง');
+      return;
+    }
+    const TARGET_ORG = utopiaRes.rows[0].id;
+    const TARGET_NAME = utopiaRes.rows[0].name_th;
+    console.log(`✅ พบหน่วยงานหลัก: [${TARGET_ORG}] ${TARGET_NAME}`);
+    console.log(`รายการอื่นๆ ที่ไม่ใช่หน่วยงานนี้จะถูกลบทั้งหมด\n`);
+
     // 1. Preview tenants to be deleted
     const tenantsRes = await pool.query('SELECT id, name_th FROM tenants WHERE id != $1', [TARGET_ORG]);
     const mockTenants = tenantsRes.rows;
