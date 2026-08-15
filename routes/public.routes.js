@@ -156,9 +156,27 @@ export function createPublicRouter(dbPool, addServerAuditLog, authenticateJWT) {
 
       let isNewRequest = true;
       let oldStatus = null;
+      let isNewCitizenMessage = false;
+      let isNewStaffMessage = false;
       try {
-        const existRes = await dbPool.query('SELECT status FROM requests WHERE id = $1', [reqId]);
-        if (existRes.rows.length > 0) { isNewRequest = false; oldStatus = existRes.rows[0].status; }
+        const existRes = await dbPool.query('SELECT status, data FROM requests WHERE id = $1', [reqId]);
+        if (existRes.rows.length > 0) {
+          isNewRequest = false;
+          oldStatus = existRes.rows[0].status;
+          
+          const oldData = typeof existRes.rows[0].data === 'string' ? JSON.parse(existRes.rows[0].data) : (existRes.rows[0].data || {});
+          const oldMsgCount = (oldData.messageThread || []).length;
+          const newMsgCount = (requestData.messageThread || []).length;
+          
+          if (newMsgCount > oldMsgCount) {
+             const latestMsg = requestData.messageThread[requestData.messageThread.length - 1];
+             if (latestMsg && latestMsg.sender === 'user') {
+                isNewCitizenMessage = true;
+             } else if (latestMsg && latestMsg.sender === 'staff') {
+                isNewStaffMessage = true;
+             }
+          }
+        }
       } catch (existErr) { console.warn('Check existing request warning:', existErr.message); }
 
       try {
@@ -178,8 +196,16 @@ export function createPublicRouter(dbPool, addServerAuditLog, authenticateJWT) {
       try {
         if (isNewRequest) {
           await sendWorkflowNotification(updatedRequest, null, status, 'CREATE', dbPool);
-        } else if (oldStatus && oldStatus !== status) {
-          await sendWorkflowNotification(updatedRequest, oldStatus, status, 'STATUS_CHANGE', dbPool);
+        } else {
+          if (oldStatus && oldStatus !== status) {
+            await sendWorkflowNotification(updatedRequest, oldStatus, status, 'STATUS_CHANGE', dbPool);
+          }
+          if (isNewCitizenMessage) {
+            await sendWorkflowNotification(updatedRequest, oldStatus, status, 'NEW_MESSAGE', dbPool);
+          }
+          if (isNewStaffMessage) {
+            await sendWorkflowNotification(updatedRequest, oldStatus, status, 'STAFF_REPLY', dbPool);
+          }
         }
       } catch (notifyErr) { console.error('Workflow notification error:', notifyErr.message); }
 
@@ -321,7 +347,8 @@ export function createPublicRouter(dbPool, addServerAuditLog, authenticateJWT) {
           firstName: reqObj.requester?.firstName || '', lastName: reqObj.requester?.lastName || '',
           email: reqObj.requester?.email || '', phone: reqObj.requester?.phone || ''
         },
-        requesterType: reqObj.requesterType, representative: reqObj.representative
+        requesterType: reqObj.requesterType, representative: reqObj.representative,
+        messageThread: reqObj.messageThread, statusHistory: reqObj.statusHistory
       }));
 
       res.json({ success: true, results: safeMatches });

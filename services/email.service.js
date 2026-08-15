@@ -261,6 +261,7 @@ export const sendWorkflowNotification = async (request, oldStatus, newStatus, ev
   let ownerEmails = [process.env.OWNER_EMAIL || 'youtub6.numcom@gmail.com'];
   let dpoEmails = [process.env.DPO_EMAIL || 'youtub6.numcom@gmail.com'];
   let approverEmails = [process.env.APPROVER_EMAIL || 'youtub6.numcom@gmail.com'];
+  let adminEmails = [process.env.ADMIN_EMAIL || 'youtub6.numcom@gmail.com'];
 
   // Dynamically fetch actual emails from database based on orgId and role
   if (request.orgId && pool) {
@@ -281,6 +282,9 @@ export const sendWorkflowNotification = async (request, oldStatus, newStatus, ev
       
       const approvers = officers.filter(o => o.role === 'approver').map(o => o.email);
       if (approvers.length > 0) approverEmails = approvers;
+      
+      const admins = officers.filter(o => o.role === 'admin').map(o => o.email);
+      if (admins.length > 0) adminEmails = admins;
     } catch (err) {
       console.error('Error fetching officer emails for notification:', err.message);
     }
@@ -318,6 +322,17 @@ export const sendWorkflowNotification = async (request, oldStatus, newStatus, ev
       flowMessageTh = `คำขอใช้สิทธิ์ตาม PDPA เลขที่ ${trackingNo} ถูกบันทึกเข้าระบบโดยเจ้าหน้าที่รับเรื่องเรียบร้อยแล้ว`;
       nextActionTh = `ตรวจสอบและมอบหมายคำขอไปยังหน่วยงานผู้เป็นเจ้าของข้อมูล (Data Owner)`;
     }
+  } else if (eventType === 'NEW_MESSAGE') {
+    subject = `[PDPA Portal] มีข้อความใหม่จากประชาชน - คำขอเลขที่ ${trackingNo}`;
+    flowMessageTh = `ประชาชนได้ส่งข้อความสอบถามหรือแจ้งข้อมูลเพิ่มเติมผ่านระบบ Message Board สำหรับคำขอใช้สิทธิ์ PDPA เลขที่ ${trackingNo}`;
+    nextActionTh = `เจ้าหน้าที่ตรวจสอบข้อความและตอบกลับประชาชนผ่านช่องทาง Message Board ในระบบ`;
+    addRecipients(intakeEmails, 'เจ้าหน้าที่ Intake', 'ตรวจสอบข้อความจากประชาชน');
+    addRecipients(adminEmails, 'ผู้ดูแลระบบ (Admin)', 'รับทราบการติดต่อจากประชาชน');
+  } else if (eventType === 'STAFF_REPLY') {
+    subject = `[PDPA Portal] เจ้าหน้าที่ได้ตอบกลับข้อความของท่าน - คำขอเลขที่ ${trackingNo}`;
+    flowMessageTh = `เจ้าหน้าที่ได้ตอบกลับข้อความหรือชี้แจงข้อมูลเพิ่มเติมผ่านระบบ Message Board สำหรับคำขอใช้สิทธิ์ PDPA เลขที่ ${trackingNo} เรียบร้อยแล้ว`;
+    nextActionTh = `ท่านสามารถเข้าสู่ระบบเพื่อตรวจสอบข้อความตอบกลับและสนทนากับเจ้าหน้าที่ได้โดยตรง`;
+    if (citizenEmail) addRecipients([citizenEmail], 'ผู้ยื่นคำขอ', 'ตรวจสอบข้อความตอบกลับจากเจ้าหน้าที่');
   } else {
     subject = `[PDPA Portal] แจ้งอัปเดตสถานะคำขอ ${trackingNo} -> ${statusNameTh}`;
     flowMessageTh = `คำขอใช้สิทธิ์ PDPA เลขที่ ${trackingNo} มีการเปลี่ยนสถานะจาก "${oldStatus ? getStatusNameTh(oldStatus) : 'ไม่ระบุ'}" เป็น "${statusNameTh}"`;
