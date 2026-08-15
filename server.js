@@ -72,7 +72,7 @@ const PORT = process.env.PORT || 3001;
 if (!process.env.JWT_SECRET) {
   console.warn('⚠️ WARNING: JWT_SECRET environment variable is missing. Using a volatile secret for this session, which means all logged-in users will be kicked out upon restart.');
 }
-const JWT_SECRET = process.env.JWT_SECRET || require('crypto').randomBytes(64).toString('hex');
+const JWT_SECRET = process.env.JWT_SECRET || crypto.randomBytes(64).toString('hex');
 
 // Restrict CORS to specific origins
 const corsOptions = {
