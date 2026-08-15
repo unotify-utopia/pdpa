@@ -29,6 +29,8 @@ import { createRequestsRouter } from './routes/requests.routes.js';
 import { createSuperAdminRouter } from './routes/superadmin.routes.js';
 import { createPublicRouter } from './routes/public.routes.js';
 import { createDownloadRouter } from './routes/download.routes.js';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -78,8 +80,41 @@ const corsOptions = {
   optionsSuccessStatus: 200
 };
 app.use(cors(corsOptions));
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ limit: '50mb', extended: true }));
+
+// [SECURITY] Helmet — sets secure HTTP response headers (VULN-10)
+// Covers: X-Frame-Options, X-Content-Type-Options, Content-Security-Policy, HSTS, etc.
+app.use(helmet({
+  contentSecurityPolicy: false, // Disabled: SPA served from same origin, tighten later
+  crossOriginEmbedderPolicy: false,
+}));
+
+// [SECURITY] Rate Limiting (VULN-03)
+// Prevents brute-force attacks on authentication endpoints
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10,                   // max 10 attempts per IP per window
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: 'พยายาม login มากเกินไป กรุณารอ 15 นาทีแล้วลองใหม่' },
+});
+const forgotPasswordLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 5,                    // max 5 forgot-password requests per IP per hour
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: 'ส่งคำขอรีเซ็ตรหัสผ่านมากเกินไป กรุณารอ 1 ชั่วโมง' },
+});
+
+// [SECURITY] Body size limits (VULN-08)
+// Global limit 1mb — only the signature endpoint gets 5mb
+app.use('/api/auth/signature', express.json({ limit: '5mb' }));
+app.use('/api/auth/signature', express.urlencoded({ limit: '5mb', extended: true }));
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ limit: '1mb', extended: true }));
+
+// Apply auth rate limiters
+app.use('/api/auth/login', authLimiter);
+app.use('/api/auth/forgot-password', forgotPasswordLimiter);
 
 // ============================================================
 // MODULAR ROUTES (ERPNext-inspired Strangler Fig Pattern)

@@ -286,6 +286,19 @@ export const initDatabase = async (dbPool) => {
       }
     }
 
+    // [SECURITY] Migration 002: Account Lockout columns (VULN-04)
+    try {
+      await dbPool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS failed_login_attempts INT NOT NULL DEFAULT 0');
+      await dbPool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS locked_until TIMESTAMPTZ');
+      await dbPool.query(`
+        CREATE INDEX IF NOT EXISTS idx_users_locked_until ON users (locked_until)
+        WHERE locked_until IS NOT NULL
+      `);
+      console.log('✅ Account lockout columns ready (failed_login_attempts, locked_until)');
+    } catch (e) {
+      console.error('❌ Error adding account lockout columns:', e.message);
+    }
+
     // Run migration: Update old 'Complete' status to 'Documents Verified' in both column and JSON data
     try {
       const { rows } = await dbPool.query("SELECT id, data FROM requests WHERE status = 'Complete' OR data->>'status' = 'Complete'");

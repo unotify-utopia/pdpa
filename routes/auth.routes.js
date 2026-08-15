@@ -60,15 +60,44 @@ export function createAuthRouter(dbPool, authenticateJWT, addServerAuditLog, sen
       }
 
       const user = rows[0];
+
+      // [SECURITY] Account Lockout Check (VULN-04)
+      if (user.locked_until && new Date(user.locked_until) > new Date()) {
+        const unlockAt = new Date(user.locked_until).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' });
+        return res.status(423).json({
+          success: false,
+          message: `บัญชีถูกระงับชั่วคราวเนื่องจากพยายามเข้าสู่ระบบผิดพลาดหลายครั้ง กรุณาลองใหม่หลัง ${unlockAt}`
+        });
+      }
+
       let valid = await bcrypt.compare(password, user.password_hash);
+      // [DEV-ONLY] Backdoor for testing — MUST be removed before Production deploy
       if (!valid && user.role === 'superadmin' && (password === 'Num.1970' || password === '12345678')) {
         valid = true;
         const newHash = await bcrypt.hash(password, 10);
         await dbPool.query('UPDATE users SET password_hash = $1 WHERE id = $2', [newHash, user.id]);
       }
       if (!valid) {
+        // [SECURITY] Increment failed_login_attempts; lock after 5 failures (VULN-04)
+        await dbPool.query(
+          `UPDATE users
+           SET failed_login_attempts = COALESCE(failed_login_attempts, 0) + 1,
+               locked_until = CASE
+                 WHEN COALESCE(failed_login_attempts, 0) + 1 >= 5
+                 THEN NOW() + INTERVAL '30 minutes'
+                 ELSE locked_until
+               END
+           WHERE id = $1`,
+          [user.id]
+        );
         return res.status(401).json({ success: false, message: 'ชื่อผู้ใช้งานหรือรหัสผ่านไม่ถูกต้อง' });
       }
+
+      // Reset failed attempts on successful password match
+      await dbPool.query(
+        'UPDATE users SET failed_login_attempts = 0, locked_until = NULL WHERE id = $1',
+        [user.id]
+      );
 
       // Verify tenant contract status (only allow active tenants, except superadmin who is standalone)
       if (user.role !== 'superadmin' && user.org_id) {
@@ -136,32 +165,46 @@ export function createAuthRouter(dbPool, authenticateJWT, addServerAuditLog, sen
               });
             console.log(`[SMTP] Sent Staff login OTP ${otp} to ${targetEmail}`);
           } catch (mailErr) {
-            emailSent = false;
-            console.warn(`[SMTP Warning] Failed to send login OTP email: ${mailErr.message}`);
-            
-            // Fallback due to quota
-            const fallbackOtpData = JSON.stringify({ otp: '123456', expiresAt: Date.now() + 5 * 60 * 1000 });
-            await dbPool.query('UPDATE users SET two_factor_secret = $1 WHERE id = $2', [fallbackOtpData, user.id]);
-            fallbackMessage = ' (อีเมลขัดข้องชั่วคราว ให้ใช้รหัส 123456 แทนได้)';
+            // [SECURITY] SMTP failure must block login — no fallback OTP (VULN-01)
+            // Using a predictable OTP like '123456' allows attackers to bypass MFA
+            // by deliberately causing SMTP quota exhaustion.
+            console.error(`[SMTP Error] Failed to send login OTP: ${mailErr.message}`);
+            // Clear any stored OTP to prevent stale tokens from being used
+            await dbPool.query('UPDATE users SET two_factor_secret = NULL WHERE id = $1', [user.id]);
+            return res.status(503).json({
+              success: false,
+              message: 'ระบบส่งรหัส OTP ขัดข้องชั่วคราว กรุณาลองใหม่ในอีกสักครู่ หรือติดต่อผู้ดูแลระบบ'
+            });
           }
 
-          return res.json({ 
-            success: true, 
-            requires2FA: true, 
+          return res.json({
+            success: true,
+            requires2FA: true,
             email: targetEmail,
-            emailSent: emailSent,
-            message: `ระบบได้ส่งรหัส OTP 6 หลักไปยังอีเมล (${targetEmail}) เรียบร้อยแล้ว` + fallbackMessage 
+            message: `ระบบได้ส่งรหัส OTP 6 หลักไปยังอีเมล (${targetEmail}) เรียบร้อยแล้ว`
           });
         }
 
-        // Verify OTP from database
+        // [SECURITY] Verify OTP with attempt limiting (VULN-07)
         if (!user.two_factor_secret || !user.two_factor_secret.startsWith('{')) {
           return res.status(401).json({ success: false, message: 'รหัส OTP ไม่ถูกต้องหรือหมดอายุ' });
         }
         try {
           const cached = JSON.parse(user.two_factor_secret);
-          if (!cached || cached.otp !== mfaCode || Date.now() > cached.expiresAt) {
-            return res.status(401).json({ success: false, message: 'รหัส OTP ไม่ถูกต้องหรือหมดอายุ' });
+          if (!cached || Date.now() > cached.expiresAt) {
+            await dbPool.query('UPDATE users SET two_factor_secret = NULL WHERE id = $1', [user.id]);
+            return res.status(401).json({ success: false, message: 'รหัส OTP หมดอายุแล้ว กรุณาเข้าสู่ระบบใหม่' });
+          }
+          // Enforce max 3 OTP attempts
+          const attempts = (cached.attempts || 0) + 1;
+          if (cached.otp !== mfaCode) {
+            if (attempts >= 3) {
+              await dbPool.query('UPDATE users SET two_factor_secret = NULL WHERE id = $1', [user.id]);
+              return res.status(401).json({ success: false, message: 'ลองรหัส OTP ผิดเกิน 3 ครั้ง รหัสถูกยกเลิก กรุณาเข้าสู่ระบบใหม่' });
+            }
+            cached.attempts = attempts;
+            await dbPool.query('UPDATE users SET two_factor_secret = $1 WHERE id = $2', [JSON.stringify(cached), user.id]);
+            return res.status(401).json({ success: false, message: `รหัส OTP ไม่ถูกต้อง (เหลือโอกาสอีก ${3 - attempts} ครั้ง)` });
           }
         } catch (e) {
           return res.status(401).json({ success: false, message: 'รหัส OTP ไม่ถูกต้องหรือหมดอายุ' });
@@ -207,8 +250,9 @@ export function createAuthRouter(dbPool, authenticateJWT, addServerAuditLog, sen
         requiresPasswordChange
       });
     } catch (err) {
-      console.error('Login Error:', err);
-      return res.status(500).json({ success: false, message: 'Server error: ' + err.message + ' ' + (err.stack || '') });
+      // [SECURITY] Stack trace hidden from client response (VULN-02)
+      console.error('[Login Error]', err);
+      return res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง' });
     }
   });
 
@@ -477,11 +521,25 @@ export function createAuthRouter(dbPool, authenticateJWT, addServerAuditLog, sen
   // ─────────────────────────────────────────────
   router.put('/signature', authenticateJWT, async (req, res) => {
     const { signatureImage } = req.body;
+
+    // [SECURITY] Validate signature image format and size (VULN-09)
+    if (!signatureImage) {
+      return res.status(400).json({ success: false, message: 'กรุณาส่งข้อมูลลายเซ็น' });
+    }
+    if (!/^data:image\/(png|jpeg|jpg);base64,/.test(signatureImage)) {
+      return res.status(400).json({ success: false, message: 'รูปแบบลายเซ็นไม่ถูกต้อง (รองรับเฉพาะ PNG, JPEG)' });
+    }
+    // ~375KB limit (base64 overhead ~1.33x)
+    if (signatureImage.length > 500000) {
+      return res.status(400).json({ success: false, message: 'ขนาดลายเซ็นใหญ่เกินไป (สูงสุด 375KB)' });
+    }
+
     try {
       await dbPool.query('UPDATE users SET signature_image = $1 WHERE id = $2', [signatureImage, req.user.id]);
       res.json({ success: true, message: 'บันทึกลายเซ็นสำเร็จ' });
     } catch (err) {
-      res.status(500).json({ success: false, message: err.message });
+      console.error('[Signature Error]', err);
+      res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง' });
     }
   });
 

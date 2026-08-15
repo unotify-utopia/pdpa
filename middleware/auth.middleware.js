@@ -3,16 +3,18 @@
 // Handles JWT validation, Role-Based Access Control (RBAC), and server audit logging to PostgreSQL.
 
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 
 export function createAuthMiddleware(dbPool, JWT_SECRET) {
   // ── 1. JWT Authentication Middleware ─────────────────────────────────────
   const authenticateJWT = (req, res, next) => {
     let token = null;
     const authHeader = req.headers.authorization;
+    // [SECURITY] Token accepted from Authorization header ONLY.
+    // Token-in-query-string was removed (VULN-05): tokens in URLs leak into
+    // server logs, browser history, CDN/proxy logs, and Referer headers.
     if (authHeader && authHeader.startsWith('Bearer ')) {
       token = authHeader.split(' ')[1];
-    } else if (req.query && req.query.token) {
-      token = req.query.token;
     }
 
     if (token) {
@@ -67,7 +69,13 @@ export function createAuthMiddleware(dbPool, JWT_SECRET) {
 
     const ipAddress = reqObj ? (reqObj.headers['x-forwarded-for'] || reqObj.socket?.remoteAddress) : '127.0.0.1';
     const userAgent = reqObj ? reqObj.headers['user-agent'] : 'Express Backend API';
-    const checksum = Math.abs(Date.now() % 1000000).toString(16);
+    // [SECURITY] HMAC-SHA256 checksum bound to log content (VULN-11).
+    // Allows detection of tampered audit log entries.
+    const checksum = crypto
+      .createHmac('sha256', JWT_SECRET)
+      .update(`${logId}|${actorId}|${action}|${timestamp}`)
+      .digest('hex')
+      .substring(0, 16);
 
     try {
       await dbPool.query(
