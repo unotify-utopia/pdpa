@@ -6,7 +6,13 @@ import express from 'express';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { maskEmailOrUsername, maskIpAddress } from '../services/email.service.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const DEFAULT_HANDOVER_MEMO_TEMPLATE = `================================================================================
           หนังสือบันทึกข้อตกลงการส่งมอบข้อมูลและสิ้นสุดสัญญาการใช้บริการ
@@ -366,6 +372,59 @@ export function createSuperAdminRouter(dbPool, authenticateJWT, requireRole, add
     } catch (err) {
       console.error('Error in offboard export:', err);
       res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดในการนำออกข้อมูลหน่วยงาน: ' + err.message });
+    }
+  });
+
+  // ─────────────────────────────────────────────
+  // GET /api/super-admin/dashboard-stats
+  // ─────────────────────────────────────────────
+  router.get('/dashboard-stats', authenticateJWT, requireRole(['superadmin']), async (req, res) => {
+    try {
+      // 1. DB Size
+      const dbSizeRes = await dbPool.query("SELECT pg_size_pretty(pg_database_size(current_database())) as size_pretty, pg_database_size(current_database()) as size_bytes");
+      
+      // 2. Metrics
+      const metricsRes = await dbPool.query(`
+        SELECT 
+          (SELECT COUNT(*) FROM audit_logs WHERE action = 'PAYLOAD_TOO_LARGE_ATTEMPT' OR action = 'FRONTEND_PAYLOAD_TOO_LARGE') as payload_blocks,
+          (SELECT COUNT(*) FROM audit_logs WHERE action = 'OTP_VERIFICATION_FAILED') as otp_failures,
+          (SELECT COUNT(*) FROM audit_logs) as total_audit_logs,
+          (SELECT COUNT(*) FROM requests) as total_requests,
+          (SELECT COUNT(*) FROM tenants) as total_tenants,
+          (SELECT COUNT(*) FROM users) as total_users
+      `);
+
+      // 3. Archives Size
+      let archivesSize = 0;
+      let archivesCount = 0;
+      const archiveDir = path.join(__dirname, '..', 'archives');
+      if (fs.existsSync(archiveDir)) {
+        const files = fs.readdirSync(archiveDir);
+        for (const file of files) {
+          const stats = fs.statSync(path.join(archiveDir, file));
+          archivesSize += stats.size;
+          archivesCount++;
+        }
+      }
+
+      // 4. Recent Alerts (Critical logs)
+      const alertsRes = await dbPool.query(`
+        SELECT * FROM audit_logs 
+        WHERE action IN ('PAYLOAD_TOO_LARGE_ATTEMPT', 'FRONTEND_PAYLOAD_TOO_LARGE', 'OTP_VERIFICATION_FAILED', 'SUPERADMIN_LOGIN_FAILED')
+        ORDER BY timestamp DESC 
+        LIMIT 10
+      `);
+
+      res.json({
+        success: true,
+        dbSize: dbSizeRes.rows[0],
+        metrics: metricsRes.rows[0],
+        archives: { count: archivesCount, sizeBytes: archivesSize },
+        recentAlerts: alertsRes.rows
+      });
+    } catch (err) {
+      console.error('Error fetching dashboard stats:', err);
+      res.status(500).json({ success: false, message: 'Failed to fetch dashboard stats' });
     }
   });
 

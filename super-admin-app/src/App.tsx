@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ShieldCheck, Building2, UserCheck, Key, Lock, LogOut, Plus, Sun, Moon, CheckCircle2, Trash2, Mail, AlertCircle, Eye, EyeOff, Check, Archive, Download, FileText, CheckCircle, ShieldAlert, RefreshCw, X, Activity, Server, ArrowRight, Sparkles, Shield } from 'lucide-react';
 import WorkflowAdminPanel from './WorkflowAdminPanel';
+import SystemDashboard from './SystemDashboard';
 
 interface Tenant {
   id: string;
@@ -44,7 +45,7 @@ export default function App() {
   const [password, setPassword] = useState('');
   const [mfaCode, setMfaCode] = useState('');
 
-  const [activeTab, setActiveTab] = useState<'tenants' | 'users' | 'export' | 'workflow'>('tenants');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'tenants' | 'users' | 'export' | 'workflow'>('dashboard');
   const [selectedTenantForUsers, setSelectedTenantForUsers] = useState<string>('');
   const [exportTenantModal, setExportTenantModal] = useState<Tenant | null>(null);
   const [exportFormat, setExportFormat] = useState<'json' | 'csv'>('json');
@@ -1361,6 +1362,16 @@ export default function App() {
         <div className="flex items-center justify-between border-b border-slate-800/40 pb-3">
           <div className="flex items-center gap-2">
             <button
+              onClick={() => setActiveTab('dashboard')}
+              className={`px-4 py-2 rounded-lg text-xs font-bold transition flex items-center gap-2 ${
+                activeTab === 'dashboard' ? 'bg-indigo-600 text-white shadow-md' : 'bg-slate-800/40 text-slate-400 hover:bg-slate-800'
+              }`}
+            >
+              <Server className="h-4 w-4" />
+              <span>Dashboard (สถิติระบบ)</span>
+            </button>
+
+            <button
               onClick={() => setActiveTab('tenants')}
               className={`px-4 py-2 rounded-lg text-xs font-bold transition flex items-center gap-2 ${
                 activeTab === 'tenants' ? 'bg-emerald-600 text-white shadow-md' : 'bg-slate-800/40 text-slate-400 hover:bg-slate-800'
@@ -1684,6 +1695,10 @@ export default function App() {
             showNotify={showNotify} 
             isDark={isDark} 
           />
+        )}
+
+        {activeTab === 'dashboard' && token && (
+          <SystemDashboard token={token} />
         )}
 
       </main>
