@@ -48,7 +48,6 @@ export default function SystemDashboard({ token, isDark = false }: SystemDashboa
   const textSubClass = isDark ? 'text-slate-400' : 'text-slate-500';
   const textValueClass = isDark ? 'text-white' : 'text-slate-900';
   const tableHeaderBg = isDark ? 'bg-slate-950 text-slate-400 border-slate-800' : 'bg-slate-50 text-slate-500 border-slate-200';
-  const borderClass = isDark ? 'border-slate-800' : 'border-slate-200';
   const borderLightClass = isDark ? 'border-slate-800' : 'border-slate-100';
   const rowHoverClass = isDark ? 'hover:bg-slate-800/50' : 'hover:bg-slate-50';
 
