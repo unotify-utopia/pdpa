@@ -767,6 +767,19 @@ export default function App() {
     if (totalSize > 5 * 1024 * 1024) {
       const mbSize = (totalSize / (1024 * 1024)).toFixed(2);
       showNotify(`⚠️ ขนาดไฟล์แนบและลายเซ็นรวมกันเกิน 5 MB (ปัจจุบัน ${mbSize} MB) กรุณาลดขนาดไฟล์หรือบีบอัดรูปภาพก่อนดำเนินการต่อ`, 'warning');
+      
+      // Log to backend
+      const targetEmail = reqType === 'self' ? requesterForm.email : repForm.email;
+      fetch('/api/audit-logs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'FRONTEND_PAYLOAD_TOO_LARGE',
+          details: `Attempted to upload ${mbSize} MB. Email/Phone: ${targetEmail || requesterForm.phone}`,
+          orgId: selectedTargetOrgId
+        })
+      }).catch(console.error);
+
       setIsSendingOtp(false);
       return;
     }

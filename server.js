@@ -22,15 +22,16 @@ import { sendMailWithFallback, sendWorkflowNotification, workflowEmailLogs, getS
 import { DEFAULT_SLA_DAYS, calculateSLADate, calculateRemainingDays, updateRequestSLA, calculateOrgSLAReport } from './services/sla.service.js';
 import { generateCoverLetterPdf, generateDiscoveryReportPdf } from './services/pdf.service.js';
 import { createAuthRouter } from './routes/auth.routes.js';
-import { createUsersRouter } from './routes/users.routes.js';
+import rateLimit from 'express-rate-limit';
 import { createAuthMiddleware } from './middleware/auth.middleware.js';
+import cron from 'node-cron';
+import archiveLogs from './archive_logs.cjs';
 import { createReportsRouter } from './routes/reports.routes.js';
 import { createRequestsRouter } from './routes/requests.routes.js';
 import { createSuperAdminRouter } from './routes/superadmin.routes.js';
 import { createPublicRouter } from './routes/public.routes.js';
 import { createDownloadRouter } from './routes/download.routes.js';
 import helmet from 'helmet';
-import rateLimit from 'express-rate-limit';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -189,6 +190,30 @@ app.use((req, res) => {
   res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
 
+// --- GLOBAL ERROR HANDLER ---
+app.use((err, req, res, next) => {
+  if (err.type === 'entity.too.large') {
+    const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+    const userAgent = req.headers['user-agent'] || 'Unknown';
+    // Log the event directly using raw query or addServerAuditLog
+    // Since addServerAuditLog requires (action, details, actor), we'll do:
+    addServerAuditLog('PAYLOAD_TOO_LARGE_ATTEMPT', `Attempted to upload file > 20MB. IP: ${ip}, User-Agent: ${userAgent}`, null).catch(console.error);
+    
+    return res.status(413).json({
+      success: false,
+      message: 'Payload Too Large: The file or request body exceeds the maximum allowed limit of 20MB.'
+    });
+  }
+  // Generic unhandled error logger could go here, but we pass to default express handler
+  next(err);
+});
+
 app.listen(PORT, () => {
   console.log(`[PDPA Backend Engine] Running on http://localhost:${PORT}`);
+  
+  // Schedule the Log Archiver to run on the 1st of every month at 02:00 AM
+  cron.schedule('0 2 1 * *', () => {
+    console.log('[Cron] Running scheduled log archival...');
+    archiveLogs();
+  });
 });

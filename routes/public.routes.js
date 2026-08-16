@@ -3,12 +3,21 @@
 // Handles: Public tenant list, request submission, OTP, tracking, config, templates
 
 import express from 'express';
+import rateLimit from 'express-rate-limit';
 import { applyFieldPermissionsToList } from '../middleware/fieldPermissions.js';
 import { sendMailWithFallback, sendWorkflowNotification, workflowEmailLogs, maskEmailOrUsername, maskIpAddress } from '../services/email.service.js';
 import { updateRequestSLA } from '../services/sla.service.js';
 
 export function createPublicRouter(dbPool, addServerAuditLog, authenticateJWT) {
   const router = express.Router();
+
+  const auditLogLimiter = rateLimit({
+    windowMs: 60 * 1000, // 1 minute
+    max: 10, // Limit each IP to 10 requests per `window`
+    message: { success: false, message: 'Too many audit logs created from this IP, please try again after a minute' },
+    standardHeaders: true,
+    legacyHeaders: false,
+  });
 
   // ─────────────────────────────────────────────
   // GET /api/config
@@ -90,7 +99,7 @@ export function createPublicRouter(dbPool, addServerAuditLog, authenticateJWT) {
   // ─────────────────────────────────────────────
   // POST /api/audit-logs (Client-side audit log ingestion)
   // ─────────────────────────────────────────────
-  router.post('/audit-logs', async (req, res) => {
+  router.post('/audit-logs', auditLogLimiter, async (req, res) => {
     try {
       const log = req.body;
       await dbPool.query(
@@ -313,17 +322,22 @@ export function createPublicRouter(dbPool, addServerAuditLog, authenticateJWT) {
 
     try {
       const result = await dbPool.query('SELECT * FROM public_otps WHERE key = $1', [key]);
-      if (result.rows.length === 0) return res.status(400).json({ success: false, message: 'ไม่พบรหัส OTP หรือรหัสอาจหมดอายุแล้ว กรุณาขอใหม่' });
+      if (result.rows.length === 0) {
+        addServerAuditLog('OTP_VERIFICATION_FAILED', `No OTP found or expired for key: ${key}`, null).catch(console.error);
+        return res.status(400).json({ success: false, message: 'ไม่พบรหัส OTP หรือรหัสอาจหมดอายุแล้ว กรุณาขอใหม่' });
+      }
 
       const record = result.rows[0];
       if (Date.now() > Number(record.expires_at)) {
         await dbPool.query('DELETE FROM public_otps WHERE key = $1', [key]);
+        addServerAuditLog('OTP_VERIFICATION_FAILED', `OTP expired for key: ${key}`, null).catch(console.error);
         return res.status(400).json({ success: false, message: 'รหัส OTP หมดอายุแล้ว กรุณาขอใหม่' });
       }
       if (record.otp === otp) {
         await dbPool.query('DELETE FROM public_otps WHERE key = $1', [key]);
         return res.json({ success: true, message: 'ยืนยันรหัส OTP สำเร็จ' });
       } else {
+        addServerAuditLog('OTP_VERIFICATION_FAILED', `Incorrect OTP attempt for key: ${key}`, null).catch(console.error);
         return res.status(400).json({ success: false, message: 'รหัส OTP ไม่ถูกต้อง' });
       }
     } catch (error) {
