@@ -33,7 +33,7 @@ export default function SystemDashboard({ token, isDark = false }: SystemDashboa
   if (error) return <div className="p-8 text-center text-red-500">เกิดข้อผิดพลาด: {error}</div>;
   if (!stats) return null;
 
-  const { dbSize, metrics, archives, recentAlerts, systemInfo } = stats;
+  const { dbSize, metrics, archives, recentAlerts, systemInfo, diskInfo } = stats;
 
   const formatBytes = (bytes: number) => {
     if (!bytes || bytes === 0) return '0 Bytes';
@@ -185,6 +185,10 @@ export default function SystemDashboard({ token, isDark = false }: SystemDashboa
               <div className={`flex justify-between items-center pb-4 border-b ${borderLightClass}`}>
                 <div className={textSubClass}>RAM ที่ว่าง (Free)</div>
                 <div className={`font-bold text-lg ${textValueClass}`}>{formatBytes(systemInfo?.freeMem || 0)} <span className="text-sm font-normal text-slate-500">/ {formatBytes(systemInfo?.totalMem || 0)}</span></div>
+              </div>
+              <div className={`flex justify-between items-center pb-4 border-b ${borderLightClass}`}>
+                <div className={textSubClass}>Disk ที่ว่าง (Free)</div>
+                <div className={`font-bold text-lg ${textValueClass}`}>{formatBytes(diskInfo?.free || 0)} <span className="text-sm font-normal text-slate-500">/ {formatBytes(diskInfo?.total || 0)}</span></div>
               </div>
               <div className="flex justify-between items-center">
                 <div className={textSubClass}>Uptime</div>

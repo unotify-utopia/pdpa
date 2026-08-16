@@ -10,6 +10,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import os from 'os';
+import { execSync } from 'child_process';
 import { maskEmailOrUsername, maskIpAddress } from '../services/email.service.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -432,13 +433,38 @@ export function createSuperAdminRouter(dbPool, authenticateJWT, requireRole, add
         uptime: os.uptime()
       };
 
+      // 6. Disk Usage
+      let diskInfo = { total: 0, free: 0 };
+      try {
+        if (os.platform() === 'win32') {
+          const out = execSync('wmic logicaldisk where "DeviceID=\'C:\'" get size,freespace').toString();
+          const lines = out.trim().split('\n');
+          if (lines.length > 1) {
+            const parts = lines[1].trim().split(/\s+/);
+            diskInfo.free = parseInt(parts[0], 10);
+            diskInfo.total = parseInt(parts[1], 10);
+          }
+        } else {
+          const out = execSync('df -k /').toString();
+          const lines = out.trim().split('\n');
+          if (lines.length > 1) {
+            const parts = lines[1].trim().split(/\s+/);
+            diskInfo.total = parseInt(parts[1], 10) * 1024;
+            diskInfo.free = parseInt(parts[3], 10) * 1024;
+          }
+        }
+      } catch (e) {
+        console.error('Error fetching disk space:', e);
+      }
+
       res.json({
         success: true,
         dbSize: dbSizeRes.rows[0],
         metrics: metricsRes.rows[0],
         archives: { count: archivesCount, sizeBytes: archivesSize },
         recentAlerts: alertsRes.rows,
-        systemInfo: systemInfo
+        systemInfo: systemInfo,
+        diskInfo: diskInfo
       });
     } catch (err) {
       console.error('Error fetching dashboard stats:', err);
