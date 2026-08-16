@@ -2987,12 +2987,13 @@ export default function App() {
                     <p className="text-xs text-slate-300 leading-relaxed">
                       ท่านสามารถยื่นคำร้องขอตรวจสอบ หรือคัดลอกไฟล์ประวัติการจอง การเข้าใช้บริการ ประวัติพนักงาน หรือบันทึกข้อมูลอื่นที่เป็นของท่านได้อย่างรวดเร็ว ปลอดภัย และถูกต้องตามขั้นตอน
                     </p>
-                    <div className="flex gap-3 pt-2">
+                    <div className="flex flex-wrap gap-4 pt-3">
                       <button
                         onClick={() => setPublicTab('submit')}
-                        className="bg-brand-500 hover:bg-brand-600 text-white text-xs font-semibold py-2.5 px-5 rounded-lg shadow-sm transition"
+                        className="bg-gradient-to-r from-brand-500 to-blue-500 hover:from-brand-400 hover:to-blue-400 text-white text-sm font-bold py-3 px-6 rounded-xl shadow-[0_0_20px_rgba(59,130,246,0.6)] border border-blue-400/50 transform hover:-translate-y-1 transition-all duration-300 flex items-center gap-2 ring-1 ring-white/20"
                       >
-                        ยื่นแบบคำร้องออนไลน์ทันที
+                        <FileText className="w-4 h-4" />
+                        ยื่นแบบคำร้องออนไลน์
                       </button>
                       <button
                         onClick={() => {
@@ -3000,8 +3001,9 @@ export default function App() {
                           setTrackingError(null);
                           setShowSearchLookupModal(true);
                         }}
-                        className="bg-white/10 hover:bg-white/20 text-white border border-white/20 text-xs font-semibold py-2.5 px-5 rounded-lg transition"
+                        className="bg-white/10 hover:bg-white/20 text-white border border-white/20 text-sm font-semibold py-3 px-6 rounded-xl transform hover:-translate-y-1 transition-all duration-300 flex items-center gap-2 backdrop-blur-md"
                       >
+                        <Search className="w-4 h-4" />
                         ติดตามสถานะคำร้องเดิม
                       </button>
                     </div>
