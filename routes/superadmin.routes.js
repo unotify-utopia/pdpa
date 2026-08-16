@@ -378,7 +378,7 @@ export function createSuperAdminRouter(dbPool, authenticateJWT, requireRole, add
   // ─────────────────────────────────────────────
   // GET /api/super-admin/dashboard-stats
   // ─────────────────────────────────────────────
-  router.get('/dashboard-stats', authenticateJWT, requireRole(['superadmin']), async (req, res) => {
+  router.get('/super-admin/dashboard-stats', authenticateJWT, requireRole(['superadmin']), async (req, res) => {
     try {
       // 1. DB Size
       const dbSizeRes = await dbPool.query("SELECT pg_size_pretty(pg_database_size(current_database())) as size_pretty, pg_database_size(current_database()) as size_bytes");
