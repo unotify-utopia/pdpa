@@ -1301,6 +1301,49 @@ export default function App() {
             </div>
           </div>
         </div>
+
+        {/* Professional Notification Modal */}
+        {notifyModal && notifyModal.open && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-fadeIn">
+            <div className="bg-slate-900/95 border border-slate-700/80 rounded-3xl max-w-sm w-full p-6 text-center shadow-2xl relative overflow-hidden transform transition-all scale-100">
+              <div className={`absolute top-0 left-0 right-0 h-1.5 ${
+                notifyModal.type === 'success' ? 'bg-gradient-to-r from-emerald-500 to-teal-400' :
+                notifyModal.type === 'warning' ? 'bg-gradient-to-r from-amber-500 to-yellow-400' :
+                'bg-gradient-to-r from-rose-500 to-red-400'
+              }`} />
+              <div className="flex justify-center mb-4 mt-2">
+                <div className={`p-4 rounded-2xl ${
+                  notifyModal.type === 'success' ? 'bg-emerald-500/15 border border-emerald-500/30 text-emerald-400' :
+                  notifyModal.type === 'warning' ? 'bg-amber-500/15 border border-amber-500/30 text-amber-400' :
+                  'bg-rose-500/15 border border-rose-500/30 text-rose-400'
+                }`}>
+                  {notifyModal.type === 'success' ? (
+                    <CheckCircle2 className="h-10 w-10 animate-bounce-short" />
+                  ) : (
+                    <AlertCircle className="h-10 w-10" />
+                  )}
+                </div>
+              </div>
+              <h3 className="text-lg font-extrabold text-white mb-2">{notifyModal.title}</h3>
+              <p className="text-sm text-slate-300 leading-relaxed mb-6 font-normal">{notifyModal.message}</p>
+              <button
+                type="button"
+                onClick={() => {
+                  const cb = notifyModal.onConfirm;
+                  setNotifyModal(null);
+                  if (cb) cb();
+                }}
+                className={`w-full py-3 px-6 rounded-xl font-bold text-sm text-white shadow-lg transition duration-200 transform hover:-translate-y-0.5 ${
+                  notifyModal.type === 'success' ? 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 shadow-emerald-900/40' :
+                  notifyModal.type === 'warning' ? 'bg-gradient-to-r from-amber-600 to-yellow-600 hover:from-amber-500 hover:to-yellow-500 shadow-amber-900/40' :
+                  'bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 shadow-rose-900/40'
+                }`}
+              >
+                รับทราบ / ตกลง
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
