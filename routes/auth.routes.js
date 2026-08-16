@@ -71,12 +71,6 @@ export function createAuthRouter(dbPool, authenticateJWT, addServerAuditLog, sen
       }
 
       let valid = await bcrypt.compare(password, user.password_hash);
-      // [DEV-ONLY] Backdoor for testing — MUST be removed before Production deploy
-      if (!valid && user.role === 'superadmin' && (password === 'Num.1970' || password === '12345678')) {
-        valid = true;
-        const newHash = await bcrypt.hash(password, 10);
-        await dbPool.query('UPDATE users SET password_hash = $1 WHERE id = $2', [newHash, user.id]);
-      }
       if (!valid) {
         // [SECURITY] Increment failed_login_attempts; lock after 5 failures (VULN-04)
         await dbPool.query(
