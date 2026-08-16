@@ -22,6 +22,7 @@ import { sendMailWithFallback, sendWorkflowNotification, workflowEmailLogs, getS
 import { DEFAULT_SLA_DAYS, calculateSLADate, calculateRemainingDays, updateRequestSLA, calculateOrgSLAReport } from './services/sla.service.js';
 import { generateCoverLetterPdf, generateDiscoveryReportPdf } from './services/pdf.service.js';
 import { createAuthRouter } from './routes/auth.routes.js';
+import { createUsersRouter } from './routes/users.routes.js';
 import rateLimit from 'express-rate-limit';
 import { createAuthMiddleware } from './middleware/auth.middleware.js';
 import cron from 'node-cron';
