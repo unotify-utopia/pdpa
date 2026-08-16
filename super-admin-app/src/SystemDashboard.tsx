@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Database, ShieldAlert, Archive, Server, AlertTriangle } from 'lucide-react';
+import { Database, ShieldAlert, Archive, Server, Activity, FileText } from 'lucide-react';
 
 interface SystemDashboardProps {
   token: string;
@@ -33,14 +33,23 @@ export default function SystemDashboard({ token, isDark = false }: SystemDashboa
   if (error) return <div className="p-8 text-center text-red-500">เกิดข้อผิดพลาด: {error}</div>;
   if (!stats) return null;
 
-  const { dbSize, metrics, archives, recentAlerts } = stats;
+  const { dbSize, metrics, archives, recentAlerts, systemInfo } = stats;
 
   const formatBytes = (bytes: number) => {
-    if (bytes === 0) return '0 Bytes';
+    if (!bytes || bytes === 0) return '0 Bytes';
     const k = 1024;
     const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+
+  const formatUptime = (seconds: number) => {
+    if (!seconds) return '0h';
+    const d = Math.floor(seconds / (3600*24));
+    const h = Math.floor(seconds % (3600*24) / 3600);
+    const m = Math.floor(seconds % 3600 / 60);
+    if (d > 0) return `${d} วัน ${h} ชม.`;
+    return `${h} ชม. ${m} นาที`;
   };
 
   const cardBgClass = isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200 shadow-sm';
@@ -64,15 +73,27 @@ export default function SystemDashboard({ token, isDark = false }: SystemDashboa
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* DB Size */}
         <div className={`rounded-xl border p-5 ${cardBgClass}`}>
           <div className="flex items-center gap-3 mb-2">
             <div className={`p-2 rounded-lg ${isDark ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-50 text-blue-600'}`}><Database size={20} /></div>
-            <h3 className={`font-semibold ${textTitleClass}`}>ขนาด Database</h3>
+            <h3 className={`font-semibold ${textTitleClass}`}>ขนาด Database รวม</h3>
           </div>
           <p className={`text-3xl font-bold mt-3 ${textValueClass}`}>{dbSize?.size_pretty || 'N/A'}</p>
-          <p className={`text-sm mt-1 ${textSubClass}`}>ตารางคำร้อง, ผู้ใช้งาน, และ Log</p>
+          <p className={`text-sm mt-1 ${textSubClass}`}>ข้อมูลทั้งหมดในฐานข้อมูล</p>
         </div>
 
+        {/* Log Size */}
+        <div className={`rounded-xl border p-5 ${cardBgClass}`}>
+          <div className="flex items-center gap-3 mb-2">
+            <div className={`p-2 rounded-lg ${isDark ? 'bg-emerald-500/20 text-emerald-400' : 'bg-emerald-50 text-emerald-600'}`}><FileText size={20} /></div>
+            <h3 className={`font-semibold ${textTitleClass}`}>ขนาด Log</h3>
+          </div>
+          <p className={`text-3xl font-bold mt-3 ${textValueClass}`}>{dbSize?.log_size_pretty || 'N/A'}</p>
+          <p className={`text-sm mt-1 ${textSubClass}`}>ประวัติการใช้งานและ Security Log</p>
+        </div>
+
+        {/* Archive Size */}
         <div className={`rounded-xl border p-5 ${cardBgClass}`}>
           <div className="flex items-center gap-3 mb-2">
             <div className={`p-2 rounded-lg ${isDark ? 'bg-indigo-500/20 text-indigo-400' : 'bg-indigo-50 text-indigo-600'}`}><Archive size={20} /></div>
@@ -82,34 +103,34 @@ export default function SystemDashboard({ token, isDark = false }: SystemDashboa
           <p className={`text-sm mt-1 ${textSubClass}`}>จำนวนไฟล์: {archives?.count || 0} ไฟล์</p>
         </div>
 
+        {/* Combined Security Info */}
         <div className={`rounded-xl border p-5 ${cardBgClass}`}>
-          <div className="flex items-center gap-3 mb-2">
+          <div className="flex items-center gap-3 mb-4">
             <div className={`p-2 rounded-lg ${isDark ? 'bg-rose-500/20 text-rose-400' : 'bg-red-50 text-red-600'}`}><ShieldAlert size={20} /></div>
-            <h3 className={`font-semibold ${textTitleClass}`}>การบล็อกการโจมตี</h3>
+            <h3 className={`font-semibold ${textTitleClass}`}>ความปลอดภัยระบบ</h3>
           </div>
-          <p className={`text-3xl font-bold mt-3 ${textValueClass}`}>{metrics?.payload_blocks || 0}</p>
-          <p className={`text-sm mt-1 ${textSubClass}`}>การพยายามอัปโหลดไฟล์ขนาดใหญ่</p>
-        </div>
-
-        <div className={`rounded-xl border p-5 ${cardBgClass}`}>
-          <div className="flex items-center gap-3 mb-2">
-            <div className={`p-2 rounded-lg ${isDark ? 'bg-amber-500/20 text-amber-400' : 'bg-orange-50 text-orange-600'}`}><AlertTriangle size={20} /></div>
-            <h3 className={`font-semibold ${textTitleClass}`}>OTP ผิดพลาด</h3>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <p className={`text-2xl font-bold ${textValueClass}`}>{metrics?.payload_blocks || 0}</p>
+              <p className={`text-xs mt-1 ${textSubClass}`}>บล็อกการโจมตี</p>
+            </div>
+            <div className={`border-l pl-3 ${isDark ? 'border-slate-700' : 'border-slate-200'}`}>
+              <p className={`text-2xl font-bold ${textValueClass}`}>{metrics?.otp_failures || 0}</p>
+              <p className={`text-xs mt-1 ${textSubClass}`}>OTP ผิดพลาด</p>
+            </div>
           </div>
-          <p className={`text-3xl font-bold mt-3 ${textValueClass}`}>{metrics?.otp_failures || 0}</p>
-          <p className={`text-sm mt-1 ${textSubClass}`}>ผู้ใช้กรอกรหัสผิดหรือหมดอายุ</p>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className={`lg:col-span-2 rounded-xl border overflow-hidden ${cardBgClass}`}>
+        <div className={`lg:col-span-2 rounded-xl border overflow-hidden flex flex-col ${cardBgClass}`}>
           <div className={`px-6 py-4 border-b ${tableHeaderBg}`}>
             <h3 className={`font-bold flex items-center gap-2 ${textTitleClass}`}>
               <ShieldAlert size={18} className={isDark ? 'text-rose-400' : 'text-red-500'} /> Security Alerts ล่าสุด
             </h3>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
+          <div className="overflow-x-auto flex-1">
+            <table className="w-full text-left text-sm h-full">
               <thead className={`border-b ${tableHeaderBg}`}>
                 <tr>
                   <th className="px-6 py-3 font-medium">เวลา</th>
@@ -148,28 +169,54 @@ export default function SystemDashboard({ token, isDark = false }: SystemDashboa
           </div>
         </div>
 
-        <div className={`rounded-xl border overflow-hidden ${cardBgClass}`}>
-           <div className={`px-6 py-4 border-b ${tableHeaderBg}`}>
-            <h3 className={`font-bold flex items-center gap-2 ${textTitleClass}`}>
-              <Server size={18} className={isDark ? 'text-blue-400' : 'text-blue-500'} /> สรุปปริมาณข้อมูล
-            </h3>
+        <div className="space-y-6">
+          {/* System Resources */}
+          <div className={`rounded-xl border overflow-hidden ${cardBgClass}`}>
+             <div className={`px-6 py-4 border-b ${tableHeaderBg}`}>
+              <h3 className={`font-bold flex items-center gap-2 ${textTitleClass}`}>
+                <Activity size={18} className={isDark ? 'text-emerald-400' : 'text-emerald-500'} /> ทรัพยากรระบบ (Server)
+              </h3>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className={`flex justify-between items-center pb-4 border-b ${borderLightClass}`}>
+                <div className={textSubClass}>CPU Load (1m)</div>
+                <div className={`font-bold text-lg ${textValueClass}`}>{systemInfo?.loadAvg?.[0]?.toFixed(2) || '0.00'}</div>
+              </div>
+              <div className={`flex justify-between items-center pb-4 border-b ${borderLightClass}`}>
+                <div className={textSubClass}>RAM ที่ว่าง (Free)</div>
+                <div className={`font-bold text-lg ${textValueClass}`}>{formatBytes(systemInfo?.freeMem || 0)} <span className="text-sm font-normal text-slate-500">/ {formatBytes(systemInfo?.totalMem || 0)}</span></div>
+              </div>
+              <div className="flex justify-between items-center">
+                <div className={textSubClass}>Uptime</div>
+                <div className={`font-bold text-lg ${textValueClass}`}>{formatUptime(systemInfo?.uptime || 0)}</div>
+              </div>
+            </div>
           </div>
-          <div className="p-6 space-y-4">
-            <div className={`flex justify-between items-center pb-4 border-b ${borderLightClass}`}>
-              <div className={textSubClass}>จำนวนคำร้องทั้งหมด</div>
-              <div className={`font-bold text-lg ${textValueClass}`}>{metrics?.total_requests || 0}</div>
+
+          {/* Data Summary */}
+          <div className={`rounded-xl border overflow-hidden ${cardBgClass}`}>
+             <div className={`px-6 py-4 border-b ${tableHeaderBg}`}>
+              <h3 className={`font-bold flex items-center gap-2 ${textTitleClass}`}>
+                <Server size={18} className={isDark ? 'text-blue-400' : 'text-blue-500'} /> สรุปปริมาณข้อมูล
+              </h3>
             </div>
-            <div className={`flex justify-between items-center pb-4 border-b ${borderLightClass}`}>
-              <div className={textSubClass}>จำนวนหน่วยงาน (Tenants)</div>
-              <div className={`font-bold text-lg ${textValueClass}`}>{metrics?.total_tenants || 0}</div>
-            </div>
-            <div className={`flex justify-between items-center pb-4 border-b ${borderLightClass}`}>
-              <div className={textSubClass}>บัญชีผู้ใช้งานระบบ (Staff/Admin)</div>
-              <div className={`font-bold text-lg ${textValueClass}`}>{metrics?.total_users || 0}</div>
-            </div>
-            <div className="flex justify-between items-center">
-              <div className={textSubClass}>จำนวน Audit Logs ทั้งหมด</div>
-              <div className={`font-bold text-lg ${textValueClass}`}>{metrics?.total_audit_logs || 0}</div>
+            <div className="p-6 space-y-4">
+              <div className={`flex justify-between items-center pb-4 border-b ${borderLightClass}`}>
+                <div className={textSubClass}>จำนวนคำร้องทั้งหมด</div>
+                <div className={`font-bold text-lg ${textValueClass}`}>{metrics?.total_requests || 0}</div>
+              </div>
+              <div className={`flex justify-between items-center pb-4 border-b ${borderLightClass}`}>
+                <div className={textSubClass}>จำนวนหน่วยงาน (Tenants)</div>
+                <div className={`font-bold text-lg ${textValueClass}`}>{metrics?.total_tenants || 0}</div>
+              </div>
+              <div className={`flex justify-between items-center pb-4 border-b ${borderLightClass}`}>
+                <div className={textSubClass}>บัญชีผู้ใช้งานระบบ (Staff)</div>
+                <div className={`font-bold text-lg ${textValueClass}`}>{metrics?.total_users || 0}</div>
+              </div>
+              <div className="flex justify-between items-center">
+                <div className={textSubClass}>จำนวน Audit Logs</div>
+                <div className={`font-bold text-lg ${textValueClass}`}>{metrics?.total_audit_logs || 0}</div>
+              </div>
             </div>
           </div>
         </div>

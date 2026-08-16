@@ -9,6 +9,7 @@ import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import os from 'os';
 import { maskEmailOrUsername, maskIpAddress } from '../services/email.service.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -380,8 +381,14 @@ export function createSuperAdminRouter(dbPool, authenticateJWT, requireRole, add
   // ─────────────────────────────────────────────
   router.get('/super-admin/dashboard-stats', authenticateJWT, requireRole(['superadmin']), async (req, res) => {
     try {
-      // 1. DB Size
-      const dbSizeRes = await dbPool.query("SELECT pg_size_pretty(pg_database_size(current_database())) as size_pretty, pg_database_size(current_database()) as size_bytes");
+      // 1. DB Size & Log Size
+      const dbSizeRes = await dbPool.query(`
+        SELECT 
+          pg_size_pretty(pg_database_size(current_database())) as size_pretty, 
+          pg_database_size(current_database()) as size_bytes,
+          pg_size_pretty(pg_total_relation_size('audit_logs')) as log_size_pretty,
+          pg_total_relation_size('audit_logs') as log_size_bytes
+      `);
       
       // 2. Metrics
       const metricsRes = await dbPool.query(`
@@ -415,12 +422,23 @@ export function createSuperAdminRouter(dbPool, authenticateJWT, requireRole, add
         LIMIT 10
       `);
 
+      // 5. System Usage (CPU, RAM, Uptime)
+      const systemInfo = {
+        cpuCount: os.cpus().length,
+        cpuModel: os.cpus()[0].model,
+        loadAvg: os.loadavg(),
+        totalMem: os.totalmem(),
+        freeMem: os.freemem(),
+        uptime: os.uptime()
+      };
+
       res.json({
         success: true,
         dbSize: dbSizeRes.rows[0],
         metrics: metricsRes.rows[0],
         archives: { count: archivesCount, sizeBytes: archivesSize },
-        recentAlerts: alertsRes.rows
+        recentAlerts: alertsRes.rows,
+        systemInfo: systemInfo
       });
     } catch (err) {
       console.error('Error fetching dashboard stats:', err);
