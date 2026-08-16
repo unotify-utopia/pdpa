@@ -49,7 +49,7 @@ export function createAuthMiddleware(dbPool, JWT_SECRET) {
   //   - (action, details, actor, reqObj)
   //   - (action, details, actor, requestId, trackingNo, reqObj)
   const addServerAuditLog = async (action, details, actor, arg4 = null, arg5 = null, arg6 = null) => {
-    const logId = `log_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+    const logId = `log_${Date.now()}_${crypto.randomBytes(2).toString('hex')}`;
     const timestamp = new Date().toISOString();
     const actorId = actor?.id || 'system';
     const actorName = actor?.fullNameTh || 'System Server';
@@ -74,8 +74,7 @@ export function createAuthMiddleware(dbPool, JWT_SECRET) {
     const checksum = crypto
       .createHmac('sha256', JWT_SECRET)
       .update(`${logId}|${actorId}|${action}|${timestamp}`)
-      .digest('hex')
-      .substring(0, 16);
+      .digest('hex');
 
     try {
       await dbPool.query(

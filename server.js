@@ -78,7 +78,7 @@ const JWT_SECRET = process.env.JWT_SECRET || crypto.randomBytes(64).toString('he
 
 // Restrict CORS to specific origins
 const corsOptions = {
-  origin: process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',') : ['https://pdpa.numcomputer.com', 'http://localhost:3000'],
+  origin: process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',') : (process.env.NODE_ENV === 'production' ? ['https://pdpa.numcomputer.com'] : ['https://pdpa.numcomputer.com', 'http://localhost:3000']),
   optionsSuccessStatus: 200
 };
 app.use(cors(corsOptions));
@@ -86,7 +86,16 @@ app.use(cors(corsOptions));
 // [SECURITY] Helmet — sets secure HTTP response headers (VULN-10)
 // Covers: X-Frame-Options, X-Content-Type-Options, Content-Security-Policy, HSTS, etc.
 app.use(helmet({
-  contentSecurityPolicy: false, // Disabled: SPA served from same origin, tighten later
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com"],
+      imgSrc: ["'self'", "data:", "https://api.qrserver.com", "blob:"],
+      connectSrc: ["'self'"],
+    }
+  },
   crossOriginEmbedderPolicy: false,
 }));
 
@@ -153,7 +162,7 @@ app.use('/api/users', createUsersRouter(dbPool, authenticateJWT, requireRole));
 app.use('/api/reports', createReportsRouter(dbPool, authenticateJWT, requireRole));
 app.use('/api', createRequestsRouter(dbPool, authenticateJWT, requireRole, addServerAuditLog));
 app.use('/api', createSuperAdminRouter(dbPool, authenticateJWT, requireRole, addServerAuditLog, sendMailWithFallback, otpCache, JWT_SECRET));
-app.use('/api', createPublicRouter(dbPool, addServerAuditLog, authenticateJWT));
+app.use('/api', createPublicRouter(dbPool, addServerAuditLog, authenticateJWT, requireRole));
 app.use('/api', createDownloadRouter(dbPool, authenticateJWT, requireRole, addServerAuditLog, sendMailWithFallback, otpCache));
 
 // --- SUPER ADMIN, TENANTS (Migrated to routes/superadmin.routes.js) ---

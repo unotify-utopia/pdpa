@@ -119,8 +119,9 @@ export function createAuthRouter(dbPool, authenticateJWT, addServerAuditLog, sen
 
         if (!mfaCode) {
           // Generate and send OTP
-          const otp = Math.floor(100000 + Math.random() * 900000).toString();
-          const otpData = JSON.stringify({ otp, expiresAt: Date.now() + 5 * 60 * 1000 });
+          const otp = crypto.randomInt(100000, 1000000).toString();
+          const hashedOtp = await bcrypt.hash(otp, 10);
+          const otpData = JSON.stringify({ otp: hashedOtp, expiresAt: Date.now() + 5 * 60 * 1000 });
           await dbPool.query('UPDATE users SET two_factor_secret = $1 WHERE id = $2', [otpData, user.id]);
 
           let emailSent = true;
@@ -191,7 +192,8 @@ export function createAuthRouter(dbPool, authenticateJWT, addServerAuditLog, sen
           }
           // Enforce max 3 OTP attempts
           const attempts = (cached.attempts || 0) + 1;
-          if (cached.otp !== mfaCode) {
+          const isValidOtp = await bcrypt.compare(mfaCode, cached.otp);
+          if (!isValidOtp) {
             if (attempts >= 3) {
               await dbPool.query('UPDATE users SET two_factor_secret = NULL WHERE id = $1', [user.id]);
               return res.status(401).json({ success: false, message: 'ลองรหัส OTP ผิดเกิน 3 ครั้ง รหัสถูกยกเลิก กรุณาเข้าสู่ระบบใหม่' });
@@ -450,22 +452,12 @@ export function createAuthRouter(dbPool, authenticateJWT, addServerAuditLog, sen
   // POST /api/auth/2fa/setup
   // Generate Authenticator App QR code & secret
   // ─────────────────────────────────────────────
-  router.post('/2fa/setup', async (req, res) => {
-    const { username, password } = req.body;
-    if (!username || !password) return res.status(400).json({ success: false, message: 'กรุณากรอก Username และ Password' });
-
+  router.post('/2fa/setup', authenticateJWT, async (req, res) => {
     try {
-      const { rows } = await dbPool.query('SELECT * FROM users WHERE username = $1 ORDER BY (case when role = $2 then 1 else 2 end) ASC, created_at DESC', [username, 'superadmin']);
+      const { rows } = await dbPool.query('SELECT * FROM users WHERE id = $1 LIMIT 1', [req.user.id]);
       if (rows.length === 0) return res.status(401).json({ success: false, message: 'ไม่พบผู้ใช้' });
 
-      let user = null;
-      for (const r of rows) {
-        if (await bcrypt.compare(password, r.password_hash)) {
-          user = r;
-          break;
-        }
-      }
-      if (!user) return res.status(401).json({ success: false, message: 'รหัสผ่านไม่ถูกต้อง' });
+      let user = rows[0];
 
       const secret = authenticator.generateSecret();
       const otpauth = authenticator.keyuri(user.username, 'PDPA Request System', secret);
@@ -529,6 +521,18 @@ export function createAuthRouter(dbPool, authenticateJWT, addServerAuditLog, sen
     // ~375KB limit (base64 overhead ~1.33x)
     if (signatureImage.length > 500000) {
       return res.status(400).json({ success: false, message: 'ขนาดลายเซ็นใหญ่เกินไป (สูงสุด 375KB)' });
+    }
+    
+    try {
+      const base64Data = signatureImage.replace(/^data:image\/(png|jpeg|jpg);base64,/, "");
+      const buffer = Buffer.from(base64Data, 'base64');
+      const isPng = buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4E && buffer[3] === 0x47;
+      const isJpeg = buffer[0] === 0xFF && buffer[1] === 0xD8 && buffer[2] === 0xFF;
+      if (!isPng && !isJpeg) {
+        return res.status(400).json({ success: false, message: 'ไฟล์ไม่ใช่รูปภาพ PNG หรือ JPEG ที่ถูกต้อง' });
+      }
+    } catch (err) {
+      return res.status(400).json({ success: false, message: 'ข้อมูลลายเซ็นไม่ถูกต้อง' });
     }
 
     try {
