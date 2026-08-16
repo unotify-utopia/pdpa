@@ -1040,6 +1040,7 @@ export default function App() {
   const cardBgClass = isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200 shadow-sm';
   const headerBgClass = isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200 shadow-sm';
   const tableHeaderBg = isDark ? 'bg-slate-950 text-slate-400 border-slate-800' : 'bg-slate-100 text-slate-700 border-slate-200';
+  const inactiveTabClass = isDark ? 'bg-slate-800/40 text-slate-400 hover:bg-slate-800' : 'bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-200';
   const inputBgClass = isDark ? 'bg-slate-950 border-slate-800 text-white' : 'bg-white border-slate-300 text-slate-900';
 
   // LOGIN SCREEN (Step 1 & Step 2 MFA)
@@ -1407,7 +1408,7 @@ export default function App() {
             <button
               onClick={() => setActiveTab('dashboard')}
               className={`px-4 py-2 rounded-lg text-xs font-bold transition flex items-center gap-2 ${
-                activeTab === 'dashboard' ? 'bg-indigo-600 text-white shadow-md' : 'bg-slate-800/40 text-slate-400 hover:bg-slate-800'
+                activeTab === 'dashboard' ? 'bg-indigo-600 text-white shadow-md' : inactiveTabClass
               }`}
             >
               <Server className="h-4 w-4" />
@@ -1417,7 +1418,7 @@ export default function App() {
             <button
               onClick={() => setActiveTab('tenants')}
               className={`px-4 py-2 rounded-lg text-xs font-bold transition flex items-center gap-2 ${
-                activeTab === 'tenants' ? 'bg-emerald-600 text-white shadow-md' : 'bg-slate-800/40 text-slate-400 hover:bg-slate-800'
+                activeTab === 'tenants' ? 'bg-emerald-600 text-white shadow-md' : inactiveTabClass
               }`}
             >
               <Building2 className="h-4 w-4" />
@@ -1427,7 +1428,7 @@ export default function App() {
             <button
               onClick={() => setActiveTab('users')}
               className={`px-4 py-2 rounded-lg text-xs font-bold transition flex items-center gap-2 ${
-                activeTab === 'users' ? 'bg-emerald-600 text-white shadow-md' : 'bg-slate-800/40 text-slate-400 hover:bg-slate-800'
+                activeTab === 'users' ? 'bg-emerald-600 text-white shadow-md' : inactiveTabClass
               }`}
             >
               <UserCheck className="h-4 w-4" />
@@ -1437,7 +1438,7 @@ export default function App() {
             <button
               onClick={() => setActiveTab('export')}
               className={`px-4 py-2 rounded-lg text-xs font-bold transition flex items-center gap-2 ${
-                activeTab === 'export' ? 'bg-amber-600 text-white shadow-md' : 'bg-slate-800/40 text-slate-400 hover:bg-slate-800'
+                activeTab === 'export' ? 'bg-amber-600 text-white shadow-md' : inactiveTabClass
               }`}
             >
               <Archive className="h-4 w-4" />
@@ -1447,7 +1448,7 @@ export default function App() {
             <button
               onClick={() => setActiveTab('workflow')}
               className={`px-4 py-2 rounded-lg text-xs font-bold transition flex items-center gap-2 ${
-                activeTab === 'workflow' ? 'bg-blue-600 text-white shadow-md' : 'bg-slate-800/40 text-slate-400 hover:bg-slate-800'
+                activeTab === 'workflow' ? 'bg-blue-600 text-white shadow-md' : inactiveTabClass
               }`}
             >
               <Activity className="h-4 w-4" />
@@ -1740,9 +1741,7 @@ export default function App() {
           />
         )}
 
-        {activeTab === 'dashboard' && token && (
-          <SystemDashboard token={token} />
-        )}
+        {activeTab === 'dashboard' && token && <SystemDashboard token={token} isDark={isDark} />}
 
       </main>
 

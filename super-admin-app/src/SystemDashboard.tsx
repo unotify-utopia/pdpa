@@ -3,9 +3,10 @@ import { Database, ShieldAlert, Archive, Server, AlertTriangle } from 'lucide-re
 
 interface SystemDashboardProps {
   token: string;
+  isDark?: boolean;
 }
 
-export default function SystemDashboard({ token }: SystemDashboardProps) {
+export default function SystemDashboard({ token, isDark = false }: SystemDashboardProps) {
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -42,66 +43,75 @@ export default function SystemDashboard({ token }: SystemDashboardProps) {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
+  const cardBgClass = isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200 shadow-sm';
+  const textTitleClass = isDark ? 'text-slate-100' : 'text-slate-800';
+  const textSubClass = isDark ? 'text-slate-400' : 'text-slate-500';
+  const textValueClass = isDark ? 'text-white' : 'text-slate-900';
+  const tableHeaderBg = isDark ? 'bg-slate-950 text-slate-400 border-slate-800' : 'bg-slate-50 text-slate-500 border-slate-200';
+  const borderClass = isDark ? 'border-slate-800' : 'border-slate-200';
+  const borderLightClass = isDark ? 'border-slate-800' : 'border-slate-100';
+  const rowHoverClass = isDark ? 'hover:bg-slate-800/50' : 'hover:bg-slate-50';
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fade-in">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold text-slate-800">System Dashboard</h2>
-          <p className="text-slate-500 mt-1">ภาพรวมการทำงานของระบบและสถานะความปลอดภัย</p>
+          <h2 className={`text-2xl font-bold ${textTitleClass}`}>System Dashboard</h2>
+          <p className={`${textSubClass} mt-1`}>ภาพรวมการทำงานของระบบและสถานะความปลอดภัย</p>
         </div>
-        <button onClick={() => window.location.reload()} className="px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium hover:bg-slate-50">
+        <button onClick={() => window.location.reload()} className={`px-4 py-2 border rounded-lg text-sm font-medium transition ${isDark ? 'bg-slate-800 border-slate-700 text-slate-200 hover:bg-slate-700' : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-700'}`}>
           รีเฟรชข้อมูล
         </button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+        <div className={`rounded-xl border p-5 ${cardBgClass}`}>
           <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 bg-blue-50 text-blue-600 rounded-lg"><Database size={20} /></div>
-            <h3 className="font-semibold text-slate-700">ขนาด Database</h3>
+            <div className={`p-2 rounded-lg ${isDark ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-50 text-blue-600'}`}><Database size={20} /></div>
+            <h3 className={`font-semibold ${textTitleClass}`}>ขนาด Database</h3>
           </div>
-          <p className="text-3xl font-bold text-slate-900 mt-3">{dbSize?.size_pretty || 'N/A'}</p>
-          <p className="text-sm text-slate-500 mt-1">ตารางคำร้อง, ผู้ใช้งาน, และ Log</p>
+          <p className={`text-3xl font-bold mt-3 ${textValueClass}`}>{dbSize?.size_pretty || 'N/A'}</p>
+          <p className={`text-sm mt-1 ${textSubClass}`}>ตารางคำร้อง, ผู้ใช้งาน, และ Log</p>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+        <div className={`rounded-xl border p-5 ${cardBgClass}`}>
           <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg"><Archive size={20} /></div>
-            <h3 className="font-semibold text-slate-700">ขนาด Archive</h3>
+            <div className={`p-2 rounded-lg ${isDark ? 'bg-indigo-500/20 text-indigo-400' : 'bg-indigo-50 text-indigo-600'}`}><Archive size={20} /></div>
+            <h3 className={`font-semibold ${textTitleClass}`}>ขนาด Archive</h3>
           </div>
-          <p className="text-3xl font-bold text-slate-900 mt-3">{formatBytes(archives?.sizeBytes || 0)}</p>
-          <p className="text-sm text-slate-500 mt-1">จำนวนไฟล์: {archives?.count || 0} ไฟล์</p>
+          <p className={`text-3xl font-bold mt-3 ${textValueClass}`}>{formatBytes(archives?.sizeBytes || 0)}</p>
+          <p className={`text-sm mt-1 ${textSubClass}`}>จำนวนไฟล์: {archives?.count || 0} ไฟล์</p>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+        <div className={`rounded-xl border p-5 ${cardBgClass}`}>
           <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 bg-red-50 text-red-600 rounded-lg"><ShieldAlert size={20} /></div>
-            <h3 className="font-semibold text-slate-700">การบล็อกการโจมตี</h3>
+            <div className={`p-2 rounded-lg ${isDark ? 'bg-rose-500/20 text-rose-400' : 'bg-red-50 text-red-600'}`}><ShieldAlert size={20} /></div>
+            <h3 className={`font-semibold ${textTitleClass}`}>การบล็อกการโจมตี</h3>
           </div>
-          <p className="text-3xl font-bold text-slate-900 mt-3">{metrics?.payload_blocks || 0}</p>
-          <p className="text-sm text-slate-500 mt-1">การพยายามอัปโหลดไฟล์ขนาดใหญ่</p>
+          <p className={`text-3xl font-bold mt-3 ${textValueClass}`}>{metrics?.payload_blocks || 0}</p>
+          <p className={`text-sm mt-1 ${textSubClass}`}>การพยายามอัปโหลดไฟล์ขนาดใหญ่</p>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+        <div className={`rounded-xl border p-5 ${cardBgClass}`}>
           <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 bg-orange-50 text-orange-600 rounded-lg"><AlertTriangle size={20} /></div>
-            <h3 className="font-semibold text-slate-700">OTP ผิดพลาด</h3>
+            <div className={`p-2 rounded-lg ${isDark ? 'bg-amber-500/20 text-amber-400' : 'bg-orange-50 text-orange-600'}`}><AlertTriangle size={20} /></div>
+            <h3 className={`font-semibold ${textTitleClass}`}>OTP ผิดพลาด</h3>
           </div>
-          <p className="text-3xl font-bold text-slate-900 mt-3">{metrics?.otp_failures || 0}</p>
-          <p className="text-sm text-slate-500 mt-1">ผู้ใช้กรอกรหัสผิดหรือหมดอายุ</p>
+          <p className={`text-3xl font-bold mt-3 ${textValueClass}`}>{metrics?.otp_failures || 0}</p>
+          <p className={`text-sm mt-1 ${textSubClass}`}>ผู้ใช้กรอกรหัสผิดหรือหมดอายุ</p>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-          <div className="px-6 py-4 border-b border-slate-200 bg-slate-50">
-            <h3 className="font-bold text-slate-800 flex items-center gap-2">
-              <ShieldAlert size={18} className="text-red-500" /> Security Alerts ล่าสุด
+        <div className={`lg:col-span-2 rounded-xl border overflow-hidden ${cardBgClass}`}>
+          <div className={`px-6 py-4 border-b ${tableHeaderBg}`}>
+            <h3 className={`font-bold flex items-center gap-2 ${textTitleClass}`}>
+              <ShieldAlert size={18} className={isDark ? 'text-rose-400' : 'text-red-500'} /> Security Alerts ล่าสุด
             </h3>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
-              <thead className="bg-slate-50 text-slate-500 border-b border-slate-200">
+              <thead className={`border-b ${tableHeaderBg}`}>
                 <tr>
                   <th className="px-6 py-3 font-medium">เวลา</th>
                   <th className="px-6 py-3 font-medium">เหตุการณ์</th>
@@ -109,29 +119,29 @@ export default function SystemDashboard({ token }: SystemDashboardProps) {
                   <th className="px-6 py-3 font-medium">รายละเอียด</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className={`divide-y ${isDark ? 'divide-slate-800' : 'divide-slate-100'}`}>
                 {recentAlerts && recentAlerts.length > 0 ? (
                   recentAlerts.map((alert: any) => (
-                    <tr key={alert.id} className="hover:bg-slate-50">
-                      <td className="px-6 py-4 whitespace-nowrap text-slate-600">
+                    <tr key={alert.id} className={`${rowHoverClass} transition`}>
+                      <td className={`px-6 py-4 whitespace-nowrap ${textSubClass}`}>
                         {new Date(alert.timestamp).toLocaleString('th-TH')}
                       </td>
                       <td className="px-6 py-4">
                         <span className={`px-2 py-1 rounded-md text-xs font-medium ${
-                          alert.action.includes('PAYLOAD') ? 'bg-red-100 text-red-700' :
-                          alert.action.includes('LOGIN') ? 'bg-purple-100 text-purple-700' :
-                          'bg-orange-100 text-orange-700'
+                          alert.action.includes('PAYLOAD') ? (isDark ? 'bg-rose-500/20 text-rose-300' : 'bg-red-100 text-red-700') :
+                          alert.action.includes('LOGIN') ? (isDark ? 'bg-indigo-500/20 text-indigo-300' : 'bg-purple-100 text-purple-700') :
+                          (isDark ? 'bg-amber-500/20 text-amber-300' : 'bg-orange-100 text-orange-700')
                         }`}>
                           {alert.action}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-slate-600 font-mono text-xs">{alert.ip_address}</td>
-                      <td className="px-6 py-4 text-slate-600 truncate max-w-xs" title={alert.details}>{alert.details}</td>
+                      <td className={`px-6 py-4 font-mono text-xs ${textSubClass}`}>{alert.ip_address}</td>
+                      <td className={`px-6 py-4 truncate max-w-xs ${textSubClass}`} title={alert.details}>{alert.details}</td>
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={4} className="px-6 py-8 text-center text-slate-500">ไม่มีข้อมูลการแจ้งเตือนความปลอดภัย</td>
+                    <td colSpan={4} className={`px-6 py-8 text-center ${textSubClass}`}>ไม่มีข้อมูลการแจ้งเตือนความปลอดภัย</td>
                   </tr>
                 )}
               </tbody>
@@ -139,28 +149,28 @@ export default function SystemDashboard({ token }: SystemDashboardProps) {
           </div>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-           <div className="px-6 py-4 border-b border-slate-200 bg-slate-50">
-            <h3 className="font-bold text-slate-800 flex items-center gap-2">
-              <Server size={18} className="text-blue-500" /> สรุปปริมาณข้อมูล
+        <div className={`rounded-xl border overflow-hidden ${cardBgClass}`}>
+           <div className={`px-6 py-4 border-b ${tableHeaderBg}`}>
+            <h3 className={`font-bold flex items-center gap-2 ${textTitleClass}`}>
+              <Server size={18} className={isDark ? 'text-blue-400' : 'text-blue-500'} /> สรุปปริมาณข้อมูล
             </h3>
           </div>
           <div className="p-6 space-y-4">
-            <div className="flex justify-between items-center pb-4 border-b border-slate-100">
-              <div className="text-slate-500">จำนวนคำร้องทั้งหมด</div>
-              <div className="font-bold text-slate-800 text-lg">{metrics?.total_requests || 0}</div>
+            <div className={`flex justify-between items-center pb-4 border-b ${borderLightClass}`}>
+              <div className={textSubClass}>จำนวนคำร้องทั้งหมด</div>
+              <div className={`font-bold text-lg ${textValueClass}`}>{metrics?.total_requests || 0}</div>
             </div>
-            <div className="flex justify-between items-center pb-4 border-b border-slate-100">
-              <div className="text-slate-500">จำนวนหน่วยงาน (Tenants)</div>
-              <div className="font-bold text-slate-800 text-lg">{metrics?.total_tenants || 0}</div>
+            <div className={`flex justify-between items-center pb-4 border-b ${borderLightClass}`}>
+              <div className={textSubClass}>จำนวนหน่วยงาน (Tenants)</div>
+              <div className={`font-bold text-lg ${textValueClass}`}>{metrics?.total_tenants || 0}</div>
             </div>
-            <div className="flex justify-between items-center pb-4 border-b border-slate-100">
-              <div className="text-slate-500">บัญชีผู้ใช้งานระบบ (Staff/Admin)</div>
-              <div className="font-bold text-slate-800 text-lg">{metrics?.total_users || 0}</div>
+            <div className={`flex justify-between items-center pb-4 border-b ${borderLightClass}`}>
+              <div className={textSubClass}>บัญชีผู้ใช้งานระบบ (Staff/Admin)</div>
+              <div className={`font-bold text-lg ${textValueClass}`}>{metrics?.total_users || 0}</div>
             </div>
             <div className="flex justify-between items-center">
-              <div className="text-slate-500">จำนวน Audit Logs ทั้งหมด</div>
-              <div className="font-bold text-slate-800 text-lg">{metrics?.total_audit_logs || 0}</div>
+              <div className={textSubClass}>จำนวน Audit Logs ทั้งหมด</div>
+              <div className={`font-bold text-lg ${textValueClass}`}>{metrics?.total_audit_logs || 0}</div>
             </div>
           </div>
         </div>
