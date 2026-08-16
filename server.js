@@ -106,9 +106,16 @@ const forgotPasswordLimiter = rateLimit({
 });
 
 // [SECURITY] Body size limits (VULN-08)
-// Global limit 1mb — only the signature endpoint gets 5mb
+// Global limit 1mb — only specific endpoints get larger limits
 app.use('/api/auth/signature', express.json({ limit: '5mb' }));
 app.use('/api/auth/signature', express.urlencoded({ limit: '5mb', extended: true }));
+
+// อนุญาตให้ endpoint ส่งคำร้อง/แนบไฟล์ มีขนาดใหญ่ขึ้น (20MB) เพราะมีรูปภาพบัตร/หลักฐาน
+app.use('/api/public/requests', express.json({ limit: '20mb' }));
+app.use('/api/public/requests', express.urlencoded({ limit: '20mb', extended: true }));
+app.use('/api/requests', express.json({ limit: '20mb' }));
+app.use('/api/requests', express.urlencoded({ limit: '20mb', extended: true }));
+
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ limit: '1mb', extended: true }));
 

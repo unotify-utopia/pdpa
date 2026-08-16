@@ -755,6 +755,22 @@ export default function App() {
       }
     }
 
+    // 2.5 File Size Limit Check (5 MB Total)
+    let totalSize = 0;
+    for (const f of uploadedAttachments) {
+      totalSize += Math.round(f.data.length * 0.75); // Convert base64 length to bytes
+    }
+    if (signatureData) {
+      totalSize += Math.round(signatureData.length * 0.75);
+    }
+    
+    if (totalSize > 5 * 1024 * 1024) {
+      const mbSize = (totalSize / (1024 * 1024)).toFixed(2);
+      showNotify(`⚠️ ขนาดไฟล์แนบและลายเซ็นรวมกันเกิน 5 MB (ปัจจุบัน ${mbSize} MB) กรุณาลดขนาดไฟล์หรือบีบอัดรูปภาพก่อนดำเนินการต่อ`, 'warning');
+      setIsSendingOtp(false);
+      return;
+    }
+
     // 3. Trigger Email OTP Verification Modal
     const targetEmail = reqType === 'self' ? requesterForm.email : repForm.email;
     const targetPhone = reqType === 'self' ? requesterForm.phone : repForm.phone;
