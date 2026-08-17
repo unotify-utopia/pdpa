@@ -37,7 +37,7 @@ export const CitizenRequestForm: React.FC<CitizenRequestFormProps> = ({ request,
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap" rel="stylesheet">
   <style>
-    @page { size: A4; margin: 15mm; }
+    @page { size: A4; margin: 0; }
     * { box-sizing: border-box; }
     body {
       font-family: 'Sarabun', sans-serif;
@@ -52,6 +52,7 @@ export const CitizenRequestForm: React.FC<CitizenRequestFormProps> = ({ request,
       width: 100%;
       max-width: 210mm;
       margin: 0 auto;
+      padding: 15mm;
       position: relative;
     }
     .tracking-no {
