@@ -7185,9 +7185,25 @@ export default function App() {
                       <span className="text-xs font-bold text-slate-700">ไฟล์เอกสารแนบในชุดส่งมอบ (Attachments in Package):</span>
                       <button
                         type="button"
-                        onClick={() => {
-                          const jwtToken = sessionStorage.getItem('pdpa_token') || sessionStorage.getItem('pdpa_jwt_token') || '';
-                          window.open(`/api/requests/${activeRequestObj.id}/download-package-admin?token=${jwtToken}`, '_blank');
+                        onClick={async () => {
+                          try {
+                            const jwtToken = sessionStorage.getItem('pdpa_token') || sessionStorage.getItem('pdpa_jwt_token') || '';
+                            const response = await fetch(`/api/requests/${activeRequestObj.id}/download-package-admin`, {
+                              headers: { 'Authorization': `Bearer ${jwtToken}` }
+                            });
+                            if (!response.ok) throw new Error('Download failed');
+                            const blob = await response.blob();
+                            const url = window.URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = `package_${activeRequestObj.trackingNo}.zip`;
+                            document.body.appendChild(a);
+                            a.click();
+                            document.body.removeChild(a);
+                            window.URL.revokeObjectURL(url);
+                          } catch (err) {
+                            alert('ไม่สามารถดาวน์โหลดไฟล์ได้');
+                          }
                         }}
                         className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold shadow-sm transition"
                       >
@@ -7215,15 +7231,25 @@ export default function App() {
                         </span>
                         <button
                           type="button"
-                          onClick={() => {
-                            const jwtToken = sessionStorage.getItem('pdpa_token') || sessionStorage.getItem('pdpa_jwt_token') || '';
-                            setPreviewAttachment({
-                              name: 'ข้อมูลส่วนบุคคลที่ผ่านการค้นหาและรวบรวมแล้ว.pdf',
-                              fileUrl: `/api/requests/${activeRequestObj.id}/preview-attachment-pdf?token=${jwtToken}`,
-                              size: 24576,
-                              isMasked: true,
-                              watermarkApplied: previewResult !== 'approved'
-                            });
+                          onClick={async () => {
+                            try {
+                              const jwtToken = sessionStorage.getItem('pdpa_token') || sessionStorage.getItem('pdpa_jwt_token') || '';
+                              const response = await fetch(`/api/requests/${activeRequestObj.id}/preview-attachment-pdf`, {
+                                headers: { 'Authorization': `Bearer ${jwtToken}` }
+                              });
+                              if (!response.ok) throw new Error('Preview failed');
+                              const blob = await response.blob();
+                              const fileUrl = window.URL.createObjectURL(blob);
+                              setPreviewAttachment({
+                                name: 'ข้อมูลส่วนบุคคลที่ผ่านการค้นหาและรวบรวมแล้ว.pdf',
+                                fileUrl: fileUrl,
+                                size: blob.size || 24576,
+                                isMasked: true,
+                                watermarkApplied: previewResult !== 'approved'
+                              });
+                            } catch (err) {
+                              alert('ไม่สามารถเปิดเอกสารได้');
+                            }
                           }}
                           className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg text-xs font-bold transition shadow-sm"
                         >
@@ -7232,9 +7258,19 @@ export default function App() {
                         </button>
                         <button
                           type="button"
-                          onClick={() => {
-                            const jwtToken = sessionStorage.getItem('pdpa_token') || sessionStorage.getItem('pdpa_jwt_token') || '';
-                            window.open(`/api/requests/${activeRequestObj.id}/preview-attachment-pdf?token=${jwtToken}`, '_blank');
+                          onClick={async () => {
+                            try {
+                              const jwtToken = sessionStorage.getItem('pdpa_token') || sessionStorage.getItem('pdpa_jwt_token') || '';
+                              const response = await fetch(`/api/requests/${activeRequestObj.id}/preview-attachment-pdf`, {
+                                headers: { 'Authorization': `Bearer ${jwtToken}` }
+                              });
+                              if (!response.ok) throw new Error('Preview failed');
+                              const blob = await response.blob();
+                              const fileUrl = window.URL.createObjectURL(blob);
+                              window.open(fileUrl, '_blank');
+                            } catch (err) {
+                              alert('ไม่สามารถเปิดเอกสารได้');
+                            }
                           }}
                           className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold transition"
                           title="เปิดในแท็บใหม่"
