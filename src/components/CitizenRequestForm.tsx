@@ -49,73 +49,64 @@ export const CitizenRequestForm: React.FC<CitizenRequestFormProps> = ({ request,
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap" rel="stylesheet">
   <style>
-    @page { size: A4; margin: 0; }
+    @page { size: A4; margin: 15mm; }
     * { box-sizing: border-box; }
     body {
       font-family: 'Sarabun', sans-serif;
-      font-size: 16pt;
-      line-height: 1.3;
+      font-size: 14pt;
+      line-height: 1.4;
       color: #000;
       background: white;
       margin: 0;
       padding: 0;
     }
     .page {
-      width: 210mm;
-      min-height: 297mm;
+      width: 100%;
+      max-width: 210mm;
       margin: 0 auto;
-      padding: 2cm;
       position: relative;
-    }
-    .saraban-box {
-      position: absolute;
-      top: 2cm;
-      right: 2cm;
-      width: 6cm;
-      border: 1px solid #000;
-      padding: 10pt;
-      font-size: 14pt;
-      line-height: 1.5;
     }
     .header {
       text-align: center;
-      margin-bottom: 20pt;
-      margin-top: 20pt;
+      margin-bottom: 15pt;
     }
     .title {
-      font-size: 20pt;
+      font-size: 18pt;
       font-weight: bold;
-      margin-bottom: 10pt;
+      margin-bottom: 5pt;
     }
     .tracking-no {
       text-align: right;
-      font-size: 14pt;
-      margin-bottom: 10pt;
+      font-size: 12pt;
+      margin-bottom: 15pt;
+      border-bottom: 1px solid #000;
+      padding-bottom: 5pt;
     }
     .content-section {
-      margin-bottom: 20pt;
+      margin-bottom: 15pt;
     }
     .section-title {
       font-weight: bold;
       text-decoration: underline;
-      margin-bottom: 10pt;
-      font-size: 16pt;
+      margin-bottom: 8pt;
+      font-size: 15pt;
     }
     .field-row {
-      margin-bottom: 5pt;
+      margin-bottom: 4pt;
+      display: flex;
     }
     .field-label {
       font-weight: bold;
-      display: inline-block;
-      width: 4cm;
+      width: 4.5cm;
+      flex-shrink: 0;
     }
     .signature-section {
-      margin-top: 30pt;
+      margin-top: 40pt;
       display: flex;
-      justify-content: space-between;
+      justify-content: center;
     }
     .signature-box {
-      width: 45%;
+      width: 60%;
       text-align: center;
     }
     .dotted-line {
@@ -123,23 +114,11 @@ export const CitizenRequestForm: React.FC<CitizenRequestFormProps> = ({ request,
       display: inline-block;
       min-width: 5cm;
     }
-    .official-box {
-      margin-top: 30pt;
-      border: 1px solid #000;
-      padding: 15pt;
-    }
     @media print { body { -webkit-print-color-adjust: exact; } }
   </style>
 </head>
 <body>
 <div class="page">
-  <div class="saraban-box">
-    <strong>สำหรับงานสารบรรณ</strong><br/>
-    เลขรับ ..........................................<br/>
-    วันที่ .............................................<br/>
-    เวลา .............................................
-  </div>
-
   <div class="header">
     ${logoHtml}
     <div class="title">แบบคำร้องขอใช้สิทธิของเจ้าของข้อมูลส่วนบุคคล</div>
@@ -150,49 +129,37 @@ export const CitizenRequestForm: React.FC<CitizenRequestFormProps> = ({ request,
     รหัสอ้างอิงคำขอ: <strong>${request.trackingNo}</strong>
   </div>
 
-  <div style="margin-bottom: 15pt;">
+  <div style="margin-bottom: 15pt; line-height: 1.6;">
     <strong>วันที่ยื่นคำร้อง:</strong> ${submissionDateStr}<br/>
     <strong>เรียน:</strong> เจ้าหน้าที่คุ้มครองข้อมูลส่วนบุคคล / หัวหน้าหน่วยงาน (${orgName})
   </div>
 
   <div class="content-section">
     <div class="section-title">ส่วนที่ 1: ข้อมูลผู้ยื่นคำร้อง (Data Subject Details)</div>
-    <div class="field-row"><span class="field-label">ชื่อ - นามสกุล:</span> ${request.requester.firstName} ${request.requester.lastName}</div>
-    <div class="field-row"><span class="field-label">เลขประจำตัวประชาชน:</span> ${request.requester.idNumber || '-'}</div>
-    <div class="field-row"><span class="field-label">อีเมล:</span> ${request.requester.email || '-'}</div>
-    <div class="field-row"><span class="field-label">เบอร์โทรศัพท์:</span> ${request.requester.phone || '-'}</div>
+    <div class="field-row"><span class="field-label">ชื่อ - นามสกุล:</span> <span>${request.requester.firstName} ${request.requester.lastName}</span></div>
+    <div class="field-row"><span class="field-label">เลขประจำตัวประชาชน:</span> <span>${request.requester.idNumber ? request.requester.idNumber.replace(/(\d{1})(\d{4})(\d{5})(\d{2})(\d{1})/, "$1-$2-$3-$4-$5") : '-'}</span></div>
+    <div class="field-row"><span class="field-label">อีเมล:</span> <span>${request.requester.email || '-'}</span></div>
+    <div class="field-row"><span class="field-label">เบอร์โทรศัพท์:</span> <span>${request.requester.phone || '-'}</span></div>
   </div>
 
   <div class="content-section">
     <div class="section-title">ส่วนที่ 2: รายละเอียดการขอใช้สิทธิ (Request Details)</div>
-    <div style="margin-bottom: 10pt;"><strong>สิทธิที่ร้องขอ:</strong></div>
-    <div style="padding-left: 20pt; margin-bottom: 10pt;">- ${requestedRights}</div>
+    <div style="margin-bottom: 5pt;"><strong>สิทธิที่ร้องขอ:</strong></div>
+    <div style="padding-left: 15pt; margin-bottom: 10pt;">- ${requestedRights}</div>
     
     <div style="margin-bottom: 5pt;"><strong>รายละเอียดคำร้อง:</strong></div>
-    <div style="padding: 10pt; border: 1px dashed #ccc; min-height: 80pt; background-color: #f9f9f9;">
+    <div style="padding: 10pt; border: 1px dashed #ccc; min-height: 80pt; background-color: #fafafa;">
       ${descriptionText}
     </div>
   </div>
 
   <div class="signature-section">
     <div class="signature-box">
-      <div style="margin-bottom: 40pt;">
+      <div style="margin-bottom: 30pt; font-size: 12pt; color: #555;">
         (ยื่นคำร้องผ่านระบบอิเล็กทรอนิกส์)
       </div>
-      <div>ลงชื่อ <span class="dotted-line">${request.requester.firstName} ${request.requester.lastName}</span> ผู้ยื่นคำร้อง</div>
-      <div style="margin-top: 5pt;">วันที่ <span class="dotted-line">${submissionDateStr.split(' เวลา')[0]}</span></div>
-    </div>
-  </div>
-
-  <div class="official-box">
-    <div class="section-title">ส่วนที่ 3: สำหรับเจ้าหน้าที่รับเรื่อง (Intake Officer)</div>
-    <div style="margin-bottom: 10pt;">
-      [ &nbsp; ] ตรวจสอบความสมบูรณ์ของคำร้องแล้ว<br/>
-      [ &nbsp; ] ตรวจสอบการยืนยันตัวตนแล้ว (รูปแบบ: ${identityMethod})
-    </div>
-    <div style="text-align: right; margin-top: 20pt;">
-      <div>ลงชื่อ <span class="dotted-line"></span> เจ้าหน้าที่รับเรื่อง</div>
-      <div style="margin-top: 5pt;">วันที่ <span class="dotted-line"></span></div>
+      <div style="margin-bottom: 10pt;">ลงชื่อ <span class="dotted-line">${request.requester.firstName} ${request.requester.lastName}</span> ผู้ยื่นคำร้อง</div>
+      <div>วันที่ <span class="dotted-line">${submissionDateStr.split(' เวลา')[0]}</span></div>
     </div>
   </div>
 

@@ -4572,7 +4572,7 @@ export default function App() {
                               <UserCheck className="h-4 w-4 text-brand-600" />
                               <span>การตรวจสอบข้อมูลและสิทธิยื่นเรื่อง (Intake Verification & Completeness)</span>
                             </span>
-                            <CitizenRequestForm request={activeRequestObj} orgData={initialOrganizations.find(o => o.id === activeRequestObj.orgId) || initialOrganizations[0]} />
+                            <CitizenRequestForm request={activeRequestObj} orgData={organizations?.find((o: any) => o.id === activeRequestObj.orgId) || { nameTh: 'หน่วยงานผู้รับคำขอ' }} />
                           </div>
 
                         {/* Assurance select */}
