@@ -94,6 +94,7 @@ app.use(helmet({
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
       imgSrc: ["'self'", "data:", "https://api.qrserver.com", "blob:"],
       connectSrc: ["'self'"],
+      frameSrc: ["'self'", "blob:", "data:"],
     }
   },
   crossOriginEmbedderPolicy: false,
