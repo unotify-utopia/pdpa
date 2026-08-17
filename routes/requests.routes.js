@@ -146,8 +146,10 @@ export function createRequestsRouter(dbPool, authenticateJWT, requireRole, addSe
       
       const reqDataStr = rows[0].data;
       const reqData = typeof reqDataStr === 'string' ? JSON.parse(reqDataStr) : (reqDataStr || {});
-      const email = reqData.email || reqData.contactEmail;
-      const requesterName = reqData.requesterName || reqData.firstName;
+      const email = reqData.requester?.email || reqData.representative?.email || reqData.email || reqData.contactEmail;
+      let requesterName = reqData.requester?.firstName 
+        ? `${reqData.requester.firstName} ${reqData.requester.lastName}` 
+        : reqData.requesterName || reqData.firstName;
       const trackingNo = rows[0].tracking_no;
 
       if (!email) {
