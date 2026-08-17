@@ -30,17 +30,6 @@ export const CitizenRequestForm: React.FC<CitizenRequestFormProps> = ({ request,
       ? request.requestDetails.description.replace(/\\n/g, '<br/>') 
       : 'ไม่มีรายละเอียดเพิ่มเติม';
 
-    const methodMap: Record<string, string> = {
-      'otp_email': 'OTP ผ่านอีเมล',
-      'otp_phone': 'OTP ผ่านเบอร์โทรศัพท์',
-      'document_check': 'ตรวจสอบเอกสาร',
-      'video_verification': 'ยืนยันผ่านวิดีโอ',
-      'in_person': 'ยืนยันด้วยตนเอง'
-    };
-    const identityMethod = request.identityVerification?.method 
-      ? methodMap[request.identityVerification.method] || request.identityVerification.method
-      : 'ไม่ระบุ';
-
     const html = `<!DOCTYPE html>
 <html>
 <head>

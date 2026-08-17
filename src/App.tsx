@@ -80,7 +80,6 @@ import type { NotifyType } from './components/NotifyModal';
 import { ChangePasswordModal } from './components/ChangePasswordModal';
 import { ResetPasswordModal } from './components/ResetPasswordModal';
 import { CitizenRequestForm } from './components/CitizenRequestForm';
-import { initialOrganizations } from './mockData';
 
 // Helper: Thai Citizen ID Modulus 11 Checksum Validator
 export const validateThaiCitizenId = (id: string): boolean => {
