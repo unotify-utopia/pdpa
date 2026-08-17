@@ -105,7 +105,7 @@ export const CitizenRequestForm: React.FC<CitizenRequestFormProps> = ({ request,
 
   <div style="margin-bottom: 15pt; line-height: 1.6;">
     <strong>วันที่ยื่นคำร้อง:</strong> ${submissionDateStr}<br/>
-    <strong>เรียน:</strong> เจ้าหน้าที่คุ้มครองข้อมูลส่วนบุคคล (${orgName})
+    <strong>เรียน:</strong> เจ้าหน้าที่คุ้มครองข้อมูลส่วนบุคคล ${orgName}
   </div>
 
   <div class="content-section">
