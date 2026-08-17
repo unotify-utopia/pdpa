@@ -2991,7 +2991,7 @@ export default function App() {
                     <div className="flex flex-wrap gap-4 pt-3">
                       <button
                         onClick={() => setPublicTab('submit')}
-                        className="bg-gradient-to-r from-brand-500 to-blue-500 hover:from-brand-400 hover:to-blue-400 text-white text-sm font-bold py-3 px-6 rounded-xl shadow-[0_0_20px_rgba(59,130,246,0.6)] border border-blue-400/50 transform hover:-translate-y-1 transition-all duration-300 flex items-center gap-2 ring-1 ring-white/20"
+                        className="bg-brand-600 hover:bg-brand-700 text-white text-sm font-bold py-3 px-6 rounded-xl shadow-md border border-brand-500 transform hover:-translate-y-0.5 transition-all duration-300 flex items-center gap-2"
                       >
                         <FileText className="w-4 h-4" />
                         ยื่นแบบคำร้องออนไลน์
