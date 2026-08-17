@@ -33,8 +33,8 @@ export default function DPOAnalyticsDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   
-  const token = localStorage.getItem('token');
-  const userStr = localStorage.getItem('user');
+  const token = sessionStorage.getItem('pdpa_jwt_token') || sessionStorage.getItem('pdpa_token');
+  const userStr = sessionStorage.getItem('pdpa_currentUser');
   const user = userStr ? JSON.parse(userStr) : null;
   const isSuperAdmin = user?.isSuperAdmin || user?.role === 'superadmin' || (user?.roles && user.roles.includes('superadmin'));
 
