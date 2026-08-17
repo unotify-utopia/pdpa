@@ -243,6 +243,7 @@ export function createAuthRouter(dbPool, authenticateJWT, addServerAuditLog, sen
         success: true,
         token,
         user: tokenPayload,
+        signature_image: user.signature_image || null,
         requiresPasswordChange
       });
     } catch (err) {

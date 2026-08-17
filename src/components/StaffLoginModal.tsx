@@ -134,7 +134,8 @@ export const StaffLoginModal: React.FC<StaffLoginModalProps> = ({
         roles: data.user.roles || [data.user.role],
         isSuperAdmin: data.user.isSuperAdmin,
         department: data.user.department,
-        mfaEnabled: true
+        mfaEnabled: true,
+        signature_image: data.signature_image || null
       };
       
       const requiresChange = data.requiresPasswordChange || false;
