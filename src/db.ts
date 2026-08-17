@@ -282,10 +282,19 @@ export const createRequest = (requestData: Omit<Request, 'id' | 'uuid' | 'tracki
 
 // Update Request Details & Status (Section 4)
 export const updateRequest = async (updatedReq: Request, actor: User, auditAction: string, auditDetail: string) => {
+  const token = localStorage.getItem('token');
+  const endpoint = token ? `/api/requests/${updatedReq.id}` : '/api/public/requests';
+  const method = token ? 'PUT' : 'POST';
+  
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
   // Sync to PostgreSQL Master Database via API FIRST (Strict Mode)
-  const res = await fetch('/api/public/requests', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+  const res = await fetch(endpoint, {
+    method,
+    headers,
     body: JSON.stringify(updatedReq)
   });
   

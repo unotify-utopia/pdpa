@@ -79,6 +79,27 @@ export function createRequestsRouter(dbPool, authenticateJWT, requireRole, addSe
     return true;
   }
 
+  // PUT /api/requests/:id (Staff update request)
+  router.put('/requests/:id', authenticateJWT, async (req, res) => {
+    try {
+      const { id } = req.params;
+      if (!(await checkOrgAccess(req, res, id))) return;
+      
+      const requestData = req.body;
+      const status = requestData.status || 'Received';
+      
+      await dbPool.query(
+        'UPDATE requests SET status = $1, data = $2 WHERE id = $3',
+        [status, JSON.stringify(requestData), id]
+      );
+      
+      res.json({ success: true, message: 'บันทึกข้อมูลสำเร็จ', request: requestData });
+    } catch (error) {
+      console.error('Update Request Error:', error);
+      res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดภายในระบบ' });
+    }
+  });
+
   // POST /api/requests/:id/tasks/:taskId/upload (Secure file upload for Data Discovery)
   router.post('/requests/:id/tasks/:taskId/upload', authenticateJWT, requireRole(['admin', 'owner']), async (req, res) => {
     try {
