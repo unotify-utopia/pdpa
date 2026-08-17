@@ -230,11 +230,12 @@ export const initDatabase = async (dbPool) => {
       `);
     }
 
-    // Migration: ensure public_otps key can hold long email addresses
+    // Migration: ensure public_otps columns can hold long values (key for emails, otp for bcrypt hashes)
     try {
       await dbPool.query(`ALTER TABLE public_otps ALTER COLUMN key TYPE VARCHAR(255);`);
+      await dbPool.query(`ALTER TABLE public_otps ALTER COLUMN otp TYPE VARCHAR(255);`);
     } catch (err) {
-      console.log('Migration note: public_otps key column might already be updated.', err.message);
+      console.log('Migration note: public_otps columns might already be updated.', err.message);
     }
 
     // Seed initial users if empty
