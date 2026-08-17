@@ -4,6 +4,7 @@
 // Workflow email notifications, and in-memory notification logs.
 
 import nodemailer from 'nodemailer';
+import crypto from 'crypto';
 import dotenv from 'dotenv';
 dotenv.config();
 
@@ -432,7 +433,7 @@ export const sendWorkflowNotification = async (request, oldStatus, newStatus, ev
   for (const rcpt of recipients) {
     if (!rcpt.email) continue;
     const logItem = {
-      id: `elog_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      id: `elog_${Date.now()}_${crypto.randomBytes(2).toString('hex')}`,
       timestamp: new Date().toISOString(),
       trackingNo,
       eventType,

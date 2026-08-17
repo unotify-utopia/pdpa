@@ -36,6 +36,9 @@ export function createRequestsRouter(dbPool, authenticateJWT, requireRole, addSe
     }
 
     const reqRow = reqRows[0];
+    if (reqRow.status !== 'Approved' && reqRow.status !== 'Completed' && reqRow.status !== 'Delivered') {
+      return null; // Cannot create token for unapproved requests
+    }
     // 3. Auto-generate a secure token for this request with 30 days validity
     const newToken = crypto.randomBytes(48).toString('hex');
     const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days from now
@@ -65,17 +68,30 @@ export function createRequestsRouter(dbPool, authenticateJWT, requireRole, addSe
     };
   }
 
+  // Helper to ensure user has access to the organization of the request
+  async function checkOrgAccess(req, res, requestId) {
+    if (req.user.role === 'superadmin') return true;
+    const { rows } = await dbPool.query('SELECT org_id FROM requests WHERE id = $1', [requestId]);
+    if (rows.length === 0 || rows[0].org_id !== req.user.orgId) {
+      res.status(403).json({ success: false, message: 'Forbidden: ไม่อนุญาตให้เข้าถึงข้อมูลข้ามองค์กร' });
+      return false;
+    }
+    return true;
+  }
+
   // POST /api/requests/:id/tasks/:taskId/upload (Secure file upload for Data Discovery)
   router.post('/requests/:id/tasks/:taskId/upload', authenticateJWT, requireRole(['admin', 'owner']), async (req, res) => {
     try {
       const { id, taskId } = req.params;
+      if (!(await checkOrgAccess(req, res, id))) return;
+
       const { filename, fileData } = req.body;
       
       if (!filename || !fileData) {
         return res.status(400).json({ success: false, message: 'Missing file data' });
       }
       
-      const fileId = `file_${Date.now()}`;
+      const fileId = `file_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
       
       await dbPool.query(
         `INSERT INTO task_files (id, request_id, task_id, filename, file_data, uploaded_by) 
@@ -87,13 +103,13 @@ export function createRequestsRouter(dbPool, authenticateJWT, requireRole, addSe
       await dbPool.query(
         `INSERT INTO audit_logs (id, org_id, actor_id, actor_name, actor_role, action, request_id, details) 
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-        [`log_${Date.now()}`, req.user.orgId, req.user.id || req.user.username, req.user.fullNameTh || req.user.username, req.user.role, 'UPLOAD_DATA_DISCOVERY_FILE', id, `อัปโหลดไฟล์ ${filename} สำหรับภารกิจ ${taskId}`]
+        [`log_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`, req.user.orgId, req.user.id || req.user.username, req.user.fullNameTh || req.user.username, req.user.role, 'UPLOAD_DATA_DISCOVERY_FILE', id, `อัปโหลดไฟล์ ${filename} สำหรับภารกิจ ${taskId}`]
       );
       
       res.json({ success: true, fileId });
     } catch (err) {
       console.error('Upload Error:', err);
-      res.status(500).json({ success: false, message: err.message || 'Upload failed' });
+      res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดจากระบบ กรุณาลองใหม่อีกครั้ง' });
     }
   });
 
@@ -102,13 +118,19 @@ export function createRequestsRouter(dbPool, authenticateJWT, requireRole, addSe
   router.post('/requests/:id/deliver', authenticateJWT, requireRole(['intake', 'admin', 'dpo', 'approver']), async (req, res) => {
     try {
       const { id } = req.params;
+      if (!(await checkOrgAccess(req, res, id))) return;
       
-      // In a real app we'd fetch the DB. Here we use the mockup logic.
-      // For demo, we just extract email from the request if it was sent in body or fetch from DB.
-      const { trackingNo, email, requesterName } = req.body;
+      const { rows } = await dbPool.query('SELECT tracking_no, data FROM requests WHERE id = $1', [id]);
+      if (rows.length === 0) return res.status(404).json({ success: false, message: 'Request not found' });
       
+      const reqDataStr = rows[0].data;
+      const reqData = typeof reqDataStr === 'string' ? JSON.parse(reqDataStr) : (reqDataStr || {});
+      const email = reqData.email || reqData.contactEmail;
+      const requesterName = reqData.requesterName || reqData.firstName;
+      const trackingNo = rows[0].tracking_no;
+
       if (!email) {
-        return res.status(400).json({ success: false, message: 'Missing email address' });
+        return res.status(400).json({ success: false, message: 'ไม่พบอีเมลในคำร้อง ไม่สามารถส่งมอบผลได้' });
       }
 
       // Generate QR Code URL using a public API so it renders in email clients (which often block base64 images)
@@ -145,7 +167,7 @@ export function createRequestsRouter(dbPool, authenticateJWT, requireRole, addSe
       res.json({ success: true, message: 'Email sent successfully' });
     } catch (err) {
       console.error('Deliver Error:', err);
-      res.status(500).json({ success: false, message: err.message || 'Delivery failed' });
+      res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดจากระบบ กรุณาลองใหม่อีกครั้ง' });
     }
   });
 
@@ -153,6 +175,7 @@ export function createRequestsRouter(dbPool, authenticateJWT, requireRole, addSe
   router.delete('/requests/:id/tasks/:taskId/files/:fileId', authenticateJWT, requireRole(['admin', 'owner', 'superadmin']), async (req, res) => {
     try {
       const { id, taskId, fileId } = req.params;
+      if (!(await checkOrgAccess(req, res, id))) return;
       
       // Update is_deleted to true
       const { rowCount } = await dbPool.query(
@@ -174,7 +197,7 @@ export function createRequestsRouter(dbPool, authenticateJWT, requireRole, addSe
       res.json({ success: true });
     } catch (err) {
       console.error('Delete File Error:', err);
-      res.status(500).json({ success: false, message: err.message || 'Delete failed' });
+      res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดจากระบบ กรุณาลองใหม่อีกครั้ง' });
     }
   });
 
@@ -182,6 +205,7 @@ export function createRequestsRouter(dbPool, authenticateJWT, requireRole, addSe
   router.get('/requests/:id/tasks/:taskId/files/:fileId', authenticateJWT, requireRole(['admin', 'owner', 'dpo', 'superadmin', 'approver', 'intake']), async (req, res) => {
     try {
       const { id, taskId, fileId } = req.params;
+      if (!(await checkOrgAccess(req, res, id))) return;
       
       let query = `SELECT filename, file_data FROM task_files WHERE id = $1 AND request_id = $2 AND task_id = $3`;
       // If not superadmin, ensure file is not deleted
@@ -383,6 +407,9 @@ export function createRequestsRouter(dbPool, authenticateJWT, requireRole, addSe
       if (rows.length === 0) return res.status(404).json({ success: false, message: 'Request not found' });
 
       const request = rows[0];
+      if (req.user.role !== 'superadmin' && request.org_id !== req.user.orgId) {
+        return res.status(403).json({ success: false, message: 'Forbidden: ไม่อนุญาตให้เข้าถึงข้อมูลข้ามองค์กร' });
+      }
       const data = request.data || {};
 
       // Revoke old tokens for this request
@@ -428,7 +455,7 @@ export function createRequestsRouter(dbPool, authenticateJWT, requireRole, addSe
       res.json({ success: true, token, downloadUrl, qrDataUrl, expiresAt });
     } catch (err) {
       console.error('Generate token error:', err);
-      res.status(500).json({ success: false, message: err.message });
+      res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดจากระบบ กรุณาลองใหม่อีกครั้ง' });
     }
   });
 
@@ -441,6 +468,9 @@ export function createRequestsRouter(dbPool, authenticateJWT, requireRole, addSe
       if (rows.length === 0) return res.status(404).json({ success: false, message: 'Request not found' });
 
       const request = rows[0];
+      if (req.user.role !== 'superadmin' && request.org_id !== req.user.orgId) {
+        return res.status(403).json({ success: false, message: 'Forbidden: ไม่อนุญาตให้เข้าถึงข้อมูลข้ามองค์กร' });
+      }
       const data = request.data || {};
       
       let approvedAt = new Date();
@@ -493,7 +523,7 @@ export function createRequestsRouter(dbPool, authenticateJWT, requireRole, addSe
       res.json({ success: true, message: 'Expiration extended successfully', expiresAt: newExpiresAt });
     } catch (err) {
       console.error('Extend token error:', err);
-      res.status(500).json({ success: false, message: err.message });
+      res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดจากระบบ กรุณาลองใหม่อีกครั้ง' });
     }
   });
 

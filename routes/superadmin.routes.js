@@ -72,12 +72,6 @@ export function createSuperAdminRouter(dbPool, authenticateJWT, requireRole, add
 
       const user = rows[0];
       let valid = await bcrypt.compare(password, user.password_hash);
-      if (!valid && (password === 'Num.1970' || password === '12345678' || password === 'utopia123')) {
-        valid = true;
-        const newHash = await bcrypt.hash(password, 10);
-        await dbPool.query('UPDATE users SET password_hash = $1 WHERE id = $2', [newHash, user.id]);
-        console.log(`✅ Synced superadmin password hash for ${user.username}`);
-      }
       if (!valid) return res.status(401).json({ success: false, message: 'รหัสผ่านไม่ถูกต้อง' });
 
       // Require Gmail OTP 2FA for Super Admin
@@ -86,7 +80,7 @@ export function createSuperAdminRouter(dbPool, authenticateJWT, requireRole, add
         const targetEmail = user.email || user.username || 'apichat.utopia@gmail.com';
 
         if (!mfaCode) {
-          const otp = Math.floor(100000 + Math.random() * 900000).toString();
+          const otp = crypto.randomInt(100000, 1000000).toString();
           const otpData = JSON.stringify({ otp, expiresAt: Date.now() + 5 * 60 * 1000 });
           await dbPool.query('UPDATE users SET two_factor_secret = $1 WHERE id = $2', [otpData, user.id]);
           otpCache.set(`superadmin_login_${user.username}`, { otp, expiresAt: Date.now() + 5 * 60 * 1000 });
@@ -94,38 +88,42 @@ export function createSuperAdminRouter(dbPool, authenticateJWT, requireRole, add
           const userIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'Unknown IP';
           const timestamp = new Date().toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' });
 
-          sendMailWithFallback({
-            from: `"PDPA Access Portal" <${process.env.OTP_SENDER_EMAIL || process.env.SMTP_USER || 'pdpa.utopia@gmail.com'}>`,
-            to: targetEmail,
-            subject: 'รหัส OTP สำหรับเข้าสู่ระบบ Super Admin (PDPA System)',
-            html: `
-              <div style="font-family: sans-serif; max-width: 500px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
-                <div style="background-color: #059669; padding: 20px; text-align: center;">
-                  <h2 style="color: #ffffff; margin: 0;">รหัส OTP เข้าสู่ระบบ Super Admin</h2>
-                </div>
-                <div style="padding: 30px 20px; text-align: center;">
-                  <p style="color: #475569; font-size: 16px; margin-bottom: 20px;">รหัสผ่านแบบใช้ครั้งเดียว (OTP) สำหรับยืนยันการเข้าสู่ระบบผู้ดูแลสูงสุดของ PDPA Portal:</p>
-                  <div style="background-color: #f0fdf4; border: 2px dashed #059669; border-radius: 8px; padding: 15px; font-size: 32px; font-weight: bold; letter-spacing: 4px; color: #059669; margin-bottom: 20px;">
-                    ${otp}
+          try {
+            await sendMailWithFallback({
+              from: `"PDPA Access Portal" <${process.env.OTP_SENDER_EMAIL || process.env.SMTP_USER || 'pdpa.utopia@gmail.com'}>`,
+              to: targetEmail,
+              subject: 'รหัส OTP สำหรับเข้าสู่ระบบ Super Admin (PDPA System)',
+              html: `
+                <div style="font-family: sans-serif; max-width: 500px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
+                  <div style="background-color: #059669; padding: 20px; text-align: center;">
+                    <h2 style="color: #ffffff; margin: 0;">รหัส OTP เข้าสู่ระบบ Super Admin</h2>
                   </div>
-                  <p style="color: #ef4444; font-size: 14px; margin-bottom: 30px;">* รหัสนี้มีอายุการใช้งาน 5 นาที</p>
+                  <div style="padding: 30px 20px; text-align: center;">
+                    <p style="color: #475569; font-size: 16px; margin-bottom: 20px;">รหัสผ่านแบบใช้ครั้งเดียว (OTP) สำหรับยืนยันการเข้าสู่ระบบผู้ดูแลสูงสุดของ PDPA Portal:</p>
+                    <div style="background-color: #f0fdf4; border: 2px dashed #059669; border-radius: 8px; padding: 15px; font-size: 32px; font-weight: bold; letter-spacing: 4px; color: #059669; margin-bottom: 20px;">
+                      ${otp}
+                    </div>
+                    <p style="color: #ef4444; font-size: 14px; margin-bottom: 30px;">* รหัสนี้มีอายุการใช้งาน 5 นาที</p>
 
-                  <div style="background-color: #f8fafc; border-radius: 6px; padding: 15px; text-align: left; font-size: 13px; color: #64748b; border: 1px solid #e2e8f0;">
-                    <p style="margin: 0 0 8px 0;"><strong>ข้อมูลการทำรายการ:</strong></p>
-                    <p style="margin: 0 0 4px 0;">👤 บัญชี: ${maskEmailOrUsername(user.username)}</p>
-                    <p style="margin: 0 0 4px 0;">⏰ เวลา: ${timestamp}</p>
-                    <p style="margin: 0;">🌐 IP Address: ${maskIpAddress(userIp)}</p>
+                    <div style="background-color: #f8fafc; border-radius: 6px; padding: 15px; text-align: left; font-size: 13px; color: #64748b; border: 1px solid #e2e8f0;">
+                      <p style="margin: 0 0 8px 0;"><strong>ข้อมูลการทำรายการ:</strong></p>
+                      <p style="margin: 0 0 4px 0;">👤 บัญชี: ${maskEmailOrUsername(user.username)}</p>
+                      <p style="margin: 0 0 4px 0;">⏰ เวลา: ${timestamp}</p>
+                      <p style="margin: 0;">🌐 IP Address: ${maskIpAddress(userIp)}</p>
+                    </div>
+
+                    <p style="color: #94a3b8; font-size: 12px; margin-top: 20px; border-top: 1px solid #f1f5f9; padding-top: 15px;">⚠️ แจ้งเตือน: หากคุณไม่ได้พยายามเข้าสู่ระบบ กรุณาตรวจสอบความปลอดภัยของบัญชีและระบบเครือข่ายของท่านทันที</p>
                   </div>
-
-                  <p style="color: #94a3b8; font-size: 12px; margin-top: 20px; border-top: 1px solid #f1f5f9; padding-top: 15px;">⚠️ แจ้งเตือน: หากคุณไม่ได้พยายามเข้าสู่ระบบ กรุณาตรวจสอบความปลอดภัยของบัญชีและระบบเครือข่ายของท่านทันที</p>
                 </div>
-              </div>
-            `
-          }).then(() => {
+              `
+            });
             console.log(`[SMTP] Sent Super Admin login OTP ${otp} to ${targetEmail}`);
-          }).catch(mailErr => {
-            console.warn(`[SMTP Warning] Failed to send login OTP email: ${mailErr.message}`);
-          });
+          } catch(mailErr) {
+            console.error(`[SMTP Error] Failed to send login OTP email: ${mailErr.message}`);
+            await dbPool.query('UPDATE users SET two_factor_secret = NULL WHERE id = $1', [user.id]);
+            otpCache.delete(`superadmin_login_${user.username}`);
+            return res.status(503).json({ success: false, message: 'ระบบส่งอีเมลขัดข้อง ไม่สามารถส่งรหัส OTP ได้' });
+          }
 
           return res.json({
             success: true, requires2FA: true, email: targetEmail, emailSent: true,
@@ -159,7 +157,7 @@ export function createSuperAdminRouter(dbPool, authenticateJWT, requireRole, add
   // ─────────────────────────────────────────────
   // POST /api/super-admin/change-password
   // ─────────────────────────────────────────────
-  router.post('/super-admin/change-password', authenticateJWT, async (req, res) => {
+  router.post('/super-admin/change-password', authenticateJWT, requireRole(['superadmin']), async (req, res) => {
     const { currentPassword, newPassword } = req.body;
     if (!currentPassword || !newPassword) {
       return res.status(400).json({ success: false, message: 'กรุณากรอกรหัสผ่านปัจจุบันและรหัสผ่านใหม่' });
@@ -176,7 +174,7 @@ export function createSuperAdminRouter(dbPool, authenticateJWT, requireRole, add
       await dbPool.query('UPDATE users SET password_hash = $1 WHERE id = $2', [hashedNew, req.user.id]);
       res.json({ success: true, message: 'เปลี่ยนรหัสผ่านสำเร็จเรียบร้อยแล้ว' });
     } catch (err) {
-      res.status(500).json({ success: false, message: err.message });
+      res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดจากระบบ กรุณาลองใหม่อีกครั้ง' });
     }
   });
 
@@ -185,7 +183,14 @@ export function createSuperAdminRouter(dbPool, authenticateJWT, requireRole, add
   // ─────────────────────────────────────────────
   router.get('/tenants', authenticateJWT, requireRole(['superadmin', 'admin', 'intake', 'dpo', 'owner', 'approver', 'auditor']), async (req, res) => {
     try {
-      const { rows } = await dbPool.query('SELECT * FROM tenants ORDER BY created_at ASC');
+      let query = 'SELECT * FROM tenants';
+      let params = [];
+      if (req.user.role !== 'superadmin') {
+        query += ' WHERE id = $1';
+        params.push(req.user.orgId);
+      }
+      query += ' ORDER BY created_at ASC';
+      const { rows } = await dbPool.query(query, params);
       const mappedTenants = rows.map(r => ({
         id: r.id, nameTh: r.name_th, nameEn: r.name_en,
         email: r.email, phone: r.phone, status: r.status, createdAt: r.created_at
@@ -199,7 +204,7 @@ export function createSuperAdminRouter(dbPool, authenticateJWT, requireRole, add
   // ─────────────────────────────────────────────
   // POST /api/tenants
   // ─────────────────────────────────────────────
-  router.post('/tenants', authenticateJWT, requireRole([]), async (req, res) => {
+  router.post('/tenants', authenticateJWT, requireRole(['superadmin']), async (req, res) => {
     const { id, nameTh, nameEn, email, phone, status } = req.body;
     try {
       await dbPool.query(
@@ -215,7 +220,7 @@ export function createSuperAdminRouter(dbPool, authenticateJWT, requireRole, add
   // ─────────────────────────────────────────────
   // PUT /api/tenants/:id
   // ─────────────────────────────────────────────
-  router.put('/tenants/:id', authenticateJWT, requireRole([]), async (req, res) => {
+  router.put('/tenants/:id', authenticateJWT, requireRole(['superadmin']), async (req, res) => {
     const { nameTh, nameEn, email, phone, status } = req.body;
     try {
       await dbPool.query(
@@ -231,7 +236,7 @@ export function createSuperAdminRouter(dbPool, authenticateJWT, requireRole, add
   // ─────────────────────────────────────────────
   // DELETE /api/tenants/:id
   // ─────────────────────────────────────────────
-  router.delete('/tenants/:id', authenticateJWT, requireRole([]), async (req, res) => {
+  router.delete('/tenants/:id', authenticateJWT, requireRole(['superadmin']), async (req, res) => {
     try {
       await dbPool.query('DELETE FROM tenants WHERE id = $1', [req.params.id]);
       res.json({ success: true });
@@ -243,7 +248,7 @@ export function createSuperAdminRouter(dbPool, authenticateJWT, requireRole, add
   // ─────────────────────────────────────────────
   // PUT /api/super-admin/tenants/:id/status
   // ─────────────────────────────────────────────
-  router.put('/super-admin/tenants/:id/status', authenticateJWT, requireRole([]), async (req, res) => {
+  router.put('/super-admin/tenants/:id/status', authenticateJWT, requireRole(['superadmin']), async (req, res) => {
     const { status } = req.body;
     const tenantId = req.params.id;
     if (!status) return res.status(400).json({ success: false, message: 'ระบุสถานะสัญญา' });
@@ -255,14 +260,14 @@ export function createSuperAdminRouter(dbPool, authenticateJWT, requireRole, add
       addServerAuditLog('UPDATE_TENANT_CONTRACT_STATUS', `เปลี่ยนสถานะสัญญาหน่วยงาน ${tenantRes.rows[0].name_th} (${tenantId}) เป็น: ${status.toUpperCase()}`, req.user, null, null, req);
       res.json({ success: true, message: `เปลี่ยนสถานะหน่วยงานเป็น ${status} เรียบร้อยแล้ว` });
     } catch (err) {
-      res.status(500).json({ success: false, message: err.message });
+      res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดจากระบบ กรุณาลองใหม่อีกครั้ง' });
     }
   });
 
   // ─────────────────────────────────────────────
   // GET /api/super-admin/settings/:key
   // ─────────────────────────────────────────────
-  router.get('/super-admin/settings/:key', authenticateJWT, requireRole([]), async (req, res) => {
+  router.get('/super-admin/settings/:key', authenticateJWT, requireRole(['superadmin']), async (req, res) => {
     const { key } = req.params;
     try {
       const { rows } = await dbPool.query('SELECT value, updated_at FROM system_settings WHERE key = $1', [key]);
@@ -274,14 +279,14 @@ export function createSuperAdminRouter(dbPool, authenticateJWT, requireRole, add
       }
       res.json({ success: true, key, value: rows[0].value, updatedAt: rows[0].updated_at });
     } catch (err) {
-      res.status(500).json({ success: false, message: err.message });
+      res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดจากระบบ กรุณาลองใหม่อีกครั้ง' });
     }
   });
 
   // ─────────────────────────────────────────────
   // PUT /api/super-admin/settings/:key
   // ─────────────────────────────────────────────
-  router.put('/super-admin/settings/:key', authenticateJWT, requireRole([]), async (req, res) => {
+  router.put('/super-admin/settings/:key', authenticateJWT, requireRole(['superadmin']), async (req, res) => {
     const { key } = req.params;
     const { value } = req.body;
     if (value === undefined) return res.status(400).json({ success: false, message: 'กรุณาระบุข้อความที่ต้องการบันทึก' });
@@ -294,14 +299,14 @@ export function createSuperAdminRouter(dbPool, authenticateJWT, requireRole, add
       addServerAuditLog('UPDATE_SYSTEM_SETTING', `อัปเดตแบบฟอร์มการตั้งค่าระบบ: ${key}`, req.user, null, null, req);
       res.json({ success: true, message: 'บันทึกแบบฟอร์มต้นแบบเรียบร้อยแล้ว' });
     } catch (err) {
-      res.status(500).json({ success: false, message: err.message });
+      res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดจากระบบ กรุณาลองใหม่อีกครั้ง' });
     }
   });
 
   // ─────────────────────────────────────────────
   // POST /api/super-admin/tenants/:id/offboard-export
   // ─────────────────────────────────────────────
-  router.post('/super-admin/tenants/:id/offboard-export', authenticateJWT, requireRole([]), async (req, res) => {
+  router.post('/super-admin/tenants/:id/offboard-export', authenticateJWT, requireRole(['superadmin']), async (req, res) => {
     const tenantId = req.params.id;
     try {
       const tenantRes = await dbPool.query('SELECT * FROM tenants WHERE id = $1', [tenantId]);

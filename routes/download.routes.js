@@ -5,9 +5,17 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import jwt from 'jsonwebtoken';
 import { generateCoverLetterPdf, generateDiscoveryReportPdf } from '../services/pdf.service.js';
+import rateLimit from 'express-rate-limit';
+import bcrypt from 'bcryptjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+const otpRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: { success: false, message: 'พยายามร้องขอหรือยืนยัน OTP มากเกินไป กรุณารอ 15 นาที' }
+});
 
 export function createDownloadRouter(dbPool, authenticateJWT, requireRole, addServerAuditLog, sendMailFn, otpCache) {
   const router = express.Router();
@@ -65,7 +73,7 @@ export function createDownloadRouter(dbPool, authenticateJWT, requireRole, addSe
   }
 
   // POST /api/public/requests/:id/download-package
-  router.post('/public/requests/:id/download-package', async (req, res) => {
+  router.post('/public/requests/:id/download-package', otpRateLimiter, async (req, res) => {
     const { id } = req.params;
     const { email, phone, otp, reference } = req.body;
     const key = reference || email || phone || id;
@@ -81,8 +89,9 @@ export function createDownloadRouter(dbPool, authenticateJWT, requireRole, addSe
         console.log(`[DOWNLOAD-PACKAGE] OTP not found for key=${key}`);
         return res.status(400).json({ success: false, message: 'OTP not found' });
       }
-      if (otpResult.rows[0].otp !== otp) {
-        console.log(`[DOWNLOAD-PACKAGE] OTP mismatch for key=${key}. Expected ${otpResult.rows[0].otp}, got ${otp}`);
+      const isValidOtp = await bcrypt.compare(otp, otpResult.rows[0].otp);
+      if (!isValidOtp) {
+        console.log(`[DOWNLOAD-PACKAGE] OTP mismatch for key=${key}`);
         return res.status(400).json({ success: false, message: 'Invalid OTP' });
       }
   
@@ -162,7 +171,7 @@ export function createDownloadRouter(dbPool, authenticateJWT, requireRole, addSe
       res.send(zipBuffer);
     } catch (err) {
       console.error('Download Package Error:', err);
-      res.status(500).json({ success: false, message: err.message });
+      res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดจากระบบ กรุณาลองใหม่อีกครั้ง' });
     }
   });
 
@@ -174,6 +183,9 @@ export function createDownloadRouter(dbPool, authenticateJWT, requireRole, addSe
       if (rows.length === 0) return res.status(404).json({ success: false, message: 'Request not found' });
   
       const pdpaRequest = rows[0];
+      if (req.user.role !== 'superadmin' && pdpaRequest.org_id !== req.user.orgId) {
+        return res.status(403).json({ success: false, message: 'Forbidden: ไม่อนุญาตให้เข้าถึงข้อมูลข้ามองค์กร' });
+      }
       const data = typeof pdpaRequest.data === 'string' ? JSON.parse(pdpaRequest.data) : (pdpaRequest.data || {});
   
       // Collect active file rows from task_files
@@ -226,7 +238,7 @@ export function createDownloadRouter(dbPool, authenticateJWT, requireRole, addSe
       res.send(pdfBuffer);
     } catch (err) {
       console.error('Preview attachment PDF error:', err);
-      res.status(500).json({ success: false, message: err.message });
+      res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดจากระบบ กรุณาลองใหม่อีกครั้ง' });
     }
   });
 
@@ -238,6 +250,9 @@ export function createDownloadRouter(dbPool, authenticateJWT, requireRole, addSe
       if (rows.length === 0) return res.status(404).json({ success: false, message: 'Request not found' });
   
       const pdpaRequest = rows[0];
+      if (req.user.role !== 'superadmin' && pdpaRequest.org_id !== req.user.orgId) {
+        return res.status(403).json({ success: false, message: 'Forbidden: ไม่อนุญาตให้เข้าถึงข้อมูลข้ามองค์กร' });
+      }
       const data = typeof pdpaRequest.data === 'string' ? JSON.parse(pdpaRequest.data) : (pdpaRequest.data || {});
   
       // Fetch active files from task_files
@@ -297,7 +312,7 @@ export function createDownloadRouter(dbPool, authenticateJWT, requireRole, addSe
       res.send(zipBuffer);
     } catch (err) {
       console.error('Download package admin error:', err);
-      res.status(500).json({ success: false, message: err.message });
+      res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดจากระบบ กรุณาลองใหม่อีกครั้ง' });
     }
   });
 
@@ -320,12 +335,12 @@ export function createDownloadRouter(dbPool, authenticateJWT, requireRole, addSe
         downloadedCount: row.downloaded_count
       });
     } catch (err) {
-      res.status(500).json({ success: false, message: err.message });
+      res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดจากระบบ กรุณาลองใหม่อีกครั้ง' });
     }
   });
   
   // POST /api/dl/request-otp
-  router.post('/dl/request-otp', async (req, res) => {
+  router.post('/dl/request-otp', otpRateLimiter, async (req, res) => {
     try {
       const { token } = req.body;
       if (!token) return res.status(400).json({ success: false, message: 'Token required' });
@@ -341,19 +356,20 @@ export function createDownloadRouter(dbPool, authenticateJWT, requireRole, addSe
       if (!email) return res.status(400).json({ success: false, message: 'ไม่พบอีเมลผู้ยื่นคำร้อง' });
   
       // Generate 6-digit OTP
-      const otp = String(Math.floor(100000 + Math.random() * 900000));
+      const otp = String(crypto.randomInt(100000, 1000000));
+      const hashedOtp = await bcrypt.hash(otp, 10);
       const otpKey1 = `dl_otp:${row.request_id}`;
       const otpKey2 = `dl_otp:${token}`;
       const expiresAt = Date.now() + 10 * 60 * 1000; // 10 min
   
       await dbPool.query(
         'INSERT INTO public_otps (key, otp, expires_at) VALUES ($1, $2, $3) ON CONFLICT (key) DO UPDATE SET otp = $2, expires_at = $3',
-        [otpKey1, otp, expiresAt]
+        [otpKey1, hashedOtp, expiresAt]
       );
       if (otpKey1 !== otpKey2) {
         await dbPool.query(
           'INSERT INTO public_otps (key, otp, expires_at) VALUES ($1, $2, $3) ON CONFLICT (key) DO UPDATE SET otp = $2, expires_at = $3',
-          [otpKey2, otp, expiresAt]
+          [otpKey2, hashedOtp, expiresAt]
         );
       }
   
@@ -396,12 +412,12 @@ export function createDownloadRouter(dbPool, authenticateJWT, requireRole, addSe
       res.json({ success: true, maskedEmail });
     } catch (err) {
       console.error('DL OTP request error:', err);
-      res.status(500).json({ success: false, message: err.message });
+      res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดจากระบบ กรุณาลองใหม่อีกครั้ง' });
     }
   });
   
   // POST /api/dl/verify-otp
-  router.post('/dl/verify-otp', async (req, res) => {
+  router.post('/dl/verify-otp', otpRateLimiter, async (req, res) => {
     try {
       const { token, otp } = req.body;
       if (!token || !otp) return res.status(400).json({ success: false, message: 'Missing params' });
@@ -434,7 +450,7 @@ export function createDownloadRouter(dbPool, authenticateJWT, requireRole, addSe
       res.json({ success: true, sessionToken });
     } catch (err) {
       console.error('DL verify OTP error:', err);
-      res.status(500).json({ success: false, message: err.message });
+      res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดจากระบบ กรุณาลองใหม่อีกครั้ง' });
     }
   });
   
@@ -517,7 +533,7 @@ export function createDownloadRouter(dbPool, authenticateJWT, requireRole, addSe
       console.log(`⬇️ Download executed for ${row.tracking_no}, session verified`);
     } catch (err) {
       console.error('DL download error:', err);
-      res.status(500).json({ success: false, message: err.message });
+      res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดจากระบบ กรุณาลองใหม่อีกครั้ง' });
     }
   });
 

@@ -1,3 +1,4 @@
+require('dotenv').config();
 const { Client } = require('ssh2');
 const conn = new Client();
 
@@ -32,8 +33,8 @@ conn.on('ready', () => {
   console.error('Connection error:', err);
   process.exit(1);
 }).connect({
-  host: '119.59.124.169',
+  host: process.env.SSH_HOST || '119.59.124.169',
   port: 22,
-  username: 'root',
-  password: '9EIy;45Gf2n-'
+  username: process.env.SSH_USER || 'root',
+  password: process.env.SSH_PASSWORD
 });

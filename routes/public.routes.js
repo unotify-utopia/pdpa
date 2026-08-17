@@ -7,14 +7,23 @@ import rateLimit from 'express-rate-limit';
 import { applyFieldPermissionsToList } from '../middleware/fieldPermissions.js';
 import { sendMailWithFallback, sendWorkflowNotification, workflowEmailLogs, maskEmailOrUsername, maskIpAddress } from '../services/email.service.js';
 import { updateRequestSLA } from '../services/sla.service.js';
+import bcrypt from 'bcryptjs';
 
-export function createPublicRouter(dbPool, addServerAuditLog, authenticateJWT) {
+export function createPublicRouter(dbPool, addServerAuditLog, authenticateJWT, requireRole) {
   const router = express.Router();
 
   const auditLogLimiter = rateLimit({
-    windowMs: 60 * 1000, // 1 minute
-    max: 10, // Limit each IP to 10 requests per `window`
-    message: { success: false, message: 'Too many audit logs created from this IP, please try again after a minute' },
+    windowMs: 5 * 60 * 1000,
+    max: 20,
+    message: { success: false, message: 'Too many audit logs requests from this IP, please try again after 5 minutes' },
+    standardHeaders: true,
+    legacyHeaders: false,
+  });
+
+  const otpRateLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 10,
+    message: { success: false, message: 'พยายามร้องขอหรือยืนยัน OTP มากเกินไป กรุณารอ 15 นาที' },
     standardHeaders: true,
     legacyHeaders: false,
   });
@@ -30,14 +39,14 @@ export function createPublicRouter(dbPool, addServerAuditLog, authenticateJWT) {
       }
       return res.json({ success: true, config: null });
     } catch (err) {
-      res.status(500).json({ success: false, message: err.message });
+      res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดจากระบบ กรุณาลองใหม่อีกครั้ง' });
     }
   });
 
   // ─────────────────────────────────────────────
   // PUT /api/config
   // ─────────────────────────────────────────────
-  router.put('/config', authenticateJWT, async (req, res) => {
+  router.put('/config', authenticateJWT, requireRole(['admin', 'superadmin']), async (req, res) => {
     const config = req.body;
     try {
       await dbPool.query(
@@ -46,7 +55,7 @@ export function createPublicRouter(dbPool, addServerAuditLog, authenticateJWT) {
       );
       res.json({ success: true });
     } catch (err) {
-      res.status(500).json({ success: false, message: err.message });
+      res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดจากระบบ กรุณาลองใหม่อีกครั้ง' });
     }
   });
 
@@ -58,14 +67,14 @@ export function createPublicRouter(dbPool, addServerAuditLog, authenticateJWT) {
       const { rows } = await dbPool.query('SELECT * FROM document_templates');
       res.json({ success: true, templates: rows });
     } catch (err) {
-      res.status(500).json({ success: false, message: err.message });
+      res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดจากระบบ กรุณาลองใหม่อีกครั้ง' });
     }
   });
 
   // ─────────────────────────────────────────────
   // PUT /api/templates
   // ─────────────────────────────────────────────
-  router.put('/templates', authenticateJWT, async (req, res) => {
+  router.put('/templates', authenticateJWT, requireRole(['admin', 'superadmin']), async (req, res) => {
     const templates = req.body.templates || [];
     try {
       for (const t of templates) {
@@ -76,7 +85,7 @@ export function createPublicRouter(dbPool, addServerAuditLog, authenticateJWT) {
       }
       res.json({ success: true });
     } catch (err) {
-      res.status(500).json({ success: false, message: err.message });
+      res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดจากระบบ กรุณาลองใหม่อีกครั้ง' });
     }
   });
 
@@ -99,7 +108,7 @@ export function createPublicRouter(dbPool, addServerAuditLog, authenticateJWT) {
   // ─────────────────────────────────────────────
   // POST /api/audit-logs (Client-side audit log ingestion)
   // ─────────────────────────────────────────────
-  router.post('/audit-logs', auditLogLimiter, async (req, res) => {
+  router.post('/audit-logs', authenticateJWT, auditLogLimiter, async (req, res) => {
     try {
       const log = req.body;
       await dbPool.query(
@@ -126,25 +135,54 @@ export function createPublicRouter(dbPool, addServerAuditLog, authenticateJWT) {
   });
 
   // ─────────────────────────────────────────────
-  // GET /api/public/requests
+  // GET /api/public/requests - REMOVED for security
   // ─────────────────────────────────────────────
-  router.get('/public/requests', async (req, res) => {
-    try {
-      const { rows } = await dbPool.query('SELECT data FROM requests ORDER BY created_at DESC');
-      const allRequests = rows.map(r => r.data);
-      const sanitizedRequests = applyFieldPermissionsToList(allRequests, 'auditor');
-      return res.json({ success: true, count: sanitizedRequests.length, requests: sanitizedRequests });
-    } catch (error) {
-      return res.status(500).json({ success: false, message: 'Database error' });
-    }
-  });
 
   // ─────────────────────────────────────────────
   // POST /api/public/requests
   // ─────────────────────────────────────────────
   router.post('/public/requests', async (req, res) => {
     try {
-      const requestData = req.body;
+      let requestData = req.body;
+      const reqId = requestData.id || `req_${Date.now()}`;
+      
+      let isNewRequest = true;
+      let oldStatus = null;
+      let existingData = null;
+      let isNewCitizenMessage = false;
+      let isNewStaffMessage = false;
+
+      try {
+        const existRes = await dbPool.query('SELECT status, data FROM requests WHERE id = $1', [reqId]);
+        if (existRes.rows.length > 0) {
+          isNewRequest = false;
+          oldStatus = existRes.rows[0].status;
+          existingData = typeof existRes.rows[0].data === 'string' ? JSON.parse(existRes.rows[0].data) : (existRes.rows[0].data || {});
+        }
+      } catch (existErr) { console.warn('Check existing request warning:', existErr.message); }
+
+      if (!isNewRequest && existingData) {
+        // Only allow appending to messageThread for existing requests from public endpoint
+        const mergedData = { ...existingData };
+        if (requestData.messageThread && requestData.messageThread.length > (existingData.messageThread || []).length) {
+            mergedData.messageThread = requestData.messageThread;
+            const latestMsg = requestData.messageThread[requestData.messageThread.length - 1];
+            if (latestMsg && latestMsg.sender === 'user') isNewCitizenMessage = true;
+            else if (latestMsg && latestMsg.sender === 'staff') isNewStaffMessage = true;
+        }
+        requestData = mergedData;
+        requestData.status = oldStatus;
+      } else {
+        // It's a new request. Strip sensitive fields.
+        delete requestData.status;
+        delete requestData.decision;
+        delete requestData.statusHistory;
+        delete requestData.assignedTo;
+        delete requestData.slaRemainingDays;
+        delete requestData.slaDaysUsed;
+        requestData.status = 'Submitted';
+      }
+
       const year = new Date().getFullYear();
       const orgId = requestData.orgId || 'org_dopa';
       const orgCodePrefix = orgId.replace(/^org_/, '').toUpperCase().replace('_TH', '');
@@ -152,7 +190,6 @@ export function createPublicRouter(dbPool, addServerAuditLog, authenticateJWT) {
       const countRes = await dbPool.query('SELECT COUNT(*) FROM requests WHERE org_id = $1', [orgId]);
       const tenantCount = parseInt(countRes.rows[0].count) + 1;
       const trackingNo = requestData.trackingNo || `REQ-${orgCodePrefix}-${year}-${tenantCount.toString().padStart(4, '0')}`;
-      const reqId = requestData.id || `req_${Date.now()}`;
       const requesterType = requestData.requesterType || 'self';
       const status = requestData.status || 'Submitted';
 
@@ -162,31 +199,6 @@ export function createPublicRouter(dbPool, addServerAuditLog, authenticateJWT) {
         slaRemainingDays: requestData.slaRemainingDays || 30,
         slaDaysUsed: requestData.slaDaysUsed || 0
       };
-
-      let isNewRequest = true;
-      let oldStatus = null;
-      let isNewCitizenMessage = false;
-      let isNewStaffMessage = false;
-      try {
-        const existRes = await dbPool.query('SELECT status, data FROM requests WHERE id = $1', [reqId]);
-        if (existRes.rows.length > 0) {
-          isNewRequest = false;
-          oldStatus = existRes.rows[0].status;
-          
-          const oldData = typeof existRes.rows[0].data === 'string' ? JSON.parse(existRes.rows[0].data) : (existRes.rows[0].data || {});
-          const oldMsgCount = (oldData.messageThread || []).length;
-          const newMsgCount = (requestData.messageThread || []).length;
-          
-          if (newMsgCount > oldMsgCount) {
-             const latestMsg = requestData.messageThread[requestData.messageThread.length - 1];
-             if (latestMsg && latestMsg.sender === 'user') {
-                isNewCitizenMessage = true;
-             } else if (latestMsg && latestMsg.sender === 'staff') {
-                isNewStaffMessage = true;
-             }
-          }
-        }
-      } catch (existErr) { console.warn('Check existing request warning:', existErr.message); }
 
       try {
         await dbPool.query(
@@ -228,14 +240,14 @@ export function createPublicRouter(dbPool, addServerAuditLog, authenticateJWT) {
   // ─────────────────────────────────────────────
   // GET /api/public/email-logs
   // ─────────────────────────────────────────────
-  router.get('/public/email-logs', (req, res) => {
-    return res.json({ success: true, count: workflowEmailLogs.length, logs: workflowEmailLogs });
+  router.get('/public/email-logs', authenticateJWT, requireRole(['superadmin', 'admin']), async (req, res) => {
+    return res.json({ success: true, logs: workflowEmailLogs.slice(-100) });
   });
 
   // ─────────────────────────────────────────────
   // POST /api/notify/workflow
   // ─────────────────────────────────────────────
-  router.post('/notify/workflow', async (req, res) => {
+  router.post('/notify/workflow', authenticateJWT, async (req, res) => {
     try {
       const { request, oldStatus, newStatus, eventType } = req.body;
       if (!request) return res.status(400).json({ success: false, message: 'Missing request object' });
@@ -250,18 +262,19 @@ export function createPublicRouter(dbPool, addServerAuditLog, authenticateJWT) {
   // ─────────────────────────────────────────────
   // POST /api/public/send-otp
   // ─────────────────────────────────────────────
-  router.post('/public/send-otp', async (req, res) => {
+  router.post('/public/send-otp', otpRateLimiter, async (req, res) => {
     const { email, phone, reference } = req.body;
     if (!email && !phone) return res.status(400).json({ success: false, message: 'กรุณาระบุอีเมลหรือเบอร์โทรศัพท์' });
 
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otp = crypto.randomInt(100000, 1000000).toString();
     const key = reference || email || phone;
     const expiresAt = Date.now() + 5 * 60 * 1000;
 
     try {
+      const hashedOtp = await bcrypt.hash(otp, 10);
       await dbPool.query(
         `INSERT INTO public_otps (key, otp, expires_at) VALUES ($1, $2, $3) ON CONFLICT (key) DO UPDATE SET otp = EXCLUDED.otp, expires_at = EXCLUDED.expires_at`,
-        [key, otp, expiresAt]
+        [key, hashedOtp, expiresAt]
       );
 
       if (email) {
@@ -302,20 +315,15 @@ export function createPublicRouter(dbPool, addServerAuditLog, authenticateJWT) {
       return res.json({ success: true, message: 'ส่งรหัส OTP เรียบร้อยแล้ว' });
     } catch (error) {
       console.error('[SMTP or DB] Error sending OTP:', error);
-      try {
-        await dbPool.query(`UPDATE public_otps SET otp = '123456' WHERE key = $1`, [key]);
-        console.log(`[SMTP Fallback] Set fallback OTP 123456 for ${key}`);
-        return res.json({ success: true, message: 'ระบบอีเมลขัดข้องชั่วคราว (โควต้าเต็ม) อนุญาตให้ใช้รหัส 123456 เพื่อทดสอบระบบได้' });
-      } catch (dbErr) {
-        return res.status(500).json({ success: false, message: 'ไม่สามารถส่งอีเมลและไม่สามารถสำรองรหัสได้' });
-      }
+      await dbPool.query('DELETE FROM public_otps WHERE key = $1', [key]);
+      return res.status(503).json({ success: false, message: 'ระบบส่งอีเมลขัดข้อง ไม่สามารถส่งรหัส OTP ได้ กรุณาลองใหม่ในภายหลัง' });
     }
   });
 
   // ─────────────────────────────────────────────
   // POST /api/public/verify-otp
   // ─────────────────────────────────────────────
-  router.post('/public/verify-otp', async (req, res) => {
+  router.post('/public/verify-otp', otpRateLimiter, async (req, res) => {
     const { reference, email, phone, otp } = req.body;
     const key = reference || email || phone;
     if (!key || !otp) return res.status(400).json({ success: false, message: 'ข้อมูลไม่ครบถ้วน' });
@@ -333,7 +341,8 @@ export function createPublicRouter(dbPool, addServerAuditLog, authenticateJWT) {
         addServerAuditLog('OTP_VERIFICATION_FAILED', `OTP expired for key: ${key}`, null).catch(console.error);
         return res.status(400).json({ success: false, message: 'รหัส OTP หมดอายุแล้ว กรุณาขอใหม่' });
       }
-      if (record.otp === otp) {
+      const isValidOtp = await bcrypt.compare(otp, record.otp);
+      if (isValidOtp) {
         await dbPool.query('DELETE FROM public_otps WHERE key = $1', [key]);
         return res.json({ success: true, message: 'ยืนยันรหัส OTP สำเร็จ' });
       } else {
@@ -356,7 +365,17 @@ export function createPublicRouter(dbPool, addServerAuditLog, authenticateJWT) {
 
       const query = keyword.trim().toUpperCase();
       const cleanDigits = query.replace(/[^0-9]/g, '');
-      const { rows } = await dbPool.query('SELECT data FROM requests ORDER BY created_at DESC');
+      
+      let dbQuery = `SELECT data FROM requests WHERE tracking_no ILIKE $1`;
+      let params = [`%${query}%`];
+      
+      if (cleanDigits.length > 0) {
+        dbQuery += ` OR regexp_replace(tracking_no, '[^0-9]', '', 'g') LIKE $2`;
+        params.push(`%${cleanDigits}`);
+      }
+      dbQuery += ` ORDER BY created_at DESC LIMIT 50`;
+
+      const { rows } = await dbPool.query(dbQuery, params);
 
       const matches = rows.map(r => r.data).filter(r => {
         const tNo = (r.trackingNo || '').toUpperCase();

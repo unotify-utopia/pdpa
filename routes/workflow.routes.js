@@ -210,7 +210,10 @@ export function createWorkflowRouter(dbPool, authenticateJWT, requireRole) {
   router.delete('/transitions/:id', authenticateJWT, requireRole(['admin', 'superadmin']), async (req, res) => {
     try {
       const { id } = req.params;
-      await dbPool.query('DELETE FROM workflow_transitions WHERE id = $1', [id]);
+      const result = await dbPool.query('DELETE FROM workflow_transitions WHERE id = $1', [id]);
+      if (result.rowCount === 0) {
+        return res.status(404).json({ success: false, message: 'ไม่พบ Transition ที่ต้องการลบ' });
+      }
       await refreshTransitionCache(dbPool);
       res.json({ success: true, message: 'ลบ Transition เรียบร้อยแล้ว' });
     } catch (err) {
@@ -229,10 +232,15 @@ export function createWorkflowRouter(dbPool, authenticateJWT, requireRole) {
       const { requestId } = req.params;
       const userRole = req.user?.role;
 
-      const { rows } = await dbPool.query(
-        "SELECT status FROM requests WHERE id = $1",
-        [requestId]
-      );
+      let query = "SELECT status FROM requests WHERE id = $1";
+      let params = [requestId];
+
+      if (req.user.role !== 'superadmin') {
+        query += " AND org_id = $2";
+        params.push(req.user.orgId);
+      }
+
+      const { rows } = await dbPool.query(query, params);
 
       if (!rows.length) {
         return res.status(404).json({ success: false, message: 'ไม่พบคำขอ' });

@@ -79,6 +79,8 @@ import { NotifyModal } from './components/NotifyModal';
 import type { NotifyType } from './components/NotifyModal';
 import { ChangePasswordModal } from './components/ChangePasswordModal';
 import { ResetPasswordModal } from './components/ResetPasswordModal';
+import { CitizenRequestForm } from './components/CitizenRequestForm';
+import { initialOrganizations } from './mockData';
 
 // Helper: Thai Citizen ID Modulus 11 Checksum Validator
 export const validateThaiCitizenId = (id: string): boolean => {
@@ -4565,10 +4567,13 @@ export default function App() {
                       const isIntakeActive = ['Submitted', 'Received', 'Identity Verification', 'Awaiting Identity Evidence', 'Completeness Review', 'Awaiting Additional Information'].includes(activeRequestObj.status);
                       return (
                         <div className={`bg-white border ${isIntakeActive ? 'border-slate-200' : 'border-slate-100 opacity-80'} rounded-xl p-5 shadow-sm space-y-4 order-3`}>
-                          <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-                          <UserCheck className="h-4 w-4 text-brand-600" />
-                          <span>การตรวจสอบข้อมูลและสิทธิยื่นเรื่อง (Intake Verification & Completeness)</span>
-                        </span>
+                          <div className="flex flex-wrap justify-between items-center gap-2">
+                            <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                              <UserCheck className="h-4 w-4 text-brand-600" />
+                              <span>การตรวจสอบข้อมูลและสิทธิยื่นเรื่อง (Intake Verification & Completeness)</span>
+                            </span>
+                            <CitizenRequestForm request={activeRequestObj} orgData={initialOrganizations.find(o => o.id === activeRequestObj.orgId) || initialOrganizations[0]} />
+                          </div>
 
                         {/* Assurance select */}
                         <div className="flex gap-4 items-center flex-wrap pb-2 border-b border-slate-100">
