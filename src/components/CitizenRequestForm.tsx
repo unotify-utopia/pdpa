@@ -11,7 +11,6 @@ interface CitizenRequestFormProps {
 export const CitizenRequestForm: React.FC<CitizenRequestFormProps> = ({ request, orgData }) => {
   const handlePrint = () => {
     const orgName = orgData?.nameTh || 'ชื่อหน่วยงาน';
-    const logoHtml = orgData?.logoUrl ? `<img src="${orgData.logoUrl}" style="height:2cm;object-fit:contain;margin-bottom:10pt;" alt="Logo">` : '';
     
     // Format rights
     const reqType = request.requestDetails?.requestType;
@@ -42,7 +41,7 @@ export const CitizenRequestForm: React.FC<CitizenRequestFormProps> = ({ request,
     * { box-sizing: border-box; }
     body {
       font-family: 'Sarabun', sans-serif;
-      font-size: 14pt;
+      font-size: 12pt;
       line-height: 1.4;
       color: #000;
       background: white;
@@ -55,33 +54,24 @@ export const CitizenRequestForm: React.FC<CitizenRequestFormProps> = ({ request,
       margin: 0 auto;
       position: relative;
     }
-    .header {
-      text-align: center;
-      margin-bottom: 15pt;
-    }
-    .title {
-      font-size: 18pt;
-      font-weight: bold;
-      margin-bottom: 5pt;
-    }
     .tracking-no {
       text-align: right;
-      font-size: 12pt;
-      margin-bottom: 15pt;
+      font-size: 11pt;
+      margin-bottom: 10pt;
       border-bottom: 1px solid #000;
       padding-bottom: 5pt;
     }
     .content-section {
-      margin-bottom: 15pt;
+      margin-bottom: 10pt;
     }
     .section-title {
       font-weight: bold;
       text-decoration: underline;
-      margin-bottom: 8pt;
-      font-size: 15pt;
+      margin-bottom: 5pt;
+      font-size: 13pt;
     }
     .field-row {
-      margin-bottom: 4pt;
+      margin-bottom: 3pt;
       display: flex;
     }
     .field-label {
@@ -90,7 +80,7 @@ export const CitizenRequestForm: React.FC<CitizenRequestFormProps> = ({ request,
       flex-shrink: 0;
     }
     .signature-section {
-      margin-top: 40pt;
+      margin-top: 30pt;
       display: flex;
       justify-content: center;
     }
@@ -108,19 +98,13 @@ export const CitizenRequestForm: React.FC<CitizenRequestFormProps> = ({ request,
 </head>
 <body>
 <div class="page">
-  <div class="header">
-    ${logoHtml}
-    <div class="title">แบบคำร้องขอใช้สิทธิของเจ้าของข้อมูลส่วนบุคคล</div>
-    <div>(Data Subject Rights Request Form)</div>
-  </div>
-
   <div class="tracking-no">
     รหัสอ้างอิงคำขอ: <strong>${request.trackingNo}</strong>
   </div>
 
   <div style="margin-bottom: 15pt; line-height: 1.6;">
     <strong>วันที่ยื่นคำร้อง:</strong> ${submissionDateStr}<br/>
-    <strong>เรียน:</strong> เจ้าหน้าที่คุ้มครองข้อมูลส่วนบุคคล / หัวหน้าหน่วยงาน (${orgName})
+    <strong>เรียน:</strong> เจ้าหน้าที่คุ้มครองข้อมูลส่วนบุคคล (${orgName})
   </div>
 
   <div class="content-section">
