@@ -357,6 +357,9 @@ export const changeRequestStatus = async (
       reason: comment || 'พักสายชั่วคราวเนื่องจากรอยื่นเอกสารเพิ่มเติม',
       operator: actor.fullNameTh,
     };
+    if (!req.slaEvents) {
+      req.slaEvents = [];
+    }
     req.slaEvents.push(pauseEvent);
   } else if (prevStatus === 'Awaiting Additional Information' && req.slaPaused) {
     req.slaPaused = false;
@@ -367,6 +370,9 @@ export const changeRequestStatus = async (
       reason: 'ได้รับเอกสารเพิ่มเติมและยืนยันประมวลผลต่อ',
       operator: actor.fullNameTh,
     };
+    if (!req.slaEvents) {
+      req.slaEvents = [];
+    }
     req.slaEvents.push(resumeEvent);
     
     // Adjust deadline date based on elapsed pause time
@@ -378,6 +384,9 @@ export const changeRequestStatus = async (
   }
 
   // Push status history
+  if (!req.statusHistory) {
+    req.statusHistory = [];
+  }
   req.statusHistory.push({
     status: newStatus,
     changedAt: new Date().toISOString(),
