@@ -8,6 +8,7 @@ import { applyFieldPermissionsToList } from '../middleware/fieldPermissions.js';
 import { sendMailWithFallback, sendWorkflowNotification, workflowEmailLogs, maskEmailOrUsername, maskIpAddress } from '../services/email.service.js';
 import { updateRequestSLA } from '../services/sla.service.js';
 import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
 
 export function createPublicRouter(dbPool, addServerAuditLog, authenticateJWT, requireRole) {
   const router = express.Router();
