@@ -317,7 +317,7 @@ export function createPublicRouter(dbPool, addServerAuditLog, authenticateJWT, r
     } catch (error) {
       console.error('[SMTP or DB] Error sending OTP:', error);
       await dbPool.query('DELETE FROM public_otps WHERE key = $1', [key]);
-      return res.status(503).json({ success: false, message: 'ระบบส่งอีเมลขัดข้อง ไม่สามารถส่งรหัส OTP ได้ กรุณาลองใหม่ในภายหลัง' });
+      return res.status(503).json({ success: false, message: 'ระบบส่งอีเมลขัดข้อง: ' + error.message });
     }
   });
 

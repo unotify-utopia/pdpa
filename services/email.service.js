@@ -112,7 +112,7 @@ export async function sendMailWithFallback(mailOptions) {
       return data;
     } catch (error) {
       console.error(`❌ Failed to send email via Resend API: ${error.message}`);
-      throw error;
+      // Fall through to Taximail or SMTP fallback instead of throwing immediately
     }
   }
 
