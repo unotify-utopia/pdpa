@@ -282,7 +282,7 @@ export const createRequest = (requestData: Omit<Request, 'id' | 'uuid' | 'tracki
 
 // Update Request Details & Status (Section 4)
 export const updateRequest = async (updatedReq: Request, actor: User, auditAction: string, auditDetail: string) => {
-  const token = localStorage.getItem('token');
+  const token = sessionStorage.getItem('pdpa_jwt_token') || sessionStorage.getItem('pdpa_token');
   const endpoint = token ? `/api/requests/${updatedReq.id}` : '/api/public/requests';
   const method = token ? 'PUT' : 'POST';
   
