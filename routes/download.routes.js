@@ -463,7 +463,9 @@ export function createDownloadRouter(dbPool, authenticateJWT, requireRole, addSe
         addServerAuditLog('SECURE_DOWNLOAD_OTP_FAILED', `OTP expired for secure download (token: ${token})`, actor, row.req_id, row.tracking_no, req).catch(() => {});
         return res.status(400).json({ success: false, message: 'OTP หมดอายุแล้ว กรุณาขอใหม่อีกครั้ง' });
       }
-      if (otpRow.otp !== otp.trim()) {
+      
+      const isValidOtp = await bcrypt.compare(otp.trim(), otpRow.otp);
+      if (!isValidOtp) {
         addServerAuditLog('SECURE_DOWNLOAD_OTP_FAILED', `Invalid OTP for secure download (token: ${token})`, actor, row.req_id, row.tracking_no, req).catch(() => {});
         return res.status(400).json({ success: false, message: 'รหัส OTP ไม่ถูกต้อง' });
       }
