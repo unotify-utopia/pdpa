@@ -326,6 +326,15 @@ export function createDownloadRouter(dbPool, authenticateJWT, requireRole, addSe
       if (new Date(row.expires_at) < new Date()) return res.status(410).json({ success: false, message: 'ลิงก์หมดอายุแล้ว (เกิน 30 วัน)' });
   
       const reqData = row.req_data || {};
+      
+      const actor = {
+        id: `public_${reqData.requester?.email || 'unknown'}`,
+        fullNameTh: `Public User (${reqData.requester?.email || 'unknown'})`,
+        role: 'public',
+        orgId: row.org_id
+      };
+      addServerAuditLog('SECURE_DOWNLOAD_PORTAL_ACCESSED', `Accessed secure download portal (token: ${token})`, actor, row.req_id, row.tracking_no, req).catch(() => {});
+
       res.json({
         success: true,
         trackingNo: row.tracking_no,
@@ -355,6 +364,14 @@ export function createDownloadRouter(dbPool, authenticateJWT, requireRole, addSe
       const email = reqData.requester?.email;
       if (!email) return res.status(400).json({ success: false, message: 'ไม่พบอีเมลผู้ยื่นคำร้อง' });
   
+      const actor = {
+        id: `public_${email}`,
+        fullNameTh: `Public User (${email})`,
+        role: 'public',
+        orgId: row.org_id
+      };
+      addServerAuditLog('SECURE_DOWNLOAD_OTP_REQUESTED', `Requested OTP for secure download (token: ${token})`, actor, row.req_id, row.tracking_no, req).catch(() => {});
+
       // Generate 6-digit OTP
       const otp = String(crypto.randomInt(100000, 1000000));
       const hashedOtp = await bcrypt.hash(otp, 10);
@@ -433,8 +450,23 @@ export function createDownloadRouter(dbPool, authenticateJWT, requireRole, addSe
       );
       if (otpRows.length === 0) return res.status(400).json({ success: false, message: 'ไม่พบ OTP กรุณาขอใหม่อีกครั้ง' });
       const otpRow = otpRows[0];
-      if (Date.now() > Number(otpRow.expires_at)) return res.status(400).json({ success: false, message: 'OTP หมดอายุแล้ว กรุณาขอใหม่อีกครั้ง' });
-      if (otpRow.otp !== otp.trim()) return res.status(400).json({ success: false, message: 'รหัส OTP ไม่ถูกต้อง' });
+      
+      const reqData = row.req_data || {};
+      const actor = {
+        id: `public_${reqData.requester?.email || 'unknown'}`,
+        fullNameTh: `Public User (${reqData.requester?.email || 'unknown'})`,
+        role: 'public',
+        orgId: row.org_id
+      };
+
+      if (Date.now() > Number(otpRow.expires_at)) {
+        addServerAuditLog('SECURE_DOWNLOAD_OTP_FAILED', `OTP expired for secure download (token: ${token})`, actor, row.req_id, row.tracking_no, req).catch(() => {});
+        return res.status(400).json({ success: false, message: 'OTP หมดอายุแล้ว กรุณาขอใหม่อีกครั้ง' });
+      }
+      if (otpRow.otp !== otp.trim()) {
+        addServerAuditLog('SECURE_DOWNLOAD_OTP_FAILED', `Invalid OTP for secure download (token: ${token})`, actor, row.req_id, row.tracking_no, req).catch(() => {});
+        return res.status(400).json({ success: false, message: 'รหัส OTP ไม่ถูกต้อง' });
+      }
   
       // OTP valid — delete it (one-time use)
       await dbPool.query('DELETE FROM public_otps WHERE key = $1 OR key = $2', [otpKey1, otpKey2]);
@@ -447,6 +479,9 @@ export function createDownloadRouter(dbPool, authenticateJWT, requireRole, addSe
   
       // Issue a short-lived (15 min) signed download session token
       const sessionToken = jwt.sign({ request_id: row.request_id, downloadToken: row.token, at: Date.now() }, process.env.JWT_SECRET || 'pdpa-secret', { expiresIn: '15m' });
+      
+      addServerAuditLog('SECURE_DOWNLOAD_OTP_VERIFIED', `OTP verified successfully for secure download (token: ${token})`, actor, row.req_id, row.tracking_no, req).catch(() => {});
+      
       res.json({ success: true, sessionToken });
     } catch (err) {
       console.error('DL verify OTP error:', err);
@@ -530,6 +565,14 @@ export function createDownloadRouter(dbPool, authenticateJWT, requireRole, addSe
       res.set('Content-Disposition', `attachment; filename="PDPA_${row.tracking_no}.zip"`);
       res.send(zipBuffer);
   
+      const actor = {
+        id: `public_${reqData.requester?.email || 'unknown'}`,
+        fullNameTh: `Public User (${reqData.requester?.email || 'unknown'})`,
+        role: 'public',
+        orgId: row.org_id
+      };
+      addServerAuditLog('SECURE_DOWNLOAD_COMPLETED', `Package downloaded successfully (token: ${token}, files: ${files.length})`, actor, row.request_id, row.tracking_no, req).catch(() => {});
+
       console.log(`⬇️ Download executed for ${row.tracking_no}, session verified`);
     } catch (err) {
       console.error('DL download error:', err);
