@@ -5,6 +5,7 @@ import QRCode from 'qrcode';
 import { applyFieldPermissions, applyFieldPermissionsToList } from '../middleware/fieldPermissions.js';
 import { calculateOrgSLAReport } from '../services/sla.service.js';
 import { sendMailWithFallback } from '../services/email.service.js';
+import { applyWatermark } from '../services/watermark.service.js';
 
 export function createRequestsRouter(dbPool, authenticateJWT, requireRole, addServerAuditLog) {
   const router = express.Router();
@@ -112,12 +113,18 @@ export function createRequestsRouter(dbPool, authenticateJWT, requireRole, addSe
         return res.status(400).json({ success: false, message: 'Missing file data' });
       }
       
+      const { rows } = await dbPool.query('SELECT tracking_no FROM requests WHERE id = $1', [id]);
+      const trackingNo = rows.length > 0 ? rows[0].tracking_no : 'UNKNOWN';
+      
+      // Apply Watermark
+      const watermarkedData = await applyWatermark(fileData, filename, trackingNo);
+      
       const fileId = `file_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
       
       await dbPool.query(
         `INSERT INTO task_files (id, request_id, task_id, filename, file_data, uploaded_by) 
          VALUES ($1, $2, $3, $4, $5, $6)`,
-        [fileId, id, taskId, filename, fileData, req.user.username]
+        [fileId, id, taskId, filename, watermarkedData, req.user.username]
       );
 
       // Also log to audit_logs

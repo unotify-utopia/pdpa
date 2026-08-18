@@ -1538,8 +1538,10 @@ export default function App() {
       return;
     }
     
-    if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
-      alert('กรุณาอัปโหลดไฟล์ PDF เท่านั้น');
+    const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+    const isImage = file.type.startsWith('image/') || file.name.toLowerCase().match(/\.(jpg|jpeg|png)$/);
+    if (!isPdf && !isImage) {
+      alert('กรุณาอัปโหลดไฟล์ PDF หรือรูปภาพ (JPG/PNG) เท่านั้น');
       return;
     }
 
@@ -4945,7 +4947,7 @@ export default function App() {
                                         type="file" 
                                         id={`upload-task-${t.id}`}
                                         style={{ display: 'none' }} 
-                                        accept=".pdf"
+                                        accept=".pdf,.jpg,.jpeg,.png"
                                         onChange={(e) => handleTaskFileUpload(activeRequestObj.id, t.id, e.target.files)}
                                       />
                                     </div>
