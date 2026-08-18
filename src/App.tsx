@@ -2255,7 +2255,7 @@ export default function App() {
       <div className="no-print bg-slate-900 text-slate-200 px-4 py-2 flex flex-wrap items-center justify-between text-xs gap-2 select-none border-b border-slate-800 z-10">
         <div className="flex items-center gap-2 font-bold">
           <Shield className="h-4 w-4 text-brand-500" />
-          <span>ระบบบริหารคำขอเข้าถึงข้อมูลส่วนบุคคล (PDPA Portal)</span>
+          <span>ระบบบริหารจัดการการปฏิบัติตามกฎหมายคุ้มครองข้อมูลส่วนบุคคล (PDPA Compliance Management)</span>
         </div>
         
         <div className="flex items-center gap-3 flex-wrap">
@@ -6539,7 +6539,7 @@ export default function App() {
       {/* Footer disclaimer */}
       <footer className="bg-slate-900 border-t border-slate-800 text-slate-400 px-6 py-4 text-center text-xs select-none space-y-1">
         <p className="font-semibold text-slate-300">
-          © {new Date().getFullYear() + 543} ระบบบริหารคำขอเข้าถึงข้อมูลส่วนบุคคล (PDPA Access Request Management System)
+          © {new Date().getFullYear() + 543} ระบบบริหารจัดการการปฏิบัติตามกฎหมายคุ้มครองข้อมูลส่วนบุคคล (PDPA Compliance Management)
         </p>
         <p className="text-[11px] text-brand-400 font-medium">
           สงวนลิขสิทธิ์ © บริษัท ยูโทเปีย เอ็นแอนด์เอ็น จำกัด (Utopia N&N Co., Ltd.) All Rights Reserved.
