@@ -2993,10 +2993,11 @@ export default function App() {
                     <div className="flex flex-wrap gap-4 pt-3">
                       <button
                         onClick={() => setPublicTab('submit')}
-                        className="bg-brand-600 hover:bg-brand-700 text-white text-sm font-bold py-3 px-6 rounded-xl shadow-md border border-brand-500 transform hover:-translate-y-0.5 transition-all duration-300 flex items-center gap-2"
+                        className="bg-brand-600 hover:bg-brand-500 text-white text-base md:text-lg font-bold py-4 px-8 rounded-2xl shadow-xl shadow-brand-500/30 border border-brand-400 transform hover:-translate-y-1 transition-all duration-300 flex items-center gap-3 relative overflow-hidden group"
                       >
-                        <FileText className="w-4 h-4" />
-                        ยื่นแบบคำร้องออนไลน์
+                        <div className="absolute inset-0 bg-white/20 w-full h-full transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-in-out"></div>
+                        <FileText className="w-5 h-5 relative z-10" />
+                        <span className="relative z-10">ยื่นแบบคำร้องออนไลน์</span>
                       </button>
                       <button
                         onClick={() => {
@@ -3004,9 +3005,9 @@ export default function App() {
                           setTrackingError(null);
                           setShowSearchLookupModal(true);
                         }}
-                        className="bg-white/10 hover:bg-white/20 text-white border border-white/20 text-sm font-semibold py-3 px-6 rounded-xl transform hover:-translate-y-1 transition-all duration-300 flex items-center gap-2 backdrop-blur-md"
+                        className="bg-white/10 hover:bg-white/20 text-white border border-white/20 text-base md:text-lg font-bold py-4 px-8 rounded-2xl shadow-lg transform hover:-translate-y-1 transition-all duration-300 flex items-center gap-3 backdrop-blur-md"
                       >
-                        <Search className="w-4 h-4" />
+                        <Search className="w-5 h-5" />
                         ติดตามสถานะคำร้องเดิม
                       </button>
                     </div>
