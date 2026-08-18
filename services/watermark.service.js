@@ -34,34 +34,52 @@ export async function applyWatermark(base64Data, filename, trackingNo) {
   try {
     if (isPdf) {
       const pdfDoc = await PDFDocument.load(buffer);
-      pdfDoc.registerFontkit(fontkit);
-      
-      const fontPath = path.join(projectRoot, 'fonts', 'Sarabun-Regular.ttf');
-      const fontBytes = await fs.readFile(fontPath);
-      const customFont = await pdfDoc.embedFont(fontBytes);
-      
       const pages = pdfDoc.getPages();
+      
       for (const page of pages) {
         const { width, height } = page.getSize();
-        const fontSize = Math.min(width, height) * 0.04; // Adaptive font size
+        // Reduce font size multiplier from 0.04 to 0.025 to make it smaller as requested
+        const fontSize = Math.floor(Math.min(width, height) * 0.025);
         
-        const drawText = (text, yOffset) => {
-          const textWidth = customFont.widthOfTextAtSize(text, fontSize);
-          
-          // Calculate center and rotate
-          page.drawText(text, {
-            x: width / 2 - (textWidth / 2) * Math.cos(Math.PI / 4) + yOffset * Math.sin(Math.PI / 4),
-            y: height / 2 - (textWidth / 2) * Math.sin(Math.PI / 4) - yOffset * Math.cos(Math.PI / 4),
-            size: fontSize,
-            font: customFont,
-            color: rgb(0.5, 0.5, 0.5),
-            opacity: 0.3,
-            rotate: degrees(45)
-          });
-        };
+        // Generate a transparent PNG using sharp to solve Thai font shaping (floating vowels)
+        const svgOverlay = `
+          <svg width="${width}" height="${height}">
+            <style>
+              .watermark {
+                fill: rgba(128, 128, 128, 0.3);
+                font-size: ${fontSize}px;
+                font-family: sans-serif;
+                font-weight: bold;
+                text-anchor: middle;
+                transform-origin: ${width/2}px ${height/2}px;
+                transform: rotate(-45deg);
+              }
+            </style>
+            <text x="${width/2}" y="${height/2 - 20}" class="watermark">${watermarkText1}</text>
+            <text x="${width/2}" y="${height/2 + 30}" class="watermark">${watermarkText2}</text>
+          </svg>
+        `;
         
-        drawText(watermarkText1, 30);
-        drawText(watermarkText2, -30);
+        const watermarkPngBuffer = await sharp({
+          create: {
+            width: Math.floor(width),
+            height: Math.floor(height),
+            channels: 4,
+            background: { r: 0, g: 0, b: 0, alpha: 0 }
+          }
+        })
+        .composite([{ input: Buffer.from(svgOverlay), blend: 'over' }])
+        .png()
+        .toBuffer();
+        
+        const pngImage = await pdfDoc.embedPng(watermarkPngBuffer);
+        
+        page.drawImage(pngImage, {
+          x: 0,
+          y: 0,
+          width: width,
+          height: height,
+        });
       }
       
       const pdfBytes = await pdfDoc.save();
@@ -72,7 +90,8 @@ export async function applyWatermark(base64Data, filename, trackingNo) {
       const metadata = await sharp(buffer).metadata();
       const width = metadata.width || 800;
       const height = metadata.height || 1000;
-      const fontSize = Math.floor(width * 0.04);
+      // Reduce font size multiplier from 0.04 to 0.025
+      const fontSize = Math.floor(width * 0.025);
       
       const svgOverlay = `
         <svg width="${width}" height="${height}">
