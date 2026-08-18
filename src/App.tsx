@@ -4229,7 +4229,8 @@ export default function App() {
                   const target = e.target as typeof e.target & {
                     trackingNo: { value: string };
                   };
-                  handleDownloadCheck(target.trackingNo.value.trim());
+                  const trackingNo = target.trackingNo.value.trim();
+                  window.location.href = `/dl/${trackingNo}`;
                 }} className="space-y-4">
                   <div className="space-y-1 text-slate-300">
                     <label className="text-xs font-medium">ระบุรหัสอ้างอิง (Tracking Number)</label>
