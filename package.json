@@ -7,6 +7,8 @@
     "dev": "vite",
     "server": "node server.js",
     "build": "tsc -b && vite build && npm --prefix super-admin-app install && npm run build --prefix super-admin-app",
+    "seed": "node services/workflow.seed.js && node services/ropa.seed.js",
+    "reset-data": "node scripts/reset_transactions.js",
     "lint": "eslint .",
     "preview": "vite preview",
     "test:e2e": "playwright test",
