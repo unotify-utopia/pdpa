@@ -1,5 +1,6 @@
 import bcrypt from 'bcryptjs';
 import { seedWorkflowData } from './workflow.seed.js';
+import { seedRopaMasterData } from './ropa.seed.js';
 import { refreshTransitionCache } from '../middleware/workflow.middleware.js';
 
 export const initDatabase = async (dbPool) => {
@@ -125,6 +126,102 @@ export const initDatabase = async (dbPool) => {
         requires_comment BOOLEAN      DEFAULT FALSE,
         auto_notify      BOOLEAN      DEFAULT TRUE,
         created_at       TIMESTAMP    DEFAULT NOW()
+      );
+
+      -- ── RoPA Tables (Record of Processing Activities) ──────────────────────
+      -- 1. Master Data
+      CREATE TABLE IF NOT EXISTS ropa_data_subject_types (
+        id VARCHAR(100) PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        description TEXT
+      );
+
+      CREATE TABLE IF NOT EXISTS ropa_data_categories (
+        id VARCHAR(100) PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        is_sensitive_data BOOLEAN DEFAULT false,
+        description TEXT
+      );
+
+      CREATE TABLE IF NOT EXISTS ropa_legal_bases (
+        id VARCHAR(100) PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        description TEXT
+      );
+
+      CREATE TABLE IF NOT EXISTS ropa_data_recipients (
+        id VARCHAR(100) PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        type VARCHAR(100),
+        country VARCHAR(100) DEFAULT 'Thailand'
+      );
+
+      -- 2. Core Transaction
+      CREATE TABLE IF NOT EXISTS ropa_processing_activities (
+        id VARCHAR(100) PRIMARY KEY,
+        org_id VARCHAR(50) REFERENCES tenants(id) ON DELETE CASCADE,
+        activity_name VARCHAR(255) NOT NULL,
+        purpose TEXT,
+        department_name VARCHAR(255),
+        created_by_id VARCHAR(50) REFERENCES users(id) ON DELETE SET NULL,
+        legal_basis_id VARCHAR(100) REFERENCES ropa_legal_bases(id) ON DELETE SET NULL,
+        retention_days INT,
+        retention_trigger VARCHAR(255),
+        status VARCHAR(50) DEFAULT 'DRAFT',
+        current_version INT DEFAULT 1,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      -- 3. Join Tables for Many-to-Many Relationships
+      CREATE TABLE IF NOT EXISTS ropa_activity_data_subjects (
+        activity_id VARCHAR(100) REFERENCES ropa_processing_activities(id) ON DELETE CASCADE,
+        subject_type_id VARCHAR(100) REFERENCES ropa_data_subject_types(id) ON DELETE CASCADE,
+        PRIMARY KEY (activity_id, subject_type_id)
+      );
+
+      CREATE TABLE IF NOT EXISTS ropa_activity_data_categories (
+        activity_id VARCHAR(100) REFERENCES ropa_processing_activities(id) ON DELETE CASCADE,
+        category_id VARCHAR(100) REFERENCES ropa_data_categories(id) ON DELETE CASCADE,
+        PRIMARY KEY (activity_id, category_id)
+      );
+
+      CREATE TABLE IF NOT EXISTS ropa_activity_recipients (
+        activity_id VARCHAR(100) REFERENCES ropa_processing_activities(id) ON DELETE CASCADE,
+        recipient_id VARCHAR(100) REFERENCES ropa_data_recipients(id) ON DELETE CASCADE,
+        PRIMARY KEY (activity_id, recipient_id)
+      );
+
+      -- 4. Versioning & Security
+      CREATE TABLE IF NOT EXISTS ropa_versions (
+        id VARCHAR(100) PRIMARY KEY,
+        activity_id VARCHAR(100) REFERENCES ropa_processing_activities(id) ON DELETE CASCADE,
+        version_number INT NOT NULL,
+        snapshot_data JSONB NOT NULL,
+        approved_by_id VARCHAR(50) REFERENCES users(id) ON DELETE SET NULL,
+        approved_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(activity_id, version_number)
+      );
+
+      CREATE TABLE IF NOT EXISTS ropa_audit_logs (
+        id VARCHAR(100) PRIMARY KEY,
+        org_id VARCHAR(50) REFERENCES tenants(id) ON DELETE CASCADE,
+        action VARCHAR(100) NOT NULL,
+        entity_type VARCHAR(100) NOT NULL,
+        entity_id VARCHAR(100),
+        user_id VARCHAR(50) REFERENCES users(id) ON DELETE SET NULL,
+        ip_address VARCHAR(100),
+        details JSONB,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE TABLE IF NOT EXISTS ropa_files (
+        id VARCHAR(100) PRIMARY KEY,
+        activity_id VARCHAR(100) REFERENCES ropa_processing_activities(id) ON DELETE CASCADE,
+        filename VARCHAR(255) NOT NULL,
+        file_data TEXT, -- Base64 or path
+        uploaded_by VARCHAR(50) REFERENCES users(id) ON DELETE SET NULL,
+        uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
     `);
     
@@ -331,6 +428,9 @@ export const initDatabase = async (dbPool) => {
 
     // ── Seed Workflow Engine data (idempotent) ────────────────────────────
     await seedWorkflowData(dbPool);
+    
+    // ── Seed RoPA Master Data (idempotent) ────────────────────────────────
+    await seedRopaMasterData(dbPool);
 
     // ── Load workflow transition cache into memory ─────────────────────────
     await refreshTransitionCache(dbPool);

@@ -47,6 +47,7 @@ export function createAuthRouter(dbPool, authenticateJWT, addServerAuditLog, sen
   // Staff login with tenant contract validation & OTP/MFA check
   // ─────────────────────────────────────────────
   router.post('/login', async (req, res) => {
+    console.log("HELLO WORLD FROM LOGIN ENDPOINT");
     const { username, password } = req.body;
 
     if (!username || !password) {
@@ -249,7 +250,7 @@ export function createAuthRouter(dbPool, authenticateJWT, addServerAuditLog, sen
     } catch (err) {
       // [SECURITY] Stack trace hidden from client response (VULN-02)
       console.error('[Login Error]', err);
-      return res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง' });
+      return res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง', details: err?.message, stack: err?.stack, error_string: String(err) });
     }
   });
 

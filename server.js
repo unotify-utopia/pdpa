@@ -26,12 +26,14 @@ import { createUsersRouter } from './routes/users.routes.js';
 import rateLimit from 'express-rate-limit';
 import { createAuthMiddleware } from './middleware/auth.middleware.js';
 import cron from 'node-cron';
+import { startBackupScheduler } from './services/backup.service.js';
 import archiveLogs from './archive_logs.cjs';
 import { createReportsRouter } from './routes/reports.routes.js';
 import { createRequestsRouter } from './routes/requests.routes.js';
 import { createSuperAdminRouter } from './routes/superadmin.routes.js';
 import { createPublicRouter } from './routes/public.routes.js';
 import { createDownloadRouter } from './routes/download.routes.js';
+import { createRopaRouter } from './routes/ropa.routes.js';
 import helmet from 'helmet';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -165,6 +167,7 @@ app.use('/api', createRequestsRouter(dbPool, authenticateJWT, requireRole, addSe
 app.use('/api', createSuperAdminRouter(dbPool, authenticateJWT, requireRole, addServerAuditLog, sendMailWithFallback, otpCache, JWT_SECRET));
 app.use('/api', createPublicRouter(dbPool, addServerAuditLog, authenticateJWT, requireRole));
 app.use('/api', createDownloadRouter(dbPool, authenticateJWT, requireRole, addServerAuditLog, sendMailWithFallback, otpCache));
+app.use('/api', createRopaRouter(dbPool, authenticateJWT, requireRole, addServerAuditLog));
 
 // --- SUPER ADMIN, TENANTS (Migrated to routes/superadmin.routes.js) ---
 // --- USER MANAGEMENT (Migrated to routes/users.routes.js) ---
@@ -219,8 +222,12 @@ app.use((err, req, res, next) => {
   next(err);
 });
 
+
 app.listen(PORT, () => {
   console.log(`[PDPA Backend Engine] Running on http://localhost:${PORT}`);
+  
+  // Start the database backup scheduler (Runs daily at 02:00 AM)
+  startBackupScheduler();
   
   // Schedule the Log Archiver to run on the 1st of every month at 02:00 AM
   cron.schedule('0 2 1 * *', () => {

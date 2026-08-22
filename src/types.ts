@@ -289,3 +289,30 @@ export interface DocumentTemplate {
   version: string;
   confidentialityLevel: 'SECRET' | 'CONFIDENTIAL' | 'NORMAL';
 }
+
+// ── RoPA Types ──────────────────────────────────────────────
+export interface RopaMasterData {
+  departments?: any[];
+  subjects: { id: string; name: string; description: string }[];
+  categories: { id: string; name: string; is_sensitive_data: boolean; description: string }[];
+  bases: { id: string; name: string; description: string }[];
+  recipients: { id: string; name: string; type: string; country: string }[];
+}
+
+export interface RopaActivity {
+  id?: string;
+  activity_name: string;
+  purpose: string;
+  department_name: string;
+  legal_basis_id: string;
+  retention_days: number | null;
+  retention_trigger: string;
+  status?: 'DRAFT' | 'PENDING_REVIEW' | 'APPROVED';
+  current_version?: number;
+  subject_type_ids: string[];
+  category_ids: string[];
+  recipient_ids: string[];
+  created_at?: string;
+  category_names?: string[]; // Used in list view
+  legal_basis_name?: string; // Used in list view
+}

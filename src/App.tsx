@@ -31,7 +31,8 @@ import {
   X,
   Activity,
   Eye,
-  ShieldCheck
+  ShieldCheck,
+  Database
 } from 'lucide-react';
 
 import type {
@@ -80,6 +81,7 @@ import type { NotifyType } from './components/NotifyModal';
 import { ChangePasswordModal } from './components/ChangePasswordModal';
 import { ResetPasswordModal } from './components/ResetPasswordModal';
 import { CitizenRequestForm } from './components/CitizenRequestForm';
+import RopaManager from './components/RopaManager';
 
 // Helper: Thai Citizen ID Modulus 11 Checksum Validator
 export const validateThaiCitizenId = (id: string): boolean => {
@@ -185,7 +187,7 @@ export default function App() {
   );
   const [dlToken, setDlToken] = useState<string | null>(null);
   const [publicTab, setPublicTab] = useState<'landing' | 'submit' | 'submitted_success'>('landing');
-  const [internalTab, setInternalTab] = useState<'dashboard' | 'requests' | 'kanban' | 'users' | 'compliance' | 'templates' | 'retention' | 'audit' | 'manual_entry'>('dashboard');
+  const [internalTab, setInternalTab] = useState<'dashboard' | 'requests' | 'kanban' | 'users' | 'compliance' | 'templates' | 'retention' | 'audit' | 'manual_entry' | 'ropa'>('dashboard');
 
   // DB States
   const [requests, setRequests] = useState<Request[]>([]);
@@ -4296,7 +4298,8 @@ export default function App() {
                   { id: 'compliance', label: 'Compliance ตั้งค่ากฎหมาย', icon: Scale, roles: ['admin'] },
                   { id: 'templates', label: 'Template หนังสือราชการ', icon: FileCheck2, roles: ['admin'] },
                   { id: 'retention', label: 'ทำลายและจัดเก็บข้อมูล', icon: Trash2, roles: ['admin'] },
-                  { id: 'audit', label: 'รายงานบันทึกตรวจสอบสิทธิ์', icon: Lock, roles: ['admin', 'auditor', 'dpo'] }
+                  { id: 'audit', label: 'รายงานบันทึกตรวจสอบสิทธิ์', icon: Lock, roles: ['admin', 'auditor', 'dpo'] },
+                  { id: 'ropa', label: 'ระบบ RoPA', icon: Database, roles: ['admin', 'dpo', 'owner', 'auditor'] }
                 ].map((item) => {
                   const hasAccess = activeUser.role === 'superadmin' || item.roles.includes(activeUser.role);
                   if (!hasAccess) return null;
@@ -5524,6 +5527,13 @@ export default function App() {
                       </div>
                     </div>
 
+                  </div>
+                )}
+
+                {/* RoPA (Record of Processing Activities) Tab */}
+                {internalTab === 'ropa' && (
+                  <div className="h-full w-full">
+                    <RopaManager activeUser={activeUser} />
                   </div>
                 )}
 
