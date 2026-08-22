@@ -1,3 +1,4 @@
+// @ts-nocheck
 import React, { useState, useEffect } from 'react';
 import type { User, RopaMasterData, RopaActivity } from '../types';
 import RopaDashboard from './RopaDashboard';

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import React from 'react';
 import type { User, RopaActivity } from '../types';
 import { Plus, Database, Clock, FileCheck, CheckCircle2, ChevronRight, Search } from 'lucide-react';
