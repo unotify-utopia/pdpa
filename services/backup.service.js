@@ -34,7 +34,7 @@ const getValidKey = (key) => {
 
 export const runBackup = async () => {
     console.log('[Backup] เริ่มกระบวนการสำรองข้อมูลฐานข้อมูล...');
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const timestamp = new Date().toLocaleString('sv-SE', { timeZone: 'Asia/Bangkok' }).replace(/[: ]/g, '-');
     const dumpFile = path.join(BACKUP_DIR, `pdpa-db-${timestamp}.sql`);
     const encryptedFile = path.join(BACKUP_DIR, `pdpa-db-${timestamp}.sql.enc`);
 
