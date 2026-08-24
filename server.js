@@ -167,6 +167,13 @@ app.use('/api', createRequestsRouter(dbPool, authenticateJWT, requireRole, addSe
 app.use('/api', createSuperAdminRouter(dbPool, authenticateJWT, requireRole, addServerAuditLog, sendMailWithFallback, otpCache, JWT_SECRET));
 app.use('/api', createPublicRouter(dbPool, addServerAuditLog, authenticateJWT, requireRole));
 app.use('/api', createDownloadRouter(dbPool, authenticateJWT, requireRole, addServerAuditLog, sendMailWithFallback, otpCache));
+app.get('/api/system/config', (req, res) => {
+  res.json({
+    success: true,
+    mode: process.env.SYSTEM_MODE || 'MULTI_TENANT'
+  });
+});
+
 app.use('/api', createRopaRouter(dbPool, authenticateJWT, requireRole, addServerAuditLog));
 
 // --- SUPER ADMIN, TENANTS (Migrated to routes/superadmin.routes.js) ---
@@ -223,12 +230,6 @@ app.use((err, req, res, next) => {
 });
 
 
-app.get('/api/system/config', (req, res) => {
-  res.json({
-    success: true,
-    mode: process.env.SYSTEM_MODE || 'MULTI_TENANT'
-  });
-});
 
 app.listen(PORT, () => {
   console.log(`🚀 PDPA Portal Server (Mode: ${process.env.SYSTEM_MODE || 'MULTI_TENANT'}) running on port ${PORT}`);
