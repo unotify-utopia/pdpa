@@ -3610,7 +3610,8 @@ export default function App() {
                             'ระบบทะเบียนและบริการประชาชน (Citizen & Registration Services)',
                             'ระบบบริหารทรัพยากรบุคคลและบุคลากร (HR & Personnel Records)',
                             'ระบบสมาชิก พอร์ทัล และแอปพลิเคชัน (Portal & Digital Services)',
-                            'ระบบสารบรรณและฐานข้อมูลเอกสารทั่วไป (General Document & Records)'
+                            'ระบบสารบรรณและฐานข้อมูลเอกสารทั่วไป (General Document & Records)',
+                            'อื่น ๆ (โปรดระบุรายละเอียดเพิ่มเติมในช่องที่ 3) (Others)'
                           ].map((sys) => (
                             <label
                               key={sys}
