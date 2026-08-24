@@ -111,10 +111,10 @@ export function createAuthRouter(dbPool, authenticateJWT, addServerAuditLog, sen
         }
       }
 
-      // 2FA / MFA Check
-      const SKIP_MFA_FOR_TESTING = true; // [!NOTE] Disable this in production!
+      // MFA Check (Bypass for testing via ENV variable only)
+      const skipMfa = process.env.SKIP_MFA_FOR_TESTING === 'true';
       
-      if (!SKIP_MFA_FOR_TESTING) {
+      if (!skipMfa) {
         const { mfaCode } = req.body;
         const targetEmail = user.email || user.username;
 
