@@ -1100,13 +1100,13 @@ export default function App() {
             {/* Main Headline */}
             <div className="space-y-3">
               <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight leading-tight">
-                <span>Super Admin </span>
+                <span>{systemMode === 'MULTI_TENANT' ? 'Super Admin ' : 'System '}</span>
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-300 to-amber-300">
-                  Enterprise Control
+                  {systemMode === 'MULTI_TENANT' ? 'Enterprise Control' : 'Administration'}
                 </span>
               </h1>
               <p className={`text-sm sm:text-base ${leftTextSubtitle} leading-relaxed max-w-xl`}>
-                ศูนย์บริหารจัดการระบบกำกับดูแลคำขอสิทธิ์ตามพระราชบัญญัติคุ้มครองข้อมูลส่วนบุคคล พ.ศ. 2562 (PDPA) ระดับความมั่นคงปลอดภัยสูง สำหรับผู้บริการกลางและผู้กำกับดูแลสัญญา
+                ศูนย์บริหารจัดการระบบกำกับดูแลคำขอสิทธิ์ตามพระราชบัญญัติคุ้มครองข้อมูลส่วนบุคคล พ.ศ. 2562 (PDPA) ระดับความมั่นคงปลอดภัยสูง {systemMode === 'MULTI_TENANT' ? 'สำหรับผู้บริการกลางและผู้กำกับดูแลสัญญา' : 'สำหรับผู้ดูแลระบบโครงสร้างพื้นฐาน'}
               </p>
             </div>
 
@@ -1137,17 +1137,19 @@ export default function App() {
 
             {/* Key Capabilities Overview Cards */}
             <div className="space-y-3 pt-2">
-              <div className={`p-4 rounded-2xl border transition ${badgeCardBg} flex items-start gap-3`}>
-                <div className="p-2.5 bg-emerald-500/20 border border-emerald-500/30 rounded-xl text-emerald-400 shrink-0 mt-0.5">
-                  <Building2 className="h-5 w-5" />
+              {systemMode === 'MULTI_TENANT' && (
+                <div className={`p-4 rounded-2xl border transition ${badgeCardBg} flex items-start gap-3`}>
+                  <div className="p-2.5 bg-emerald-500/20 border border-emerald-500/30 rounded-xl text-emerald-400 shrink-0 mt-0.5">
+                    <Building2 className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-sm">ระบบกำกับดูแลสัญญาและส่งมอบข้อมูล (Tenant Lifecycle & Takeout)</h3>
+                    <p className="text-xs text-slate-400 mt-1 leading-relaxed">
+                      ควบคุมสถานะสัญญาทั้งระบบ Active, Expired, Suspended พร้อมเครื่องมือส่งมอบชุดข้อมูล JSON/CSV และหนังสือบันทึกข้อตกลง (Handover Memorandum) รับรองด้วย Digital Signature
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="font-bold text-sm">ระบบกำกับดูแลสัญญาและส่งมอบข้อมูล (Tenant Lifecycle & Takeout)</h3>
-                  <p className="text-xs text-slate-400 mt-1 leading-relaxed">
-                    ควบคุมสถานะสัญญาทั้งระบบ Active, Expired, Suspended พร้อมเครื่องมือส่งมอบชุดข้อมูล JSON/CSV และหนังสือบันทึกข้อตกลง (Handover Memorandum) รับรองด้วย Digital Signature
-                  </p>
-                </div>
-              </div>
+              )}
 
               <div className={`p-4 rounded-2xl border transition ${badgeCardBg} flex items-start gap-3`}>
                 <div className="p-2.5 bg-indigo-500/20 border border-indigo-500/30 rounded-xl text-indigo-400 shrink-0 mt-0.5">
@@ -1193,8 +1195,8 @@ export default function App() {
 
               {/* Header Title inside Card */}
               <div className="space-y-1 mb-6">
-                <h2 className="text-xl font-bold tracking-tight">เข้าสู่ระบบพอร์ทัลผู้ดูแลระบบกลาง</h2>
-                <p className="text-xs text-slate-400">ยืนยันสิทธิ์เพื่อเข้าถึงเครื่องมือบริหารจัดการระดับสูง</p>
+                <h2 className="text-xl font-bold tracking-tight">{systemMode === 'MULTI_TENANT' ? 'เข้าสู่ระบบพอร์ทัลผู้ดูแลระบบกลาง' : 'เข้าสู่ระบบผู้ดูแลโครงสร้างพื้นฐาน'}</h2>
+                <p className="text-xs text-slate-400">{systemMode === 'MULTI_TENANT' ? 'ยืนยันสิทธิ์เพื่อเข้าถึงเครื่องมือบริหารจัดการระดับสูง' : 'ยืนยันสิทธิ์เพื่อเข้าถึงเครื่องมือตั้งค่าระบบ'}</p>
               </div>
 
               {/* STEP 1: Username & Password */}
@@ -1202,7 +1204,7 @@ export default function App() {
                 <form onSubmit={handleStep1Submit} className="space-y-5" autoComplete="off">
                   <div>
                     <label className="block text-sm font-bold mb-2 text-slate-200">
-                      Username ผู้ดูแลระบบกลาง
+                      {systemMode === 'MULTI_TENANT' ? 'Username ผู้ดูแลระบบกลาง' : 'Username ผู้ดูแลระบบ'}
                     </label>
                     <div className="relative">
                       <UserCheck className="absolute left-4 top-4 h-5 w-5 text-emerald-400" />
