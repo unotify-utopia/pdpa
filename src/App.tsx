@@ -3584,9 +3584,15 @@ export default function App() {
                           onChange={(e) => setScopeForm({...scopeForm, requestType: e.target.value as any})}
                           className="w-full text-xs font-semibold border border-slate-300 rounded-lg p-2.5 focus:ring-1 focus:ring-brand-500 bg-white"
                         >
+                          <option value="access_and_copy">ขอเข้าถึงพร้อมขอรับสำเนาข้อมูล (Access & Copy)</option>
                           <option value="access">ขอเข้าถึงข้อมูลส่วนบุคคล (Right to Access)</option>
                           <option value="copy">ขอรับสำเนาข้อมูลส่วนบุคคล (Right to obtain a copy)</option>
-                          <option value="access_and_copy">ขอเข้าถึงพร้อมขอรับสำเนาข้อมูล (Access & Copy)</option>
+                          <option value="erasure">ขอให้ลบหรือทำลายข้อมูลส่วนบุคคล (Right to Erasure)</option>
+                          <option value="rectification">ขอแก้ไขข้อมูลส่วนบุคคลให้ถูกต้อง (Right to Rectification)</option>
+                          <option value="restriction">ขอระงับการใช้ข้อมูลส่วนบุคคล (Right to Restriction of Processing)</option>
+                          <option value="withdraw">ขอถอนความยินยอม (Right to Withdraw Consent)</option>
+                          <option value="object">ขอคัดค้านการเก็บรวบรวม ใช้ หรือเปิดเผย (Right to Object)</option>
+                          <option value="portability">ขอให้โอนย้ายข้อมูลส่วนบุคคล (Right to Data Portability)</option>
                         </select>
                       </div>
 
