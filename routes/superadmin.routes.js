@@ -187,8 +187,8 @@ export function createSuperAdminRouter(dbPool, authenticateJWT, requireRole, add
     try {
       let query = 'SELECT * FROM tenants';
       let params = [];
-      if (process.env.SYSTEM_MODE === 'SINGLE_NODE') {
-        query += ' WHERE id = $1';
+      if (process.env.SYSTEM_MODE && process.env.SYSTEM_MODE.trim() === 'SINGLE_NODE') {
+        query += " WHERE id = $1";
         params.push('default-tenant');
       } else if (req.user.role !== 'superadmin') {
         query += ' WHERE id = $1';

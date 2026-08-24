@@ -97,7 +97,7 @@ export function createPublicRouter(dbPool, addServerAuditLog, authenticateJWT, r
     try {
       let query = "SELECT id, name_th, name_en, status FROM tenants WHERE status = 'active' OR status IS NULL";
       let params = [];
-      if (process.env.SYSTEM_MODE === 'SINGLE_NODE') {
+      if (process.env.SYSTEM_MODE && process.env.SYSTEM_MODE.trim() === 'SINGLE_NODE') {
         query += " AND id = $1";
         params.push('default-tenant');
       }

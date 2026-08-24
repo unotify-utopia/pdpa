@@ -16,7 +16,7 @@ export function createUsersRouter(dbPool, authenticateJWT, requireRole) {
     try {
       let query = 'SELECT id, org_id, username, full_name_th as "fullName", full_name_th as "fullNameTh", full_name_en as "fullNameEn", email, role, roles, department FROM users WHERE role != $1';
       let params = ['superadmin'];
-      if (process.env.SYSTEM_MODE === 'SINGLE_NODE') {
+      if (process.env.SYSTEM_MODE && process.env.SYSTEM_MODE.trim() === 'SINGLE_NODE') {
         query += ' AND org_id = $2';
         params.push('default-tenant');
       } else if (req.user.role !== 'superadmin') {
@@ -50,7 +50,7 @@ export function createUsersRouter(dbPool, authenticateJWT, requireRole) {
         return res.status(403).json({ success: false, message: 'ไม่อนุญาตให้กำหนดสิทธิ์ superadmin' });
       }
       let targetOrgId = req.user.role === 'superadmin' ? orgId : req.user.orgId;
-      if (process.env.SYSTEM_MODE === 'SINGLE_NODE') {
+      if (process.env.SYSTEM_MODE && process.env.SYSTEM_MODE.trim() === 'SINGLE_NODE') {
         targetOrgId = 'default-tenant';
       }
       const pwdHash = await bcrypt.hash(password || '123456', 10);
