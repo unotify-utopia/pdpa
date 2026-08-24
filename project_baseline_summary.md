@@ -1,6 +1,6 @@
-# 🚀 บทสรุปสถาปัตยกรรมและฟีเจอร์ของระบบ PDPA Portal (Baseline Version)
+# 🚀 บทสรุปสถาปัตยกรรมและฟีเจอร์ของระบบ PDPA Portal (Final Beta 2.0)
 
-เอกสารฉบับนี้จัดทำขึ้นเพื่อใช้เป็น **จุดอ้างอิง (Baseline)** สำหรับการพัฒนาต่อยอดในอนาคต เพื่อให้ทีมงานและ AI ทราบถึงบริบท โครงสร้าง และมาตรฐานความปลอดภัยที่ได้ถูกกำหนดไว้ในเวอร์ชันปัจจุบัน โดยไม่ต้องเริ่มต้นอธิบายใหม่
+เอกสารฉบับนี้จัดทำขึ้นเพื่อใช้เป็น **จุดอ้างอิง (Baseline)** สำหรับการพัฒนาต่อยอดในอนาคต เพื่อให้ทีมงานและ AI ทราบถึงบริบท โครงสร้าง และมาตรฐานความปลอดภัยที่ได้ถูกกำหนดไว้ในเวอร์ชันปัจจุบัน (Final Beta 2.0) โดยไม่ต้องเริ่มต้นอธิบายใหม่
 
 ---
 
@@ -10,8 +10,8 @@
 - **Database:** PostgreSQL (`pg` pool)
 - **Code Structure (Backend):**
   - มีการจัดทำโครงสร้างแบบ **Modular Architecture** เพื่อไม่ให้ `server.js` รุงรัง (ปัจจุบันมีเพียง ~150 บรรทัด)
-  - **Routes (`routes/`):** แยกการทำงานตาม Domain เช่น `auth`, `public`, `superadmin`, `workflow`, `requests`, `users`
-  - **Services (`services/`):** แยก Business logic ที่สำคัญ เช่น การส่งอีเมล (`email.service.js`), การคำนวณ SLA (`sla.service.js`), การสร้าง PDF (`pdf.service.js`), การตั้งค่า DB (`database.init.js`)
+  - **Routes (`routes/`):** แยกการทำงานตาม Domain เช่น `auth`, `public`, `superadmin`, `workflow`, `requests`, `users`, `ropa`
+  - **Services (`services/`):** แยก Business logic ที่สำคัญ เช่น การส่งอีเมล (`email.service.js`), การคำนวณ SLA (`sla.service.js`), การสร้าง PDF (`pdf.service.js`), การตั้งค่า DB (`database.init.js`), การ Backup (`backup.service.js`)
   - **Middleware (`middleware/`):** จัดการสิทธิ์การเข้าถึง (`auth.middleware.js`) และการซ่อนฟิลด์ข้อมูลอ่อนไหว (`fieldPermissions.js`)
 
 ---
@@ -40,18 +40,22 @@
 
 ## ⚙️ 4. ฟีเจอร์แกนหลักของธุรกิจ (Core Business Features)
 - **Super Admin & Multi-Tenant:** รองรับการดูแลหลายองค์กร (Org ID) ผ่าน Super Admin (การจัดการ Tenant, ข้อมูล Offboarding)
+- **B2B Onboarding Flow:** ปรับปรุงขั้นตอนการสร้าง Tenant ใหม่โดยยกเลิกข้อบังคับรับ OTP แบบเรียลไทม์เพื่อลดความซ้ำซ้อนในการปฏิบัติงาน แต่ยังคงบังคับให้ลูกค้ายืนยัน OTP ตอนเข้าสู่ระบบครั้งแรกเพื่อความปลอดภัยสูงสุด (Deferred OTP Verification)
 - **Dynamic Workflow & SLA:** 
   - คำนวณ SLA วันครบกำหนดอัตโนมัติตามประเภทของคำร้อง
   - แจ้งเตือน Workflow อัตโนมัติ (Trigger emails) ตามสถานะของตั๋ว
+- **RoPA (Record of Processing Activities):** ระบบบันทึกกิจกรรมการประมวลผลข้อมูลส่วนบุคคล
 - **Field Permissions:** ควบคุมการมองเห็นข้อมูล (เช่น เบอร์โทรศัพท์, อีเมลผู้ร้องขอ) ตามระดับสิทธิ์ (Role) ของพนักงาน
 - **Data Export & Reporting:** การออกเอกสาร PDF (Cover Letter, Discovery Report) สำหรับตอบกลับคำร้อง
 
 ---
 
-## 🗄️ 5. โครงสร้างฐานข้อมูล (Database Management)
+## 🗄️ 5. โครงสร้างฐานข้อมูลและการสำรองข้อมูล (Database & Backups)
 - **Auto Migration:** ควบคุมการสร้างตารางและอัปเดต Schema ฐานข้อมูลอัตโนมัติผ่าน `services/database.init.js`
 - **Error Isolation:** ใช้ `try-catch` บล็อกการทำงานรายคอลัมน์/ตาราง ทำให้เมื่อการ `ALTER TABLE` บางจุดมีข้อผิดพลาด (เช่น มีคอลัมน์อยู่แล้ว) จะไม่ทำให้โครงสร้างส่วนอื่นหยุดทำงาน (Robust Migration)
+- **Automated Cloud Backup:** สำรองข้อมูลฐานข้อมูลอัตโนมัติรายวัน (Cron Job) อัปโหลดขึ้น Cloudflare R2
+- **Backup Security & Encryption:** บีบอัดและเข้ารหัสไฟล์ SQL ด้วยเทคโนโลยี **AES-256-CBC** พร้อมระบบประทับเวลาประเทศไทย (Asia/Bangkok) อย่างแม่นยำ ป้องกันข้อมูลรั่วไหลแม้ไฟล์แบคอัปจะถูกเข้าถึงโดยไม่ได้รับอนุญาต
 
 ---
 > [!NOTE] 
-> **สำหรับ AI ในอนาคต:** เมื่อมีการรับ Requirement ใหม่ ให้ยึดถือมาตรฐานความปลอดภัย (เช่น 2FA, Audit Log) และโครงสร้างการเขียนโค้ดแบบ Modular นี้เป็น **บรรทัดฐาน** ในการพัฒนาโมดูลใหม่ๆ เสมอ
+> **สำหรับ AI ในอนาคต:** เมื่อมีการรับ Requirement ใหม่ ให้ยึดถือมาตรฐานความปลอดภัย (เช่น 2FA, Audit Log, Encryption) และโครงสร้างการเขียนโค้ดแบบ Modular นี้เป็น **บรรทัดฐาน** ในการพัฒนาโมดูลใหม่ๆ เสมอ
