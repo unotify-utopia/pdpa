@@ -97,7 +97,6 @@ app.use(helmet({
       imgSrc: ["'self'", "data:", "https://api.qrserver.com", "blob:"],
       connectSrc: ["'self'"],
       frameSrc: ["'self'", "blob:", "data:"],
-      upgradeInsecureRequests: null, // Allow HTTP access directly (for IP access in sandbox)
     }
   },
   crossOriginEmbedderPolicy: false,
