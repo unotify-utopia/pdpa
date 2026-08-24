@@ -349,6 +349,9 @@ export default function App() {
         if (data && data.success && Array.isArray(data.tenants)) {
            const formatted = data.tenants.map((t: any) => ({ id: t.id, nameTh: t.nameTh || t.name_th, nameEn: t.nameEn || t.name_en, code: t.id.replace('org_', '') }));
            setOrganizations(formatted);
+           if (formatted.length === 1) {
+             setSelectedTargetOrgId(formatted[0].id);
+           }
         }
       })
       .catch(console.error);
@@ -3139,6 +3142,7 @@ export default function App() {
                   {wizardStep === 1 && (
                     <div className="space-y-4">
                       {/* Smart Searchable Tenant Organization Selector */}
+                      {organizations.length !== 1 && (
                       <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5 space-y-4 shadow-sm">
                         <div className="flex items-center justify-between">
                           <label className="block text-xs font-bold text-slate-800 flex items-center gap-1.5">
@@ -3284,6 +3288,7 @@ export default function App() {
                           </div>
                         )}
                       </div>
+                      )}
 
                       <div className="flex gap-4 border-b border-slate-100 pb-4 mb-4">
                         <label className="flex items-center gap-2 cursor-pointer text-xs font-bold">

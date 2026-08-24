@@ -95,7 +95,14 @@ export function createPublicRouter(dbPool, addServerAuditLog, authenticateJWT, r
   // ─────────────────────────────────────────────
   router.get('/public/tenants', async (req, res) => {
     try {
-      const { rows } = await dbPool.query("SELECT id, name_th, name_en, status FROM tenants WHERE status = 'active' OR status IS NULL ORDER BY created_at ASC");
+      let query = "SELECT id, name_th, name_en, status FROM tenants WHERE status = 'active' OR status IS NULL";
+      let params = [];
+      if (process.env.SYSTEM_MODE === 'SINGLE_NODE') {
+        query += " AND id = $1";
+        params.push('default-tenant');
+      }
+      query += " ORDER BY created_at ASC";
+      const { rows } = await dbPool.query(query, params);
       const mappedTenants = rows.map(t => ({
         id: t.id, nameTh: t.name_th, nameEn: t.name_en, code: t.id.replace('org_', '')
       }));
