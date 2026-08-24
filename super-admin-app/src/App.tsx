@@ -402,10 +402,12 @@ export default function App() {
     if (!tenantFormData.email.trim()) return showNotify('กรุณากรอก "อีเมลติดต่อทางการ"', 'warning', 'ข้อมูลไม่ครบถ้วน');
     if (!tenantFormData.phone.trim()) return showNotify('กรุณากรอก "เบอร์โทรศัพท์ติดต่อ" สำหรับช่องทางติดต่อผู้ให้บริการ', 'warning', 'ข้อมูลไม่ครบถ้วน');
 
+    /*
     // Require Email OTP Verification for new tenants
     if (!editingTenantId && !isEmailVerified) {
       return showNotify('กรุณากดปุ่ม "ส่งรหัส OTP ยืนยันอีเมล" และยืนยันตัวตนอีเมลก่อนบันทึก', 'warning', 'ยังไม่ได้ยืนยันอีเมล');
     }
+    */
 
     try {
       const headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` };
@@ -1980,8 +1982,8 @@ export default function App() {
                     required
                   />
                   {!editingTenantId && !isEmailVerified && (
-                    <span className="block text-[10px] text-amber-400 mt-1 font-medium">
-                      ⚠️ ต้องกดส่งรหัส OTP และกรอกรหัสยืนยันอีเมลก่อนสร้างหน่วยงานใหม่
+                    <span className="block text-[10px] text-slate-400 mt-1 font-medium">
+                      💡 ไม่จำเป็นต้องยืนยัน OTP ตอนนี้ (แอดมินระบบจะยืนยันเมื่อ Login ครั้งแรก)
                     </span>
                   )}
                 </div>
