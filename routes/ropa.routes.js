@@ -6,20 +6,20 @@ export function createRopaRouter(dbPool, authenticateJWT, requireRole, addServer
   // 1. GET Master Data
   router.get('/ropa/master-data', authenticateJWT, async (req, res) => {
     try {
-      const departmentsQuery = dbPool.query('SELECT * FROM ropa_departments WHERE org_id = $1', [req.user.org_id]);
+      // const departmentsQuery = dbPool.query('SELECT * FROM ropa_departments WHERE org_id = $1', [req.user.orgId]);
       const subjectsQuery = dbPool.query('SELECT * FROM ropa_data_subject_types');
       const categoriesQuery = dbPool.query('SELECT * FROM ropa_data_categories');
       const basesQuery = dbPool.query('SELECT * FROM ropa_legal_bases');
       const recipientsQuery = dbPool.query('SELECT * FROM ropa_data_recipients');
 
-      const [departments, subjects, categories, bases, recipients] = await Promise.all([
-        departmentsQuery, subjectsQuery, categoriesQuery, basesQuery, recipientsQuery
+      const [subjects, categories, bases, recipients] = await Promise.all([
+        subjectsQuery, categoriesQuery, basesQuery, recipientsQuery
       ]);
 
       res.json({
         success: true,
         data: {
-          departments: departments.rows,
+          departments: [], // Not used currently, derived from user strings
           subjects: subjects.rows,
           categories: categories.rows,
           bases: bases.rows,
