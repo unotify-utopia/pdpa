@@ -1858,6 +1858,25 @@ export default function App() {
                   placeholder="เช่น ศูนย์รับเรื่องร้องเรียน PDPA"
                   className={`w-full px-3 py-2 border rounded-xl text-xs focus:outline-none focus:border-emerald-500 ${inputBgClass}`}
                 />
+                {/* Department Suggestions */}
+                {newUserData.orgId && (
+                  <div className="mt-2 flex flex-wrap gap-1">
+                    {Array.from(new Set(
+                      users
+                        .filter(u => u.orgId === newUserData.orgId && u.department && u.department !== 'หน่วยงานผู้ปฏิบัติงาน')
+                        .map(u => u.department)
+                    )).slice(0, 5).map(dept => (
+                      <button
+                        key={dept}
+                        type="button"
+                        onClick={() => setNewUserData({ ...newUserData, department: dept })}
+                        className="text-[10px] px-2 py-1 bg-slate-800/80 text-emerald-400 rounded-md hover:bg-emerald-500 hover:text-white transition-colors border border-emerald-500/30"
+                      >
+                        + {dept}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Buttons */}
