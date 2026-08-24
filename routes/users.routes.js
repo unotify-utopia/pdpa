@@ -16,7 +16,10 @@ export function createUsersRouter(dbPool, authenticateJWT, requireRole) {
     try {
       let query = 'SELECT id, org_id, username, full_name_th as "fullName", full_name_th as "fullNameTh", full_name_en as "fullNameEn", email, role, roles, department FROM users WHERE role != $1';
       let params = ['superadmin'];
-      if (req.user.role !== 'superadmin') {
+      if (process.env.SYSTEM_MODE === 'SINGLE_NODE') {
+        query += ' AND org_id = $2';
+        params.push('default-tenant');
+      } else if (req.user.role !== 'superadmin') {
         query += ' AND org_id = $2';
         params.push(req.user.orgId);
       }

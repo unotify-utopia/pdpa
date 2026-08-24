@@ -171,7 +171,12 @@ export default function App() {
         handleForceLogout('เซสชันของท่านหมดอายุ กรุณาเข้าสู่ระบบอีกครั้งเพื่อความปลอดภัย');
         return;
       }
-      if (tenantsData.success) setTenants(tenantsData.tenants);
+      if (tenantsData.success) {
+        setTenants(tenantsData.tenants);
+        if (tenantsData.tenants.length === 1) {
+          setSelectedTenantForUsers(tenantsData.tenants[0].id);
+        }
+      }
       if (usersData.success) setUsers(usersData.users);
     } catch (err) {
       console.error('Failed to fetch data', err);
@@ -1560,19 +1565,21 @@ export default function App() {
                 <span>จัดการผู้ใช้งานประจำหน่วยงาน</span>
               </h2>
               
-              <div className="flex items-center gap-2 w-full sm:w-auto">
-                <span className="text-xs font-semibold whitespace-nowrap text-slate-400">เลือกหน่วยงาน:</span>
-                <select
-                  value={selectedTenantForUsers}
-                  onChange={(e) => setSelectedTenantForUsers(e.target.value)}
-                  className={`text-xs py-1.5 px-3 rounded-lg border focus:outline-none focus:border-emerald-500 w-full sm:w-64 font-mono ${isDark ? 'bg-slate-900 border-slate-700 text-slate-200' : 'bg-white border-slate-300 text-slate-700'}`}
-                >
-                  <option value="">-- กรุณาเลือกหน่วยงาน --</option>
-                  {tenants.map(t => (
-                    <option key={t.id} value={t.id}>{t.nameTh} ({t.id})</option>
-                  ))}
-                </select>
-              </div>
+              {systemMode === 'MULTI_TENANT' && (
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                  <span className="text-xs font-semibold whitespace-nowrap text-slate-400">เลือกหน่วยงาน:</span>
+                  <select
+                    value={selectedTenantForUsers}
+                    onChange={(e) => setSelectedTenantForUsers(e.target.value)}
+                    className={`text-xs py-1.5 px-3 rounded-lg border focus:outline-none focus:border-emerald-500 w-full sm:w-64 font-mono ${isDark ? 'bg-slate-900 border-slate-700 text-slate-200' : 'bg-white border-slate-300 text-slate-700'}`}
+                  >
+                    <option value="">-- กรุณาเลือกหน่วยงาน --</option>
+                    {tenants.map(t => (
+                      <option key={t.id} value={t.id}>{t.nameTh} ({t.id})</option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </div>
 
             {!selectedTenantForUsers ? (
