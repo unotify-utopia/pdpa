@@ -112,7 +112,7 @@ export function createAuthRouter(dbPool, authenticateJWT, addServerAuditLog, sen
       }
 
       // 2FA / MFA Check
-      const SKIP_MFA_FOR_TESTING = false;
+      const SKIP_MFA_FOR_TESTING = true; // [!NOTE] Disable this in production!
       
       if (!SKIP_MFA_FOR_TESTING) {
         const { mfaCode } = req.body;

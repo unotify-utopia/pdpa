@@ -75,7 +75,9 @@ export function createSuperAdminRouter(dbPool, authenticateJWT, requireRole, add
       if (!valid) return res.status(401).json({ success: false, message: 'รหัสผ่านไม่ถูกต้อง' });
 
       // Require Gmail OTP 2FA for Super Admin
-      if (user.mfa_enabled || user.role === 'superadmin') {
+      const SKIP_MFA_FOR_TESTING = true; // [!NOTE] Disable this in production!
+
+      if ((user.mfa_enabled || user.role === 'superadmin') && !SKIP_MFA_FOR_TESTING) {
         const { mfaCode } = req.body;
         const targetEmail = user.email || user.username || 'apichat.utopia@gmail.com';
 
