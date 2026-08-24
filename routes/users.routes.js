@@ -46,7 +46,10 @@ export function createUsersRouter(dbPool, authenticateJWT, requireRole) {
       if (role === 'superadmin' || (roles && roles.includes('superadmin'))) {
         return res.status(403).json({ success: false, message: 'ไม่อนุญาตให้กำหนดสิทธิ์ superadmin' });
       }
-      const targetOrgId = req.user.role === 'superadmin' ? orgId : req.user.orgId;
+      let targetOrgId = req.user.role === 'superadmin' ? orgId : req.user.orgId;
+      if (process.env.SYSTEM_MODE === 'SINGLE_NODE') {
+        targetOrgId = 'default-tenant';
+      }
       const pwdHash = await bcrypt.hash(password || '123456', 10);
       const assignedRoles = (roles && Array.isArray(roles) && roles.length > 0) ? roles : [role || 'intake'];
       const primaryRole = role || assignedRoles[0] || 'intake';

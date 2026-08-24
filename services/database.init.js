@@ -327,6 +327,18 @@ export const initDatabase = async (dbPool) => {
       `);
     }
 
+    // Auto-create default-tenant for SINGLE_NODE mode
+    if (process.env.SYSTEM_MODE === 'SINGLE_NODE') {
+      const { rows: defaultTenant } = await dbPool.query('SELECT id FROM tenants WHERE id = $1', ['default-tenant']);
+      if (defaultTenant.length === 0) {
+        console.log('🌱 SYSTEM_MODE is SINGLE_NODE: Auto-creating default-tenant...');
+        await dbPool.query(`
+          INSERT INTO tenants (id, name_th, name_en, email, phone) VALUES 
+          ('default-tenant', 'องค์กรของคุณ (Single Node)', 'Your Organization', 'admin@example.com', '02-000-0000');
+        `);
+      }
+    }
+
     // Migration: ensure public_otps columns can hold long values (key for emails, otp for bcrypt hashes)
     try {
       await dbPool.query(`ALTER TABLE public_otps ALTER COLUMN key TYPE VARCHAR(255);`);

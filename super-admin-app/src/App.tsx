@@ -135,8 +135,23 @@ export default function App() {
   // Master Tenants List State
   const [tenants, setTenants] = useState<Tenant[]>([]);
 
+  // System Config State
+  const [systemMode, setSystemMode] = useState<'MULTI_TENANT' | 'SINGLE_NODE'>('MULTI_TENANT');
+
   // Master Users List State
   const [users, setUsers] = useState<User[]>([]);
+
+  // Fetch System Config
+  useEffect(() => {
+    fetch('/api/system/config')
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && data.mode) {
+          setSystemMode(data.mode);
+        }
+      })
+      .catch(err => console.error('Error fetching system config:', err));
+  }, []);
 
   // Fetch Data from Backend
   const fetchData = async (authToken: string) => {
@@ -1363,7 +1378,7 @@ export default function App() {
             </div>
             <div>
               <h1 className="font-bold text-base flex items-center gap-2">
-                <span>Super Admin Enterprise Console</span>
+                <span>{systemMode === 'MULTI_TENANT' ? 'Super Admin Enterprise Console' : 'System Administration Console'}</span>
                 <span className="bg-emerald-500/20 text-emerald-500 border border-emerald-500/30 text-[10px] px-2 py-0.5 rounded-full font-mono font-bold">
                   2FA MFA VERIFIED
                 </span>
@@ -1417,15 +1432,17 @@ export default function App() {
               <span>Dashboard (สถิติระบบ)</span>
             </button>
 
-            <button
-              onClick={() => setActiveTab('tenants')}
-              className={`px-4 py-2 rounded-lg text-xs font-bold transition flex items-center gap-2 ${
-                activeTab === 'tenants' ? 'bg-emerald-600 text-white shadow-md' : inactiveTabClass
-              }`}
-            >
-              <Building2 className="h-4 w-4" />
-              <span>1. จัดการหน่วยงาน (Tenants - {tenants.length})</span>
-            </button>
+            {systemMode === 'MULTI_TENANT' && (
+              <button
+                onClick={() => setActiveTab('tenants')}
+                className={`px-4 py-2 rounded-lg text-xs font-bold transition flex items-center gap-2 ${
+                  activeTab === 'tenants' ? 'bg-emerald-600 text-white shadow-md' : inactiveTabClass
+                }`}
+              >
+                <Building2 className="h-4 w-4" />
+                <span>1. จัดการหน่วยงาน (Tenants - {tenants.length})</span>
+              </button>
+            )}
 
             <button
               onClick={() => setActiveTab('users')}
@@ -1434,18 +1451,20 @@ export default function App() {
               }`}
             >
               <UserCheck className="h-4 w-4" />
-              <span>2. จัดการผู้ใช้ & รหัสผ่าน (Users - {users.length})</span>
+              <span>{systemMode === 'MULTI_TENANT' ? '2.' : '1.'} จัดการผู้ใช้ & รหัสผ่าน (Users - {users.length})</span>
             </button>
 
-            <button
-              onClick={() => setActiveTab('export')}
-              className={`px-4 py-2 rounded-lg text-xs font-bold transition flex items-center gap-2 ${
-                activeTab === 'export' ? 'bg-amber-600 text-white shadow-md' : inactiveTabClass
-              }`}
-            >
-              <Archive className="h-4 w-4" />
-              <span>3. ส่งมอบข้อมูลหมดสัญญา (Offboarding - {tenants.length})</span>
-            </button>
+            {systemMode === 'MULTI_TENANT' && (
+              <button
+                onClick={() => setActiveTab('export')}
+                className={`px-4 py-2 rounded-lg text-xs font-bold transition flex items-center gap-2 ${
+                  activeTab === 'export' ? 'bg-amber-600 text-white shadow-md' : inactiveTabClass
+                }`}
+              >
+                <Archive className="h-4 w-4" />
+                <span>3. ส่งมอบข้อมูลหมดสัญญา (Offboarding - {tenants.length})</span>
+              </button>
+            )}
 
             <button
               onClick={() => setActiveTab('workflow')}
@@ -1454,7 +1473,7 @@ export default function App() {
               }`}
             >
               <Activity className="h-4 w-4" />
-              <span>4. จัดการระบบ Workflow</span>
+              <span>{systemMode === 'MULTI_TENANT' ? '4.' : '2.'} จัดการระบบ Workflow</span>
             </button>
           </div>
 
@@ -1771,25 +1790,27 @@ export default function App() {
             </div>
 
             <form onSubmit={handleCreateUserSubmit} className="space-y-4">
-              {/* 1. เลือกหน่วยงาน (Dropdown) */}
-              <div>
-                <label className="block text-xs font-bold mb-1.5 flex items-center justify-between">
-                  <span>🏢 เลือกหน่วยงานต้นสังกัด (Select Tenant Organization)</span>
-                  <span className="text-emerald-500 text-[10px]">✓ ป้องกันการพิมพ์รหัสผิด</span>
-                </label>
-                <select
-                  value={newUserData.orgId}
-                  onChange={(e) => setNewUserData({ ...newUserData, orgId: e.target.value })}
-                  className={`w-full px-3 py-2.5 border rounded-xl text-xs font-semibold focus:outline-none focus:border-emerald-500 ${inputBgClass}`}
-                  required
-                >
-                  {tenants.map((org) => (
-                    <option key={org.id} value={org.id} className="bg-slate-900 text-white">
-                      {org.nameTh} ({org.id})
-                    </option>
-                  ))}
-                </select>
-              </div>
+              {/* 1. เลือกหน่วยงาน (Dropdown) - Hidden in SINGLE_NODE mode */}
+              {systemMode === 'MULTI_TENANT' && (
+                <div>
+                  <label className="block text-xs font-bold mb-1.5 flex items-center justify-between">
+                    <span>🏢 เลือกหน่วยงานต้นสังกัด (Select Tenant Organization)</span>
+                    <span className="text-emerald-500 text-[10px]">✓ ป้องกันการพิมพ์รหัสผิด</span>
+                  </label>
+                  <select
+                    value={newUserData.orgId}
+                    onChange={(e) => setNewUserData({ ...newUserData, orgId: e.target.value })}
+                    className={`w-full px-3 py-2.5 border rounded-xl text-xs font-semibold focus:outline-none focus:border-emerald-500 ${inputBgClass}`}
+                    required
+                  >
+                    {tenants.map((org) => (
+                      <option key={org.id} value={org.id} className="bg-slate-900 text-white">
+                        {org.nameTh} ({org.id})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               {/* 2. Username & Full Name */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
