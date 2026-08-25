@@ -481,6 +481,23 @@ export function createSuperAdminRouter(dbPool, authenticateJWT, requireRole, add
       res.status(500).json({ success: false, message: 'Failed to fetch dashboard stats' });
     }
   });
+  // ==========================================
+  // GET: Fetch Cookie Consent Logs (Super Admin Only)
+  // ==========================================
+  router.get('/cookie-logs', authenticateJWT, requireRole('superadmin'), async (req, res) => {
+    try {
+      const result = await dbPool.query(`
+        SELECT id, session_id, ip_address, user_agent, action, preferences, created_at 
+        FROM cookie_consent_logs 
+        ORDER BY created_at DESC 
+        LIMIT 500
+      `);
+      res.json({ success: true, logs: result.rows });
+    } catch (err) {
+      console.error('Error fetching cookie logs:', err);
+      res.status(500).json({ success: false, message: 'Failed to fetch cookie logs' });
+    }
+  });
 
   return router;
 }
