@@ -82,6 +82,9 @@ import { ChangePasswordModal } from './components/ChangePasswordModal';
 import { ResetPasswordModal } from './components/ResetPasswordModal';
 import { CitizenRequestForm } from './components/CitizenRequestForm';
 import RopaManager from './components/RopaManager';
+import { CookieBanner } from './components/CookieBanner';
+import { CookieSettingsModal } from './components/CookieSettingsModal';
+import { CookiePolicy } from './components/CookiePolicy';
 
 // Helper: Thai Citizen ID Modulus 11 Checksum Validator
 export const validateThaiCitizenId = (id: string): boolean => {
@@ -209,6 +212,49 @@ export default function App() {
   const [manualChannel, setManualChannel] = useState<'office' | 'post' | 'email' | 'e-service'>('office');
   const [manualRefNo, setManualRefNo] = useState('');
   const [manualEntrySuccessTrackingNo, setManualEntrySuccessTrackingNo] = useState<string | null>(null);
+
+  // Cookie Consent States
+  const [showCookieBanner, setShowCookieBanner] = useState(false);
+  const [showCookieSettings, setShowCookieSettings] = useState(false);
+  const [showCookiePolicy, setShowCookiePolicy] = useState(false);
+  const [cookiePreferences, setCookiePreferences] = useState({ necessary: true, analytics: false, marketing: false });
+
+  useEffect(() => {
+    const consent = localStorage.getItem('pdpa_cookie_consent');
+    if (!consent) {
+      setShowCookieBanner(true);
+    } else {
+      try {
+        setCookiePreferences(JSON.parse(consent).preferences);
+      } catch (e) {}
+    }
+  }, []);
+
+  const handleSaveCookieConsent = async (action: string, prefs: any) => {
+    try {
+      let sessionId = localStorage.getItem('pdpa_session_id');
+      if (!sessionId) {
+        sessionId = `sess_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+        localStorage.setItem('pdpa_session_id', sessionId);
+      }
+      
+      const consentData = { action, preferences: prefs, timestamp: new Date().toISOString() };
+      localStorage.setItem('pdpa_cookie_consent', JSON.stringify(consentData));
+      
+      setCookiePreferences(prefs);
+      setShowCookieBanner(false);
+      setShowCookieSettings(false);
+
+      // Send to API
+      await fetch('/api/cookie-consent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId, action, preferences: prefs })
+      });
+    } catch (err) {
+      console.error('Error saving cookie consent:', err);
+    }
+  };
 
   // Organizations from DB
   const [organizations, setOrganizations] = useState<any[]>([]);
@@ -2256,6 +2302,38 @@ export default function App() {
   return (
     <div className="min-h-screen print:min-h-0 print:h-auto print:block flex flex-col font-sans">
       
+      {showCookieBanner && (
+        <CookieBanner 
+          onAcceptAll={() => handleSaveCookieConsent('accept_all', { necessary: true, analytics: true, marketing: true })}
+          onRejectAll={() => handleSaveCookieConsent('reject_all', { necessary: true, analytics: false, marketing: false })}
+          onCustomize={() => setShowCookieSettings(true)}
+          onPolicyClick={() => setShowCookiePolicy(true)}
+        />
+      )}
+
+      <CookieSettingsModal
+        isOpen={showCookieSettings}
+        onClose={() => setShowCookieSettings(false)}
+        initialPreferences={cookiePreferences}
+        onSave={(prefs) => handleSaveCookieConsent('custom', prefs)}
+        onPolicyClick={() => {
+          setShowCookieSettings(false);
+          setShowCookiePolicy(true);
+        }}
+      />
+      
+      {showCookiePolicy && (
+        <div className="fixed inset-0 z-[120] bg-white overflow-y-auto">
+          <div className="sticky top-0 bg-white border-b border-gray-200 p-4 flex justify-between items-center shadow-sm z-10">
+            <h2 className="text-xl font-bold text-gray-800">นโยบายคุกกี้ (Cookie Policy)</h2>
+            <button onClick={() => setShowCookiePolicy(false)} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+              <X size={24} className="text-gray-600" />
+            </button>
+          </div>
+          <CookiePolicy />
+        </div>
+      )}
+
       {/* Header Navigation Bar */}
       <div className="no-print bg-slate-900 text-slate-200 px-4 py-2 flex flex-wrap items-center justify-between text-xs gap-2 select-none border-b border-slate-800 z-10">
         <div className="flex items-center gap-2 font-bold">

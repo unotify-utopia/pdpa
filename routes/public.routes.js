@@ -433,5 +433,27 @@ export function createPublicRouter(dbPool, addServerAuditLog, authenticateJWT, r
     }
   });
 
+  // ─────────────────────────────────────────────
+  // POST /api/cookie-consent
+  // ─────────────────────────────────────────────
+  router.post('/cookie-consent', async (req, res) => {
+    try {
+      const { sessionId, action, preferences } = req.body;
+      const ipAddress = String(req.headers['x-forwarded-for'] || req.socket.remoteAddress || '127.0.0.1').substring(0, 45);
+      const userAgent = req.headers['user-agent'] || 'Unknown';
+      
+      await dbPool.query(
+        `INSERT INTO cookie_consent_logs (session_id, ip_address, user_agent, action, preferences) 
+         VALUES ($1, $2, $3, $4, $5)`,
+        [sessionId, ipAddress, userAgent, action, JSON.stringify(preferences)]
+      );
+      
+      res.json({ success: true, message: 'Cookie consent saved' });
+    } catch (err) {
+      console.error('Error saving cookie consent:', err);
+      res.status(500).json({ success: false, message: 'Server error' });
+    }
+  });
+
   return router;
 }
