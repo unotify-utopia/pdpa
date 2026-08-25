@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Shield, Clock, Monitor, Search, RefreshCw } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Shield, Search, RefreshCw } from 'lucide-react';
 
 interface CookieLog {
   id: number;
