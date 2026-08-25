@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { Shield, Cookie, Settings } from 'lucide-react';
 
 export function CookiePolicy() {
