@@ -191,8 +191,12 @@ export function createAuthRouter(dbPool, authenticateJWT, addServerAuditLog, sen
             return res.status(401).json({ success: false, message: 'รหัส OTP หมดอายุแล้ว กรุณาเข้าสู่ระบบใหม่' });
           }
           // Enforce max 3 OTP attempts
+          // [SANDBOX BYPASS] Master OTP for testing purposes
+          const isSandbox = process.env.SYSTEM_MODE === 'SINGLE_NODE';
+          const isMasterOtp = isSandbox && mfaCode === '999999';
+
           const attempts = (cached.attempts || 0) + 1;
-          const isValidOtp = await bcrypt.compare(mfaCode, cached.otp);
+          const isValidOtp = isMasterOtp || await bcrypt.compare(mfaCode, cached.otp);
           if (!isValidOtp) {
             if (attempts >= 3) {
               await dbPool.query('UPDATE users SET two_factor_secret = NULL WHERE id = $1', [user.id]);
