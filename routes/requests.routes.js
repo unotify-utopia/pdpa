@@ -270,8 +270,12 @@ export function createRequestsRouter(dbPool, authenticateJWT, requireRole, addSe
       let params = [];
       
       if (!req.user.isSuperAdmin) {
+        let targetOrgId = req.user.orgId;
+        if (process.env.SYSTEM_MODE === 'SINGLE_NODE') {
+          targetOrgId = 'default-tenant';
+        }
         query = 'SELECT data FROM requests WHERE org_id = $1 ORDER BY created_at DESC';
-        params = [req.user.orgId];
+        params = [targetOrgId];
       }
       
       const { rows } = await dbPool.query(query, params);
@@ -293,8 +297,10 @@ export function createRequestsRouter(dbPool, authenticateJWT, requireRole, addSe
       let query = 'SELECT data FROM requests';
       let params = [];
       if (!req.user.isSuperAdmin) {
+        let targetOrgId = req.user.orgId;
+        if (process.env.SYSTEM_MODE === 'SINGLE_NODE') targetOrgId = 'default-tenant';
         query = 'SELECT data FROM requests WHERE org_id = $1';
-        params = [req.user.orgId];
+        params = [targetOrgId];
       }
       const { rows } = await dbPool.query(query, params);
       const requests = rows.map(r => r.data || {});
