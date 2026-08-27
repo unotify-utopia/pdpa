@@ -80,7 +80,7 @@ const JWT_SECRET = process.env.JWT_SECRET || crypto.randomBytes(64).toString('he
 
 // Restrict CORS to specific origins
 const corsOptions = {
-  origin: process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',') : (process.env.NODE_ENV === 'production' ? ['https://pdpa.numcomputer.com'] : ['https://pdpa.numcomputer.com', 'http://localhost:3000']),
+  origin: process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',') : (process.env.NODE_ENV === 'production' ? ['https://utopia.pdpa.click'] : ['https://utopia.pdpa.click', 'http://localhost:3000']),
   optionsSuccessStatus: 200
 };
 app.use(cors(corsOptions));

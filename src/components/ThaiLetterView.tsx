@@ -319,7 +319,7 @@ export const ThaiLetterView: React.FC<ThaiLetterViewProps> = ({
               
               <div className="py-4 flex flex-col items-center justify-center space-y-4">
                 <a 
-                  href={`https://pdpa.numcomputer.com/dl?ref=${request.trackingNo}`} 
+                  href={`https://utopia.pdpa.click/dl?ref=${request.trackingNo}`} 
                   target="_blank" 
                   rel="noreferrer"
                   className="inline-block bg-brand-600 hover:bg-brand-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition transform hover:-translate-y-0.5"
@@ -330,7 +330,7 @@ export const ThaiLetterView: React.FC<ThaiLetterViewProps> = ({
                 <div className="pt-2 flex flex-col items-center space-y-2">
                   <span className="text-xs font-semibold text-slate-500">หรือ สแกน QR Code เพื่อดาวน์โหลดผ่านมือถือ</span>
                   <img 
-                    src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://pdpa.numcomputer.com/dl?ref=${request.trackingNo}`} 
+                    src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://utopia.pdpa.click/dl?ref=${request.trackingNo}`} 
                     alt="QR Code" 
                     className="w-[120px] h-[120px] p-2 border border-slate-200 rounded-lg shadow-sm"
                   />
@@ -344,7 +344,7 @@ export const ThaiLetterView: React.FC<ThaiLetterViewProps> = ({
               
               <p className="text-xs text-slate-500 pt-4 border-t border-slate-100">
                 หากท่านมีข้อสงสัย หรือต้องการตรวจสอบความถูกต้องของอีเมลฉบับนี้<br/>
-                สามารถนำรหัสคำขอ {request.trackingNo} ไปตรวจสอบได้ที่ <a href="#" className="text-brand-600 hover:underline">pdpa.numcomputer.com/verify</a><br/>
+                สามารถนำรหัสคำขอ {request.trackingNo} ไปตรวจสอบได้ที่ <a href="#" className="text-brand-600 hover:underline">utopia.pdpa.click/verify</a><br/>
                 <br/>
                 ขอแสดงความนับถือ<br/>
                 {org.nameTh}

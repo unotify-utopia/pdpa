@@ -164,7 +164,7 @@ export function createRequestsRouter(dbPool, authenticateJWT, requireRole, addSe
       }
 
       // Generate QR Code URL using a public API so it renders in email clients (which often block base64 images)
-      const directDownloadUrl = `https://pdpa.numcomputer.com/dl/${trackingNo}`;
+      const directDownloadUrl = `https://utopia.pdpa.click/dl/${trackingNo}`;
       const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(directDownloadUrl)}`;
 
       const emailHtml = `
@@ -179,7 +179,7 @@ export function createRequestsRouter(dbPool, authenticateJWT, requireRole, addSe
               <img src="${qrImageUrl}" alt="QR Code for Download" width="150" height="150" style="border-radius: 8px; border: 1px solid #cbd5e1; padding: 8px; background: white;" />
             </div>
             <p style="font-size: 14px; margin-bottom: 8px;">หรือสแกน QR Code เพื่อดาวน์โหลดเอกสาร</p>
-            <p style="margin: 4px 0;">เข้าสู่เว็บไซต์: <a href="https://pdpa.numcomputer.com/dl" style="color: #2563eb;">pdpa.numcomputer.com/dl</a></p>
+            <p style="margin: 4px 0;">เข้าสู่เว็บไซต์: <a href="https://utopia.pdpa.click/dl" style="color: #2563eb;">utopia.pdpa.click/dl</a></p>
             <p style="margin: 4px 0;">และระบุรหัสอ้างอิง: <strong>${trackingNo}</strong></p>
           </div>
           <p style="font-size: 12px; color: #64748b;">
@@ -470,7 +470,7 @@ export function createRequestsRouter(dbPool, authenticateJWT, requireRole, addSe
       } catch (e) {}
 
       // Build the public download URL
-      const baseUrl = process.env.APP_BASE_URL || `https://pdpa.numcomputer.com`;
+      const baseUrl = process.env.APP_BASE_URL || `https://utopia.pdpa.click`;
       const downloadUrl = `${baseUrl}/dl/${token}`;
 
       // Generate QR code as data URL

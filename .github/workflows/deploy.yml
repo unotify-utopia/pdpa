@@ -7,7 +7,7 @@ on:
 
 jobs:
   deploy:
-    name: Deploy to pdpa.numcomputer.com
+    name: Deploy to utopia.pdpa.click
     runs-on: ubuntu-latest
 
     steps:
