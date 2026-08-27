@@ -492,14 +492,7 @@ export function createSuperAdminRouter(dbPool, authenticateJWT, requireRole, add
         dbSize: dbSizeRes.rows[0],
         metrics: metricsRes.rows[0],
         archives: { count: archivesCount, sizeBytes: archivesSize },
-        // [MOCK DATA] Temporary mockup for UI testing on Sandbox
-        recentAlerts: [
-          { id: 'm1', timestamp: new Date(Date.now() - 300000).toISOString(), action: 'OTP_VERIFICATION_FAILED', ip_address: '192.168.1.105', details: 'Incorrect OTP attempt for key: admin@dopa.go.th' },
-          { id: 'm2', timestamp: new Date(Date.now() - 1500000).toISOString(), action: 'SUPERADMIN_LOGIN_FAILED', ip_address: '10.0.0.52', details: 'Invalid password for user: super.admin' },
-          { id: 'm3', timestamp: new Date(Date.now() - 7200000).toISOString(), action: 'PAYLOAD_TOO_LARGE_ATTEMPT', ip_address: '45.33.12.99', details: 'Request exceeded 10MB limit on /api/requests' },
-          { id: 'm4', timestamp: new Date(Date.now() - 18000000).toISOString(), action: 'FRONTEND_PAYLOAD_TOO_LARGE', ip_address: '118.175.22.41', details: 'Blocked malicious large base64 upload' },
-          { id: 'm5', timestamp: new Date(Date.now() - 86400000).toISOString(), action: 'OTP_VERIFICATION_FAILED', ip_address: '127.0.0.1', details: 'OTP expired for key: REQ-028384' }
-        ],
+        recentAlerts: alertsRes.rows,
         systemInfo: systemInfo,
         diskInfo: diskInfo
       });
