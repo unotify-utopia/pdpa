@@ -31,8 +31,7 @@ import {
   X,
   Activity,
   Eye,
-  ShieldCheck,
-  Database
+  ShieldCheck
 } from 'lucide-react';
 
 import type {
