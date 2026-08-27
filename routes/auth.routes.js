@@ -216,7 +216,8 @@ export function createAuthRouter(dbPool, authenticateJWT, addServerAuditLog, sen
 
       // Password expiration check (6 months = 180 days)
       const isExpired = user.password_changed_at ? (new Date() - new Date(user.password_changed_at)) > (180 * 24 * 60 * 60 * 1000) : false;
-      const requiresPasswordChange = user.force_password_change || isExpired;
+      const isSandbox = process.env.SYSTEM_MODE === 'SINGLE_NODE';
+      const requiresPasswordChange = !isSandbox && (user.force_password_change || isExpired);
 
       // Generate JWT token
       const tokenPayload = {
