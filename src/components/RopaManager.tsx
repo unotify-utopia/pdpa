@@ -24,12 +24,12 @@ export default function RopaManager({ activeUser }: RopaManagerProps) {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const token = localStorage.getItem('token');
+      const token = sessionStorage.getItem('pdpa_jwt_token') || sessionStorage.getItem('pdpa_token') || localStorage.getItem('token');
       const headers = { 'Authorization': `Bearer ${token}` };
       
       const [masterRes, activitiesRes] = await Promise.all([
-        fetch('http://localhost:3001/api/ropa/master-data', { headers }),
-        fetch('http://localhost:3001/api/ropa/activities', { headers })
+        fetch('/api/ropa/master-data', { headers }),
+        fetch('/api/ropa/activities', { headers })
       ]);
       
       const masterDataRes = await masterRes.json();
