@@ -4388,8 +4388,7 @@ export default function App() {
                   { id: 'compliance', label: 'Compliance ตั้งค่ากฎหมาย', icon: Scale, roles: ['admin'] },
                   { id: 'templates', label: 'Template หนังสือราชการ', icon: FileCheck2, roles: ['admin'] },
                   { id: 'retention', label: 'ทำลายและจัดเก็บข้อมูล', icon: Trash2, roles: ['admin'] },
-                  { id: 'audit', label: 'รายงานบันทึกตรวจสอบสิทธิ์', icon: Lock, roles: ['admin', 'auditor', 'dpo'] },
-                  { id: 'ropa', label: 'ระบบ RoPA', icon: Database, roles: ['admin', 'dpo', 'owner', 'auditor'] }
+                  { id: 'audit', label: 'รายงานบันทึกตรวจสอบสิทธิ์', icon: Lock, roles: ['admin', 'auditor', 'dpo'] }
                 ].map((item) => {
                   const hasAccess = activeUser.role === 'superadmin' || item.roles.includes(activeUser.role);
                   if (!hasAccess) return null;
