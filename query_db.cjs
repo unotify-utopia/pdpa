@@ -2,7 +2,7 @@ const pg = require('pg');
 
 async function main() {
   const pool = new pg.Pool({ 
-    host: 'pdpa.numcomputer.com', 
+    host: 'portal.pdpa.click', 
     port: 5432, 
     user: 'pdpa_admin', 
     password: 'PdpaSecure_Prod2026', 
