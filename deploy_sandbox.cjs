@@ -2,7 +2,7 @@ const { Client } = require('ssh2');
 
 const host = '119.59.102.26';
 const username = 'root';
-const password = 'G)6cUxio73M5F';
+const password = process.env.SSH_PASSWORD;
 
 const conn = new Client();
 
