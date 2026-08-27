@@ -80,7 +80,9 @@ export async function getTaximailSessionId() {
   }
 }
 
-export async function sendMailWithFallback(mailOptions) {
+import { enqueueEmail } from './email.queue.js';
+
+export async function executeEmailSend(mailOptions) {
   // PRIMARY: Use Resend REST API if API key is configured
   if (process.env.RESEND_API_KEY) {
     try {
@@ -202,6 +204,13 @@ export async function sendMailWithFallback(mailOptions) {
   throw new Error(`All ${transporters.length} SMTP accounts failed. Last error: ${lastError.message}`);
 }
 
+export async function sendMailWithFallback(mailOptions, priority = 10) {
+  // Automatically assign highest priority (1) to OTP emails
+  if (mailOptions.subject && mailOptions.subject.includes('OTP')) {
+    priority = 1;
+  }
+  return enqueueEmail(mailOptions, priority);
+}
 // --- WORKFLOW EMAIL LOGGING & HELPERS ---
 export const workflowEmailLogs = [];
 
@@ -494,3 +503,6 @@ export const maskIpAddress = (ipStr) => {
   }
   return '***.***.***.***';
 };
+
+
+

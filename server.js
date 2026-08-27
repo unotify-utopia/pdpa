@@ -200,6 +200,28 @@ app.use('/super-admin', (req, res) => {
 // ── Workflow Engine Routes (ERPNext-inspired) ─────────────────────────────
 app.use('/api/workflow', createWorkflowRouter(dbPool, authenticateJWT, requireRole));
 
+// --- WEBHOOKS ---
+app.post('/api/webhooks/resend', async (req, res) => {
+  try {
+    const payload = req.body;
+    
+    // Resend sends { type: "email.bounced", data: { to: ["..."] } }
+    if (payload && payload.type === 'email.bounced') {
+      const bouncedEmail = payload.data?.to?.[0];
+      console.warn(`[Webhook] Resend Alert: Email bounced to ${bouncedEmail}`);
+      
+      // Log to database if needed
+      await addServerAuditLog('EMAIL_BOUNCED', `Delivery failed for ${bouncedEmail}`, null).catch(() => {});
+    }
+    
+    // Always return 200 OK so Resend knows we received it
+    res.status(200).json({ success: true });
+  } catch (err) {
+    console.error('[Webhook] Error processing Resend webhook:', err);
+    res.status(500).json({ success: false });
+  }
+});
+
 // --- MAIN STATIC FRONTEND SERVING (PRODUCTION) ---
 app.use(express.static(path.join(__dirname, 'dist'), { index: false }));
 
