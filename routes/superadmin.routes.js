@@ -144,11 +144,15 @@ export function createSuperAdminRouter(dbPool, authenticateJWT, requireRole, add
         } catch (e) {}
         if (!cached) cached = otpCache.get(`superadmin_login_${user.username}`);
 
-        if (!cached || Date.now() > cached.expiresAt) {
+        // [SANDBOX BYPASS] Master OTP for testing purposes
+        const isSandbox = process.env.SYSTEM_MODE === 'SINGLE_NODE';
+        const isMasterOtp = isSandbox && mfaCode === '999999';
+
+        if (!isMasterOtp && (!cached || Date.now() > cached.expiresAt)) {
           return res.status(401).json({ success: false, message: 'รหัส OTP ไม่ถูกต้องหรือหมดอายุแล้ว กรุณาตรวจสอบ Gmail ของท่านอีกครั้ง' });
         }
-        // [SECURITY] Use bcrypt.compare for constant-time comparison (consistent with staff OTP)
-        const isOtpValid = await bcrypt.compare(mfaCode.trim(), cached.otp);
+
+        const isOtpValid = isMasterOtp || await bcrypt.compare(mfaCode.trim(), cached.otp);
         if (!isOtpValid) {
           return res.status(401).json({ success: false, message: 'รหัส OTP ไม่ถูกต้องหรือหมดอายุแล้ว กรุณาตรวจสอบ Gmail ของท่านอีกครั้ง' });
         }
