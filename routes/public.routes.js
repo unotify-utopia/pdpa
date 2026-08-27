@@ -119,16 +119,21 @@ export function createPublicRouter(dbPool, addServerAuditLog, authenticateJWT, r
   router.post('/audit-logs', authenticateJWT, auditLogLimiter, async (req, res) => {
     try {
       const log = req.body;
+      // [SECURITY] Override actor fields from authenticated JWT — never trust client
+      const actorId = (req.user && req.user.id) || 'unknown';
+      const actorName = (req.user && req.user.fullNameTh) || 'Unknown User';
+      const actorRole = (req.user && req.user.role) || 'unknown';
+      const orgId = (req.user && req.user.orgId) || 'public';
       await dbPool.query(
         `INSERT INTO audit_logs (id, org_id, timestamp, actor_id, actor_name, actor_role, action, request_id, request_tracking_no, ip_address, user_agent, details, checksum) 
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
         [
           log.id || `log_${Date.now()}`,
-          log.orgId || (req.user && req.user.orgId) || 'public',
-          log.timestamp || new Date().toISOString(),
-          log.actorId || (req.user && req.user.id) || 'public_user',
-          log.actorName || (req.user && req.user.fullNameTh) || 'ประชาชน',
-          log.actorRole || (req.user && req.user.role) || 'public',
+          orgId,
+          new Date().toISOString(),
+          actorId,
+          actorName,
+          actorRole,
           log.action, log.requestId, log.requestTrackingNo,
           String(req.headers['x-forwarded-for'] || req.socket.remoteAddress || '127.0.0.1').substring(0, 50),
           req.headers['user-agent'] || 'Frontend API',
@@ -138,7 +143,7 @@ export function createPublicRouter(dbPool, addServerAuditLog, authenticateJWT, r
       res.status(201).json({ success: true, message: 'Audit log created' });
     } catch (err) {
       console.error('Failed to create audit log via API:', err);
-      res.status(500).json({ success: false, message: 'Database error: ' + err.message });
+      res.status(500).json({ success: false, message: 'Failed to create audit log' });
     }
   });
 
@@ -146,13 +151,24 @@ export function createPublicRouter(dbPool, addServerAuditLog, authenticateJWT, r
   // GET /api/public/requests - REMOVED for security
   // ─────────────────────────────────────────────
 
+  // [SECURITY] Rate limiter for public request submission — prevents spam/DDoS
+  const publicRequestLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000, // 1 ชั่วโมง
+    max: 10,                   // max 10 คำร้อง/IP/ชั่วโมง
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { success: false, message: 'ส่งคำร้องมากเกินไป กรุณารอ 1 ชั่วโมงแล้วลองใหม่' },
+  });
+
   // ─────────────────────────────────────────────
   // POST /api/public/requests
   // ─────────────────────────────────────────────
-  router.post('/public/requests', async (req, res) => {
+  router.post('/public/requests', publicRequestLimiter, async (req, res) => {
     try {
       let requestData = req.body;
-      const reqId = requestData.id || `req_${Date.now()}`;
+      // [SECURITY] For new requests, server generates ID. Client-provided ID is only used to lookup existing requests for messageThread updates.
+      const clientProvidedId = requestData.id;
+      const serverGeneratedId = `req_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
       
       let isNewRequest = true;
       let oldStatus = null;
@@ -160,26 +176,48 @@ export function createPublicRouter(dbPool, addServerAuditLog, authenticateJWT, r
       let isNewCitizenMessage = false;
       let isNewStaffMessage = false;
 
-      try {
-        const existRes = await dbPool.query('SELECT status, data FROM requests WHERE id = $1', [reqId]);
-        if (existRes.rows.length > 0) {
-          isNewRequest = false;
-          oldStatus = existRes.rows[0].status;
-          existingData = typeof existRes.rows[0].data === 'string' ? JSON.parse(existRes.rows[0].data) : (existRes.rows[0].data || {});
-        }
-      } catch (existErr) { console.warn('Check existing request warning:', existErr.message); }
+      // Only check for existing request if client provides an ID (for messageThread append flow)
+      if (clientProvidedId) {
+        try {
+          const existRes = await dbPool.query('SELECT status, data FROM requests WHERE id = $1', [clientProvidedId]);
+          if (existRes.rows.length > 0) {
+            isNewRequest = false;
+            oldStatus = existRes.rows[0].status;
+            existingData = typeof existRes.rows[0].data === 'string' ? JSON.parse(existRes.rows[0].data) : (existRes.rows[0].data || {});
+          }
+        } catch (existErr) { console.warn('Check existing request warning:', existErr.message); }
+      }
+
+      const reqId = isNewRequest ? serverGeneratedId : clientProvidedId;
 
       if (!isNewRequest && existingData) {
-        // Only allow appending to messageThread for existing requests from public endpoint
+        // [SECURITY] C3: For existing requests from public endpoint,
+        // ONLY allow: (1) appending to messageThread, (2) adding attachments when status is 'Awaiting Additional Information'
+        // All other fields are preserved from the existing DB record — client cannot modify status, decision, requester info, etc.
         const mergedData = { ...existingData };
+        
+        // (1) Allow messageThread append only (new messages at the end)
         if (requestData.messageThread && requestData.messageThread.length > (existingData.messageThread || []).length) {
-            mergedData.messageThread = requestData.messageThread;
-            const latestMsg = requestData.messageThread[requestData.messageThread.length - 1];
+            // Only append genuinely new messages — preserve all existing ones
+            const existingCount = (existingData.messageThread || []).length;
+            const newMessages = requestData.messageThread.slice(existingCount);
+            mergedData.messageThread = [...(existingData.messageThread || []), ...newMessages];
+            
+            const latestMsg = newMessages[newMessages.length - 1];
             if (latestMsg && latestMsg.sender === 'user') isNewCitizenMessage = true;
             else if (latestMsg && latestMsg.sender === 'staff') isNewStaffMessage = true;
         }
+        
+        // (2) Allow attachments append only when 'Awaiting Additional Information'
+        if (oldStatus === 'Awaiting Additional Information' && requestData.attachments) {
+          const existingAttachments = existingData.attachments || [];
+          if (requestData.attachments.length > existingAttachments.length) {
+            mergedData.attachments = requestData.attachments;
+          }
+        }
+
         requestData = mergedData;
-        requestData.status = oldStatus;
+        requestData.status = oldStatus; // Never allow public user to change status
       } else {
         // It's a new request. Strip sensitive fields.
         delete requestData.status;
@@ -317,7 +355,7 @@ export function createPublicRouter(dbPool, addServerAuditLog, authenticateJWT, r
             </div>
           `
         });
-        console.log(`[SMTP] Sent OTP ${otp} to ${email}`);
+        console.log(`[SMTP] Sent OTP to ${email}`);
       }
 
       return res.json({ success: true, message: 'ส่งรหัส OTP เรียบร้อยแล้ว' });
@@ -393,15 +431,31 @@ export function createPublicRouter(dbPool, addServerAuditLog, authenticateJWT, r
         return false;
       });
 
+      // [SECURITY] Server-side PII masking — don't expose raw data before OTP verification
+      const maskEmail = (e) => {
+        if (!e || typeof e !== 'string') return '';
+        const [local, domain] = e.split('@');
+        if (!domain) return e[0] + '***';
+        return local[0] + '***@' + domain;
+      };
+      const maskPhone = (p) => {
+        if (!p || typeof p !== 'string') return '';
+        return p.substring(0, 2) + 'x-xxx-x' + p.slice(-3);
+      };
+
       const safeMatches = matches.map(reqObj => ({
-        id: reqObj.id, trackingNo: reqObj.trackingNo, status: reqObj.status,
+        id: reqObj.id,
+        trackingNo: reqObj.trackingNo,
+        status: reqObj.status,
         submissionDate: reqObj.submissionDate,
         requester: {
-          firstName: reqObj.requester?.firstName || '', lastName: reqObj.requester?.lastName || '',
-          email: reqObj.requester?.email || '', phone: reqObj.requester?.phone || ''
+          firstName: (reqObj.requester?.firstName || '')[0] || '',
+          lastName: (reqObj.requester?.lastName || '')[0] || '',
+          email: maskEmail(reqObj.requester?.email),
+          phone: maskPhone(reqObj.requester?.phone),
         },
-        requesterType: reqObj.requesterType, representative: reqObj.representative,
-        messageThread: reqObj.messageThread, statusHistory: reqObj.statusHistory
+        requesterType: reqObj.requesterType,
+        // messageThread, representative, statusHistory intentionally excluded (VULN-H1)
       }));
 
       res.json({ success: true, results: safeMatches });
@@ -412,31 +466,24 @@ export function createPublicRouter(dbPool, addServerAuditLog, authenticateJWT, r
   });
 
   // ─────────────────────────────────────────────
-  // GET /api/public/track/:trackingNo
+  // GET /api/public/track/:trackingNo — REMOVED (VULN-H2)
+  // Was: returned messageThread + statusHistory without auth
+  // Frontend uses POST /api/public/requests/search instead
   // ─────────────────────────────────────────────
-  router.get('/public/track/:trackingNo', async (req, res) => {
-    try {
-      const { rows } = await dbPool.query('SELECT data FROM requests WHERE tracking_no = $1', [req.params.trackingNo.trim().toUpperCase()]);
-      if (rows.length === 0) return res.status(404).json({ success: false, message: 'ไม่พบคำร้องขอข้อมูลหมายเลขนี้' });
-
-      const reqObj = rows[0].data;
-      res.json({
-        success: true,
-        request: {
-          id: reqObj.id, trackingNo: reqObj.trackingNo, status: reqObj.status,
-          submissionDate: reqObj.submissionDate, slaRemainingDays: reqObj.slaRemainingDays,
-          statusHistory: reqObj.statusHistory, messageThread: reqObj.messageThread
-        }
-      });
-    } catch (err) {
-      res.status(500).json({ success: false, message: 'Database error' });
-    }
-  });
 
   // ─────────────────────────────────────────────
   // POST /api/cookie-consent
   // ─────────────────────────────────────────────
-  router.post('/cookie-consent', async (req, res) => {
+  // [SECURITY] Rate limiter for cookie consent
+  const cookieConsentLimiter = rateLimit({
+    windowMs: 5 * 60 * 1000, // 5 นาที
+    max: 20,                  // max 20 req/IP/5 นาที
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { success: false, message: 'Too many requests' },
+  });
+
+  router.post('/cookie-consent', cookieConsentLimiter, async (req, res) => {
     try {
       const { sessionId, action, preferences } = req.body;
       const ipAddress = String(req.headers['x-forwarded-for'] || req.socket.remoteAddress || '127.0.0.1').substring(0, 45);

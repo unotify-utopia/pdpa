@@ -91,7 +91,9 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://cdn.tailwindcss.com"],
+      // [SECURITY] C5: Removed 'unsafe-eval' (no eval() in codebase) and cdn.tailwindcss.com (only used in super-admin-app dev, not main app)
+      // Note: 'unsafe-inline' kept because Vite injects inline module preload scripts in index.html
+      scriptSrc: ["'self'", "'unsafe-inline'"],
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
       imgSrc: ["'self'", "data:", "https://api.qrserver.com", "blob:"],
@@ -166,7 +168,7 @@ app.use('/api/reports', createReportsRouter(dbPool, authenticateJWT, requireRole
 app.use('/api', createRequestsRouter(dbPool, authenticateJWT, requireRole, addServerAuditLog));
 app.use('/api', createSuperAdminRouter(dbPool, authenticateJWT, requireRole, addServerAuditLog, sendMailWithFallback, otpCache, JWT_SECRET));
 app.use('/api', createPublicRouter(dbPool, addServerAuditLog, authenticateJWT, requireRole));
-app.use('/api', createDownloadRouter(dbPool, authenticateJWT, requireRole, addServerAuditLog, sendMailWithFallback, otpCache));
+app.use('/api', createDownloadRouter(dbPool, authenticateJWT, requireRole, addServerAuditLog, sendMailWithFallback, otpCache, JWT_SECRET));
 app.get('/api/system/config', (req, res) => {
   res.json({
     success: true,

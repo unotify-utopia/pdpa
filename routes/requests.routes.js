@@ -81,7 +81,7 @@ export function createRequestsRouter(dbPool, authenticateJWT, requireRole, addSe
   }
 
   // PUT /api/requests/:id (Staff update request)
-  router.put('/requests/:id', authenticateJWT, async (req, res) => {
+  router.put('/requests/:id', authenticateJWT, requireRole(['admin', 'intake', 'dpo', 'owner', 'approver']), async (req, res) => {
     try {
       const { id } = req.params;
       if (!(await checkOrgAccess(req, res, id))) return;

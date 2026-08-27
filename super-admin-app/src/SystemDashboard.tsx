@@ -122,15 +122,15 @@ export default function SystemDashboard({ token, isDark = false }: SystemDashboa
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className={`lg:col-span-2 rounded-xl border overflow-hidden flex flex-col ${cardBgClass}`}>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+        <div className={`lg:col-span-2 rounded-xl border overflow-hidden ${cardBgClass}`}>
           <div className={`px-6 py-4 border-b ${tableHeaderBg}`}>
             <h3 className={`font-bold flex items-center gap-2 ${textTitleClass}`}>
               <ShieldAlert size={18} className={isDark ? 'text-rose-400' : 'text-red-500'} /> Security Alerts ล่าสุด
             </h3>
           </div>
-          <div className="overflow-x-auto flex-1">
-            <table className="w-full text-left text-sm h-full">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
               <thead className={`border-b ${tableHeaderBg}`}>
                 <tr>
                   <th className="px-6 py-3 font-medium">เวลา</th>
@@ -143,10 +143,10 @@ export default function SystemDashboard({ token, isDark = false }: SystemDashboa
                 {recentAlerts && recentAlerts.length > 0 ? (
                   recentAlerts.map((alert: any) => (
                     <tr key={alert.id} className={`${rowHoverClass} transition`}>
-                      <td className={`px-6 py-4 whitespace-nowrap ${textSubClass}`}>
+                      <td className={`px-6 py-2.5 whitespace-nowrap ${textSubClass}`}>
                         {new Date(alert.timestamp).toLocaleString('th-TH')}
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="px-6 py-2.5">
                         <span className={`px-2 py-1 rounded-md text-xs font-medium ${
                           alert.action.includes('PAYLOAD') ? (isDark ? 'bg-rose-500/20 text-rose-300' : 'bg-red-100 text-red-700') :
                           alert.action.includes('LOGIN') ? (isDark ? 'bg-indigo-500/20 text-indigo-300' : 'bg-purple-100 text-purple-700') :
@@ -155,8 +155,8 @@ export default function SystemDashboard({ token, isDark = false }: SystemDashboa
                           {alert.action}
                         </span>
                       </td>
-                      <td className={`px-6 py-4 font-mono text-xs ${textSubClass}`}>{alert.ip_address}</td>
-                      <td className={`px-6 py-4 truncate max-w-xs ${textSubClass}`} title={alert.details}>{alert.details}</td>
+                      <td className={`px-6 py-2.5 font-mono text-xs ${textSubClass}`}>{alert.ip_address}</td>
+                      <td className={`px-6 py-2.5 truncate max-w-xs ${textSubClass}`} title={alert.details}>{alert.details}</td>
                     </tr>
                   ))
                 ) : (

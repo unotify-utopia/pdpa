@@ -47,7 +47,6 @@ export function createAuthRouter(dbPool, authenticateJWT, addServerAuditLog, sen
   // Staff login with tenant contract validation & OTP/MFA check
   // ─────────────────────────────────────────────
   router.post('/login', async (req, res) => {
-    console.log("HELLO WORLD FROM LOGIN ENDPOINT");
     const { username, password } = req.body;
 
     if (!username || !password) {
@@ -159,7 +158,7 @@ export function createAuthRouter(dbPool, authenticateJWT, addServerAuditLog, sen
                   </div>
                 `
               });
-            console.log(`[SMTP] Sent Staff login OTP ${otp} to ${targetEmail}`);
+            console.log(`[SMTP] Sent Staff login OTP to ${targetEmail}`);
           } catch (mailErr) {
             // [SECURITY] SMTP failure must block login — no fallback OTP (VULN-01)
             // Using a predictable OTP like '123456' allows attackers to bypass MFA
@@ -250,7 +249,7 @@ export function createAuthRouter(dbPool, authenticateJWT, addServerAuditLog, sen
     } catch (err) {
       // [SECURITY] Stack trace hidden from client response (VULN-02)
       console.error('[Login Error]', err);
-      return res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง', details: err?.message, stack: err?.stack, error_string: String(err) });
+      return res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง' });
     }
   });
 

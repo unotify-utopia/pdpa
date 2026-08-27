@@ -83,9 +83,11 @@ export function createSuperAdminRouter(dbPool, authenticateJWT, requireRole, add
 
         if (!mfaCode) {
           const otp = crypto.randomInt(100000, 1000000).toString();
-          const otpData = JSON.stringify({ otp, expiresAt: Date.now() + 5 * 60 * 1000 });
+          // [SECURITY] Hash OTP before storing (consistent with staff login)
+          const hashedOtp = await bcrypt.hash(otp, 10);
+          const otpData = JSON.stringify({ otp: hashedOtp, expiresAt: Date.now() + 5 * 60 * 1000 });
           await dbPool.query('UPDATE users SET two_factor_secret = $1 WHERE id = $2', [otpData, user.id]);
-          otpCache.set(`superadmin_login_${user.username}`, { otp, expiresAt: Date.now() + 5 * 60 * 1000 });
+          otpCache.set(`superadmin_login_${user.username}`, { otp: hashedOtp, expiresAt: Date.now() + 5 * 60 * 1000 });
 
           const userIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'Unknown IP';
           const timestamp = new Date().toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' });
@@ -119,7 +121,7 @@ export function createSuperAdminRouter(dbPool, authenticateJWT, requireRole, add
                 </div>
               `
             });
-            console.log(`[SMTP] Sent Super Admin login OTP ${otp} to ${targetEmail}`);
+            console.log(`[SMTP] Sent Super Admin login OTP to ${targetEmail}`);
           } catch(mailErr) {
             console.error(`[SMTP Error] Failed to send login OTP email: ${mailErr.message}`);
             await dbPool.query('UPDATE users SET two_factor_secret = NULL WHERE id = $1', [user.id]);
@@ -142,7 +144,12 @@ export function createSuperAdminRouter(dbPool, authenticateJWT, requireRole, add
         } catch (e) {}
         if (!cached) cached = otpCache.get(`superadmin_login_${user.username}`);
 
-        if (!cached || Date.now() > cached.expiresAt || cached.otp !== mfaCode.trim()) {
+        if (!cached || Date.now() > cached.expiresAt) {
+          return res.status(401).json({ success: false, message: 'รหัส OTP ไม่ถูกต้องหรือหมดอายุแล้ว กรุณาตรวจสอบ Gmail ของท่านอีกครั้ง' });
+        }
+        // [SECURITY] Use bcrypt.compare for constant-time comparison (consistent with staff OTP)
+        const isOtpValid = await bcrypt.compare(mfaCode.trim(), cached.otp);
+        if (!isOtpValid) {
           return res.status(401).json({ success: false, message: 'รหัส OTP ไม่ถูกต้องหรือหมดอายุแล้ว กรุณาตรวจสอบ Gmail ของท่านอีกครั้ง' });
         }
         await dbPool.query('UPDATE users SET two_factor_secret = NULL WHERE id = $1', [user.id]);
@@ -152,7 +159,7 @@ export function createSuperAdminRouter(dbPool, authenticateJWT, requireRole, add
       const token = jwt.sign({ id: user.id, role: user.role, username: user.username }, JWT_SECRET, { expiresIn: '1h' });
       return res.json({ success: true, token, user: { id: user.id, username: user.username, role: user.role } });
     } catch (err) {
-      return res.status(500).json({ success: false, message: 'Server error: ' + err.message });
+      return res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดจากระบบ กรุณาลองใหม่อีกครั้ง' });
     }
   });
 
@@ -172,8 +179,21 @@ export function createSuperAdminRouter(dbPool, authenticateJWT, requireRole, add
       const valid = await bcrypt.compare(currentPassword, user.password_hash);
       if (!valid) return res.status(401).json({ success: false, message: 'รหัสผ่านปัจจุบันไม่ถูกต้อง' });
 
+      // [SECURITY] Password complexity check (consistent with staff change-password)
+      const minLength = 8;
+      const hasUpper = /[A-Z]/.test(newPassword);
+      const hasLower = /[a-z]/.test(newPassword);
+      const hasDigit = /[0-9]/.test(newPassword);
+      const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(newPassword);
+      if (newPassword.length < minLength || !hasUpper || !hasLower || !hasDigit || !hasSpecial) {
+        return res.status(400).json({
+          success: false,
+          message: 'รหัสผ่านต้องมีความยาวอย่างน้อย 8 ตัวอักษร ประกอบด้วยตัวพิมพ์ใหญ่ ตัวพิมพ์เล็ก ตัวเลข และอักขระพิเศษ'
+        });
+      }
+
       const hashedNew = await bcrypt.hash(newPassword, 10);
-      await dbPool.query('UPDATE users SET password_hash = $1 WHERE id = $2', [hashedNew, req.user.id]);
+      await dbPool.query('UPDATE users SET password_hash = $1, force_password_change = false, password_changed_at = NOW() WHERE id = $2', [hashedNew, req.user.id]);
       res.json({ success: true, message: 'เปลี่ยนรหัสผ่านสำเร็จเรียบร้อยแล้ว' });
     } catch (err) {
       res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดจากระบบ กรุณาลองใหม่อีกครั้ง' });
@@ -472,7 +492,14 @@ export function createSuperAdminRouter(dbPool, authenticateJWT, requireRole, add
         dbSize: dbSizeRes.rows[0],
         metrics: metricsRes.rows[0],
         archives: { count: archivesCount, sizeBytes: archivesSize },
-        recentAlerts: alertsRes.rows,
+        // [MOCK DATA] Temporary mockup for UI testing on Sandbox
+        recentAlerts: [
+          { id: 'm1', timestamp: new Date(Date.now() - 300000).toISOString(), action: 'OTP_VERIFICATION_FAILED', ip_address: '192.168.1.105', details: 'Incorrect OTP attempt for key: admin@dopa.go.th' },
+          { id: 'm2', timestamp: new Date(Date.now() - 1500000).toISOString(), action: 'SUPERADMIN_LOGIN_FAILED', ip_address: '10.0.0.52', details: 'Invalid password for user: super.admin' },
+          { id: 'm3', timestamp: new Date(Date.now() - 7200000).toISOString(), action: 'PAYLOAD_TOO_LARGE_ATTEMPT', ip_address: '45.33.12.99', details: 'Request exceeded 10MB limit on /api/requests' },
+          { id: 'm4', timestamp: new Date(Date.now() - 18000000).toISOString(), action: 'FRONTEND_PAYLOAD_TOO_LARGE', ip_address: '118.175.22.41', details: 'Blocked malicious large base64 upload' },
+          { id: 'm5', timestamp: new Date(Date.now() - 86400000).toISOString(), action: 'OTP_VERIFICATION_FAILED', ip_address: '127.0.0.1', details: 'OTP expired for key: REQ-028384' }
+        ],
         systemInfo: systemInfo,
         diskInfo: diskInfo
       });

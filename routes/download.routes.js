@@ -17,7 +17,7 @@ const otpRateLimiter = rateLimit({
   message: { success: false, message: 'พยายามร้องขอหรือยืนยัน OTP มากเกินไป กรุณารอ 15 นาที' }
 });
 
-export function createDownloadRouter(dbPool, authenticateJWT, requireRole, addServerAuditLog, sendMailFn, otpCache) {
+export function createDownloadRouter(dbPool, authenticateJWT, requireRole, addServerAuditLog, sendMailFn, otpCache, JWT_SECRET) {
   const router = express.Router();
 
   // helper resolveDownloadToken
@@ -45,6 +45,15 @@ export function createDownloadRouter(dbPool, authenticateJWT, requireRole, addSe
     }
   
     const reqRow = reqRows[0];
+    
+    // [SECURITY] Only allow download token for approved/delivered requests
+    const reqData = typeof reqRow.data === 'string' ? JSON.parse(reqRow.data) : (reqRow.data || {});
+    const reqStatus = reqData.status || '';
+    const allowedStatuses = ['Approved', 'Ready for Delivery', 'Delivered', 'Receipt Confirmed', 'Closed'];
+    if (!allowedStatuses.includes(reqStatus)) {
+      return null;
+    }
+
     const newToken = crypto.randomBytes(48).toString('hex');
     const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
   
@@ -80,7 +89,7 @@ export function createDownloadRouter(dbPool, authenticateJWT, requireRole, addSe
     
     if (!key || !otp) return res.status(400).json({ success: false, message: 'Missing parameters' });
   
-    console.log(`[DOWNLOAD-PACKAGE] Verifying OTP. key=${key}, otp=${otp}, reference=${reference}`);
+    console.log(`[DOWNLOAD-PACKAGE] Verifying OTP. key=${key}, reference=${reference}`);
   
     try {
       // 1. Verify OTP
@@ -480,7 +489,7 @@ export function createDownloadRouter(dbPool, authenticateJWT, requireRole, addSe
       );
   
       // Issue a short-lived (15 min) signed download session token
-      const sessionToken = jwt.sign({ request_id: row.request_id, downloadToken: row.token, at: Date.now() }, process.env.JWT_SECRET || 'pdpa-secret', { expiresIn: '15m' });
+      const sessionToken = jwt.sign({ request_id: row.request_id, downloadToken: row.token, at: Date.now() }, process.env.JWT_SECRET || JWT_SECRET, { expiresIn: '15m' });
       
       addServerAuditLog('SECURE_DOWNLOAD_OTP_VERIFIED', `OTP verified successfully for secure download (token: ${token})`, actor, row.req_id, row.tracking_no, req).catch(() => {});
       
@@ -501,7 +510,7 @@ export function createDownloadRouter(dbPool, authenticateJWT, requireRole, addSe
       // Verify session token
       let payload;
       try {
-        payload = jwt.verify(session, process.env.JWT_SECRET || 'pdpa-secret');
+        payload = jwt.verify(session, process.env.JWT_SECRET || JWT_SECRET);
       } catch {
         return res.status(401).json({ success: false, message: 'Session หมดอายุ กรุณายืนยัน OTP ใหม่' });
       }
