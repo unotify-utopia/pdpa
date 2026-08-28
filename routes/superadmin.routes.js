@@ -535,8 +535,8 @@ router.get('/audit-logs', authenticateJWT, requireRole(['superadmin']), async (r
     let query = 'SELECT * FROM audit_logs';
     let params = [];
     if (req.query.search) {
-      query += ' WHERE details ILIKE  OR action ILIKE  OR user_id ILIKE ';
-      params.push(%%);
+      query += ' WHERE details ILIKE $1 OR action ILIKE $1 OR user_id ILIKE $1';
+      params.push(`%${req.query.search}%`);
     }
     query += ' ORDER BY timestamp DESC LIMIT $' + (params.length + 1) + ' OFFSET $' + (params.length + 2);
     params.push(limit, offset);
@@ -544,8 +544,8 @@ router.get('/audit-logs', authenticateJWT, requireRole(['superadmin']), async (r
     let countQuery = 'SELECT COUNT(*) FROM audit_logs';
     let countParams = [];
     if (req.query.search) {
-      countQuery += ' WHERE details ILIKE  OR action ILIKE  OR user_id ILIKE ';
-      countParams.push(%%);
+      countQuery += ' WHERE details ILIKE $1 OR action ILIKE $1 OR user_id ILIKE $1';
+      countParams.push(`%${req.query.search}%`);
     }
     const countResult = await dbPool.query(countQuery, countParams);
     res.json({ success: true, logs: result.rows, total: parseInt(countResult.rows[0].count) });
