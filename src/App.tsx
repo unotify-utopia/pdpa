@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Shield,
   FileText,
@@ -122,7 +122,7 @@ export const formatThaiTimeString = (dateStr: string): string => {
       minute: '2-digit',
       second: '2-digit',
       hour12: false
-    }) + ' à¸™.';
+    }) + ' น.';
   } catch {
     return dateStr;
   }
@@ -136,25 +136,25 @@ export default function App() {
   });
 
   const showNotify = (message: string, type: NotifyType = 'success', title?: string, onConfirm?: () => void, onCancel?: () => void) => {
-    let defaultTitle = 'à¸à¸²à¸£à¹à¸ˆà¹‰à¸‡à¹€à¸•à¸·à¸­à¸™à¸ˆà¸²à¸à¸£à¸°à¸šà¸š';
-    if (type === 'error') defaultTitle = 'à¹€à¸à¸´à¸”à¸‚à¹‰à¸­à¸œà¸´à¸”à¸žà¸¥à¸²à¸”';
-    if (type === 'warning') defaultTitle = 'à¸‚à¹‰à¸­à¸„à¸§à¸²à¸¡à¹à¸ˆà¹‰à¸‡à¹€à¸•à¸·à¸­à¸™';
-    if (type === 'confirm') defaultTitle = 'à¸¢à¸·à¸™à¸¢à¸±à¸™à¸à¸²à¸£à¸”à¸³à¹€à¸™à¸´à¸™à¸à¸²à¸£';
+    let defaultTitle = 'การแจ้งเตือนจากระบบ';
+    if (type === 'error') defaultTitle = 'เกิดข้อผิดพลาด';
+    if (type === 'warning') defaultTitle = 'ข้อความแจ้งเตือน';
+    if (type === 'confirm') defaultTitle = 'ยืนยันการดำเนินการ';
     
     // Auto-detect type if it's default
-    if (message.includes('âŒ') || message.includes('à¹€à¸à¸´à¸”à¸‚à¹‰à¸­à¸œà¸´à¸”à¸žà¸¥à¸²à¸”') || message.includes('à¹„à¸¡à¹ˆà¸ªà¸²à¸¡à¸²à¸£à¸–')) {
+    if (message.includes('❌') || message.includes('เกิดข้อผิดพลาด') || message.includes('ไม่สามารถ')) {
       type = 'error';
-      defaultTitle = 'à¹€à¸à¸´à¸”à¸‚à¹‰à¸­à¸œà¸´à¸”à¸žà¸¥à¸²à¸”';
-    } else if (message.includes('âš ï¸') || message.includes('à¸à¸£à¸¸à¸“à¸²')) {
+      defaultTitle = 'เกิดข้อผิดพลาด';
+    } else if (message.includes('⚠️') || message.includes('กรุณา')) {
       type = 'warning';
-      defaultTitle = 'à¸‚à¹‰à¸­à¸„à¸§à¸²à¸¡à¹à¸ˆà¹‰à¸‡à¹€à¸•à¸·à¸­à¸™';
-    } else if (message.includes('âœ…') || message.includes('à¸ªà¸³à¹€à¸£à¹‡à¸ˆ') || message.includes('à¹€à¸£à¸µà¸¢à¸šà¸£à¹‰à¸­à¸¢')) {
+      defaultTitle = 'ข้อความแจ้งเตือน';
+    } else if (message.includes('✅') || message.includes('สำเร็จ') || message.includes('เรียบร้อย')) {
       type = 'success';
-      defaultTitle = 'à¸à¸²à¸£à¹à¸ˆà¹‰à¸‡à¹€à¸•à¸·à¸­à¸™à¸ˆà¸²à¸à¸£à¸°à¸šà¸š';
+      defaultTitle = 'การแจ้งเตือนจากระบบ';
     }
     
     // Remove emojis from message for cleaner UI
-    const cleanMessage = message.replace(/^[âŒâš ï¸âœ…]\s*/, '');
+    const cleanMessage = message.replace(/^[❌⚠️✅]\s*/, '');
     
     setNotifyState({ open: true, title: title || defaultTitle, message: cleanMessage, type, onConfirm, onCancel });
   };
@@ -171,13 +171,13 @@ export default function App() {
     return `${first}***${last}@${domain}`;
   };
 
-  // Helper to handle strict database mode â€” declared AFTER showNotify so it can call it on error
+  // Helper to handle strict database mode — declared AFTER showNotify so it can call it on error
   const safeUpdateRequest = async (req: Request, actor: UserType, action: string, detail: string) => {
     try {
       await updateRequest(req, actor, action, detail);
       return true;
     } catch (err: any) {
-      showNotify(err.message || 'à¹€à¸à¸´à¸”à¸‚à¹‰à¸­à¸œà¸´à¸”à¸žà¸¥à¸²à¸”à¹ƒà¸™à¸à¸²à¸£à¸šà¸±à¸™à¸—à¸¶à¸à¸‚à¹‰à¸­à¸¡à¸¹à¸¥', 'error');
+      showNotify(err.message || 'เกิดข้อผิดพลาดในการบันทึกข้อมูล', 'error');
       return false;
     }
   };
@@ -343,7 +343,7 @@ export default function App() {
       // Set timeout for 10 minutes (600,000 ms) - Staff Document Review Policy
       timeoutId = setTimeout(() => {
         if (activeUser) {
-          handleStaffForceLogout('à¸—à¹ˆà¸²à¸™à¹„à¸¡à¹ˆà¹„à¸”à¹‰à¹ƒà¸Šà¹‰à¸‡à¸²à¸™à¸£à¸°à¸šà¸šà¹€à¸à¸´à¸™ 10 à¸™à¸²à¸—à¸µ à¸£à¸°à¸šà¸šà¸ˆà¸¶à¸‡à¸—à¸³à¸à¸²à¸£à¸­à¸­à¸à¸ˆà¸²à¸à¸£à¸°à¸šà¸šà¸­à¸±à¸•à¹‚à¸™à¸¡à¸±à¸•à¸´à¹€à¸žà¸·à¹ˆà¸­à¸„à¸§à¸²à¸¡à¸›à¸¥à¸­à¸”à¸ à¸±à¸¢');
+          handleStaffForceLogout('ท่านไม่ได้ใช้งานระบบเกิน 10 นาที ระบบจึงทำการออกจากระบบอัตโนมัติเพื่อความปลอดภัย');
           window.location.reload();
         }
       }, 10 * 60 * 1000);
@@ -368,7 +368,7 @@ export default function App() {
   useEffect(() => {
     const handleWorkflowNotify = (e: any) => {
       const { title, message } = e.detail || {};
-      showNotify(message || 'à¸ªà¹ˆà¸‡à¸­à¸µà¹€à¸¡à¸¥à¹à¸ˆà¹‰à¸‡à¹€à¸•à¸·à¸­à¸™à¸„à¸§à¸²à¸¡à¸„à¸·à¸šà¸«à¸™à¹‰à¸²à¸•à¸²à¸¡ Workflow à¹€à¸£à¸µà¸¢à¸šà¸£à¹‰à¸­à¸¢à¹à¸¥à¹‰à¸§', 'success', title || 'à¹à¸ˆà¹‰à¸‡à¹€à¸•à¸·à¸­à¸™à¸•à¸²à¸¡ Flow à¹€à¸­à¸à¸ªà¸²à¸£', () => {
+      showNotify(message || 'ส่งอีเมลแจ้งเตือนความคืบหน้าตาม Workflow เรียบร้อยแล้ว', 'success', title || 'แจ้งเตือนตาม Flow เอกสาร', () => {
         // Automatically close the active request detail view to prevent further actions on completed steps
         setSelectedRequestId(null);
       });
@@ -385,7 +385,7 @@ export default function App() {
     fetch(endpoint, { headers })
       .then(res => {
         if (token && (res.status === 401 || res.status === 403)) {
-          handleStaffForceLogout('à¹€à¸‹à¸ªà¸Šà¸±à¸™à¸‚à¸­à¸‡à¸—à¹ˆà¸²à¸™à¸«à¸¡à¸”à¸­à¸²à¸¢à¸¸ à¸à¸£à¸¸à¸“à¸²à¹€à¸‚à¹‰à¸²à¸ªà¸¹à¹ˆà¸£à¸°à¸šà¸šà¸­à¸µà¸à¸„à¸£à¸±à¹‰à¸‡à¹€à¸žà¸·à¹ˆà¸­à¸„à¸§à¸²à¸¡à¸›à¸¥à¸­à¸”à¸ à¸±à¸¢');
+          handleStaffForceLogout('เซสชันของท่านหมดอายุ กรุณาเข้าสู่ระบบอีกครั้งเพื่อความปลอดภัย');
           return null;
         }
         return res.json();
@@ -415,7 +415,7 @@ export default function App() {
         })
           .then(res => {
             if (res.status === 401 || res.status === 403) {
-              handleStaffForceLogout('à¹€à¸‹à¸ªà¸Šà¸±à¸™à¸‚à¸­à¸‡à¸—à¹ˆà¸²à¸™à¸«à¸¡à¸”à¸­à¸²à¸¢à¸¸ à¸à¸£à¸¸à¸“à¸²à¹€à¸‚à¹‰à¸²à¸ªà¸¹à¹ˆà¸£à¸°à¸šà¸šà¸­à¸µà¸à¸„à¸£à¸±à¹‰à¸‡à¹€à¸žà¸·à¹ˆà¸­à¸„à¸§à¸²à¸¡à¸›à¸¥à¸­à¸”à¸ à¸±à¸¢');
+              handleStaffForceLogout('เซสชันของท่านหมดอายุ กรุณาเข้าสู่ระบบอีกครั้งเพื่อความปลอดภัย');
               return null;
             }
             return res.json();
@@ -426,10 +426,10 @@ export default function App() {
                 const userRoles = u.roles || [u.role];
                 const warnings = [];
                 if (userRoles.includes('dpo') && userRoles.includes('approver')) {
-                   warnings.push('Conflict of Interest: DPO à¹„à¸¡à¹ˆà¸„à¸§à¸£à¹€à¸›à¹‡à¸™à¸œà¸¹à¹‰à¸­à¸™à¸¸à¸¡à¸±à¸•à¸´à¸„à¸³à¸‚à¸­ (Approver) à¹€à¸žà¸·à¹ˆà¸­à¸£à¸±à¸à¸©à¸²à¸ªà¸–à¸²à¸™à¸°à¸œà¸¹à¹‰à¸›à¸£à¸°à¹€à¸¡à¸´à¸™à¸­à¸´à¸ªà¸£à¸°');
+                   warnings.push('Conflict of Interest: DPO ไม่ควรเป็นผู้อนุมัติคำขอ (Approver) เพื่อรักษาสถานะผู้ประเมินอิสระ');
                 }
                 if (userRoles.includes('intake') && userRoles.includes('owner')) {
-                   warnings.push('Data Pipeline Risk: à¸œà¸¹à¹‰à¸£à¸±à¸šà¹€à¸£à¸·à¹ˆà¸­à¸‡ (Intake) à¹„à¸¡à¹ˆà¸„à¸§à¸£à¹€à¸›à¹‡à¸™à¸œà¸¹à¹‰à¸”à¸¶à¸‡à¸‚à¹‰à¸­à¸¡à¸¹à¸¥ (Owner) à¹€à¸­à¸‡à¸—à¸±à¹‰à¸‡à¸«à¸¡à¸”à¹‚à¸”à¸¢à¹„à¸¡à¹ˆà¸¡à¸µà¸„à¸™à¸ªà¸­à¸šà¸—à¸²à¸™');
+                   warnings.push('Data Pipeline Risk: ผู้รับเรื่อง (Intake) ไม่ควรเป็นผู้ดึงข้อมูล (Owner) เองทั้งหมดโดยไม่มีคนสอบทาน');
                 }
                 return { ...u, sodWarnings: warnings };
               });
@@ -473,7 +473,7 @@ export default function App() {
       })
         .then(res => {
           if (res.status === 401 || res.status === 403) {
-            handleStaffForceLogout('à¹€à¸‹à¸ªà¸Šà¸±à¸™à¸‚à¸­à¸‡à¸—à¹ˆà¸²à¸™à¸«à¸¡à¸”à¸­à¸²à¸¢à¸¸ à¸à¸£à¸¸à¸“à¸²à¹€à¸‚à¹‰à¸²à¸ªà¸¹à¹ˆà¸£à¸°à¸šà¸šà¸­à¸µà¸à¸„à¸£à¸±à¹‰à¸‡à¹€à¸žà¸·à¹ˆà¸­à¸„à¸§à¸²à¸¡à¸›à¸¥à¸­à¸”à¸ à¸±à¸¢');
+            handleStaffForceLogout('เซสชันของท่านหมดอายุ กรุณาเข้าสู่ระบบอีกครั้งเพื่อความปลอดภัย');
             return null;
           }
           return res.json();
@@ -571,7 +571,7 @@ export default function App() {
     fullNameTh: '',
     fullNameEn: '',
     email: '',
-    department: 'à¸¨à¸¹à¸™à¸¢à¹Œà¸£à¸±à¸šà¹€à¸£à¸·à¹ˆà¸­à¸‡à¸£à¹‰à¸­à¸‡à¹€à¸£à¸µà¸¢à¸™ (à¸à¸£à¸¡à¸à¸²à¸£à¸›à¸à¸„à¸£à¸­à¸‡)',
+    department: 'ศูนย์รับเรื่องร้องเรียน (กรมการปกครอง)',
     role: 'intake',
     roles: ['intake']
   });
@@ -580,10 +580,10 @@ export default function App() {
   const calculateSodWarnings = (rolesList: string[]): string[] => {
     const warnings: string[] = [];
     if (rolesList.includes('dpo') && rolesList.includes('approver')) {
-      warnings.push('Conflict of Interest: DPO à¹„à¸¡à¹ˆà¸„à¸§à¸£à¹€à¸›à¹‡à¸™à¸œà¸¹à¹‰à¸­à¸™à¸¸à¸¡à¸±à¸•à¸´à¸„à¸³à¸‚à¸­ (Approver) à¹€à¸žà¸·à¹ˆà¸­à¸£à¸±à¸à¸©à¸²à¸ªà¸–à¸²à¸™à¸°à¸œà¸¹à¹‰à¸›à¸£à¸°à¹€à¸¡à¸´à¸™à¸­à¸´à¸ªà¸£à¸°');
+      warnings.push('Conflict of Interest: DPO ไม่ควรเป็นผู้อนุมัติคำขอ (Approver) เพื่อรักษาสถานะผู้ประเมินอิสระ');
     }
     if (rolesList.includes('intake') && rolesList.includes('owner')) {
-      warnings.push('Data Pipeline Risk: à¸œà¸¹à¹‰à¸£à¸±à¸šà¹€à¸£à¸·à¹ˆà¸­à¸‡ (Intake) à¹„à¸¡à¹ˆà¸„à¸§à¸£à¹€à¸›à¹‡à¸™à¸œà¸¹à¹‰à¸”à¸¶à¸‡à¸‚à¹‰à¸­à¸¡à¸¹à¸¥ (Owner) à¹€à¸­à¸‡à¸—à¸±à¹‰à¸‡à¸«à¸¡à¸”à¹‚à¸”à¸¢à¹„à¸¡à¹ˆà¸¡à¸µà¸„à¸™à¸ªà¸­à¸šà¸—à¸²à¸™');
+      warnings.push('Data Pipeline Risk: ผู้รับเรื่อง (Intake) ไม่ควรเป็นผู้ดึงข้อมูล (Owner) เองทั้งหมดโดยไม่มีคนสอบทาน');
     }
     return warnings;
   };
@@ -605,13 +605,13 @@ export default function App() {
       });
       const data = await res.json();
       if (!data.success) {
-        showNotify(data.message || 'à¹„à¸¡à¹ˆà¸ªà¸²à¸¡à¸²à¸£à¸–à¸ªà¹ˆà¸‡à¸£à¸«à¸±à¸ª OTP à¹„à¸”à¹‰', 'error', 'à¹€à¸à¸´à¸”à¸‚à¹‰à¸­à¸œà¸´à¸”à¸žà¸¥à¸²à¸”');
+        showNotify(data.message || 'ไม่สามารถส่งรหัส OTP ได้', 'error', 'เกิดข้อผิดพลาด');
         return false;
       }
       return true;
     } catch (err) {
       console.error('Failed to send OTP via SMTP', err);
-      showNotify('à¹€à¸à¸´à¸”à¸‚à¹‰à¸­à¸œà¸´à¸”à¸žà¸¥à¸²à¸”à¹ƒà¸™à¸à¸²à¸£à¹€à¸Šà¸·à¹ˆà¸­à¸¡à¸•à¹ˆà¸­à¹€à¸žà¸·à¹ˆà¸­à¸ªà¹ˆà¸‡ OTP', 'error', 'à¹€à¸à¸´à¸”à¸‚à¹‰à¸­à¸œà¸´à¸”à¸žà¸¥à¸²à¸”');
+      showNotify('เกิดข้อผิดพลาดในการเชื่อมต่อเพื่อส่ง OTP', 'error', 'เกิดข้อผิดพลาด');
       return false;
     }
   };
@@ -625,12 +625,12 @@ export default function App() {
       });
       const data = await res.json();
       if (!data.success) {
-        showNotify(`âŒ ${data.message}`);
+        showNotify(`❌ ${data.message}`);
         return false;
       }
       return true;
     } catch (err) {
-      showNotify('âŒ à¹„à¸¡à¹ˆà¸ªà¸²à¸¡à¸²à¸£à¸–à¹€à¸Šà¸·à¹ˆà¸­à¸¡à¸•à¹ˆà¸­à¸à¸±à¸šà¹€à¸‹à¸´à¸£à¹Œà¸Ÿà¹€à¸§à¸­à¸£à¹Œà¹€à¸žà¸·à¹ˆà¸­à¸¢à¸·à¸™à¸¢à¸±à¸™ OTP à¹„à¸”à¹‰');
+      showNotify('❌ ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์เพื่อยืนยัน OTP ได้');
       return false;
     }
   };
@@ -671,7 +671,7 @@ export default function App() {
     const resetTimer = () => {
       clearTimeout(inactivityTimer);
       inactivityTimer = setTimeout(() => {
-        showNotify('à¹€à¸‹à¸ªà¸Šà¸±à¸™à¸«à¸¡à¸”à¸­à¸²à¸¢à¸¸à¹€à¸™à¸·à¹ˆà¸­à¸‡à¸ˆà¸²à¸à¹„à¸¡à¹ˆà¸¡à¸µà¸à¸²à¸£à¹ƒà¸Šà¹‰à¸‡à¸²à¸™à¹€à¸à¸´à¸™ 10 à¸™à¸²à¸—à¸µ à¸£à¸°à¸šà¸šà¹„à¸”à¹‰à¸—à¸³à¸à¸²à¸£à¸¥à¹‡à¸­à¸à¹€à¸­à¸²à¸•à¹Œà¸­à¸±à¸•à¹‚à¸™à¸¡à¸±à¸•à¸´à¹€à¸žà¸·à¹ˆà¸­à¸„à¸§à¸²à¸¡à¸›à¸¥à¸­à¸”à¸ à¸±à¸¢à¸•à¸²à¸¡à¸¡à¸²à¸•à¸£à¸à¸²à¸™ PDPA');
+        showNotify('เซสชันหมดอายุเนื่องจากไม่มีการใช้งานเกิน 10 นาที ระบบได้ทำการล็อกเอาต์อัตโนมัติเพื่อความปลอดภัยตามมาตรฐาน PDPA');
         setActiveUser(null);
         setView('public');
       }, TIMEOUT_DURATION);
@@ -731,7 +731,7 @@ export default function App() {
     email: '',
     phone: '',
     address: '',
-    scope: 'à¸à¸²à¸£à¸¢à¸·à¹ˆà¸™à¸‚à¸­à¹ƒà¸Šà¹‰à¸ªà¸´à¸—à¸˜à¸´à¸”à¸¶à¸‡à¸›à¸£à¸°à¸§à¸±à¸•à¸´à¸à¸²à¸£à¹€à¸‡à¸´à¸™à¹à¸¥à¸°à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸ªà¹ˆà¸§à¸™à¸šà¸¸à¸„à¸„à¸¥à¹à¸—à¸™à¸œà¸¹à¹‰à¸¡à¸­à¸šà¸­à¸³à¸™à¸²à¸ˆà¸—à¸±à¹‰à¸‡à¸«à¸¡à¸”',
+    scope: 'การยื่นขอใช้สิทธิดึงประวัติการเงินและข้อมูลส่วนบุคคลแทนผู้มอบอำนาจทั้งหมด',
     validFrom: new Date().toISOString().split('T')[0],
     validTo: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
   });
@@ -782,7 +782,7 @@ export default function App() {
 
     // 1. Check mandatory consent checkboxes
     if (!consentAccepted || !accuracyCertified) {
-      showNotify('âš ï¸ à¸à¸£à¸¸à¸“à¸²à¸„à¸¥à¸´à¸à¸¢à¸­à¸¡à¸£à¸±à¸šà¸™à¹‚à¸¢à¸šà¸²à¸¢à¸„à¸§à¸²à¸¡à¹€à¸›à¹‡à¸™à¸ªà¹ˆà¸§à¸™à¸•à¸±à¸§à¹à¸¥à¸°à¸„à¸³à¸£à¸±à¸šà¸£à¸­à¸‡à¸„à¸§à¸²à¸¡à¸–à¸¹à¸à¸•à¹‰à¸­à¸‡à¸à¹ˆà¸­à¸™à¸¢à¸·à¹ˆà¸™à¸„à¸³à¸‚à¸­');
+      showNotify('⚠️ กรุณาคลิกยอมรับนโยบายความเป็นส่วนตัวและคำรับรองความถูกต้องก่อนยื่นคำขอ');
       setIsSendingOtp(false);
       return;
     }
@@ -790,17 +790,17 @@ export default function App() {
     // 2. Mandatory File Upload Verification
     if (reqType === 'self') {
       if (uploadedAttachments.length === 0) {
-        showNotify('âš ï¸ à¸à¸£à¸¸à¸“à¸²à¸­à¸±à¸›à¹‚à¸«à¸¥à¸”à¸ªà¸³à¹€à¸™à¸²à¸šà¸±à¸•à¸£à¸›à¸£à¸°à¸ˆà¸³à¸•à¸±à¸§à¸›à¸£à¸°à¸Šà¸²à¸Šà¸™à¸«à¸£à¸·à¸­à¹€à¸­à¸à¸ªà¸²à¸£à¸¢à¸·à¸™à¸¢à¸±à¸™à¸•à¸±à¸§à¸•à¸™à¹€à¸ˆà¹‰à¸²à¸‚à¸­à¸‡à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸ªà¹ˆà¸§à¸™à¸šà¸¸à¸„à¸„à¸¥à¸à¹ˆà¸­à¸™à¸¢à¸·à¹ˆà¸™à¸„à¸³à¸‚à¸­');
+        showNotify('⚠️ กรุณาอัปโหลดสำเนาบัตรประจำตัวประชาชนหรือเอกสารยืนยันตัวตนเจ้าของข้อมูลส่วนบุคคลก่อนยื่นคำขอ');
         setIsSendingOtp(false);
         return;
       }
     } else if (reqType === 'representative') {
-      const hasDelegatorId = uploadedAttachments.some(f => f.name.includes('[à¸œà¸¹à¹‰à¸¡à¸­à¸šà¸­à¸³à¸™à¸²à¸ˆ]'));
-      const hasRepId = uploadedAttachments.some(f => f.name.includes('[à¸œà¸¹à¹‰à¸£à¸±à¸šà¸¡à¸­à¸šà¸­à¸³à¸™à¸²à¸ˆ]'));
-      const hasPoa = uploadedAttachments.some(f => f.name.includes('[à¸«à¸™à¸±à¸‡à¸ªà¸·à¸­à¸¡à¸­à¸šà¸­à¸³à¸™à¸²à¸ˆ]'));
+      const hasDelegatorId = uploadedAttachments.some(f => f.name.includes('[ผู้มอบอำนาจ]'));
+      const hasRepId = uploadedAttachments.some(f => f.name.includes('[ผู้รับมอบอำนาจ]'));
+      const hasPoa = uploadedAttachments.some(f => f.name.includes('[หนังสือมอบอำนาจ]'));
 
       if (!hasDelegatorId || !hasRepId || !hasPoa) {
-        showNotify('âš ï¸ à¸à¸£à¸¸à¸“à¸²à¸­à¸±à¸›à¹‚à¸«à¸¥à¸”à¹€à¸­à¸à¸ªà¸²à¸£à¸«à¸¥à¸±à¸à¸à¸²à¸™à¹ƒà¸«à¹‰à¸„à¸£à¸šà¸–à¹‰à¸§à¸™à¸—à¸±à¹‰à¸‡ 3 à¸£à¸²à¸¢à¸à¸²à¸£à¸à¹ˆà¸­à¸™à¸¢à¸·à¹ˆà¸™à¸„à¸³à¸‚à¸­:\n1. à¸šà¸±à¸•à¸£à¸›à¸£à¸°à¸ˆà¸³à¸•à¸±à¸§à¸›à¸£à¸°à¸Šà¸²à¸Šà¸™à¸œà¸¹à¹‰à¸¡à¸­à¸šà¸­à¸³à¸™à¸²à¸ˆ (à¹€à¸ˆà¹‰à¸²à¸‚à¸­à¸‡à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸ªà¹ˆà¸§à¸™à¸šà¸¸à¸„à¸„à¸¥)\n2. à¸šà¸±à¸•à¸£à¸›à¸£à¸°à¸ˆà¸³à¸•à¸±à¸§à¸›à¸£à¸°à¸Šà¸²à¸Šà¸™à¸œà¸¹à¹‰à¸£à¸±à¸šà¸¡à¸­à¸šà¸­à¸³à¸™à¸²à¸ˆ\n3. à¹€à¸­à¸à¸ªà¸²à¸£à¸«à¸™à¸±à¸‡à¸ªà¸·à¸­à¸¡à¸­à¸šà¸­à¸³à¸™à¸²à¸ˆ (Power of Attorney)');
+        showNotify('⚠️ กรุณาอัปโหลดเอกสารหลักฐานให้ครบถ้วนทั้ง 3 รายการก่อนยื่นคำขอ:\n1. บัตรประจำตัวประชาชนผู้มอบอำนาจ (เจ้าของข้อมูลส่วนบุคคล)\n2. บัตรประจำตัวประชาชนผู้รับมอบอำนาจ\n3. เอกสารหนังสือมอบอำนาจ (Power of Attorney)');
         setIsSendingOtp(false);
         return;
       }
@@ -817,7 +817,7 @@ export default function App() {
     
     if (totalSize > 5 * 1024 * 1024) {
       const mbSize = (totalSize / (1024 * 1024)).toFixed(2);
-      showNotify(`âš ï¸ à¸‚à¸™à¸²à¸”à¹„à¸Ÿà¸¥à¹Œà¹à¸™à¸šà¹à¸¥à¸°à¸¥à¸²à¸¢à¹€à¸‹à¹‡à¸™à¸£à¸§à¸¡à¸à¸±à¸™à¹€à¸à¸´à¸™ 5 MB (à¸›à¸±à¸ˆà¸ˆà¸¸à¸šà¸±à¸™ ${mbSize} MB) à¸à¸£à¸¸à¸“à¸²à¸¥à¸”à¸‚à¸™à¸²à¸”à¹„à¸Ÿà¸¥à¹Œà¸«à¸£à¸·à¸­à¸šà¸µà¸šà¸­à¸±à¸”à¸£à¸¹à¸›à¸ à¸²à¸žà¸à¹ˆà¸­à¸™à¸”à¸³à¹€à¸™à¸´à¸™à¸à¸²à¸£à¸•à¹ˆà¸­`, 'warning');
+      showNotify(`⚠️ ขนาดไฟล์แนบและลายเซ็นรวมกันเกิน 5 MB (ปัจจุบัน ${mbSize} MB) กรุณาลดขนาดไฟล์หรือบีบอัดรูปภาพก่อนดำเนินการต่อ`, 'warning');
       
       // Log to backend
       const targetEmail = reqType === 'self' ? requesterForm.email : repForm.email;
@@ -849,15 +849,15 @@ export default function App() {
       // 2-second delay to prevent spam and allow server to process
       await new Promise(resolve => setTimeout(resolve, 2000));
       if (!res.ok || !data.success) {
-        showNotify(`âŒ ${data.message || 'à¹„à¸¡à¹ˆà¸ªà¸²à¸¡à¸²à¸£à¸–à¸ªà¹ˆà¸‡à¸£à¸«à¸±à¸ª OTP à¹„à¸”à¹‰ à¸à¸£à¸¸à¸“à¸²à¸¥à¸­à¸‡à¹ƒà¸«à¸¡à¹ˆà¸­à¸µà¸à¸„à¸£à¸±à¹‰à¸‡'}`);
+        showNotify(`❌ ${data.message || 'ไม่สามารถส่งรหัส OTP ได้ กรุณาลองใหม่อีกครั้ง'}`);
         setIsSendingOtp(false);
         return; // Stop and do not show modal
       } else if (data.message && data.message.includes('123456')) {
-        showNotify(`âš ï¸ ${data.message}`);
+        showNotify(`⚠️ ${data.message}`);
       }
     } catch (err) {
       console.error('Failed to send OTP:', err);
-      showNotify('âŒ à¸à¸²à¸£à¹€à¸Šà¸·à¹ˆà¸­à¸¡à¸•à¹ˆà¸­à¸¥à¹‰à¸¡à¹€à¸«à¸¥à¸§ à¹„à¸¡à¹ˆà¸ªà¸²à¸¡à¸²à¸£à¸–à¸ªà¹ˆà¸‡à¸£à¸«à¸±à¸ª OTP à¹„à¸”à¹‰');
+      showNotify('❌ การเชื่อมต่อล้มเหลว ไม่สามารถส่งรหัส OTP ได้');
       setIsSendingOtp(false);
       return;
     }
@@ -882,11 +882,11 @@ export default function App() {
       const data = await res.json();
       
       if (!data.success) {
-        showNotify(`âŒ ${data.message}`);
+        showNotify(`❌ ${data.message}`);
         return;
       }
     } catch (err) {
-      showNotify('âŒ à¹„à¸¡à¹ˆà¸ªà¸²à¸¡à¸²à¸£à¸–à¹€à¸Šà¸·à¹ˆà¸­à¸¡à¸•à¹ˆà¸­à¸à¸±à¸šà¹€à¸‹à¸´à¸£à¹Œà¸Ÿà¹€à¸§à¸­à¸£à¹Œà¹€à¸žà¸·à¹ˆà¸­à¸¢à¸·à¸™à¸¢à¸±à¸™ OTP à¹„à¸”à¹‰');
+      showNotify('❌ ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์เพื่อยืนยัน OTP ได้');
       return;
     }
 
@@ -920,7 +920,7 @@ export default function App() {
     const newReq = createRequest({
       orgId: selectedTargetOrgId,
       targetOrgId: selectedTargetOrgId,
-      targetOrgName: organizations.find((o: any) => o.id === selectedTargetOrgId)?.nameTh || 'à¸«à¸™à¹ˆà¸§à¸¢à¸‡à¸²à¸™à¸œà¸¹à¹‰à¸£à¸±à¸šà¸„à¸³à¸‚à¸­ PDPA',
+      targetOrgName: organizations.find((o: any) => o.id === selectedTargetOrgId)?.nameTh || 'หน่วยงานผู้รับคำขอ PDPA',
       requesterType: reqType,
       requester: requesterForm,
       representative: reqType === 'representative' ? {
@@ -974,7 +974,7 @@ export default function App() {
         // Sync local storage with actual server tracking number
         newReq.trackingNo = data.request.trackingNo;
         saveLocal(newReq);
-        showNotify('à¸ªà¹ˆà¸‡à¸­à¸µà¹€à¸¡à¸¥à¸¢à¸·à¸™à¸¢à¸±à¸™à¸à¸²à¸£à¸£à¸±à¸šà¹€à¸£à¸·à¹ˆà¸­à¸‡à¹„à¸›à¸¢à¸±à¸‡à¸›à¸£à¸°à¸Šà¸²à¸Šà¸™ à¹à¸¥à¸°à¹à¸ˆà¹‰à¸‡à¹€à¸•à¸·à¸­à¸™à¹„à¸›à¸¢à¸±à¸‡à¹€à¸ˆà¹‰à¸²à¸«à¸™à¹‰à¸²à¸—à¸µà¹ˆ Intake à¸•à¸²à¸¡ Workflow à¹€à¸£à¸µà¸¢à¸šà¸£à¹‰à¸­à¸¢à¹à¸¥à¹‰à¸§', 'success', 'à¸£à¸°à¸šà¸šà¹à¸ˆà¹‰à¸‡à¹€à¸•à¸·à¸­à¸™à¸­à¸±à¸•à¹‚à¸™à¸¡à¸±à¸•à¸´ (Email Workflow)');
+        showNotify('ส่งอีเมลยืนยันการรับเรื่องไปยังประชาชน และแจ้งเตือนไปยังเจ้าหน้าที่ Intake ตาม Workflow เรียบร้อยแล้ว', 'success', 'ระบบแจ้งเตือนอัตโนมัติ (Email Workflow)');
       } else {
         setIsNewRequestSuccess(newReq);
       }
@@ -1095,7 +1095,7 @@ export default function App() {
         newReq.trackingNo = data.request.trackingNo;
         saveLocal(newReq);
         setManualEntrySuccessTrackingNo(data.request.trackingNo);
-        showNotify('à¸ªà¹ˆà¸‡à¸­à¸µà¹€à¸¡à¸¥à¹à¸ˆà¹‰à¸‡à¹€à¸•à¸·à¸­à¸™à¸à¸²à¸£à¹€à¸žà¸´à¹ˆà¸¡à¸„à¸³à¸£à¹‰à¸­à¸‡à¹ƒà¸«à¸¡à¹ˆ (Manual Entry) à¹„à¸›à¸¢à¸±à¸‡à¸›à¸£à¸°à¸Šà¸²à¸Šà¸™ à¹à¸¥à¸°à¹€à¸ˆà¹‰à¸²à¸«à¸™à¹‰à¸²à¸—à¸µà¹ˆà¸—à¸µà¹ˆà¹€à¸à¸µà¹ˆà¸¢à¸§à¸‚à¹‰à¸­à¸‡à¸•à¸²à¸¡ Workflow à¹€à¸£à¸µà¸¢à¸šà¸£à¹‰à¸­à¸¢à¹à¸¥à¹‰à¸§', 'success', 'à¹à¸ˆà¹‰à¸‡à¹€à¸•à¸·à¸­à¸™à¸•à¸²à¸¡ Flow à¹€à¸­à¸à¸ªà¸²à¸£');
+        showNotify('ส่งอีเมลแจ้งเตือนการเพิ่มคำร้องใหม่ (Manual Entry) ไปยังประชาชน และเจ้าหน้าที่ที่เกี่ยวข้องตาม Workflow เรียบร้อยแล้ว', 'success', 'แจ้งเตือนตาม Flow เอกสาร');
       } else {
         setManualEntrySuccessTrackingNo(newReq.trackingNo);
       }
@@ -1131,7 +1131,7 @@ export default function App() {
 
     const query = (customKeyword || searchKeyword || trackNo).trim().toUpperCase();
     if (!query) {
-      setTrackingError('à¸à¸£à¸¸à¸“à¸²à¸à¸£à¸­à¸à¸•à¸±à¸§à¹€à¸¥à¸‚à¸„à¸³à¸‚à¸­ à¸«à¸£à¸·à¸­à¸„à¸³à¸„à¹‰à¸™à¸«à¸² Keyword');
+      setTrackingError('กรุณากรอกตัวเลขคำขอ หรือคำค้นหา Keyword');
       return;
     }
 
@@ -1144,14 +1144,14 @@ export default function App() {
       const data = await res.json();
       
       if (!data.success) {
-        setTrackingError(data.message || 'à¹€à¸à¸´à¸”à¸‚à¹‰à¸­à¸œà¸´à¸”à¸žà¸¥à¸²à¸”à¹ƒà¸™à¸à¸²à¸£à¸„à¹‰à¸™à¸«à¸²');
+        setTrackingError(data.message || 'เกิดข้อผิดพลาดในการค้นหา');
         return;
       }
       
       const matches = data.results;
 
       if (matches.length === 0) {
-        setTrackingError(`à¹„à¸¡à¹ˆà¸žà¸šà¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸„à¸³à¸£à¹‰à¸­à¸‡à¸‚à¸­à¸—à¸µà¹ˆà¸¡à¸µà¸£à¸«à¸±à¸ªà¸«à¸£à¸·à¸­à¸„à¸³à¸„à¹‰à¸™à¸«à¸² "${query}" à¹ƒà¸™à¸£à¸°à¸šà¸š`);
+        setTrackingError(`ไม่พบข้อมูลคำร้องขอที่มีรหัสหรือคำค้นหา "${query}" ในระบบ`);
         return;
       }
 
@@ -1159,7 +1159,7 @@ export default function App() {
       setSearchLookupResults(matches);
       setShowSearchLookupModal(true);
     } catch (err) {
-      setTrackingError('à¹„à¸¡à¹ˆà¸ªà¸²à¸¡à¸²à¸£à¸–à¹€à¸Šà¸·à¹ˆà¸­à¸¡à¸•à¹ˆà¸­à¸à¸±à¸šà¹€à¸‹à¸´à¸£à¹Œà¸Ÿà¹€à¸§à¸­à¸£à¹Œà¹€à¸žà¸·à¹ˆà¸­à¸„à¹‰à¸™à¸«à¸²à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¹„à¸”à¹‰');
+      setTrackingError('ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์เพื่อค้นหาข้อมูลได้');
     }
   };
 
@@ -1177,8 +1177,8 @@ export default function App() {
   };
 
   const handleWithdrawRequest = async (reqId: string, reason: string) => {
-    const mockUser: UserType = { id: 'user', orgId: 'org_dopa', username: 'data.subject', fullNameTh: 'à¸œà¸¹à¹‰à¸¢à¸·à¹ˆà¸™à¸„à¸³à¸‚à¸­', fullNameEn: 'Data Subject', email: '', role: 'intake', roles: ['intake'], mfaEnabled: false };
-    await changeRequestStatus(getRequestClone(reqId), 'Withdrawn', mockUser, `à¸–à¸­à¸™à¸„à¸³à¸‚à¸­à¹€à¸™à¸·à¹ˆà¸­à¸‡à¸ˆà¸²à¸: ${reason}`, config || undefined);
+    const mockUser: UserType = { id: 'user', orgId: 'org_dopa', username: 'data.subject', fullNameTh: 'ผู้ยื่นคำขอ', fullNameEn: 'Data Subject', email: '', role: 'intake', roles: ['intake'], mfaEnabled: false };
+    await changeRequestStatus(getRequestClone(reqId), 'Withdrawn', mockUser, `ถอนคำขอเนื่องจาก: ${reason}`, config || undefined);
     // Update active tracked view
     const req = getRequestClone(reqId);
     if (req) setTrackedRequest(req);
@@ -1203,19 +1203,19 @@ export default function App() {
       attachments: [...trackedRequest.attachments, newAtt]
     };
 
-    const mockUser: UserType = { id: 'user', orgId: 'org_dopa', username: 'data.subject', fullNameTh: 'à¸œà¸¹à¹‰à¸¢à¸·à¹ˆà¸™à¸„à¸³à¸‚à¸­', fullNameEn: 'Data Subject', email: '', role: 'intake', roles: ['intake'], mfaEnabled: false };
-    updateRequest(updated, mockUser, 'UPLOAD_EVIDENCE', `à¸œà¸¹à¹‰à¸¢à¸·à¹ˆà¸™à¸­à¸±à¸›à¹‚à¸«à¸¥à¸”à¹€à¸­à¸à¸ªà¸²à¸£à¹€à¸žà¸´à¹ˆà¸¡à¹€à¸•à¸´à¸¡à¸Šà¸·à¹ˆà¸­: ${fileName}`);
+    const mockUser: UserType = { id: 'user', orgId: 'org_dopa', username: 'data.subject', fullNameTh: 'ผู้ยื่นคำขอ', fullNameEn: 'Data Subject', email: '', role: 'intake', roles: ['intake'], mfaEnabled: false };
+    updateRequest(updated, mockUser, 'UPLOAD_EVIDENCE', `ผู้ยื่นอัปโหลดเอกสารเพิ่มเติมชื่อ: ${fileName}`);
     setTrackedRequest(updated);
     
     // Automatically transition status and resume SLA when citizen uploads additional documents
     if (trackedRequest.status === 'Awaiting Additional Information') {
-      await changeRequestStatus(getRequestClone(trackedRequest.id), 'Completeness Review', mockUser, `à¸œà¸¹à¹‰à¸¢à¸·à¹ˆà¸™à¸­à¸±à¸›à¹‚à¸«à¸¥à¸”à¹€à¸­à¸à¸ªà¸²à¸£à¹à¸à¹‰à¹„à¸‚à¹€à¸£à¸µà¸¢à¸šà¸£à¹‰à¸­à¸¢à¹à¸¥à¹‰à¸§ (${fileName}, config || undefined) - à¸›à¸¥à¸”à¸¥à¹‡à¸­à¸à¸™à¸±à¸šà¹€à¸§à¸¥à¸² SLA à¸•à¹ˆà¸­à¹„à¸›`);
+      await changeRequestStatus(getRequestClone(trackedRequest.id), 'Completeness Review', mockUser, `ผู้ยื่นอัปโหลดเอกสารแก้ไขเรียบร้อยแล้ว (${fileName}, config || undefined) - ปลดล็อกนับเวลา SLA ต่อไป`);
       const updatedReq = getRequestClone(trackedRequest.id);
       if (updatedReq) setTrackedRequest(updatedReq);
     }
     
     reloadData();
-    showNotify('âœ… à¸­à¸±à¸›à¹‚à¸«à¸¥à¸”à¸£à¸¹à¸›à¸ à¸²à¸žà¸šà¸±à¸•à¸£à¸›à¸£à¸°à¸Šà¸²à¸Šà¸™ / à¹€à¸­à¸à¸ªà¸²à¸£à¹€à¸žà¸´à¹ˆà¸¡à¹€à¸•à¸´à¸¡à¹€à¸£à¸µà¸¢à¸šà¸£à¹‰à¸­à¸¢à¹à¸¥à¹‰à¸§!\n\nà¸£à¸°à¸šà¸šà¸—à¸³à¸à¸²à¸£à¸›à¸¥à¸”à¸¥à¹‡à¸­à¸à¸™à¸±à¸šà¹€à¸§à¸¥à¸² SLA à¹à¸¥à¸°à¸ªà¹ˆà¸‡à¹€à¸£à¸·à¹ˆà¸­à¸‡à¸à¸¥à¸±à¸šà¸«à¸²à¹€à¸ˆà¹‰à¸²à¸«à¸™à¹‰à¸²à¸—à¸µà¹ˆà¸„à¸±à¸”à¸à¸£à¸­à¸‡à¹€à¸£à¸µà¸¢à¸šà¸£à¹‰à¸­à¸¢à¹à¸¥à¹‰à¸§');
+    showNotify('✅ อัปโหลดรูปภาพบัตรประชาชน / เอกสารเพิ่มเติมเรียบร้อยแล้ว!\n\nระบบทำการปลดล็อกนับเวลา SLA และส่งเรื่องกลับหาเจ้าหน้าที่คัดกรองเรียบร้อยแล้ว');
   };
 
   // --- SECURE DOWNLOAD VERIFICATION (Section 3.9) ---
@@ -1248,20 +1248,20 @@ export default function App() {
     }
 
     if (!req) {
-      setDownloadError('à¸¥à¸´à¸‡à¸à¹Œà¸”à¸²à¸§à¸™à¹Œà¹‚à¸«à¸¥à¸”à¹„à¸¡à¹ˆà¸–à¸¹à¸à¸•à¹‰à¸­à¸‡à¸«à¸£à¸·à¸­à¸«à¸¡à¸”à¸­à¸²à¸¢à¸¸à¸à¸²à¸£à¹ƒà¸Šà¹‰à¸‡à¸²à¸™à¹à¸¥à¹‰à¸§');
+      setDownloadError('ลิงก์ดาวน์โหลดไม่ถูกต้องหรือหมดอายุการใช้งานแล้ว');
       setView('download');
       return;
     }
 
     if (req.status !== 'Ready for Delivery' && req.status !== 'Delivered' && req.status !== 'Receipt Confirmed' && req.status !== 'Closed') {
-      setDownloadError('à¹€à¸­à¸à¸ªà¸²à¸£à¸‚à¸­à¸‡à¸„à¸³à¸‚à¸­à¸™à¸µà¹‰à¸¢à¸±à¸‡à¹„à¸¡à¹ˆà¸žà¸£à¹‰à¸­à¸¡à¸ªà¹ˆà¸‡à¸¡à¸­à¸š à¸«à¸£à¸·à¸­à¸–à¸¹à¸à¸£à¸°à¸‡à¸±à¸šà¸ªà¸´à¸—à¸˜à¸´à¹Œ');
+      setDownloadError('เอกสารของคำขอนี้ยังไม่พร้อมส่งมอบ หรือถูกระงับสิทธิ์');
       setView('download');
       return;
     }
 
     if (req.downloadExpiresAt) {
       if (new Date(req.downloadExpiresAt) < new Date()) {
-        setDownloadError('à¹€à¸­à¸à¸ªà¸²à¸£à¸«à¸¡à¸”à¸­à¸²à¸¢à¸¸à¸à¸²à¸£à¸”à¸²à¸§à¸™à¹Œà¹‚à¸«à¸¥à¸”à¹à¸¥à¹‰à¸§ (à¹€à¸à¸´à¸™ 30 à¸§à¸±à¸™)');
+        setDownloadError('เอกสารหมดอายุการดาวน์โหลดแล้ว (เกิน 30 วัน)');
         setDownloadRequest(req);
         setView('download');
         return;
@@ -1325,10 +1325,10 @@ export default function App() {
         mfaEnabled: false
       };
       
-      addAuditLog('SECURE_DOWNLOAD_FILE', `à¸œà¸¹à¹‰à¸¢à¸·à¹ˆà¸™à¸¢à¸·à¸™à¸¢à¸±à¸™ OTP à¸ªà¸³à¹€à¸£à¹‡à¸ˆà¹à¸¥à¸°à¸”à¸²à¸§à¸™à¹Œà¹‚à¸«à¸¥à¸”à¹„à¸Ÿà¸¥à¹Œà¸ªà¹ˆà¸‡à¸¡à¸­à¸š`, mockSubjectUser, downloadRequest.id, downloadRequest.trackingNo);
+      addAuditLog('SECURE_DOWNLOAD_FILE', `ผู้ยื่นยืนยัน OTP สำเร็จและดาวน์โหลดไฟล์ส่งมอบ`, mockSubjectUser, downloadRequest.id, downloadRequest.trackingNo);
       
       if (downloadRequest.status === 'Ready for Delivery') {
-        await changeRequestStatus(getRequestClone(downloadRequest.id), 'Delivered', mockSubjectUser, 'à¸œà¸¹à¹‰à¸¢à¸·à¹ˆà¸™à¸”à¸²à¸§à¸™à¹Œà¹‚à¸«à¸¥à¸”à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸œà¹ˆà¸²à¸™à¸£à¸°à¸šà¸šà¸ˆà¸±à¸”à¸ªà¹ˆà¸‡à¸›à¸¥à¸­à¸”à¸ à¸±à¸¢à¸ªà¸³à¹€à¸£à¹‡à¸ˆ', config || undefined);
+        await changeRequestStatus(getRequestClone(downloadRequest.id), 'Delivered', mockSubjectUser, 'ผู้ยื่นดาวน์โหลดข้อมูลผ่านระบบจัดส่งปลอดภัยสำเร็จ', config || undefined);
       }
       
       reloadData();
@@ -1347,7 +1347,7 @@ export default function App() {
       
     } catch (e) {
       console.error('Download error:', e);
-      alert('à¹„à¸¡à¹ˆà¸ªà¸²à¸¡à¸²à¸£à¸–à¸”à¸²à¸§à¸™à¹Œà¹‚à¸«à¸¥à¸”à¹„à¸Ÿà¸¥à¹Œà¹„à¸”à¹‰: ' + (e instanceof Error ? e.message : 'à¸£à¸«à¸±à¸ª OTP à¹„à¸¡à¹ˆà¸–à¸¹à¸à¸•à¹‰à¸­à¸‡à¸«à¸£à¸·à¸­à¹€à¸à¸´à¸”à¸‚à¹‰à¸­à¸œà¸´à¸”à¸žà¸¥à¸²à¸”à¸ à¸²à¸¢à¹ƒà¸™à¸£à¸°à¸šà¸š'));
+      alert('ไม่สามารถดาวน์โหลดไฟล์ได้: ' + (e instanceof Error ? e.message : 'รหัส OTP ไม่ถูกต้องหรือเกิดข้อผิดพลาดภายในระบบ'));
     }
   };
 
@@ -1368,17 +1368,17 @@ export default function App() {
       mfaEnabled: false
     };
     
-    addAuditLog('SECURE_DOWNLOAD_FILE', `à¸œà¸¹à¹‰à¸¢à¸·à¹ˆà¸™à¸¢à¸·à¸™à¸¢à¸±à¸™ OTP à¸ªà¸³à¹€à¸£à¹‡à¸ˆà¹à¸¥à¸°à¸”à¸²à¸§à¸™à¹Œà¹‚à¸«à¸¥à¸”à¹„à¸Ÿà¸¥à¹Œà¸œà¹ˆà¸²à¸™à¸£à¸°à¸šà¸šà¸•à¸£à¸§à¸ˆà¸ªà¸­à¸šà¹€à¸­à¸à¸ªà¸²à¸£`, mockSubjectUser, downloadReq.id, downloadReq.trackingNo);
+    addAuditLog('SECURE_DOWNLOAD_FILE', `ผู้ยื่นยืนยัน OTP สำเร็จและดาวน์โหลดไฟล์ผ่านระบบตรวจสอบเอกสาร`, mockSubjectUser, downloadReq.id, downloadReq.trackingNo);
     
     // Update status if it was not closed
     if (downloadReq.status === 'Ready for Delivery') {
-      await changeRequestStatus(getRequestClone(downloadReq.id), 'Delivered', mockSubjectUser, 'à¸œà¸¹à¹‰à¸¢à¸·à¹ˆà¸™à¸”à¸²à¸§à¸™à¹Œà¹‚à¸«à¸¥à¸”à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸œà¹ˆà¸²à¸™à¸£à¸°à¸šà¸šà¸ˆà¸±à¸”à¸ªà¹ˆà¸‡à¸›à¸¥à¸­à¸”à¸ à¸±à¸¢à¸ªà¸³à¹€à¸£à¹‡à¸ˆ', config || undefined);
+      await changeRequestStatus(getRequestClone(downloadReq.id), 'Delivered', mockSubjectUser, 'ผู้ยื่นดาวน์โหลดข้อมูลผ่านระบบจัดส่งปลอดภัยสำเร็จ', config || undefined);
       reloadData();
     }
     
     // Simulate file download by creating mockup file
     const link = document.createElement('a');
-    link.href = 'data:text/plain;charset=utf-8,' + encodeURIComponent(`[CONFIDENTIAL DATA REPORT FOR ${downloadReq.requester.firstName}]\n\nà¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸£à¸²à¸¢à¸‡à¸²à¸™à¸à¸²à¸£à¹ƒà¸Šà¹‰à¸‡à¸²à¸™à¸‚à¸­à¸‡à¸—à¹ˆà¸²à¸™ à¹„à¸”à¹‰à¸£à¸±à¸šà¸à¸²à¸£à¸•à¸£à¸§à¸ˆà¸ªà¸­à¸šà¹à¸¥à¸°à¸ªà¹ˆà¸‡à¸¡à¸­à¸šà¸•à¸²à¸¡à¸ªà¸´à¸—à¸˜à¸´à¹€à¸£à¸µà¸¢à¸šà¸£à¹‰à¸­à¸¢à¹à¸¥à¹‰à¸§.`);
+    link.href = 'data:text/plain;charset=utf-8,' + encodeURIComponent(`[CONFIDENTIAL DATA REPORT FOR ${downloadReq.requester.firstName}]\n\nข้อมูลรายงานการใช้งานของท่าน ได้รับการตรวจสอบและส่งมอบตามสิทธิเรียบร้อยแล้ว.`);
     link.download = `PDPA_EXPORT_${downloadReq.trackingNo}.txt`;
     document.body.appendChild(link);
     link.click();
@@ -1446,14 +1446,14 @@ export default function App() {
       method: req.contactChannel === 'web' ? 'otp_email' : 'document_check',
       verifiedBy: activeUser.fullNameTh,
       verifiedAt: new Date().toISOString(),
-      notes: 'à¸•à¸£à¸§à¸ˆà¸ªà¸­à¸šà¸œà¹ˆà¸²à¸™à¸£à¸°à¸šà¸šà¸§à¸´à¹€à¸„à¸£à¸²à¸°à¸«à¹Œà¹€à¸­à¸à¸ªà¸²à¸£à¸„à¸§à¸²à¸¡à¸–à¸¹à¸à¸•à¹‰à¸­à¸‡à¹à¸šà¸šà¹à¸¡à¸™à¸™à¸§à¸¥à¸ªà¸³à¹€à¸£à¹‡à¸ˆ'
+      notes: 'ตรวจสอบผ่านระบบวิเคราะห์เอกสารความถูกต้องแบบแมนนวลสำเร็จ'
     };
 
     if (status === 'verified') {
       setCheckItems(prev => ({ ...prev, identity: true }));
     }
 
-    await safeUpdateRequest(req, activeUser, 'VERIFY_IDENTITY', `à¸¢à¸·à¸™à¸¢à¸±à¸™à¸•à¸±à¸§à¸•à¸™à¸£à¸°à¸”à¸±à¸š ${assurance.toUpperCase()} à¸œà¸¥à¹€à¸›à¹‡à¸™: ${status === 'verified' ? 'à¸œà¹ˆà¸²à¸™' : 'à¸›à¸à¸´à¹€à¸ªà¸˜'}`);
+    await safeUpdateRequest(req, activeUser, 'VERIFY_IDENTITY', `ยืนยันตัวตนระดับ ${assurance.toUpperCase()} ผลเป็น: ${status === 'verified' ? 'ผ่าน' : 'ปฏิเสธ'}`);
     reloadData();
   };
 
@@ -1463,17 +1463,17 @@ export default function App() {
     
     // Validate identity verification
     if (req?.identityVerification?.status !== 'verified') {
-      showNotify('âš ï¸ à¸à¸£à¸¸à¸“à¸²à¸à¸”à¸¢à¸·à¸™à¸¢à¸±à¸™à¸œà¸¥à¸¢à¸·à¸™à¸¢à¸±à¸™à¸•à¸™à¸œà¸¹à¹‰à¸¢à¸·à¹ˆà¸™à¸„à¸³à¸‚à¸­à¸à¹ˆà¸­à¸™à¸”à¸³à¹€à¸™à¸´à¸™à¸à¸²à¸£à¸•à¹ˆà¸­', 'warning');
+      showNotify('⚠️ กรุณากดยืนยันผลยืนยันตนผู้ยื่นคำขอก่อนดำเนินการต่อ', 'warning');
       return;
     }
 
     // Validate completeness checklist
     if (!checkItems.name || !checkItems.contact || !checkItems.scope || !checkItems.identity || !checkItems.signature) {
-      showNotify('âš ï¸ à¸à¸£à¸¸à¸“à¸²à¸—à¸³à¹€à¸„à¸£à¸·à¹ˆà¸­à¸‡à¸«à¸¡à¸²à¸¢à¹€à¸Šà¹‡à¸„à¸¥à¸´à¸ªà¸•à¹Œà¸•à¸£à¸§à¸ˆà¹€à¸­à¸à¸ªà¸²à¸£à¹ƒà¸«à¹‰à¸„à¸£à¸šà¸–à¹‰à¸§à¸™', 'warning');
+      showNotify('⚠️ กรุณาทำเครื่องหมายเช็คลิสต์ตรวจเอกสารให้ครบถ้วน', 'warning');
       return;
     }
 
-    await changeRequestStatus(req, 'Documents Verified', activeUser, 'à¸•à¸£à¸§à¸ˆà¸ªà¸­à¸šà¹€à¸­à¸à¸ªà¸²à¸£à¸„à¸£à¸šà¸–à¹‰à¸§à¸™à¹€à¸£à¸µà¸¢à¸šà¸£à¹‰à¸­à¸¢ à¹€à¸£à¸´à¹ˆà¸¡à¸™à¸±à¸šà¸£à¸°à¸¢à¸°à¹€à¸§à¸¥à¸²à¸”à¸³à¹€à¸™à¸´à¸™à¸à¸²à¸£ SLA', config || undefined);
+    await changeRequestStatus(req, 'Documents Verified', activeUser, 'ตรวจสอบเอกสารครบถ้วนเรียบร้อย เริ่มนับระยะเวลาดำเนินการ SLA', config || undefined);
     reloadData();
   };
 
@@ -1481,13 +1481,13 @@ export default function App() {
     if (!activeUser) return;
     
     const missing: string[] = [];
-    if (!checkItems.name) missing.push('à¸Šà¸·à¹ˆà¸­à¹à¸¥à¸°à¸™à¸²à¸¡à¸ªà¸à¸¸à¸¥à¸œà¸¹à¹‰à¸¢à¸·à¹ˆà¸™à¸„à¸³à¸‚à¸­');
-    if (!checkItems.contact) missing.push('à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸à¸²à¸£à¸•à¸´à¸”à¸•à¹ˆà¸­à¸à¸¥à¸±à¸š');
-    if (!checkItems.identity) missing.push('à¹€à¸­à¸à¸ªà¸²à¸£à¸¢à¸·à¸™à¸¢à¸±à¸™à¸•à¸±à¸§à¸•à¸™ / à¸ªà¸³à¹€à¸™à¸²à¸šà¸±à¸•à¸£à¸›à¸£à¸°à¸Šà¸²à¸Šà¸™à¸—à¸µà¹ˆà¸Šà¸±à¸”à¹€à¸ˆà¸™');
-    if (!checkItems.signature) missing.push('à¸¥à¸²à¸¢à¸¡à¸·à¸­à¸Šà¸·à¹ˆà¸­à¸­à¸´à¹€à¸¥à¹‡à¸à¸—à¸£à¸­à¸™à¸´à¸à¸ªà¹Œ');
-    if (!checkItems.repDocs) missing.push('à¸«à¸™à¸±à¸‡à¸ªà¸·à¸­à¸¡à¸­à¸šà¸­à¸³à¸™à¸²à¸ˆà¸«à¸£à¸·à¸­à¹€à¸­à¸à¸ªà¸²à¸£à¸›à¸£à¸°à¸ˆà¸³à¸•à¸±à¸§à¸œà¸¹à¹‰à¸£à¸±à¸šà¸¡à¸­à¸šà¸­à¸³à¸™à¸²à¸ˆ');
+    if (!checkItems.name) missing.push('ชื่อและนามสกุลผู้ยื่นคำขอ');
+    if (!checkItems.contact) missing.push('ข้อมูลการติดต่อกลับ');
+    if (!checkItems.identity) missing.push('เอกสารยืนยันตัวตน / สำเนาบัตรประชาชนที่ชัดเจน');
+    if (!checkItems.signature) missing.push('ลายมือชื่ออิเล็กทรอนิกส์');
+    if (!checkItems.repDocs) missing.push('หนังสือมอบอำนาจหรือเอกสารประจำตัวผู้รับมอบอำนาจ');
 
-    const comment = `à¹€à¸­à¸à¸ªà¸²à¸£à¸«à¸¥à¸±à¸à¸à¸²à¸™à¸‚à¸²à¸”à¸„à¸§à¸²à¸¡à¸ªà¸¡à¸šà¸¹à¸£à¸“à¹Œ: à¸‚à¸­à¹€à¸­à¸à¸ªà¸²à¸£à¹€à¸žà¸´à¹ˆà¸¡à¹€à¸•à¸´à¸¡à¸ªà¸³à¸«à¸£à¸±à¸š ${missing.join(', ')}. ${incompleteComment}`;
+    const comment = `เอกสารหลักฐานขาดความสมบูรณ์: ขอเอกสารเพิ่มเติมสำหรับ ${missing.join(', ')}. ${incompleteComment}`;
     await changeRequestStatus(getRequestClone(reqId), 'Awaiting Additional Information', activeUser, comment, config || undefined);
     
     // Auto-generate notification thread message
@@ -1497,10 +1497,10 @@ export default function App() {
         id: `msg_auto_${Date.now()}`,
         sender: 'staff',
         senderName: activeUser.fullNameTh,
-        message: `à¹€à¸£à¸µà¸¢à¸™ à¸„à¸¸à¸“ ${req.requester.firstName} à¸­à¸‡à¸„à¹Œà¸à¸£à¸‚à¸­à¸£à¸±à¸šà¸«à¸¥à¸±à¸à¸à¸²à¸™à¹€à¸žà¸´à¹ˆà¸¡à¹€à¸•à¸´à¸¡à¹€à¸™à¸·à¹ˆà¸­à¸‡à¸ˆà¸²à¸à¹€à¸­à¸à¸ªà¸²à¸£à¸«à¸¥à¸±à¸à¸à¸²à¸™à¸•à¸£à¸§à¸ˆà¸ªà¸­à¸šà¸„à¸§à¸²à¸¡à¸ªà¸¡à¸šà¸¹à¸£à¸“à¹Œà¹„à¸¡à¹ˆà¸œà¹ˆà¸²à¸™ à¸„à¸·à¸­: ${missing.join(', ')} à¸à¸£à¸¸à¸“à¸²à¸­à¸±à¸›à¹‚à¸«à¸¥à¸”à¹€à¸­à¸à¸ªà¸²à¸£à¹ƒà¸«à¸¡à¹ˆà¹€à¸žà¸´à¹ˆà¸¡à¹€à¸•à¸´à¸¡à¹€à¸‚à¹‰à¸²à¸£à¸°à¸šà¸šà¹ƒà¸™à¸«à¸™à¹‰à¸²à¸•à¸´à¸”à¸•à¸²à¸¡à¸ªà¸–à¸²à¸™à¸°`,
+        message: `เรียน คุณ ${req.requester.firstName} องค์กรขอรับหลักฐานเพิ่มเติมเนื่องจากเอกสารหลักฐานตรวจสอบความสมบูรณ์ไม่ผ่าน คือ: ${missing.join(', ')} กรุณาอัปโหลดเอกสารใหม่เพิ่มเติมเข้าระบบในหน้าติดตามสถานะ`,
         timestamp: new Date().toISOString()
       });
-      updateRequest(req, activeUser, 'SEND_MESSAGE', 'à¸ªà¹ˆà¸‡à¸«à¸™à¸±à¸‡à¸ªà¸·à¸­à¹€à¸•à¸·à¸­à¸™à¸‚à¸­à¹€à¸­à¸à¸ªà¸²à¸£à¹€à¸žà¸´à¹ˆà¸¡à¹€à¸•à¸´à¸¡à¸­à¹‰à¸²à¸‡à¸­à¸´à¸‡à¸ªà¸–à¸²à¸™à¸°à¸£à¸­à¸à¸²à¸£à¸”à¸³à¹€à¸™à¸´à¸™à¸à¸²à¸£');
+      updateRequest(req, activeUser, 'SEND_MESSAGE', 'ส่งหนังสือเตือนขอเอกสารเพิ่มเติมอ้างอิงสถานะรอการดำเนินการ');
     }
 
     setShowIncompletePanel(false);
@@ -1509,7 +1509,7 @@ export default function App() {
 
   // Data Discovery System Owner Assign Task (Section 3.5)
   const [selectedTaskSystem, setSelectedTaskSystem] = useState('');
-  const [taskAssignee, setTaskAssignee] = useState('à¸˜à¸™à¸²à¸˜à¸£ à¸£à¸°à¸šà¸šà¸¥à¸¹à¸à¸„à¹‰à¸²');
+  const [taskAssignee, setTaskAssignee] = useState('ธนาธร ระบบลูกค้า');
   const [searchQueryParam, setSearchQueryParam] = useState('');
 
   const handleCreateSearchTask = (reqId: string) => {
@@ -1535,11 +1535,11 @@ export default function App() {
         status: 'Data Collection',
         changedAt: new Date().toISOString(),
         changedBy: activeUser.fullNameTh,
-        comment: `à¸¡à¸­à¸šà¸«à¸¡à¸²à¸¢à¸ à¸²à¸£à¸à¸´à¸ˆà¸„à¹‰à¸™à¸«à¸²à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¹„à¸›à¸¢à¸±à¸‡à¸£à¸°à¸šà¸š: ${selectedTaskSystem}`
+        comment: `มอบหมายภารกิจค้นหาข้อมูลไปยังระบบ: ${selectedTaskSystem}`
       });
     }
 
-    updateRequest(req, activeUser, 'CREATE_DATA_TASK', `à¸ªà¸£à¹‰à¸²à¸‡à¸‡à¸²à¸™à¸„à¹‰à¸™à¸«à¸²à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸£à¸°à¸šà¸š: ${selectedTaskSystem} à¸¡à¸­à¸šà¹ƒà¸«à¹‰: ${taskAssignee}`);
+    updateRequest(req, activeUser, 'CREATE_DATA_TASK', `สร้างงานค้นหาข้อมูลระบบ: ${selectedTaskSystem} มอบให้: ${taskAssignee}`);
     setSelectedTaskSystem('');
     setSearchQueryParam('');
     reloadData();
@@ -1556,7 +1556,7 @@ export default function App() {
         t.status = 'found';
         t.completedAt = new Date().toISOString();
         t.completedBy = activeUser.fullNameTh;
-        t.dataLineage = `à¸£à¸°à¸šà¸š ${t.systemName} -> à¸à¸§à¸²à¸”à¸„à¹‰à¸™à¸«à¸²à¸”à¹‰à¸§à¸¢ SQL / Index -> à¸ˆà¸±à¸”à¹€à¸à¹‡à¸šà¹„à¸Ÿà¸¥à¹Œà¹ƒà¸™ Object Private Container`;
+        t.dataLineage = `ระบบ ${t.systemName} -> กวาดค้นหาด้วย SQL / Index -> จัดเก็บไฟล์ใน Object Private Container`;
         updated++;
       }
     });
@@ -1569,12 +1569,12 @@ export default function App() {
         status: 'Data Owner Review',
         changedAt: new Date().toISOString(),
         changedBy: activeUser.fullNameTh,
-        comment: 'à¸‡à¸²à¸™à¸„à¹‰à¸™à¸«à¸²à¸£à¸°à¸šà¸šà¸ à¸²à¸¢à¹ƒà¸™à¹€à¸ªà¸£à¹‡à¸ˆà¸ªà¸´à¹‰à¸™à¸„à¸£à¸šà¸–à¹‰à¸§à¸™ à¸ªà¹ˆà¸‡à¸•à¹ˆà¸­à¸•à¸£à¸§à¸ˆà¹€à¸­à¸à¸ªà¸²à¸£à¹€à¸œà¸¢à¹à¸žà¸£à¹ˆ'
+        comment: 'งานค้นหาระบบภายในเสร็จสิ้นครบถ้วน ส่งต่อตรวจเอกสารเผยแพร่'
       });
     }
 
     if (updated > 0 || allDone) {
-      updateRequest(req, activeUser, 'COMPLETE_DATA_TASK', `à¸­à¸±à¸›à¹€à¸”à¸•à¸œà¸¥à¸ à¸²à¸£à¸à¸´à¸ˆà¸„à¹‰à¸™à¸«à¸²à¸—à¸±à¹‰à¸‡à¸«à¸¡à¸” à¸ªà¹ˆà¸‡à¹„à¸›à¸¢à¸±à¸‡à¸‚à¸±à¹‰à¸™à¸•à¸­à¸™à¸•à¹ˆà¸­à¹„à¸›`);
+      updateRequest(req, activeUser, 'COMPLETE_DATA_TASK', `อัปเดตผลภารกิจค้นหาทั้งหมด ส่งไปยังขั้นตอนต่อไป`);
       reloadData();
     }
   };
@@ -1584,14 +1584,14 @@ export default function App() {
     const file = files[0];
     
     if (file.size > 3 * 1024 * 1024) {
-      alert('à¸‚à¸™à¸²à¸”à¹„à¸Ÿà¸¥à¹Œà¹€à¸à¸´à¸™ 3MB (à¸ˆà¸³à¸à¸±à¸”à¸—à¸µà¹ˆ 3MB à¹€à¸™à¸·à¹ˆà¸­à¸‡à¸ˆà¸²à¸à¸‚à¹‰à¸­à¸ˆà¸³à¸à¸±à¸”à¸‚à¸­à¸‡ Cloud Server)');
+      alert('ขนาดไฟล์เกิน 3MB (จำกัดที่ 3MB เนื่องจากข้อจำกัดของ Cloud Server)');
       return;
     }
     
     const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
     const isImage = file.type.startsWith('image/') || file.name.toLowerCase().match(/\.(jpg|jpeg|png)$/);
     if (!isPdf && !isImage) {
-      alert('à¸à¸£à¸¸à¸“à¸²à¸­à¸±à¸›à¹‚à¸«à¸¥à¸”à¹„à¸Ÿà¸¥à¹Œ PDF à¸«à¸£à¸·à¸­à¸£à¸¹à¸›à¸ à¸²à¸ž (JPG/PNG) à¹€à¸—à¹ˆà¸²à¸™à¸±à¹‰à¸™');
+      alert('กรุณาอัปโหลดไฟล์ PDF หรือรูปภาพ (JPG/PNG) เท่านั้น');
       return;
     }
 
@@ -1630,13 +1630,13 @@ export default function App() {
                 t.status = 'found';
                 t.completedAt = new Date().toISOString();
                 t.completedBy = activeUser?.fullNameTh;
-                t.dataLineage = `à¸£à¸°à¸šà¸š ${t.systemName} -> à¸à¸§à¸²à¸”à¸„à¹‰à¸™à¸«à¸²à¸”à¹‰à¸§à¸¢ SQL / Index -> à¸ˆà¸±à¸”à¹€à¸à¹‡à¸šà¹„à¸Ÿà¸¥à¹Œà¹ƒà¸™ Object Private Container`;
+                t.dataLineage = `ระบบ ${t.systemName} -> กวาดค้นหาด้วย SQL / Index -> จัดเก็บไฟล์ใน Object Private Container`;
               }
-              updateRequest(req, activeUser, 'UPLOAD_FILE', 'à¸­à¸±à¸›à¹‚à¸«à¸¥à¸”à¹€à¸­à¸à¸ªà¸²à¸£à¹ƒà¸«à¸¡à¹ˆà¹€à¸‚à¹‰à¸²à¸ªà¸¹à¹ˆà¸£à¸°à¸šà¸š à¹à¸¥à¸°à¸­à¸±à¸›à¹€à¸”à¸•à¸ªà¸–à¸²à¸™à¸°à¹€à¸›à¹‡à¸™à¸žà¸šà¸‚à¹‰à¸­à¸¡à¸¹à¸¥');
+              updateRequest(req, activeUser, 'UPLOAD_FILE', 'อัปโหลดเอกสารใหม่เข้าสู่ระบบ และอัปเดตสถานะเป็นพบข้อมูล');
               reloadData();
             }
           } else {
-            alert('à¸­à¸±à¸›à¹‚à¸«à¸¥à¸”à¹„à¸¡à¹ˆà¸ªà¸³à¹€à¸£à¹‡à¸ˆ: ' + data.message);
+            alert('อัปโหลดไม่สำเร็จ: ' + data.message);
           }
         } else {
           let errText = 'Upload failed';
@@ -1646,10 +1646,10 @@ export default function App() {
           } catch(err) {
             errText = res.statusText;
           }
-          alert(`à¸­à¸±à¸›à¹‚à¸«à¸¥à¸”à¹„à¸¡à¹ˆà¸ªà¸³à¹€à¸£à¹‡à¸ˆ (HTTP ${res.status}): ${errText}`);
+          alert(`อัปโหลดไม่สำเร็จ (HTTP ${res.status}): ${errText}`);
         }
       } catch (err: any) {
-        alert('à¹€à¸à¸´à¸”à¸‚à¹‰à¸­à¸œà¸´à¸”à¸žà¸¥à¸²à¸”à¹ƒà¸™à¸à¸²à¸£à¸­à¸±à¸›à¹‚à¸«à¸¥à¸”: ' + err.message);
+        alert('เกิดข้อผิดพลาดในการอัปโหลด: ' + err.message);
       }
     };
     reader.readAsDataURL(file);
@@ -1661,19 +1661,19 @@ export default function App() {
     if (!req) return;
     const t = req.dataCollectionTasks.find((t: any) => t.id === taskId);
     if (t) {
-      if (!confirm(`à¸„à¸¸à¸“à¹à¸™à¹ˆà¹ƒà¸ˆà¸«à¸£à¸·à¸­à¹„à¸¡à¹ˆà¸—à¸µà¹ˆà¸ˆà¸°à¹à¸ˆà¹‰à¸‡à¸§à¹ˆà¸² "à¹„à¸¡à¹ˆà¸žà¸šà¸‚à¹‰à¸­à¸¡à¸¹à¸¥" à¸ªà¸³à¸«à¸£à¸±à¸šà¸£à¸°à¸šà¸š ${t.systemName}?`)) return;
+      if (!confirm(`คุณแน่ใจหรือไม่ที่จะแจ้งว่า "ไม่พบข้อมูล" สำหรับระบบ ${t.systemName}?`)) return;
       t.status = 'not_found';
       t.completedAt = new Date().toISOString();
       t.completedBy = activeUser.fullNameTh;
-      t.dataLineage = `à¸£à¸°à¸šà¸š ${t.systemName} -> à¸à¸§à¸²à¸”à¸„à¹‰à¸™à¸«à¸²à¸”à¹‰à¸§à¸¢ SQL / Index -> à¹„à¸¡à¹ˆà¸žà¸šà¸‚à¹‰à¸­à¸¡à¸¹à¸¥`;
-      updateRequest(req, activeUser, 'MARK_NOT_FOUND', `à¹€à¸ˆà¹‰à¸²à¸«à¸™à¹‰à¸²à¸—à¸µà¹ˆà¹à¸ˆà¹‰à¸‡à¸§à¹ˆà¸²à¹„à¸¡à¹ˆà¸žà¸šà¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¹ƒà¸™à¸£à¸°à¸šà¸š ${t.systemName}`);
+      t.dataLineage = `ระบบ ${t.systemName} -> กวาดค้นหาด้วย SQL / Index -> ไม่พบข้อมูล`;
+      updateRequest(req, activeUser, 'MARK_NOT_FOUND', `เจ้าหน้าที่แจ้งว่าไม่พบข้อมูลในระบบ ${t.systemName}`);
       reloadData();
     }
   };
 
   const handleTaskFileDelete = async (reqId: string, taskId: string, fileId: string) => {
     if (!activeUser) return;
-    if (!confirm('à¸¢à¸·à¸™à¸¢à¸±à¸™à¸à¸²à¸£à¸¥à¸šà¹„à¸Ÿà¸¥à¹Œà¸™à¸µà¹‰? (à¹„à¸Ÿà¸¥à¹Œà¸ˆà¸°à¸–à¸¹à¸à¸¥à¸šà¸­à¸­à¸à¸ˆà¸²à¸à¸«à¸™à¹‰à¸²à¸ˆà¸­à¸œà¸¹à¹‰à¹ƒà¸Šà¹‰ à¹à¸•à¹ˆà¸¢à¸±à¸‡à¸„à¸‡à¹€à¸à¹‡à¸šà¸›à¸£à¸°à¸§à¸±à¸•à¸´à¹„à¸§à¹‰à¹ƒà¸™à¸£à¸°à¸šà¸š)')) return;
+    if (!confirm('ยืนยันการลบไฟล์นี้? (ไฟล์จะถูกลบออกจากหน้าจอผู้ใช้ แต่ยังคงเก็บประวัติไว้ในระบบ)')) return;
     try {
       const res = await fetch(`/api/requests/${reqId}/tasks/${taskId}/files/${fileId}`, {
         method: 'DELETE',
@@ -1687,20 +1687,20 @@ export default function App() {
             const f = t.uploadedFiles.find((f: any) => f.id === fileId);
             if (f) f.isDeleted = true;
           }
-          updateRequest(req, activeUser, 'DELETE_FILE', 'à¸¥à¸šà¹€à¸­à¸à¸ªà¸²à¸£à¸­à¸­à¸à¸ˆà¸²à¸à¸£à¸°à¸šà¸š');
+          updateRequest(req, activeUser, 'DELETE_FILE', 'ลบเอกสารออกจากระบบ');
           reloadData();
         }
       } else {
-        alert('à¸¥à¸šà¹„à¸¡à¹ˆà¸ªà¸³à¹€à¸£à¹‡à¸ˆ');
+        alert('ลบไม่สำเร็จ');
       }
     } catch (e) {
-      alert('à¹€à¸à¸´à¸”à¸‚à¹‰à¸­à¸œà¸´à¸”à¸žà¸¥à¸²à¸”à¹ƒà¸™à¸à¸²à¸£à¸¥à¸šà¹„à¸Ÿà¸¥à¹Œ');
+      alert('เกิดข้อผิดพลาดในการลบไฟล์');
     }
   };
 
   const handleOwnerEscalateFlow = (reqId: string) => {
     if (!activeUser) return;
-    if (!confirm('à¸„à¸¸à¸“à¹à¸™à¹ˆà¹ƒà¸ˆà¸«à¸£à¸·à¸­à¹„à¸¡à¹ˆà¸—à¸µà¹ˆà¸ˆà¸°à¹à¸ˆà¹‰à¸‡à¸§à¹ˆà¸²à¹„à¸¡à¹ˆà¸žà¸šà¸‚à¹‰à¸­à¸¡à¸¹à¸¥ à¹à¸¥à¸°à¸ªà¹ˆà¸‡à¹€à¸£à¸·à¹ˆà¸­à¸‡à¸™à¸µà¹‰à¸‚à¹‰à¸²à¸¡à¹„à¸›à¸¢à¸±à¸‡à¸œà¸¹à¹‰à¸šà¸£à¸´à¸«à¸²à¸£à¹‚à¸”à¸¢à¸•à¸£à¸‡?')) return;
+    if (!confirm('คุณแน่ใจหรือไม่ที่จะแจ้งว่าไม่พบข้อมูล และส่งเรื่องนี้ข้ามไปยังผู้บริหารโดยตรง?')) return;
     const req = getRequestClone(reqId);
     if (!req) return;
 
@@ -1709,7 +1709,7 @@ export default function App() {
         t.status = 'not_found';
         t.completedAt = new Date().toISOString();
         t.completedBy = activeUser.fullNameTh;
-        t.dataLineage = `à¸£à¸°à¸šà¸š ${t.systemName} -> à¸à¸§à¸²à¸”à¸„à¹‰à¸™à¸«à¸²à¸”à¹‰à¸§à¸¢ SQL / Index -> à¹„à¸¡à¹ˆà¸žà¸šà¸‚à¹‰à¸­à¸¡à¸¹à¸¥ -> à¸ªà¹ˆà¸‡à¸œà¸¹à¹‰à¸šà¸£à¸´à¸«à¸²à¸£à¸•à¸±à¸”à¸ªà¸´à¸™à¹ƒà¸ˆ`;
+        t.dataLineage = `ระบบ ${t.systemName} -> กวาดค้นหาด้วย SQL / Index -> ไม่พบข้อมูล -> ส่งผู้บริหารตัดสินใจ`;
       }
     });
 
@@ -1719,10 +1719,10 @@ export default function App() {
       status: 'Executive Approval',
       changedAt: new Date().toISOString(),
       changedBy: activeUser.fullNameTh,
-      comment: `à¸ªà¹ˆà¸‡à¹€à¸£à¸·à¹ˆà¸­à¸‡à¹ƒà¸«à¹‰à¸œà¸¹à¹‰à¸šà¸£à¸´à¸«à¸²à¸£à¸•à¸±à¸”à¸ªà¸´à¸™à¹ƒà¸ˆ à¹€à¸™à¸·à¹ˆà¸­à¸‡à¸ˆà¸²à¸à¹„à¸¡à¹ˆà¸žà¸šà¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¹ƒà¸™à¸£à¸°à¸šà¸š`
+      comment: `ส่งเรื่องให้ผู้บริหารตัดสินใจ เนื่องจากไม่พบข้อมูลในระบบ`
     });
 
-    updateRequest(req, activeUser, 'ESCALATE_DATA_TASK', `à¸ªà¹ˆà¸‡à¹€à¸£à¸·à¹ˆà¸­à¸‡à¹ƒà¸«à¹‰à¸œà¸¹à¹‰à¸šà¸£à¸´à¸«à¸²à¸£à¸•à¸±à¸”à¸ªà¸´à¸™à¹ƒà¸ˆ à¹€à¸™à¸·à¹ˆà¸­à¸‡à¸ˆà¸²à¸à¹„à¸¡à¹ˆà¸žà¸šà¸‚à¹‰à¸­à¸¡à¸¹à¸¥`);
+    updateRequest(req, activeUser, 'ESCALATE_DATA_TASK', `ส่งเรื่องให้ผู้บริหารตัดสินใจ เนื่องจากไม่พบข้อมูล`);
     reloadData();
   };
 
@@ -1748,23 +1748,23 @@ export default function App() {
           watermarkApplied: file.watermarkApplied
         });
       } else {
-        alert('à¸”à¸¶à¸‡à¹„à¸Ÿà¸¥à¹Œà¹„à¸¡à¹ˆà¸ªà¸³à¹€à¸£à¹‡à¸ˆ: ' + data.message);
+        alert('ดึงไฟล์ไม่สำเร็จ: ' + data.message);
       }
     } catch (err) {
-      alert('à¹€à¸à¸´à¸”à¸‚à¹‰à¸­à¸œà¸´à¸”à¸žà¸¥à¸²à¸”à¹ƒà¸™à¸à¸²à¸£à¸”à¸¶à¸‡à¹„à¸Ÿà¸¥à¹Œ');
+      alert('เกิดข้อผิดพลาดในการดึงไฟล์');
     }
   };
 
   const handleUnassignTask = (reqId: string, taskId: string) => {
     if (!activeUser) return;
-    if (!confirm('à¸¢à¸·à¸™à¸¢à¸±à¸™à¸à¸²à¸£à¸¢à¸à¹€à¸¥à¸´à¸à¸à¸²à¸£à¸¡à¸­à¸šà¸«à¸¡à¸²à¸¢à¸‡à¸²à¸™à¸ªà¸·à¸šà¸„à¹‰à¸™à¸™à¸µà¹‰? (à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸ à¸²à¸£à¸à¸´à¸ˆà¸™à¸µà¹‰à¸ˆà¸°à¸–à¸¹à¸à¸¥à¸šà¸­à¸­à¸à¸ˆà¸²à¸à¸£à¸²à¸¢à¸à¸²à¸£)')) return;
+    if (!confirm('ยืนยันการยกเลิกการมอบหมายงานสืบค้นนี้? (ข้อมูลภารกิจนี้จะถูกลบออกจากรายการ)')) return;
     const req = getRequestClone(reqId);
     if (!req) return;
     const taskIndex = req.dataCollectionTasks.findIndex((t: any) => t.id === taskId);
     if (taskIndex !== -1) {
       const sysName = req.dataCollectionTasks[taskIndex].systemName;
       req.dataCollectionTasks.splice(taskIndex, 1);
-      updateRequest(req, activeUser, 'UNASSIGN_TASK', `à¸¢à¸à¹€à¸¥à¸´à¸à¸à¸²à¸£à¸¡à¸­à¸šà¸«à¸¡à¸²à¸¢à¹à¸¥à¸°à¸¥à¸šà¸ à¸²à¸£à¸à¸´à¸ˆà¸„à¹‰à¸™à¸«à¸²à¸£à¸°à¸šà¸š ${sysName}`);
+      updateRequest(req, activeUser, 'UNASSIGN_TASK', `ยกเลิกการมอบหมายและลบภารกิจค้นหาระบบ ${sysName}`);
       reloadData();
     }
   };
@@ -1802,11 +1802,11 @@ export default function App() {
         status: 'Redaction Required',
         changedAt: new Date().toISOString(),
         changedBy: activeUser.fullNameTh,
-        comment: 'à¹€à¸£à¸´à¹ˆà¸¡à¹€à¸‹à¹‡à¸™à¹€à¸‹à¸­à¸£à¹Œà¸›à¸à¸›à¸´à¸”à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸ªà¹ˆà¸§à¸™à¸šà¸¸à¸„à¸„à¸¥à¸šà¸¸à¸„à¸„à¸¥à¸­à¸·à¹ˆà¸™à¹ƒà¸™à¸£à¸²à¸¢à¸‡à¸²à¸™'
+        comment: 'เริ่มเซ็นเซอร์ปกปิดข้อมูลส่วนบุคคลบุคคลอื่นในรายงาน'
       });
     }
 
-    updateRequest(req, activeUser, 'REDACT_DOCUMENT', `à¸›à¸à¸›à¸´à¸”à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸ªà¹ˆà¸§à¸™à¸—à¸µà¹ˆ: ${newRecord.itemRedacted} à¹ƒà¸™à¹„à¸Ÿà¸¥à¹Œ: ${newRecord.itemId}`);
+    updateRequest(req, activeUser, 'REDACT_DOCUMENT', `ปกปิดข้อมูลส่วนที่: ${newRecord.itemRedacted} ในไฟล์: ${newRecord.itemId}`);
     reloadData();
   };
 
@@ -1817,12 +1817,12 @@ export default function App() {
 
     try {
       // Transition to DPO or Legal review
-      await changeRequestStatus(getRequestClone(reqId), 'DPO or Legal Review', activeUser, 'à¸šà¸±à¸™à¸—à¸¶à¸à¸à¸²à¸£à¸–à¸¡à¸”à¸³à¹à¸¥à¸°à¸ªà¹ˆà¸‡à¸•à¹ˆà¸­à¹ƒà¸«à¹‰à¸à¸Žà¸«à¸¡à¸²à¸¢/DPO à¸žà¸´à¸ˆà¸²à¸£à¸“à¸²à¸à¸²à¸™à¸ªà¸´à¸—à¸˜à¸´à¹Œà¹à¸¥à¸°à¹€à¸­à¸à¸ªà¸²à¸£à¹à¸ˆà¹‰à¸‡à¸œà¸¥', config || undefined);
-      showNotify('à¸šà¸±à¸™à¸—à¸¶à¸à¸œà¸¥à¸à¸²à¸£à¸›à¸à¸›à¸´à¸”à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¹à¸¥à¸°à¸­à¸±à¸›à¹€à¸”à¸•à¸ªà¸–à¸²à¸™à¸°à¹€à¸›à¹‡à¸™ "DPO or Legal Review" à¹€à¸£à¸µà¸¢à¸šà¸£à¹‰à¸­à¸¢à¹à¸¥à¹‰à¸§', 'success');
+      await changeRequestStatus(getRequestClone(reqId), 'DPO or Legal Review', activeUser, 'บันทึกการถมดำและส่งต่อให้กฎหมาย/DPO พิจารณาฐานสิทธิ์และเอกสารแจ้งผล', config || undefined);
+      showNotify('บันทึกผลการปกปิดข้อมูลและอัปเดตสถานะเป็น "DPO or Legal Review" เรียบร้อยแล้ว', 'success');
       reloadData();
     } catch (error: any) {
       console.error(error);
-      showNotify(error.message || 'à¹€à¸à¸´à¸”à¸‚à¹‰à¸­à¸œà¸´à¸”à¸žà¸¥à¸²à¸”à¹ƒà¸™à¸à¸²à¸£à¸šà¸±à¸™à¸—à¸¶à¸à¸‚à¹‰à¸­à¸¡à¸¹à¸¥ à¸à¸£à¸¸à¸“à¸²à¸¥à¸­à¸‡à¹ƒà¸«à¸¡à¹ˆà¸­à¸µà¸à¸„à¸£à¸±à¹‰à¸‡', 'error');
+      showNotify(error.message || 'เกิดข้อผิดพลาดในการบันทึกข้อมูล กรุณาลองใหม่อีกครั้ง', 'error');
     }
   };
 
@@ -1870,9 +1870,9 @@ export default function App() {
       paymentStatus: subtotal > 0 ? 'pending' : 'waived'
     };
 
-    await safeUpdateRequest(req, activeUser, 'CALCULATE_FEE', `à¸„à¸³à¸™à¸§à¸“à¸­à¸±à¸•à¸£à¸²à¸„à¹ˆà¸²à¸˜à¸£à¸£à¸¡à¹€à¸™à¸µà¸¢à¸¡à¸ªà¸³à¹€à¸£à¹‡à¸ˆ à¸¢à¸­à¸”à¸ªà¸¸à¸—à¸˜à¸´: ${subtotal} à¸šà¸²à¸— (à¸ªà¸–à¸²à¸™à¸°: ${subtotal > 0 ? 'à¸£à¸­à¸™à¸±à¸”à¸Šà¸³à¸£à¸°' : 'à¸¢à¸à¹€à¸§à¹‰à¸™'})`);
+    await safeUpdateRequest(req, activeUser, 'CALCULATE_FEE', `คำนวณอัตราค่าธรรมเนียมสำเร็จ ยอดสุทธิ: ${subtotal} บาท (สถานะ: ${subtotal > 0 ? 'รอนัดชำระ' : 'ยกเว้น'})`);
     reloadData();
-    showNotify('à¸„à¸³à¸™à¸§à¸“à¹à¸¥à¸°à¸šà¸±à¸™à¸—à¸¶à¸à¸­à¸±à¸•à¸£à¸²à¸„à¹ˆà¸²à¸˜à¸£à¸£à¸¡à¹€à¸™à¸µà¸¢à¸¡à¹€à¸£à¸µà¸¢à¸šà¸£à¹‰à¸­à¸¢à¹à¸¥à¹‰à¸§');
+    showNotify('คำนวณและบันทึกอัตราค่าธรรมเนียมเรียบร้อยแล้ว');
   };
 
   // Simulating Payment Upload / Verification
@@ -1885,11 +1885,11 @@ export default function App() {
     req.feeCalculation.paymentReceiptNo = `REC-${Date.now().toString().substr(-6)}`;
     req.feeCalculation.paidAt = new Date().toISOString();
 
-    updateRequest(req, activeUser, 'RECEIVE_PAYMENT', `à¸¢à¸·à¸™à¸¢à¸±à¸™à¸à¸²à¸£à¸Šà¸³à¸£à¸°à¹€à¸‡à¸´à¸™à¹€à¸£à¸µà¸¢à¸šà¸£à¹‰à¸­à¸¢ à¹ƒà¸šà¹€à¸ªà¸£à¹‡à¸ˆà¹€à¸¥à¸‚à¸—à¸µà¹ˆ: ${req.feeCalculation.paymentReceiptNo}`);
+    updateRequest(req, activeUser, 'RECEIVE_PAYMENT', `ยืนยันการชำระเงินเรียบร้อย ใบเสร็จเลขที่: ${req.feeCalculation.paymentReceiptNo}`);
     
     // Automatically advance state
     if (req.status === 'Awaiting Payment' || req.status === 'Fee Notification') {
-      await changeRequestStatus(getRequestClone(reqId), 'Ready for Delivery', activeUser, 'à¸Šà¸³à¸£à¸°à¸„à¹ˆà¸²à¸˜à¸£à¸£à¸¡à¹€à¸™à¸µà¸¢à¸¡à¹à¸¥à¹‰à¸§ à¹€à¸•à¸£à¸µà¸¢à¸¡à¸ªà¹ˆà¸‡à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸ªà¸´à¸—à¸˜à¸´à¹Œà¸—à¸²à¸‡à¸Šà¹ˆà¸­à¸‡à¸—à¸²à¸‡à¸›à¸¥à¸­à¸”à¸ à¸±à¸¢', config || undefined);
+      await changeRequestStatus(getRequestClone(reqId), 'Ready for Delivery', activeUser, 'ชำระค่าธรรมเนียมแล้ว เตรียมส่งข้อมูลสิทธิ์ทางช่องทางปลอดภัย', config || undefined);
     }
     
     reloadData();
@@ -1898,7 +1898,7 @@ export default function App() {
   // DPO and Approver Decisions (Section 3.7)
   const [decisionType, setDecisionType] = useState<'approved' | 'partially_approved' | 'denied' | 'no_data'>('approved');
   const [denialBasisCode, setDenialBasisCode] = useState('');
-  const [legalBasisInput, setLegalBasisInput] = useState('à¸•à¸²à¸¡à¸ªà¸´à¸—à¸˜à¸´à¸‚à¸­à¸‡à¹€à¸ˆà¹‰à¸²à¸‚à¸­à¸‡à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸ªà¹ˆà¸§à¸™à¸šà¸¸à¸„à¸„à¸¥ à¹à¸«à¹ˆà¸‡à¸žà¸£à¸°à¸£à¸²à¸Šà¸šà¸±à¸à¸à¸±à¸•à¸´à¸„à¸¸à¹‰à¸¡à¸„à¸£à¸­à¸‡à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸ªà¹ˆà¸§à¸™à¸šà¸¸à¸„à¸„à¸¥ à¸ž.à¸¨. 2562');
+  const [legalBasisInput, setLegalBasisInput] = useState('ตามสิทธิของเจ้าของข้อมูลส่วนบุคคล แห่งพระราชบัญญัติคุ้มครองข้อมูลส่วนบุคคล พ.ศ. 2562');
   const [decisionNotes, setDecisionNotes] = useState('');
 
   const handleSubmitDecisionProposal = async (reqId: string) => {
@@ -1906,7 +1906,7 @@ export default function App() {
     
     // Check DPO Signature
     if (!activeUser.signature_image) {
-      showNotify('à¹„à¸¡à¹ˆà¸ªà¸²à¸¡à¸²à¸£à¸–à¸”à¸³à¹€à¸™à¸´à¸™à¸à¸²à¸£à¹„à¸”à¹‰ à¹€à¸™à¸·à¹ˆà¸­à¸‡à¸ˆà¸²à¸à¸—à¹ˆà¸²à¸™à¸¢à¸±à¸‡à¹„à¸¡à¹ˆà¹„à¸”à¹‰à¸­à¸±à¸›à¹‚à¸«à¸¥à¸”à¸¥à¸²à¸¢à¸¡à¸·à¸­à¸Šà¸·à¹ˆà¸­ (E-Signature) à¹ƒà¸™à¹‚à¸›à¸£à¹„à¸Ÿà¸¥à¹Œ à¸à¸£à¸¸à¸“à¸²à¹„à¸›à¸—à¸µà¹ˆà¹€à¸¡à¸™à¸¹à¹‚à¸›à¸£à¹„à¸Ÿà¸¥à¹Œà¹€à¸žà¸·à¹ˆà¸­à¸­à¸±à¸›à¹‚à¸«à¸¥à¸”à¸¥à¸²à¸¢à¸¡à¸·à¸­à¸Šà¸·à¹ˆà¸­à¸à¹ˆà¸­à¸™à¸—à¸³à¸à¸²à¸£à¹€à¸ªà¸™à¸­à¸§à¸´à¸™à¸´à¸ˆà¸‰à¸±à¸¢', 'warning');
+      showNotify('ไม่สามารถดำเนินการได้ เนื่องจากท่านยังไม่ได้อัปโหลดลายมือชื่อ (E-Signature) ในโปรไฟล์ กรุณาไปที่เมนูโปรไฟล์เพื่ออัปโหลดลายมือชื่อก่อนทำการเสนอวินิจฉัย', 'warning');
       return;
     }
 
@@ -1916,11 +1916,11 @@ export default function App() {
     const reasons: string[] = [];
     if (decisionType === 'denied') {
       const selectedReason = config?.rejectionReasons.find(r => r.code === denialBasisCode);
-      reasons.push(selectedReason ? selectedReason.labelTh : 'à¸à¸²à¸£à¸›à¸à¸´à¹€à¸ªà¸˜à¹€à¸™à¸·à¹ˆà¸­à¸‡à¸ˆà¸²à¸à¸ªà¸´à¸—à¸˜à¸´à¸‚à¸±à¸”à¸à¸±à¸šà¸à¸Žà¸«à¸¡à¸²à¸¢à¸«à¸¥à¸±à¸');
+      reasons.push(selectedReason ? selectedReason.labelTh : 'การปฏิเสธเนื่องจากสิทธิขัดกับกฎหมายหลัก');
     } else if (decisionType === 'partially_approved') {
-      reasons.push('à¸›à¸à¸›à¸´à¸”à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸ªà¹ˆà¸§à¸™à¸šà¸¸à¸„à¸„à¸¥à¸‚à¸­à¸‡à¸šà¸¸à¸„à¸„à¸¥à¸­à¸·à¹ˆà¸™à¹€à¸žà¸·à¹ˆà¸­à¸£à¸±à¸à¸©à¸²à¸„à¸§à¸²à¸¡à¸›à¸¥à¸­à¸”à¸ à¸±à¸¢');
+      reasons.push('ปกปิดข้อมูลส่วนบุคคลของบุคคลอื่นเพื่อรักษาความปลอดภัย');
     } else {
-      reasons.push('à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸ªà¹ˆà¸§à¸™à¸šà¸¸à¸„à¸„à¸¥à¸–à¸¹à¸à¸•à¹‰à¸­à¸‡à¸•à¸£à¸‡à¸•à¸²à¸¡à¸‚à¸­à¸šà¹€à¸‚à¸•à¹à¸¥à¸°à¸•à¸£à¸§à¸ˆà¸ªà¸­à¸šà¹„à¸¡à¹ˆà¸žà¸šà¸‚à¹‰à¸­à¸¢à¸à¹€à¸§à¹‰à¸™à¸›à¸à¸´à¹€à¸ªà¸˜à¸ªà¸´à¸—à¸˜à¸´');
+      reasons.push('ข้อมูลส่วนบุคคลถูกต้องตรงตามขอบเขตและตรวจสอบไม่พบข้อยกเว้นปฏิเสธสิทธิ');
     }
 
     req.decision = {
@@ -1938,10 +1938,10 @@ export default function App() {
       status: 'Approval Pending',
       changedAt: new Date().toISOString(),
       changedBy: activeUser.fullNameTh,
-      comment: `DPO à¸¢à¸·à¹ˆà¸™à¸‚à¹‰à¸­à¹€à¸ªà¸™à¸­à¸¡à¸¸à¸¡à¸¡à¸­à¸‡à¸à¸Žà¸«à¸¡à¸²à¸¢à¸ªà¸£à¸¸à¸›à¸œà¸¥: ${decisionType === 'approved' ? 'à¸­à¸™à¸¸à¸¡à¸±à¸•à¸´à¸—à¸±à¹‰à¸‡à¸«à¸¡à¸”' : decisionType === 'partially_approved' ? 'à¸­à¸™à¸¸à¸¡à¸±à¸•à¸´à¸šà¸²à¸‡à¸ªà¹ˆà¸§à¸™' : 'à¸›à¸à¸´à¹€à¸ªà¸˜à¸„à¸³à¸‚à¸­'}`
+      comment: `DPO ยื่นข้อเสนอมุมมองกฎหมายสรุปผล: ${decisionType === 'approved' ? 'อนุมัติทั้งหมด' : decisionType === 'partially_approved' ? 'อนุมัติบางส่วน' : 'ปฏิเสธคำขอ'}`
     });
 
-    await safeUpdateRequest(req, activeUser, 'SUBMIT_DPO_DECISION', `à¸šà¸±à¸™à¸—à¸¶à¸à¸„à¸³à¸žà¸´à¸ˆà¸²à¸£à¸“à¸²à¸œà¸¥à¹à¸¥à¸°à¸‚à¸­à¸­à¸™à¸¸à¸¡à¸±à¸•à¸´à¸­à¸¢à¹ˆà¸²à¸‡à¹€à¸›à¹‡à¸™à¸—à¸²à¸‡à¸à¸²à¸£`);
+    await safeUpdateRequest(req, activeUser, 'SUBMIT_DPO_DECISION', `บันทึกคำพิจารณาผลและขออนุมัติอย่างเป็นทางการ`);
     reloadData();
   };
 
@@ -1949,7 +1949,7 @@ export default function App() {
     if (!activeUser) return;
     
     if (!activeUser.signature_image) {
-      showNotify('à¸à¸£à¸¸à¸“à¸²à¸•à¸±à¹‰à¸‡à¸„à¹ˆà¸²à¹‚à¸›à¸£à¹„à¸Ÿà¸¥à¹Œà¹à¸¥à¸°à¸­à¸±à¸›à¹‚à¸«à¸¥à¸”à¸¥à¸²à¸¢à¸¡à¸·à¸­à¸Šà¸·à¹ˆà¸­à¸à¹ˆà¸­à¸™à¸—à¸³à¸à¸²à¸£à¸­à¸™à¸¸à¸¡à¸±à¸•à¸´à¸„à¸³à¸£à¹‰à¸­à¸‡', 'warning');
+      showNotify('กรุณาตั้งค่าโปรไฟล์และอัปโหลดลายมือชื่อก่อนทำการอนุมัติคำร้อง', 'warning');
       return;
     }
 
@@ -1959,24 +1959,24 @@ export default function App() {
     if (req.decision) {
       req.decision.approvedAt = new Date().toISOString();
       req.decision.approverName = activeUser.fullNameTh;
-      req.decision.approverOpinion = 'à¹€à¸«à¹‡à¸™à¸Šà¸­à¸šà¹à¸¥à¸°à¸¢à¸´à¸™à¸¢à¸­à¸¡à¹ƒà¸«à¹‰à¸¥à¸‡à¸™à¸²à¸¡à¸«à¸™à¸±à¸‡à¸ªà¸·à¸­à¸•à¸²à¸¡à¸›à¸£à¸°à¸à¸²à¸¨ DPO';
+      req.decision.approverOpinion = 'เห็นชอบและยินยอมให้ลงนามหนังสือตามประกาศ DPO';
       req.decision.approverSignatureImage = activeUser.signature_image || null;
-      await updateRequest(req, activeUser, 'APPROVER_SIGN', 'à¸œà¸¹à¹‰à¸šà¸£à¸´à¸«à¸²à¸£à¸¥à¸‡à¸™à¸²à¸¡à¹€à¸«à¹‡à¸™à¸Šà¸­à¸š');
+      await updateRequest(req, activeUser, 'APPROVER_SIGN', 'ผู้บริหารลงนามเห็นชอบ');
     }
 
     // Change status using the mutated req reference
-    await changeRequestStatus(req, resultStatus, activeUser, `à¸œà¸¹à¹‰à¸­à¸™à¸¸à¸¡à¸±à¸•à¸´à¸¡à¸µà¸„à¸³à¸ªà¸±à¹ˆà¸‡à¸­à¸¢à¹ˆà¸²à¸‡à¹€à¸›à¹‡à¸™à¸—à¸²à¸‡à¸à¸²à¸£: ${resultStatus}`, config || undefined);
+    await changeRequestStatus(req, resultStatus, activeUser, `ผู้อนุมัติมีคำสั่งอย่างเป็นทางการ: ${resultStatus}`, config || undefined);
 
     // If approved and has fees, go to payment. If not, go to Ready for Delivery (digital)
     if (['Approved', 'Partially Approved'].includes(resultStatus)) {
       if (req.feeCalculation && req.feeCalculation.totalCalculated > 0 && req.feeCalculation.paymentStatus === 'pending') {
-        await changeRequestStatus(req, 'Fee Notification', activeUser, 'à¹à¸ˆà¹‰à¸‡à¹€à¸£à¸µà¸¢à¸à¹€à¸à¹‡à¸šà¸„à¹ˆà¸²à¸˜à¸£à¸£à¸¡à¹€à¸™à¸µà¸¢à¸¡à¸•à¸²à¸¡à¹ƒà¸šà¹à¸ˆà¹‰à¸‡à¸«à¸™à¸µà¹‰à¸à¹ˆà¸­à¸™à¸ªà¹ˆà¸‡à¸¡à¸­à¸šà¸‚à¹‰à¸­à¸¡à¸¹à¸¥', config || undefined);
+        await changeRequestStatus(req, 'Fee Notification', activeUser, 'แจ้งเรียกเก็บค่าธรรมเนียมตามใบแจ้งหนี้ก่อนส่งมอบข้อมูล', config || undefined);
       } else {
-        await changeRequestStatus(req, 'Ready for Delivery', activeUser, 'à¹„à¸¡à¹ˆà¸¡à¸µà¸„à¹ˆà¸²à¸˜à¸£à¸£à¸¡à¹€à¸™à¸µà¸¢à¸¡à¸«à¸£à¸·à¸­à¸¢à¸à¹€à¸§à¹‰à¸™à¹à¸¥à¹‰à¸§ à¹€à¸•à¸£à¸µà¸¢à¸¡à¸ªà¹ˆà¸‡à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸ªà¸´à¸—à¸˜à¸´à¹Œ', config || undefined);
+        await changeRequestStatus(req, 'Ready for Delivery', activeUser, 'ไม่มีค่าธรรมเนียมหรือยกเว้นแล้ว เตรียมส่งข้อมูลสิทธิ์', config || undefined);
       }
     } else {
       // Rejections or no data go straight to close or delivery of reject letter
-      await changeRequestStatus(req, 'Ready for Delivery', activeUser, 'à¸žà¸£à¹‰à¸­à¸¡à¸ªà¹ˆà¸‡à¸¡à¸­à¸šà¸«à¸™à¸±à¸‡à¸ªà¸·à¸­à¸Šà¸µà¹‰à¹à¸ˆà¸‡à¸„à¸³à¸›à¸à¸´à¹€à¸ªà¸˜ / à¹„à¸¡à¹ˆà¸žà¸šà¸‚à¹‰à¸­à¸¡à¸¹à¸¥', config || undefined);
+      await changeRequestStatus(req, 'Ready for Delivery', activeUser, 'พร้อมส่งมอบหนังสือชี้แจงคำปฏิเสธ / ไม่พบข้อมูล', config || undefined);
     }
 
     reloadData();
@@ -1995,14 +1995,14 @@ export default function App() {
       });
       const data = await res.json();
       if (data.success) {
-        showNotify('à¸•à¹ˆà¸­à¸­à¸²à¸¢à¸¸à¸à¸²à¸£à¸”à¸²à¸§à¸™à¹Œà¹‚à¸«à¸¥à¸”à¹€à¸­à¸à¸ªà¸²à¸£à¹€à¸£à¸µà¸¢à¸šà¸£à¹‰à¸­à¸¢à¹à¸¥à¹‰à¸§ (à¹€à¸žà¸´à¹ˆà¸¡ 30 à¸§à¸±à¸™)');
+        showNotify('ต่ออายุการดาวน์โหลดเอกสารเรียบร้อยแล้ว (เพิ่ม 30 วัน)');
         reloadData();
       } else {
-        showNotify(`âš ï¸ à¸œà¸´à¸”à¸žà¸¥à¸²à¸”: ${data.message}`);
+        showNotify(`⚠️ ผิดพลาด: ${data.message}`);
       }
     } catch (e) {
       console.error(e);
-      showNotify('âš ï¸ à¹€à¸à¸´à¸”à¸‚à¹‰à¸­à¸œà¸´à¸”à¸žà¸¥à¸²à¸”à¹ƒà¸™à¸à¸²à¸£à¸•à¹ˆà¸­à¸­à¸²à¸¢à¸¸à¸à¸²à¸£à¸”à¸²à¸§à¸™à¹Œà¹‚à¸«à¸¥à¸”');
+      showNotify('⚠️ เกิดข้อผิดพลาดในการต่ออายุการดาวน์โหลด');
     }
   };
 
@@ -2012,9 +2012,9 @@ export default function App() {
     if (!req) return;
 
     // Optional: Prevent spamming by checking if a request was already made recently
-    const alreadyRequested = req.messageThread?.some(m => m.message.includes('à¸‚à¸­à¸•à¹ˆà¸­à¸­à¸²à¸¢à¸¸à¸à¸²à¸£à¸”à¸²à¸§à¸™à¹Œà¹‚à¸«à¸¥à¸”à¹€à¸­à¸à¸ªà¸²à¸£') && new Date(m.timestamp).getTime() > Date.now() - 24 * 60 * 60 * 1000);
+    const alreadyRequested = req.messageThread?.some(m => m.message.includes('ขอต่ออายุการดาวน์โหลดเอกสาร') && new Date(m.timestamp).getTime() > Date.now() - 24 * 60 * 60 * 1000);
     if (alreadyRequested) {
-      showNotify('à¸—à¹ˆà¸²à¸™à¹„à¸”à¹‰à¸ªà¹ˆà¸‡à¸„à¸³à¸‚à¸­à¸•à¹ˆà¸­à¸­à¸²à¸¢à¸¸à¹„à¸›à¹à¸¥à¹‰à¸§ à¸à¸£à¸¸à¸“à¸²à¸£à¸­à¹€à¸ˆà¹‰à¸²à¸«à¸™à¹‰à¸²à¸—à¸µà¹ˆà¸”à¸³à¹€à¸™à¸´à¸™à¸à¸²à¸£', 'warning');
+      showNotify('ท่านได้ส่งคำขอต่ออายุไปแล้ว กรุณารอเจ้าหน้าที่ดำเนินการ', 'warning');
       return;
     }
 
@@ -2022,21 +2022,21 @@ export default function App() {
       id: `msg_${Date.now()}`,
       sender: 'user',
       senderName: `${req.requester.firstName} ${req.requester.lastName}`,
-      message: `[à¸£à¸°à¸šà¸šà¸­à¸±à¸•à¹‚à¸™à¸¡à¸±à¸•à¸´] à¸œà¸¹à¹‰à¸¢à¸·à¹ˆà¸™à¸„à¸³à¸£à¹‰à¸­à¸‡à¸‚à¸­à¸•à¹ˆà¸­à¸­à¸²à¸¢à¸¸à¸à¸²à¸£à¸”à¸²à¸§à¸™à¹Œà¹‚à¸«à¸¥à¸”à¹€à¸­à¸à¸ªà¸²à¸£ (à¹€à¸™à¸·à¹ˆà¸­à¸‡à¸ˆà¸²à¸à¸«à¸¡à¸”à¸­à¸²à¸¢à¸¸à¹€à¸¡à¸·à¹ˆà¸­: ${req.downloadExpiresAt ? new Date(req.downloadExpiresAt).toLocaleDateString('th-TH') : 'à¹„à¸¡à¹ˆà¸£à¸°à¸šà¸¸'})`,
+      message: `[ระบบอัตโนมัติ] ผู้ยื่นคำร้องขอต่ออายุการดาวน์โหลดเอกสาร (เนื่องจากหมดอายุเมื่อ: ${req.downloadExpiresAt ? new Date(req.downloadExpiresAt).toLocaleDateString('th-TH') : 'ไม่ระบุ'})`,
       timestamp: new Date().toISOString()
     };
     req.messageThread = req.messageThread || [];
     req.messageThread.push(newMsg);
 
-    const mockSubjectUser: UserType = { id: 'user', orgId: 'org_dopa', username: 'data.subject', fullNameTh: 'à¸œà¸¹à¹‰à¸¢à¸·à¹ˆà¸™à¸„à¸³à¸‚à¸­', fullNameEn: 'Data Subject', email: '', role: 'intake', roles: ['intake'], mfaEnabled: false };
+    const mockSubjectUser: UserType = { id: 'user', orgId: 'org_dopa', username: 'data.subject', fullNameTh: 'ผู้ยื่นคำขอ', fullNameEn: 'Data Subject', email: '', role: 'intake', roles: ['intake'], mfaEnabled: false };
     
     try {
-      await updateRequest(req, mockSubjectUser, 'SEND_MESSAGE', `à¸œà¸¹à¹‰à¸¢à¸·à¹ˆà¸™à¸‚à¸­à¸•à¹ˆà¸­à¸­à¸²à¸¢à¸¸à¸à¸²à¸£à¸”à¸²à¸§à¸™à¹Œà¹‚à¸«à¸¥à¸”à¹€à¸­à¸à¸ªà¸²à¸£ à¹€à¸¥à¸‚à¸„à¸³à¸‚à¸­: ${req.trackingNo}`);
+      await updateRequest(req, mockSubjectUser, 'SEND_MESSAGE', `ผู้ยื่นขอต่ออายุการดาวน์โหลดเอกสาร เลขคำขอ: ${req.trackingNo}`);
       setDownloadRequest(req); // Update local state so UI can reflect it if needed
-      showNotify('à¸ªà¹ˆà¸‡à¸„à¸³à¸‚à¸­à¸•à¹ˆà¸­à¸­à¸²à¸¢à¸¸à¹„à¸›à¸¢à¸±à¸‡à¹€à¸ˆà¹‰à¸²à¸«à¸™à¹‰à¸²à¸—à¸µà¹ˆà¹€à¸£à¸µà¸¢à¸šà¸£à¹‰à¸­à¸¢à¹à¸¥à¹‰à¸§ à¸à¸£à¸¸à¸“à¸²à¸£à¸­à¸à¸²à¸£à¸•à¸´à¸”à¸•à¹ˆà¸­à¸à¸¥à¸±à¸š', 'success');
+      showNotify('ส่งคำขอต่ออายุไปยังเจ้าหน้าที่เรียบร้อยแล้ว กรุณารอการติดต่อกลับ', 'success');
     } catch (e) {
       console.error(e);
-      showNotify('à¹€à¸à¸´à¸”à¸‚à¹‰à¸­à¸œà¸´à¸”à¸žà¸¥à¸²à¸”à¹ƒà¸™à¸à¸²à¸£à¸ªà¹ˆà¸‡à¸„à¸³à¸‚à¸­à¸•à¹ˆà¸­à¸­à¸²à¸¢à¸¸', 'error');
+      showNotify('เกิดข้อผิดพลาดในการส่งคำขอต่ออายุ', 'error');
     }
   };
 
@@ -2047,7 +2047,7 @@ export default function App() {
     if (!req) return;
 
     try {
-      showNotify('à¸à¸³à¸¥à¸±à¸‡à¸ªà¹ˆà¸‡à¸­à¸µà¹€à¸¡à¸¥à¹à¸ˆà¹‰à¸‡à¸œà¸¥à¸à¸²à¸£à¸žà¸´à¸ˆà¸²à¸£à¸“à¸²...', 'info');
+      showNotify('กำลังส่งอีเมลแจ้งผลการพิจารณา...', 'info');
       // Call Backend API to send real email
       const jwtToken = sessionStorage.getItem('pdpa_token') || sessionStorage.getItem('pdpa_jwt_token') || '';
       const res = await fetch(`/api/requests/${reqId}/deliver`, {
@@ -2065,22 +2065,22 @@ export default function App() {
 
       if (!res.ok) {
         const errBody = await res.json().catch(() => ({}));
-        showNotify(`à¹€à¸à¸´à¸”à¸‚à¹‰à¸­à¸œà¸´à¸”à¸žà¸¥à¸²à¸”à¹ƒà¸™à¸à¸²à¸£à¸ªà¹ˆà¸‡à¸­à¸µà¹€à¸¡à¸¥: ${errBody.message || 'à¹€à¸‹à¸´à¸£à¹Œà¸Ÿà¹€à¸§à¸­à¸£à¹Œà¸›à¸à¸´à¹€à¸ªà¸˜à¸à¸²à¸£à¸ªà¹ˆà¸‡à¸­à¸µà¹€à¸¡à¸¥ à¸«à¸£à¸·à¸­à¸•à¸±à¹‰à¸‡à¸„à¹ˆà¸² SMTP à¹„à¸¡à¹ˆà¸–à¸¹à¸à¸•à¹‰à¸­à¸‡'}`, 'error');
+        showNotify(`เกิดข้อผิดพลาดในการส่งอีเมล: ${errBody.message || 'เซิร์ฟเวอร์ปฏิเสธการส่งอีเมล หรือตั้งค่า SMTP ไม่ถูกต้อง'}`, 'error');
         return; // Halt execution if email fails, do not change status!
       }
 
-      showNotify('à¸ªà¹ˆà¸‡à¸­à¸µà¹€à¸¡à¸¥à¹à¸ˆà¹‰à¸‡à¸œà¸¥à¸à¸²à¸£à¸žà¸´à¸ˆà¸²à¸£à¸“à¸²à¹à¸¥à¸°à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸žà¸£à¹‰à¸­à¸¡à¸£à¸«à¸±à¸ª QR Code à¹ƒà¸«à¹‰à¸œà¸¹à¹‰à¸£à¹‰à¸­à¸‡à¸‚à¸­à¹€à¸£à¸µà¸¢à¸šà¸£à¹‰à¸­à¸¢à¹à¸¥à¹‰à¸§!', 'success');
+      showNotify('ส่งอีเมลแจ้งผลการพิจารณาและข้อมูลพร้อมรหัส QR Code ให้ผู้ร้องขอเรียบร้อยแล้ว!', 'success');
 
-      await changeRequestStatus(getRequestClone(reqId), 'Delivered', activeUser, 'à¹€à¸ˆà¹‰à¸²à¸«à¸™à¹‰à¸²à¸—à¸µà¹ˆà¸—à¸³à¸à¸²à¸£à¸ˆà¸±à¸”à¸ªà¹ˆà¸‡à¸«à¸™à¸±à¸‡à¸ªà¸·à¸­à¸£à¸²à¸Šà¸à¸²à¸£à¹à¸¥à¸°à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸ªà¸³à¹€à¸£à¹‡à¸ˆ (à¸žà¸£à¹‰à¸­à¸¡à¸­à¸µà¹€à¸¡à¸¥)', config || undefined);
+      await changeRequestStatus(getRequestClone(reqId), 'Delivered', activeUser, 'เจ้าหน้าที่ทำการจัดส่งหนังสือราชการและข้อมูลสำเร็จ (พร้อมอีเมล)', config || undefined);
       
       // Automatically close after delivery
       setTimeout(async () => {
-        await changeRequestStatus(getRequestClone(reqId), 'Closed', activeUser, 'à¸„à¸³à¸‚à¸­à¸ªà¸´à¹‰à¸™à¸ªà¸¸à¸”à¸à¸£à¸°à¸šà¸§à¸™à¸à¸²à¸£ à¸šà¸±à¸™à¸—à¸¶à¸à¸£à¸°à¸¢à¸°à¹€à¸§à¸¥à¸²à¸”à¸³à¹€à¸™à¸´à¸™à¸à¸²à¸£à¹€à¸‰à¸¥à¸µà¹ˆà¸¢à¸›à¸´à¸”à¸‡à¸²à¸™', config || undefined);
+        await changeRequestStatus(getRequestClone(reqId), 'Closed', activeUser, 'คำขอสิ้นสุดกระบวนการ บันทึกระยะเวลาดำเนินการเฉลี่ยปิดงาน', config || undefined);
         reloadData();
       }, 1000);
     } catch (error) {
       console.error(error);
-      showNotify('à¹€à¸à¸´à¸”à¸‚à¹‰à¸­à¸œà¸´à¸”à¸žà¸¥à¸²à¸”à¹ƒà¸™à¸à¸²à¸£à¹€à¸Šà¸·à¹ˆà¸­à¸¡à¸•à¹ˆà¸­à¹€à¸‹à¸´à¸£à¹Œà¸Ÿà¹€à¸§à¸­à¸£à¹Œ', 'error');
+      showNotify('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์', 'error');
     }
   };
 
@@ -2091,7 +2091,7 @@ export default function App() {
     if (!req) return;
 
     req.legalHold = !req.legalHold;
-    updateRequest(req, activeUser, 'TOGGLE_LEGAL_HOLD', `à¸›à¸£à¸±à¸šà¹€à¸›à¸¥à¸µà¹ˆà¸¢à¸™à¸ªà¸–à¸²à¸™à¸° Legal Hold à¹€à¸›à¹‡à¸™: ${req.legalHold ? 'à¹€à¸›à¸´à¸”à¹ƒà¸Šà¹‰à¸‡à¸²à¸™ (à¸«à¹‰à¸²à¸¡à¸—à¸³à¸¥à¸²à¸¢)' : 'à¸›à¸´à¸”à¸à¸²à¸£à¹ƒà¸Šà¹‰à¸‡à¸²à¸™'}`);
+    updateRequest(req, activeUser, 'TOGGLE_LEGAL_HOLD', `ปรับเปลี่ยนสถานะ Legal Hold เป็น: ${req.legalHold ? 'เปิดใช้งาน (ห้ามทำลาย)' : 'ปิดการใช้งาน'}`);
     reloadData();
   };
 
@@ -2102,14 +2102,14 @@ export default function App() {
     if (!req) return;
 
     if (req.legalHold) {
-      showNotify('à¹„à¸¡à¹ˆà¸ªà¸²à¸¡à¸²à¸£à¸–à¸—à¸³à¸¥à¸²à¸¢à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸—à¸µà¹ˆà¸­à¸¢à¸¹à¹ˆà¸ à¸²à¸¢à¹ƒà¸•à¹‰ Legal Hold à¸„à¸”à¸µà¸„à¸§à¸²à¸¡à¹„à¸”à¹‰');
+      showNotify('ไม่สามารถทำลายข้อมูลที่อยู่ภายใต้ Legal Hold คดีความได้');
       return;
     }
 
     req.status = 'Destroyed';
     req.destroyedDate = new Date().toISOString();
     req.destroyedBy = activeUser.fullNameTh;
-    req.destroyedWitness = 'à¸§à¸´à¸¥à¸²à¸§à¸±à¸¥à¸¢à¹Œ à¸•à¸£à¸§à¸ˆà¸ªà¸­à¸š (Auditor)';
+    req.destroyedWitness = 'วิลาวัลย์ ตรวจสอบ (Auditor)';
     
     // Remove attachments payload to simulate clean delete
     req.attachments = [];
@@ -2119,12 +2119,12 @@ export default function App() {
       status: 'Destroyed',
       changedAt: new Date().toISOString(),
       changedBy: activeUser.fullNameTh,
-      comment: 'à¸”à¸³à¹€à¸™à¸´à¸™à¸à¸²à¸£à¸—à¸³à¸¥à¸²à¸¢à¸ªà¸³à¹€à¸™à¸²à¸«à¸¥à¸±à¸à¸à¸²à¸™à¸•à¸²à¸¡à¸à¸³à¸«à¸™à¸”à¸­à¸²à¸¢à¸¸à¸ˆà¸±à¸”à¹€à¸à¹‡à¸š 2 à¸›à¸µ à¹€à¸£à¸µà¸¢à¸šà¸£à¹‰à¸­à¸¢à¹à¸¥à¹‰à¸§'
+      comment: 'ดำเนินการทำลายสำเนาหลักฐานตามกำหนดอายุจัดเก็บ 2 ปี เรียบร้อยแล้ว'
     });
 
-    updateRequest(req, activeUser, 'DESTROY_EXPIRED_DATA', `à¸¥à¸šà¸—à¸³à¸¥à¸²à¸¢à¹„à¸Ÿà¸¥à¹Œà¹à¸¥à¸°à¹€à¸­à¸à¸ªà¸²à¸£à¸«à¸¥à¸±à¸à¸à¸²à¸™à¸£à¸°à¸šà¸¸à¸•à¸±à¸§à¸•à¸™à¸–à¸²à¸§à¸£à¸•à¸²à¸¡ Retention Policy à¸žà¸¢à¸²à¸™à¸£à¹ˆà¸§à¸¡à¸•à¸£à¸§à¸ˆà¸ªà¸­à¸š: ${req.destroyedWitness}`);
+    updateRequest(req, activeUser, 'DESTROY_EXPIRED_DATA', `ลบทำลายไฟล์และเอกสารหลักฐานระบุตัวตนถาวรตาม Retention Policy พยานร่วมตรวจสอบ: ${req.destroyedWitness}`);
     reloadData();
-    showNotify('à¸—à¸³à¸¥à¸²à¸¢à¹€à¸­à¸à¸ªà¸²à¸£à¸«à¸¥à¸±à¸à¸à¸²à¸™à¹à¸¥à¸°à¸›à¸´à¸”à¸›à¸£à¸°à¸§à¸±à¸•à¸´à¹€à¸£à¸µà¸¢à¸šà¸£à¹‰à¸­à¸¢à¹à¸¥à¹‰à¸§');
+    showNotify('ทำลายเอกสารหลักฐานและปิดประวัติเรียบร้อยแล้ว');
   };
 
   // Compliance Config Edit Panel (Section 1)
@@ -2159,7 +2159,7 @@ export default function App() {
     if (!activeUser || !config) return;
 
     if (!configForm.changeReason) {
-      showNotify('à¸à¸£à¸¸à¸“à¸²à¸à¸£à¸­à¸à¹€à¸«à¸•à¸¸à¸œà¸¥à¹ƒà¸™à¸à¸²à¸£à¹à¸à¹‰à¹„à¸‚à¸à¸Žà¹€à¸à¸“à¸‘à¹Œà¸™à¹‚à¸¢à¸šà¸²à¸¢à¸„à¸§à¸²à¸¡à¸ªà¸­à¸”à¸„à¸¥à¹‰à¸­à¸‡');
+      showNotify('กรุณากรอกเหตุผลในการแก้ไขกฎเกณฑ์นโยบายความสอดคล้อง');
       return;
     }
 
@@ -2186,7 +2186,7 @@ export default function App() {
 
     await saveComplianceConfig(updatedConfig, activeUser, configForm.changeReason);
     reloadData();
-    showNotify('à¸šà¸±à¸™à¸—à¸¶à¸à¸„à¹ˆà¸²à¸à¸³à¸«à¸™à¸”à¸„à¸§à¸²à¸¡à¸ªà¸­à¸”à¸„à¸¥à¹‰à¸­à¸‡à¸—à¸²à¸‡à¸à¸Žà¸«à¸¡à¸²à¸¢à¹€à¸£à¸µà¸¢à¸šà¸£à¹‰à¸­à¸¢à¹à¸¥à¹‰à¸§');
+    showNotify('บันทึกค่ากำหนดความสอดคล้องทางกฎหมายเรียบร้อยแล้ว');
   };
 
   // SLA extension (Section 5)
@@ -2212,20 +2212,20 @@ export default function App() {
       id: `evt_ext_${Date.now()}`,
       type: 'extend',
       timestamp: new Date().toISOString(),
-      reason: `à¸‚à¸¢à¸²à¸¢à¹€à¸§à¸¥à¸² SLA: ${reason}`,
+      reason: `ขยายเวลา SLA: ${reason}`,
       operator: activeUser.fullNameTh
     });
 
-    updateRequest(req, activeUser, 'EXTEND_SLA_TIMELINE', `à¸‚à¸¢à¸²à¸¢à¸£à¸°à¸¢à¸°à¹€à¸§à¸¥à¸²à¸£à¸±à¸šà¸ªà¸´à¸—à¸˜à¸´à¹€à¸žà¸´à¹ˆà¸¡ ${config?.sla.extensionDays || 30} à¸§à¸±à¸™à¸”à¹‰à¸§à¸¢à¹€à¸«à¸•à¸¸à¸ˆà¸³à¹€à¸›à¹‡à¸™`);
+    updateRequest(req, activeUser, 'EXTEND_SLA_TIMELINE', `ขยายระยะเวลารับสิทธิเพิ่ม ${config?.sla.extensionDays || 30} วันด้วยเหตุจำเป็น`);
     reloadData();
-    showNotify('à¸‚à¸¢à¸²à¸¢à¹€à¸§à¸¥à¸² SLA à¸ªà¸³à¹€à¸£à¹‡à¸ˆ');
+    showNotify('ขยายเวลา SLA สำเร็จ');
   };
 
   // Staff manual message post
   const [chatMessage, setChatMessage] = useState('');
   const handleExportAuditCSV = async () => {
     try {
-      const headers = ['à¸§à¸±à¸™à¹à¸¥à¸°à¹€à¸§à¸¥à¸² (Timestamp)', 'à¸œà¸¹à¹‰à¸›à¸à¸´à¸šà¸±à¸•à¸´à¸‡à¸²à¸™ (User)', 'à¸šà¸—à¸šà¸²à¸— (Role)', 'à¸à¸²à¸£à¸à¸£à¸°à¸—à¸³ (Action)', 'à¸£à¸²à¸¢à¸¥à¸°à¹€à¸­à¸µà¸¢à¸” (Details)', 'à¹€à¸¥à¸‚à¹„à¸­à¸žà¸µ (IP Address)', 'à¸•à¸£à¸§à¸ˆà¸ªà¸­à¸šà¸„à¸§à¸²à¸¡à¸›à¸¥à¸­à¸”à¸ à¸±à¸¢ (Checksum)'];
+      const headers = ['วันและเวลา (Timestamp)', 'ผู้ปฏิบัติงาน (User)', 'บทบาท (Role)', 'การกระทำ (Action)', 'รายละเอียด (Details)', 'เลขไอพี (IP Address)', 'ตรวจสอบความปลอดภัย (Checksum)'];
       const rows = auditLogs.map(log => [
         new Date(log.timestamp).toLocaleString('th-TH'),
         `"${(log.actorName || '').replace(/"/g, '""')}"`,
@@ -2246,8 +2246,8 @@ export default function App() {
       document.body.removeChild(link);
       
       const user = getCurrentUser();
-      await addAuditLog('EXPORT_AUDIT_CSV', 'à¸”à¸²à¸§à¸™à¹Œà¹‚à¸«à¸¥à¸”à¸£à¸²à¸¢à¸‡à¸²à¸™ Audit Logs à¹€à¸›à¹‡à¸™à¹„à¸Ÿà¸¥à¹Œ CSV', user);
-      showNotify('à¸”à¸²à¸§à¸™à¹Œà¹‚à¸«à¸¥à¸”à¸£à¸²à¸¢à¸‡à¸²à¸™ Audit Logs (CSV) à¸ªà¸³à¹€à¸£à¹‡à¸ˆ');
+      await addAuditLog('EXPORT_AUDIT_CSV', 'ดาวน์โหลดรายงาน Audit Logs เป็นไฟล์ CSV', user);
+      showNotify('ดาวน์โหลดรายงาน Audit Logs (CSV) สำเร็จ');
       
       // Refresh audit logs to show this action
       const allLogs = await fetchAuditLogs();
@@ -2258,7 +2258,7 @@ export default function App() {
       }
     } catch (error) {
       console.error('Export failed:', error);
-      showNotify('à¹€à¸à¸´à¸”à¸‚à¹‰à¸­à¸œà¸´à¸”à¸žà¸¥à¸²à¸”à¹ƒà¸™à¸à¸²à¸£à¸”à¸²à¸§à¸™à¹Œà¹‚à¸«à¸¥à¸” CSV');
+      showNotify('เกิดข้อผิดพลาดในการดาวน์โหลด CSV');
     }
   };
 
@@ -2272,7 +2272,7 @@ export default function App() {
     const newMsg: MessageThread = {
       id: `msg_${Date.now()}`,
       sender: senderRole,
-      senderName: senderRole === 'staff' ? (activeUser?.fullNameTh || 'à¹€à¸ˆà¹‰à¸²à¸«à¸™à¹‰à¸²à¸—à¸µà¹ˆà¸à¸Žà¸«à¸¡à¸²à¸¢') : `${req.requester.firstName} ${req.requester.lastName}`,
+      senderName: senderRole === 'staff' ? (activeUser?.fullNameTh || 'เจ้าหน้าที่กฎหมาย') : `${req.requester.firstName} ${req.requester.lastName}`,
       message: chatMessage,
       timestamp: new Date().toISOString()
     };
@@ -2280,10 +2280,10 @@ export default function App() {
     req.messageThread.push(newMsg);
     
     if (senderRole === 'staff' && activeUser) {
-      updateRequest(req, activeUser, 'SEND_MESSAGE', `à¹€à¸ˆà¹‰à¸²à¸«à¸™à¹‰à¸²à¸—à¸µà¹ˆà¸ªà¹ˆà¸‡à¸‚à¹‰à¸­à¸„à¸§à¸²à¸¡à¸ªà¸·à¹ˆà¸­à¸ªà¸²à¸£à¹€à¸žà¸´à¹ˆà¸¡à¹€à¸•à¸´à¸¡à¹€à¸¥à¸‚à¸„à¸³à¸‚à¸­: ${req.trackingNo}`);
+      updateRequest(req, activeUser, 'SEND_MESSAGE', `เจ้าหน้าที่ส่งข้อความสื่อสารเพิ่มเติมเลขคำขอ: ${req.trackingNo}`);
     } else {
-      const mockSubjectUser: UserType = { id: 'user', orgId: 'org_dopa', username: 'data.subject', fullNameTh: 'à¸œà¸¹à¹‰à¸¢à¸·à¹ˆà¸™à¸„à¸³à¸‚à¸­', fullNameEn: 'Data Subject', email: '', role: 'intake', roles: ['intake'], mfaEnabled: false };
-      updateRequest(req, mockSubjectUser, 'SEND_MESSAGE', `à¸œà¸¹à¹‰à¸¢à¸·à¹ˆà¸™à¸ªà¹ˆà¸‡à¸‚à¹‰à¸­à¸„à¸§à¸²à¸¡à¸•à¸´à¸”à¸•à¹ˆà¸­à¸à¸¥à¸±à¸šà¹€à¸¥à¸‚à¸„à¸³à¸‚à¸­: ${req.trackingNo}`);
+      const mockSubjectUser: UserType = { id: 'user', orgId: 'org_dopa', username: 'data.subject', fullNameTh: 'ผู้ยื่นคำขอ', fullNameEn: 'Data Subject', email: '', role: 'intake', roles: ['intake'], mfaEnabled: false };
+      updateRequest(req, mockSubjectUser, 'SEND_MESSAGE', `ผู้ยื่นส่งข้อความติดต่อกลับเลขคำขอ: ${req.trackingNo}`);
     }
 
     setChatMessage('');
@@ -2301,15 +2301,15 @@ export default function App() {
   useEffect(() => {
     if (activeRequestObj?.requestDetails?.requestType) {
       const rt = activeRequestObj.requestDetails.requestType;
-      let section = 'à¸¡à¸²à¸•à¸£à¸² 30'; // access & copy
-      if (rt === 'erasure') section = 'à¸¡à¸²à¸•à¸£à¸² 33';
-      else if (rt === 'rectification') section = 'à¸¡à¸²à¸•à¸£à¸² 35 à¹à¸¥à¸°à¸¡à¸²à¸•à¸£à¸² 36';
-      else if (rt === 'restriction') section = 'à¸¡à¸²à¸•à¸£à¸² 34';
-      else if (rt === 'withdraw') section = 'à¸¡à¸²à¸•à¸£à¸² 19';
-      else if (rt === 'object') section = 'à¸¡à¸²à¸•à¸£à¸² 32';
-      else if (rt === 'portability') section = 'à¸¡à¸²à¸•à¸£à¸² 31';
+      let section = 'มาตรา 30'; // access & copy
+      if (rt === 'erasure') section = 'มาตรา 33';
+      else if (rt === 'rectification') section = 'มาตรา 35 และมาตรา 36';
+      else if (rt === 'restriction') section = 'มาตรา 34';
+      else if (rt === 'withdraw') section = 'มาตรา 19';
+      else if (rt === 'object') section = 'มาตรา 32';
+      else if (rt === 'portability') section = 'มาตรา 31';
       
-      setLegalBasisInput(`${section} à¹à¸«à¹ˆà¸‡à¸žà¸£à¸°à¸£à¸²à¸Šà¸šà¸±à¸à¸à¸±à¸•à¸´à¸„à¸¸à¹‰à¸¡à¸„à¸£à¸­à¸‡à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸ªà¹ˆà¸§à¸™à¸šà¸¸à¸„à¸„à¸¥ à¸ž.à¸¨. 2562`);
+      setLegalBasisInput(`${section} แห่งพระราชบัญญัติคุ้มครองข้อมูลส่วนบุคคล พ.ศ. 2562`);
     }
   }, [activeRequestObj?.id, activeRequestObj?.requestDetails?.requestType]);
 
@@ -2339,7 +2339,7 @@ export default function App() {
       {showCookiePolicy && (
         <div className="fixed inset-0 z-[120] bg-white overflow-y-auto">
           <div className="sticky top-0 bg-white border-b border-gray-200 p-4 flex justify-between items-center shadow-sm z-10">
-            <h2 className="text-xl font-bold text-gray-800">à¸™à¹‚à¸¢à¸šà¸²à¸¢à¸„à¸¸à¸à¸à¸µà¹‰ (Cookie Policy)</h2>
+            <h2 className="text-xl font-bold text-gray-800">นโยบายคุกกี้ (Cookie Policy)</h2>
             <button onClick={() => setShowCookiePolicy(false)} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
               <X size={24} className="text-gray-600" />
             </button>
@@ -2352,7 +2352,7 @@ export default function App() {
       <div className="no-print bg-slate-900 text-slate-200 px-4 py-2 flex flex-wrap items-center justify-between text-xs gap-2 select-none border-b border-slate-800 z-10">
         <div className="flex items-center gap-2 font-bold">
           <Shield className="h-4 w-4 text-brand-500" />
-          <span>à¸£à¸°à¸šà¸šà¸šà¸£à¸´à¸«à¸²à¸£à¸ˆà¸±à¸”à¸à¸²à¸£à¸à¸²à¸£à¸›à¸à¸´à¸šà¸±à¸•à¸´à¸•à¸²à¸¡à¸à¸Žà¸«à¸¡à¸²à¸¢à¸„à¸¸à¹‰à¸¡à¸„à¸£à¸­à¸‡à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸ªà¹ˆà¸§à¸™à¸šà¸¸à¸„à¸„à¸¥ (PDPA Compliance Management)</span>
+          <span>ระบบบริหารจัดการการปฏิบัติตามกฎหมายคุ้มครองข้อมูลส่วนบุคคล (PDPA Compliance Management)</span>
         </div>
         
         <div className="flex items-center gap-3 flex-wrap">
@@ -2360,7 +2360,7 @@ export default function App() {
           {activeUser ? (
             <div className="flex items-center gap-3 flex-wrap">
               <span className="text-brand-400 font-bold bg-slate-800 px-2.5 py-1 rounded border border-slate-700">
-                ðŸ¢ {organizations.find((o) => o.id === currentViewOrgId)?.nameTh || 'à¸«à¸™à¹ˆà¸§à¸¢à¸‡à¸²à¸™à¸—à¸±à¹ˆà¸§à¹„à¸›'} ({activeUser.fullNameTh})
+                🏢 {organizations.find((o) => o.id === currentViewOrgId)?.nameTh || 'หน่วยงานทั่วไป'} ({activeUser.fullNameTh})
               </span>
 
               <button
@@ -2377,28 +2377,28 @@ export default function App() {
                 className="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 font-bold px-3 py-1 rounded transition text-xs shadow-sm cursor-pointer flex items-center gap-1.5"
               >
                 {view === 'internal' ? (
-                  <><span>ðŸŒ à¸«à¸™à¹‰à¸²à¹€à¸§à¹‡à¸šà¸›à¸£à¸°à¸Šà¸²à¸Šà¸™</span><span className="opacity-50">â†—</span></>
+                  <><span>🌐 หน้าเว็บประชาชน</span><span className="opacity-50">↗</span></>
                 ) : (
-                  <><span>â¬…ï¸ à¸à¸¥à¸±à¸šà¸«à¸™à¹‰à¸² Dashboard</span></>
+                  <><span>⬅️ กลับหน้า Dashboard</span></>
                 )}
               </button>
 
               {/* Show role switcher dropdown ONLY IF user holds multiple roles */}
               {activeUser.roles && activeUser.roles.length > 1 ? (
                 <div className="flex items-center gap-1.5 border-l border-slate-700 pl-3">
-                  <span className="text-slate-400 font-semibold text-[11px]">à¸ªà¸¥à¸±à¸šà¸šà¸—à¸šà¸²à¸—à¹ƒà¸™à¸«à¸™à¹‰à¸²à¸—à¸µà¹ˆ:</span>
+                  <span className="text-slate-400 font-semibold text-[11px]">สลับบทบาทในหน้าที่:</span>
                   <select
                     value={activeUser.role}
                     onChange={(e) => handleRoleChange(e.target.value as Role)}
                     className="bg-slate-800 border border-brand-500/50 text-brand-300 rounded px-2 py-0.5 font-bold text-[11px] focus:outline-none focus:ring-1 focus:ring-brand-500"
                   >
                     {[
-                      { value: 'intake', label: 'Intake (à¸£à¸±à¸šà¸„à¸³à¸‚à¸­)' },
-                      { value: 'owner', label: 'Data Owner (à¸ªà¸·à¸šà¸„à¹‰à¸™)' },
-                      { value: 'dpo', label: 'DPO (à¸à¸Žà¸«à¸¡à¸²à¸¢/à¸–à¸¡à¸”à¸³)' },
-                      { value: 'approver', label: 'Approver (à¸­à¸™à¸¸à¸¡à¸±à¸•à¸´)' },
-                      { value: 'auditor', label: 'Auditor (à¸•à¸£à¸§à¸ˆà¸ªà¸­à¸š)' },
-                      { value: 'admin', label: 'Admin (à¸œà¸¹à¹‰à¸”à¸¹à¹à¸¥à¸£à¸°à¸šà¸š)' }
+                      { value: 'intake', label: 'Intake (รับคำขอ)' },
+                      { value: 'owner', label: 'Data Owner (สืบค้น)' },
+                      { value: 'dpo', label: 'DPO (กฎหมาย/ถมดำ)' },
+                      { value: 'approver', label: 'Approver (อนุมัติ)' },
+                      { value: 'auditor', label: 'Auditor (ตรวจสอบ)' },
+                      { value: 'admin', label: 'Admin (ผู้ดูแลระบบ)' }
                     ]
                       .filter((opt) => activeUser.roles.includes(opt.value as Role))
                       .map((opt) => (
@@ -2410,7 +2410,7 @@ export default function App() {
                 </div>
               ) : (
                 <div className="flex items-center gap-1.5 border-l border-slate-700 pl-3">
-                  <span className="text-slate-400 font-semibold text-[11px]">à¸ªà¸´à¸—à¸˜à¸´à¹Œà¸à¸²à¸£à¸—à¸³à¸‡à¸²à¸™:</span>
+                  <span className="text-slate-400 font-semibold text-[11px]">สิทธิ์การทำงาน:</span>
                   <span className="bg-slate-800 border border-slate-700 text-slate-300 px-2 py-0.5 rounded font-bold text-[11px] uppercase">
                     {activeUser.role}
                   </span>
@@ -2421,14 +2421,14 @@ export default function App() {
               {activeUser.isSuperAdmin && (
                 <div className="flex items-center gap-1.5 border-l border-slate-700 pl-3 animate-fade-in">
                   <span className="text-amber-400 font-semibold text-[11px] flex items-center gap-1">
-                    <AlertTriangle className="h-3 w-3" /> à¹à¸à¸‡à¸•à¸±à¸§ (Impersonate):
+                    <AlertTriangle className="h-3 w-3" /> แฝงตัว (Impersonate):
                   </span>
                   <select
                     value={impersonatedOrgId || ''}
                     onChange={(e) => setImpersonatedOrgId(e.target.value || null)}
                     className="bg-amber-900/30 border border-amber-500/50 text-amber-300 rounded px-2 py-0.5 font-bold text-[11px] focus:outline-none focus:ring-1 focus:ring-amber-500 max-w-[150px] truncate"
                   >
-                    <option value="">-- à¸”à¸¹à¸—à¸±à¹‰à¸‡à¸«à¸¡à¸” (Global) --</option>
+                    <option value="">-- ดูทั้งหมด (Global) --</option>
                     {organizations.map((org: any) => (
                       <option key={org.id} value={org.id}>
                         {org.nameTh} ({org.id})
@@ -2442,14 +2442,14 @@ export default function App() {
                 onClick={() => setIsProfileModalOpen(true)}
                 className="bg-slate-700 hover:bg-slate-600 border border-slate-600 text-slate-200 font-bold px-2.5 py-1 rounded transition text-xs shadow-sm cursor-pointer"
               >
-                à¸•à¸±à¹‰à¸‡à¸„à¹ˆà¸²à¹‚à¸›à¸£à¹„à¸Ÿà¸¥à¹Œ
+                ตั้งค่าโปรไฟล์
               </button>
 
               <button
                 onClick={() => setIsChangePasswordModalOpen(true)}
                 className="bg-slate-700 hover:bg-slate-600 border border-slate-600 text-slate-200 font-bold px-2.5 py-1 rounded transition text-xs shadow-sm cursor-pointer"
               >
-                à¹€à¸›à¸¥à¸µà¹ˆà¸¢à¸™à¸£à¸«à¸±à¸ªà¸œà¹ˆà¸²à¸™
+                เปลี่ยนรหัสผ่าน
               </button>
 
               <button
@@ -2464,7 +2464,7 @@ export default function App() {
                 }}
                 className="bg-rose-600 hover:bg-rose-700 text-white font-bold px-2.5 py-1 rounded transition text-xs shadow-sm cursor-pointer"
               >
-                à¸­à¸­à¸à¸ˆà¸²à¸à¸£à¸°à¸šà¸š (Logout)
+                ออกจากระบบ (Logout)
               </button>
             </div>
           ) : (
@@ -2474,7 +2474,7 @@ export default function App() {
               className="bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 font-semibold px-3 py-1 rounded transition flex items-center gap-1.5 text-xs"
             >
               <Lock className="h-3.5 w-3.5 text-brand-400" />
-              <span>à¹€à¸ˆà¹‰à¸²à¸«à¸™à¹‰à¸²à¸—à¸µà¹ˆà¹€à¸‚à¹‰à¸²à¸ªà¸¹à¹ˆà¸£à¸°à¸šà¸š (Staff Login)</span>
+              <span>เจ้าหน้าที่เข้าสู่ระบบ (Staff Login)</span>
             </button>
           )}
         </div>
@@ -2494,7 +2494,7 @@ export default function App() {
           if (requiresPasswordChange) {
             setIsForcePasswordChange(true);
             setIsChangePasswordModalOpen(true);
-            showNotify('à¸„à¸¸à¸“à¸ˆà¸³à¹€à¸›à¹‡à¸™à¸•à¹‰à¸­à¸‡à¹€à¸›à¸¥à¸µà¹ˆà¸¢à¸™à¸£à¸«à¸±à¸ªà¸œà¹ˆà¸²à¸™à¹€à¸žà¸·à¹ˆà¸­à¸„à¸§à¸²à¸¡à¸›à¸¥à¸­à¸”à¸ à¸±à¸¢', 'warning');
+            showNotify('คุณจำเป็นต้องเปลี่ยนรหัสผ่านเพื่อความปลอดภัย', 'warning');
           } else {
             setIsForcePasswordChange(false);
           }
@@ -2531,7 +2531,7 @@ export default function App() {
               <div className="flex items-center gap-2">
                 <FileCheck2 className="h-5 w-5 text-brand-300" />
                 <h3 className="font-bold text-base">
-                  à¹à¸à¹‰à¹„à¸‚à¹à¸¡à¹ˆà¹à¸šà¸šà¸«à¸™à¸±à¸‡à¸ªà¸·à¸­à¸£à¸²à¸Šà¸à¸²à¸£: {editingTemplate.nameTh}
+                  แก้ไขแม่แบบหนังสือราชการ: {editingTemplate.nameTh}
                 </h3>
               </div>
               <button
@@ -2539,7 +2539,7 @@ export default function App() {
                 onClick={() => setEditingTemplate(null)}
                 className="text-slate-400 hover:text-white transition"
               >
-                âœ•
+                ✕
               </button>
             </div>
 
@@ -2553,15 +2553,15 @@ export default function App() {
               saveDocumentTemplates(updated);
               addAuditLog(
                   'UPDATE_TEMPLATE',
-                  `à¹à¸à¹‰à¹„à¸‚à¹à¸¡à¹ˆà¹à¸šà¸šà¸«à¸™à¸±à¸‡à¸ªà¸·à¸­à¸£à¸²à¸Šà¸à¸²à¸£: ${editingTemplate.nameTh} (${editingTemplate.id})`,
+                  `แก้ไขแม่แบบหนังสือราชการ: ${editingTemplate.nameTh} (${editingTemplate.id})`,
                   (activeUser || initialUser) as any
                 );
                 reloadData(); // Reload data async to get updated templates and logs
                 setEditingTemplate(null);
                 showNotify(
-                  `à¸šà¸±à¸™à¸—à¸¶à¸à¸à¸²à¸£à¹à¸à¹‰à¹„à¸‚à¹à¸¡à¹ˆà¹à¸šà¸š "${editingTemplate.nameTh}" à¹€à¸£à¸µà¸¢à¸šà¸£à¹‰à¸­à¸¢à¹à¸¥à¹‰à¸§`,
+                  `บันทึกการแก้ไขแม่แบบ "${editingTemplate.nameTh}" เรียบร้อยแล้ว`,
                   'success',
-                  'à¸šà¸±à¸™à¸—à¸¶à¸à¹à¸¡à¹ˆà¹à¸šà¸šà¸ªà¸³à¹€à¸£à¹‡à¸ˆ'
+                  'บันทึกแม่แบบสำเร็จ'
                 );
               }}
               className="p-6 space-y-4 text-xs"
@@ -2569,7 +2569,7 @@ export default function App() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-slate-700 font-bold mb-1">
-                    à¸£à¸«à¸±à¸ªà¹à¸¡à¹ˆà¹à¸šà¸š (Template ID)
+                    รหัสแม่แบบ (Template ID)
                   </label>
                   <input
                     type="text"
@@ -2581,7 +2581,7 @@ export default function App() {
 
                 <div>
                   <label className="block text-slate-700 font-bold mb-1">
-                    à¸£à¸°à¸”à¸±à¸šà¸„à¸§à¸²à¸¡à¸¥à¸±à¸š (Level)
+                    ระดับความลับ (Level)
                   </label>
                   <select
                     value={editingTemplate.confidentialityLevel}
@@ -2593,15 +2593,15 @@ export default function App() {
                     }
                     className="w-full border border-slate-300 rounded-lg px-3 py-2 bg-white font-semibold focus:outline-none focus:border-brand-500"
                   >
-                    <option value="NORMAL">NORMAL (à¸›à¸à¸•à¸´)</option>
-                    <option value="CONFIDENTIAL">CONFIDENTIAL (à¸¥à¸±à¸š)</option>
-                    <option value="SECRET">SECRET (à¸¥à¸±à¸šà¸¡à¸²à¸)</option>
+                    <option value="NORMAL">NORMAL (ปกติ)</option>
+                    <option value="CONFIDENTIAL">CONFIDENTIAL (ลับ)</option>
+                    <option value="SECRET">SECRET (ลับมาก)</option>
                   </select>
                 </div>
 
                 <div>
                   <label className="block text-slate-700 font-bold mb-1">
-                    à¹€à¸§à¸­à¸£à¹Œà¸Šà¸±à¸™ (Version)
+                    เวอร์ชัน (Version)
                   </label>
                   <input
                     type="text"
@@ -2621,7 +2621,7 @@ export default function App() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-slate-700 font-bold mb-1">
-                    à¸Šà¸·à¹ˆà¸­à¹à¸¡à¹ˆà¹à¸šà¸š (à¸ à¸²à¸©à¸²à¹„à¸—à¸¢)
+                    ชื่อแม่แบบ (ภาษาไทย)
                   </label>
                   <input
                     type="text"
@@ -2638,7 +2638,7 @@ export default function App() {
                 </div>
                 <div>
                   <label className="block text-slate-700 font-bold mb-1">
-                    à¸Šà¸·à¹ˆà¸­à¹à¸¡à¹ˆà¹à¸šà¸š (English / Reference)
+                    ชื่อแม่แบบ (English / Reference)
                   </label>
                   <input
                     type="text"
@@ -2657,7 +2657,7 @@ export default function App() {
 
               <div>
                 <label className="block text-slate-700 font-bold mb-1">
-                  à¸Šà¸·à¹ˆà¸­à¹€à¸£à¸·à¹ˆà¸­à¸‡à¸«à¸™à¸±à¸‡à¸ªà¸·à¸­à¸£à¸²à¸Šà¸à¸²à¸£ (Subject Template)
+                  ชื่อเรื่องหนังสือราชการ (Subject Template)
                 </label>
                 <input
                   type="text"
@@ -2675,7 +2675,7 @@ export default function App() {
 
               <div>
                 <label className="block text-slate-700 font-bold mb-1">
-                  à¸‚à¹‰à¸­à¸„à¸§à¸²à¸¡à¹à¸¡à¹ˆà¹à¸šà¸šà¸«à¸™à¸±à¸‡à¸ªà¸·à¸­à¸£à¸²à¸Šà¸à¸²à¸£ (Body Template)
+                  ข้อความแม่แบบหนังสือราชการ (Body Template)
                 </label>
                 <textarea
                   rows={8}
@@ -2690,7 +2690,7 @@ export default function App() {
                   className="w-full border border-slate-300 rounded-lg p-3 font-mono text-[11px] leading-relaxed focus:outline-none focus:border-brand-500"
                 />
                 <p className="text-[10px] text-slate-400 mt-1">
-                  * à¸ªà¸²à¸¡à¸²à¸£à¸–à¹ƒà¸Šà¹‰à¸•à¸±à¸§à¹à¸›à¸£à¸­à¸±à¸•à¹‚à¸™à¸¡à¸±à¸•à¸´à¸‚à¸­à¸‡à¸£à¸°à¸šà¸š à¹€à¸Šà¹ˆà¸™ <code className="bg-slate-100 px-1 rounded font-mono">{'{{trackingNo}}'}</code>, <code className="bg-slate-100 px-1 rounded font-mono">{'{{requesterName}}'}</code>, <code className="bg-slate-100 px-1 rounded font-mono">{'{{receivedDate}}'}</code>, <code className="bg-slate-100 px-1 rounded font-mono">{'{{channel}}'}</code>
+                  * สามารถใช้ตัวแปรอัตโนมัติของระบบ เช่น <code className="bg-slate-100 px-1 rounded font-mono">{'{{trackingNo}}'}</code>, <code className="bg-slate-100 px-1 rounded font-mono">{'{{requesterName}}'}</code>, <code className="bg-slate-100 px-1 rounded font-mono">{'{{receivedDate}}'}</code>, <code className="bg-slate-100 px-1 rounded font-mono">{'{{channel}}'}</code>
                 </p>
               </div>
 
@@ -2700,13 +2700,13 @@ export default function App() {
                   onClick={() => setEditingTemplate(null)}
                   className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-lg transition"
                 >
-                  à¸¢à¸à¹€à¸¥à¸´à¸ (Cancel)
+                  ยกเลิก (Cancel)
                 </button>
                 <button
                   type="submit"
                   className="px-5 py-2 bg-brand-600 hover:bg-brand-700 text-white font-bold rounded-lg transition shadow-sm"
                 >
-                  à¸šà¸±à¸™à¸—à¸¶à¸à¸à¸²à¸£à¹à¸à¹‰à¹„à¸‚à¹à¸¡à¹ˆà¹à¸šà¸š (Save Template)
+                  บันทึกการแก้ไขแม่แบบ (Save Template)
                 </button>
               </div>
             </form>
@@ -2722,7 +2722,7 @@ export default function App() {
               <div className="flex items-center gap-2">
                 <UserCheck className="h-5 w-5 text-brand-300" />
                 <h3 className="font-bold text-base">
-                  {editingUser ? `à¸ˆà¸±à¸”à¸à¸²à¸£à¸ªà¸´à¸—à¸˜à¸´à¹Œà¸œà¸¹à¹‰à¹ƒà¸Šà¹‰à¸‡à¸²à¸™: ${editingUser.fullNameTh}` : 'à¹€à¸žà¸´à¹ˆà¸¡à¸šà¸±à¸à¸Šà¸µà¹€à¸ˆà¹‰à¸²à¸«à¸™à¹‰à¸²à¸—à¸µà¹ˆà¹ƒà¸«à¸¡à¹ˆ (Add Staff User)'}
+                  {editingUser ? `จัดการสิทธิ์ผู้ใช้งาน: ${editingUser.fullNameTh}` : 'เพิ่มบัญชีเจ้าหน้าที่ใหม่ (Add Staff User)'}
                 </h3>
               </div>
               <button
@@ -2730,84 +2730,84 @@ export default function App() {
                 onClick={() => setIsUserModalOpen(false)}
                 className="text-slate-300 hover:text-white font-bold text-lg leading-none"
               >
-                âœ•
+                ✕
               </button>
             </div>
 
             <div className="p-6 space-y-5 text-xs text-slate-700">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block font-bold text-slate-700 mb-1">à¸£à¸«à¸±à¸ªà¸œà¸¹à¹‰à¹ƒà¸Šà¹‰ (Username) *</label>
+                  <label className="block font-bold text-slate-700 mb-1">รหัสผู้ใช้ (Username) *</label>
                   <input
                     type="text"
                     disabled={!!editingUser}
                     value={userForm.username}
                     onChange={(e) => setUserForm({ ...userForm, username: e.target.value })}
-                    placeholder="à¹€à¸Šà¹ˆà¸™ staff.01"
+                    placeholder="เช่น staff.01"
                     className="w-full border border-slate-300 rounded-lg p-2.5 font-mono text-brand-700 disabled:bg-slate-100 disabled:text-slate-500"
                   />
                 </div>
                 <div>
-                  <label className="block font-bold text-slate-700 mb-1">à¸­à¸µà¹€à¸¡à¸¥à¸‡à¸²à¸™ (Email) *</label>
+                  <label className="block font-bold text-slate-700 mb-1">อีเมลงาน (Email) *</label>
                   <input
                     type="email"
                     value={userForm.email}
                     onChange={(e) => setUserForm({ ...userForm, email: e.target.value })}
-                    placeholder="à¹€à¸Šà¹ˆà¸™ somchai@dopa.go.th"
+                    placeholder="เช่น somchai@dopa.go.th"
                     className="w-full border border-slate-300 rounded-lg p-2.5"
                   />
                 </div>
                 <div>
-                  <label className="block font-bold text-slate-700 mb-1">à¸Šà¸·à¹ˆà¸­-à¸™à¸²à¸¡à¸ªà¸à¸¸à¸¥ (à¸ à¸²à¸©à¸²à¹„à¸—à¸¢) *</label>
+                  <label className="block font-bold text-slate-700 mb-1">ชื่อ-นามสกุล (ภาษาไทย) *</label>
                   <input
                     type="text"
                     value={userForm.fullNameTh}
                     onChange={(e) => setUserForm({ ...userForm, fullNameTh: e.target.value })}
-                    placeholder="à¹€à¸Šà¹ˆà¸™ à¸ªà¸¡à¸Šà¸²à¸¢ à¸£à¸±à¸šà¹€à¸£à¸·à¹ˆà¸­à¸‡"
+                    placeholder="เช่น สมชาย รับเรื่อง"
                     className="w-full border border-slate-300 rounded-lg p-2.5 font-bold"
                   />
                 </div>
                 <div>
-                  <label className="block font-bold text-slate-700 mb-1">à¸Šà¸·à¹ˆà¸­-à¸™à¸²à¸¡à¸ªà¸à¸¸à¸¥ (à¸ à¸²à¸©à¸²à¸­à¸±à¸‡à¸à¸¤à¸©)</label>
+                  <label className="block font-bold text-slate-700 mb-1">ชื่อ-นามสกุล (ภาษาอังกฤษ)</label>
                   <input
                     type="text"
                     value={userForm.fullNameEn}
                     onChange={(e) => setUserForm({ ...userForm, fullNameEn: e.target.value })}
-                    placeholder="à¹€à¸Šà¹ˆà¸™ Somchai Intake"
+                    placeholder="เช่น Somchai Intake"
                     className="w-full border border-slate-300 rounded-lg p-2.5"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block font-bold text-slate-700 mb-1">à¸«à¸™à¹ˆà¸§à¸¢à¸‡à¸²à¸™ / à¹à¸œà¸™à¸ (Department)</label>
+                <label className="block font-bold text-slate-700 mb-1">หน่วยงาน / แผนก (Department)</label>
                 <input
                   type="text"
                   value={userForm.department}
                   onChange={(e) => setUserForm({ ...userForm, department: e.target.value })}
-                  placeholder="à¹€à¸Šà¹ˆà¸™ à¸¨à¸¹à¸™à¸¢à¹Œà¸£à¸±à¸šà¹€à¸£à¸·à¹ˆà¸­à¸‡à¹à¸¥à¸°à¸„à¸±à¸”à¸à¸£à¸­à¸‡à¸„à¸³à¸‚à¸­ PDPA"
+                  placeholder="เช่น ศูนย์รับเรื่องและคัดกรองคำขอ PDPA"
                   className="w-full border border-slate-300 rounded-lg p-2.5"
                 />
               </div>
 
               <div className="border-t border-slate-200 pt-4">
                 <label className="block font-bold text-slate-800 text-sm mb-2">
-                  à¸šà¸—à¸šà¸²à¸—à¹à¸¥à¸°à¸ªà¸´à¸—à¸˜à¸´à¹Œà¸à¸²à¸£à¸—à¸³à¸‡à¸²à¸™ (Multi-Role Access Control)
+                  บทบาทและสิทธิ์การทำงาน (Multi-Role Access Control)
                 </label>
                 <p className="text-[11px] text-slate-500 mb-3">
-                  à¹€à¸ˆà¹‰à¸²à¸«à¸™à¹‰à¸²à¸—à¸µà¹ˆ 1 à¸—à¹ˆà¸²à¸™à¸ªà¸²à¸¡à¸²à¸£à¸–à¸£à¸±à¸šà¸œà¸´à¸”à¸Šà¸­à¸šà¹„à¸”à¹‰à¸«à¸¥à¸²à¸¢à¸šà¸—à¸šà¸²à¸—à¸•à¸²à¸¡à¸à¸²à¸£à¸à¸³à¸«à¸™à¸”à¹‚à¸„à¸£à¸‡à¸ªà¸£à¹‰à¸²à¸‡à¸à¸²à¸£à¸›à¸à¸´à¸šà¸±à¸•à¸´à¸‡à¸²à¸™à¹ƒà¸™à¸­à¸‡à¸„à¹Œà¸à¸£
+                  เจ้าหน้าที่ 1 ท่านสามารถรับผิดชอบได้หลายบทบาทตามการกำหนดโครงสร้างการปฏิบัติงานในองค์กร
                 </p>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-2.5">
                   {(['admin', 'intake', 'owner', 'dpo', 'approver', 'auditor'] as Role[]).map((roleKey) => {
                     const isChecked = userForm.roles.includes(roleKey);
                     const roleLabels: Record<Role, string> = {
-                      superadmin: 'SUPERADMIN - à¸œà¸¹à¹‰à¸”à¸¹à¹à¸¥à¸ªà¸¹à¸‡à¸ªà¸¸à¸”',
-                      admin: 'ADMIN - à¸œà¸¹à¹‰à¸”à¸¹à¹à¸¥à¸£à¸°à¸šà¸š',
-                      intake: 'INTAKE - à¸£à¸±à¸šà¹€à¸£à¸·à¹ˆà¸­à¸‡/à¸„à¸±à¸”à¸à¸£à¸­à¸‡',
-                      owner: 'OWNER - à¸«à¸™à¹ˆà¸§à¸¢à¸‡à¸²à¸™à¸„à¸£à¸­à¸šà¸„à¸£à¸­à¸‡',
-                      dpo: 'DPO - à¸„à¸¸à¹‰à¸¡à¸„à¸£à¸­à¸‡à¸‚à¹‰à¸­à¸¡à¸¹à¸¥/à¸à¸Žà¸«à¸¡à¸²à¸¢',
-                      approver: 'APPROVER - à¸œà¸¹à¹‰à¸šà¸£à¸´à¸«à¸²à¸£à¸­à¸™à¸¸à¸¡à¸±à¸•à¸´',
-                      auditor: 'AUDITOR - à¸•à¸£à¸§à¸ˆà¸ªà¸­à¸šà¸­à¸´à¸ªà¸£à¸°'
+                      superadmin: 'SUPERADMIN - ผู้ดูแลสูงสุด',
+                      admin: 'ADMIN - ผู้ดูแลระบบ',
+                      intake: 'INTAKE - รับเรื่อง/คัดกรอง',
+                      owner: 'OWNER - หน่วยงานครอบครอง',
+                      dpo: 'DPO - คุ้มครองข้อมูล/กฎหมาย',
+                      approver: 'APPROVER - ผู้บริหารอนุมัติ',
+                      auditor: 'AUDITOR - ตรวจสอบอิสระ'
                     };
                     return (
                       <label
@@ -2848,7 +2848,7 @@ export default function App() {
                     <div className="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-r-xl space-y-1">
                       <div className="flex items-center gap-2 text-amber-900 font-bold">
                         <AlertTriangle className="h-4 w-4 text-amber-600" />
-                        <span>âš ï¸ à¹à¸ˆà¹‰à¸‡à¹€à¸•à¸·à¸­à¸™à¸„à¸§à¸²à¸¡à¹€à¸ªà¸µà¹ˆà¸¢à¸‡à¸‚à¸±à¸”à¹à¸¢à¹‰à¸‡à¸—à¸²à¸‡à¸«à¸™à¹‰à¸²à¸—à¸µà¹ˆ (SOD Conflict Warning)</span>
+                        <span>⚠️ แจ้งเตือนความเสี่ยงขัดแย้งทางหน้าที่ (SOD Conflict Warning)</span>
                       </div>
                       <ul className="list-disc list-inside text-[11px] text-amber-800 space-y-0.5">
                         {warnings.map((w, i) => (
@@ -2856,7 +2856,7 @@ export default function App() {
                         ))}
                       </ul>
                       <p className="text-[10px] text-amber-700 pt-1">
-                        * à¹„à¸¡à¹ˆà¸ªà¸²à¸¡à¸²à¸£à¸–à¸šà¸±à¸™à¸—à¸¶à¸à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¹„à¸”à¹‰ à¸à¸£à¸¸à¸“à¸²à¸›à¸£à¸±à¸šà¹€à¸›à¸¥à¸µà¹ˆà¸¢à¸™à¸šà¸—à¸šà¸²à¸—à¸ªà¸´à¸—à¸˜à¸´à¹Œà¹ƒà¸«à¹‰à¸–à¸¹à¸à¸•à¹‰à¸­à¸‡à¸•à¸²à¸¡à¸«à¸¥à¸±à¸à¸à¸²à¸£à¸„à¸²à¸™à¸­à¸³à¸™à¸²à¸ˆ
+                        * ไม่สามารถบันทึกข้อมูลได้ กรุณาปรับเปลี่ยนบทบาทสิทธิ์ให้ถูกต้องตามหลักการคานอำนาจ
                       </p>
                     </div>
                   );
@@ -2864,7 +2864,7 @@ export default function App() {
                 return (
                   <div className="bg-emerald-50 border border-emerald-200 p-3 rounded-xl flex items-center gap-2 text-emerald-800">
                     <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
-                    <span>âœ“ Compliant: à¸ªà¸´à¸—à¸˜à¸´à¹Œà¸—à¸µà¹ˆà¹€à¸¥à¸·à¸­à¸à¸ªà¸­à¸”à¸„à¸¥à¹‰à¸­à¸‡à¸à¸±à¸šà¸«à¸¥à¸±à¸à¸à¸²à¸£à¸„à¸²à¸™à¸­à¸³à¸™à¸²à¸ˆà¹à¸¥à¸°à¸¡à¸²à¸•à¸£à¸à¸²à¸™à¸„à¸§à¸²à¸¡à¸›à¸¥à¸­à¸”à¸ à¸±à¸¢ SOD</span>
+                    <span>✓ Compliant: สิทธิ์ที่เลือกสอดคล้องกับหลักการคานอำนาจและมาตรฐานความปลอดภัย SOD</span>
                   </div>
                 );
               })()}
@@ -2887,7 +2887,7 @@ export default function App() {
                             .then((res) => res.json())
                             .then((data) => {
                               if (data.success) {
-                                showNotify('à¸£à¸«à¸±à¸ªà¸œà¹ˆà¸²à¸™à¸–à¸¹à¸à¸•à¸±à¹‰à¸‡à¸„à¹ˆà¸²à¹ƒà¸«à¸¡à¹ˆà¹€à¸›à¹‡à¸™ 123456 à¹€à¸£à¸µà¸¢à¸šà¸£à¹‰à¸­à¸¢à¹à¸¥à¹‰à¸§', 'success');
+                                showNotify('รหัสผ่านถูกตั้งค่าใหม่เป็น 123456 เรียบร้อยแล้ว', 'success');
                               }
                             });
                         }
@@ -2895,12 +2895,12 @@ export default function App() {
                       className="bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 font-bold px-3 py-2 rounded-lg text-xs transition flex items-center gap-1.5"
                     >
                       <Lock className="h-3.5 w-3.5 text-amber-600" />
-                      <span>à¸£à¸µà¹€à¸‹à¹‡à¸•à¸£à¸«à¸±à¸ªà¸œà¹ˆà¸²à¸™à¹€à¸›à¹‡à¸™ 123456</span>
+                      <span>รีเซ็ตรหัสผ่านเป็น 123456</span>
                     </button>
                     <button
                       type="button"
                       onClick={() => {
-                        showNotify(`à¸¢à¸·à¸™à¸¢à¸±à¸™à¸à¸²à¸£à¸¥à¸šà¸œà¸¹à¹‰à¹ƒà¸Šà¹‰: ${editingUser.fullNameTh} à¸­à¸­à¸à¸ˆà¸²à¸à¸£à¸°à¸šà¸š?`, 'confirm', 'à¸¢à¸·à¸™à¸¢à¸±à¸™à¸à¸²à¸£à¸¥à¸šà¸œà¸¹à¹‰à¹ƒà¸Šà¹‰', () => {
+                        showNotify(`ยืนยันการลบผู้ใช้: ${editingUser.fullNameTh} ออกจากระบบ?`, 'confirm', 'ยืนยันการลบผู้ใช้', () => {
                           const token = sessionStorage.getItem('pdpa_token') || sessionStorage.getItem('pdpa_jwt_token');
                           if (token) {
                             fetch(`/api/users/${editingUser.id}`, {
@@ -2910,7 +2910,7 @@ export default function App() {
                               .then((res) => res.json())
                               .then((data) => {
                                 if (data.success) {
-                                  showNotify('à¸¥à¸šà¸œà¸¹à¹‰à¹ƒà¸Šà¹‰à¸‡à¸²à¸™à¸ªà¸³à¹€à¸£à¹‡à¸ˆ');
+                                  showNotify('ลบผู้ใช้งานสำเร็จ');
                                   reloadUsers();
                                   setIsUserModalOpen(false);
                                 }
@@ -2921,7 +2921,7 @@ export default function App() {
                       className="bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-300 font-bold px-3 py-2 rounded-lg text-xs transition flex items-center gap-1.5"
                     >
                       <Trash2 className="h-3.5 w-3.5 text-rose-600" />
-                      <span>à¸¥à¸šà¸œà¸¹à¹‰à¹ƒà¸Šà¹‰à¸‡à¸²à¸™</span>
+                      <span>ลบผู้ใช้งาน</span>
                     </button>
                   </>
                 )}
@@ -2933,22 +2933,22 @@ export default function App() {
                   onClick={() => setIsUserModalOpen(false)}
                   className="bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold px-4 py-2 rounded-lg text-xs transition"
                 >
-                  à¸¢à¸à¹€à¸¥à¸´à¸
+                  ยกเลิก
                 </button>
                 <button
                   type="button"
                   onClick={async () => {
                     const token = sessionStorage.getItem('pdpa_token') || sessionStorage.getItem('pdpa_jwt_token');
                     if (!userForm.username || !userForm.fullNameTh) {
-                      showNotify('à¸à¸£à¸¸à¸“à¸²à¸à¸£à¸­à¸à¸£à¸«à¸±à¸ªà¸œà¸¹à¹‰à¹ƒà¸Šà¹‰ à¹à¸¥à¸°à¸Šà¸·à¹ˆà¸­-à¸™à¸²à¸¡à¸ªà¸à¸¸à¸¥à¹ƒà¸«à¹‰à¸„à¸£à¸šà¸–à¹‰à¸§à¸™', 'warning');
+                      showNotify('กรุณากรอกรหัสผู้ใช้ และชื่อ-นามสกุลให้ครบถ้วน', 'warning');
                       return;
                     }
                     if (calculateSodWarnings(userForm.roles).length > 0) {
-                      showNotify('à¹„à¸¡à¹ˆà¸ªà¸²à¸¡à¸²à¸£à¸–à¸šà¸±à¸™à¸—à¸¶à¸à¹„à¸”à¹‰ à¹€à¸™à¸·à¹ˆà¸­à¸‡à¸ˆà¸²à¸à¸¡à¸µà¸ªà¸´à¸—à¸˜à¸´à¹Œà¸—à¸µà¹ˆà¸‚à¸±à¸”à¹à¸¢à¹‰à¸‡à¸à¸±à¸™ (SOD Conflict) à¸à¸£à¸¸à¸“à¸²à¸›à¸£à¸±à¸šà¹€à¸›à¸¥à¸µà¹ˆà¸¢à¸™à¸šà¸—à¸šà¸²à¸—à¸ªà¸´à¸—à¸˜à¸´à¹Œà¹ƒà¸«à¹‰à¸–à¸¹à¸à¸•à¹‰à¸­à¸‡', 'error');
+                      showNotify('ไม่สามารถบันทึกได้ เนื่องจากมีสิทธิ์ที่ขัดแย้งกัน (SOD Conflict) กรุณาปรับเปลี่ยนบทบาทสิทธิ์ให้ถูกต้อง', 'error');
                       return;
                     }
                     if (!token) {
-                      showNotify('à¹€à¸‹à¸ªà¸Šà¸±à¹ˆà¸™à¸«à¸¡à¸”à¸­à¸²à¸¢à¸¸ à¸à¸£à¸¸à¸“à¸²à¸­à¸­à¸à¸ˆà¸²à¸à¸£à¸°à¸šà¸šà¹à¸¥à¸°à¹€à¸‚à¹‰à¸²à¸ªà¸¹à¹ˆà¸£à¸°à¸šà¸šà¹ƒà¸«à¸¡à¹ˆ');
+                      showNotify('เซสชั่นหมดอายุ กรุณาออกจากระบบและเข้าสู่ระบบใหม่');
                       return;
                     }
 
@@ -2980,25 +2980,25 @@ export default function App() {
 
                       if (!res.ok) {
                         const errData = await res.json().catch(() => ({}));
-                        showNotify(`à¹€à¸à¸´à¸”à¸‚à¹‰à¸­à¸œà¸´à¸”à¸žà¸¥à¸²à¸” (${res.status}): ${errData.message || errData.error || 'à¹„à¸¡à¹ˆà¹„à¸”à¹‰à¸£à¸±à¸šà¸­à¸™à¸¸à¸à¸²à¸• à¸à¸£à¸¸à¸“à¸²à¸•à¸£à¸§à¸ˆà¸ªà¸­à¸šà¸ªà¸´à¸—à¸˜à¸´à¹Œà¸œà¸¹à¹‰à¹ƒà¸Šà¹‰'}`);
+                        showNotify(`เกิดข้อผิดพลาด (${res.status}): ${errData.message || errData.error || 'ไม่ได้รับอนุญาต กรุณาตรวจสอบสิทธิ์ผู้ใช้'}`);
                         return;
                       }
 
                       const data = await res.json();
                       if (data.success) {
-                        showNotify(editingUser ? 'à¸šà¸±à¸™à¸—à¸¶à¸à¸à¸²à¸£à¹à¸à¹‰à¹„à¸‚à¸ªà¸´à¸—à¸˜à¸´à¹Œà¹€à¸£à¸µà¸¢à¸šà¸£à¹‰à¸­à¸¢à¹à¸¥à¹‰à¸§' : 'à¹€à¸žà¸´à¹ˆà¸¡à¸œà¸¹à¹‰à¹ƒà¸Šà¹‰à¸‡à¸²à¸™à¸ªà¸³à¹€à¸£à¹‡à¸ˆ! à¸£à¸«à¸±à¸ªà¸œà¹ˆà¸²à¸™à¹€à¸£à¸´à¹ˆà¸¡à¸•à¹‰à¸™à¸„à¸·à¸­ 123456');
+                        showNotify(editingUser ? 'บันทึกการแก้ไขสิทธิ์เรียบร้อยแล้ว' : 'เพิ่มผู้ใช้งานสำเร็จ! รหัสผ่านเริ่มต้นคือ 123456');
                         setIsUserModalOpen(false);
                         reloadUsers();
                       } else {
-                        showNotify('à¹€à¸à¸´à¸”à¸‚à¹‰à¸­à¸œà¸´à¸”à¸žà¸¥à¸²à¸”: ' + (data.error || data.message || 'à¹„à¸¡à¹ˆà¸—à¸£à¸²à¸šà¸ªà¸²à¹€à¸«à¸•à¸¸'));
+                        showNotify('เกิดข้อผิดพลาด: ' + (data.error || data.message || 'ไม่ทราบสาเหตุ'));
                       }
                     } catch (err) {
-                      showNotify('à¹„à¸¡à¹ˆà¸ªà¸²à¸¡à¸²à¸£à¸–à¸•à¸´à¸”à¸•à¹ˆà¸­ Server à¹„à¸”à¹‰: ' + String(err));
+                      showNotify('ไม่สามารถติดต่อ Server ได้: ' + String(err));
                     }
                   }}
                   className="bg-brand-600 hover:bg-brand-700 text-white font-bold px-5 py-2 rounded-lg text-xs transition shadow-sm"
                 >
-                  à¸šà¸±à¸™à¸—à¸¶à¸à¸‚à¹‰à¸­à¸¡à¸¹à¸¥
+                  บันทึกข้อมูล
                 </button>
               </div>
             </div>
@@ -3035,8 +3035,8 @@ export default function App() {
                   <Shield className="h-5 w-5" />
                 </div>
                 <div>
-                  <h1 className="font-bold text-slate-900 text-base leading-tight">à¸£à¸°à¸šà¸šà¸¢à¸·à¹ˆà¸™à¸„à¸³à¸‚à¸­à¹€à¸‚à¹‰à¸²à¸–à¸¶à¸‡à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸ªà¹ˆà¸§à¸™à¸šà¸¸à¸„à¸„à¸¥ (PDPA Access Portal)</h1>
-                  <p className="text-xs text-slate-500">à¸¢à¸·à¹ˆà¸™à¸„à¸³à¸‚à¸­à¹ƒà¸Šà¹‰à¸ªà¸´à¸—à¸˜à¸´à¹à¸¥à¸°à¸£à¸±à¸šà¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸„à¸§à¸²à¸¡à¸¡à¸±à¹ˆà¸™à¸„à¸‡à¸›à¸¥à¸­à¸”à¸ à¸±à¸¢à¸•à¸²à¸¡ à¸ž.à¸£.à¸š. à¸„à¸¸à¹‰à¸¡à¸„à¸£à¸­à¸‡à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸ªà¹ˆà¸§à¸™à¸šà¸¸à¸„à¸„à¸¥ à¸ž.à¸¨. 2562</p>
+                  <h1 className="font-bold text-slate-900 text-base leading-tight">ระบบยื่นคำขอเข้าถึงข้อมูลส่วนบุคคล (PDPA Access Portal)</h1>
+                  <p className="text-xs text-slate-500">ยื่นคำขอใช้สิทธิและรับข้อมูลความมั่นคงปลอดภัยตาม พ.ร.บ. คุ้มครองข้อมูลส่วนบุคคล พ.ศ. 2562</p>
                 </div>
               </div>
 
@@ -3045,13 +3045,13 @@ export default function App() {
                   onClick={() => setPublicTab('landing')}
                   className={`hover:text-brand-600 transition ${publicTab === 'landing' ? 'text-brand-600 border-b-2 border-brand-600 pb-1' : ''}`}
                 >
-                  à¸«à¸™à¹‰à¸²à¸«à¸¥à¸±à¸à¸ªà¸´à¸—à¸˜à¸´à¹Œ
+                  หน้าหลักสิทธิ์
                 </button>
                 <button
                   onClick={() => setPublicTab('submit')}
                   className={`hover:text-brand-600 transition ${publicTab === 'submit' ? 'text-brand-600 border-b-2 border-brand-600 pb-1' : ''}`}
                 >
-                  à¸à¸£à¸­à¸à¸„à¸³à¸‚à¸­à¸­à¸­à¸™à¹„à¸¥à¸™à¹Œ
+                  กรอกคำขอออนไลน์
                 </button>
                 <button
                   onClick={() => {
@@ -3062,7 +3062,7 @@ export default function App() {
                   className="bg-brand-600 hover:bg-brand-700 text-white font-bold px-3 py-1.5 rounded-lg transition shadow-sm flex items-center gap-1.5"
                 >
                   <Search className="h-3.5 w-3.5" />
-                  <span>à¸•à¸´à¸”à¸•à¸²à¸¡à¸ªà¸–à¸²à¸™à¸°à¸„à¸³à¸‚à¸­</span>
+                  <span>ติดตามสถานะคำขอ</span>
                 </button>
               </div>
             </div>
@@ -3079,13 +3079,13 @@ export default function App() {
                 <div className="bg-gradient-to-r from-brand-900 to-slate-900 text-white rounded-2xl p-8 shadow-md relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-6">
                   <div className="space-y-3 max-w-xl">
                     <span className="inline-block bg-brand-500/20 text-brand-300 border border-brand-500/40 text-[11px] px-3.5 py-1.5 rounded-full font-bold mb-1 shadow-sm tracking-wide">
-                      à¸ž.à¸£.à¸š. à¸„à¸¸à¹‰à¸¡à¸„à¸£à¸­à¸‡à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸ªà¹ˆà¸§à¸™à¸šà¸¸à¸„à¸„à¸¥ à¸ž.à¸¨. 2562 (à¸à¸²à¸£à¹ƒà¸Šà¹‰à¸ªà¸´à¸—à¸˜à¸´à¸‚à¸­à¸‡à¹€à¸ˆà¹‰à¸²à¸‚à¸­à¸‡à¸‚à¹‰à¸­à¸¡à¸¹à¸¥)
+                      พ.ร.บ. คุ้มครองข้อมูลส่วนบุคคล พ.ศ. 2562 (การใช้สิทธิของเจ้าของข้อมูล)
                     </span>
                     <h2 className="text-2xl md:text-3xl font-bold leading-snug pt-1">
-                      à¸¡à¸µà¸ªà¸´à¸—à¸˜à¸´à¸‚à¸­à¹€à¸‚à¹‰à¸²à¸–à¸¶à¸‡à¹à¸¥à¸°à¸£à¸±à¸šà¸ªà¸³à¹€à¸™à¸²à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸ªà¹ˆà¸§à¸™à¸šà¸¸à¸„à¸„à¸¥à¸‚à¸­à¸‡à¸—à¹ˆà¸²à¸™à¸—à¸µà¹ˆà¸­à¸¢à¸¹à¹ˆà¹ƒà¸™à¸„à¸§à¸²à¸¡à¸”à¸¹à¹à¸¥à¸‚à¸­à¸‡à¸­à¸‡à¸„à¹Œà¸à¸£
+                      มีสิทธิขอเข้าถึงและรับสำเนาข้อมูลส่วนบุคคลของท่านที่อยู่ในความดูแลขององค์กร
                     </h2>
                     <p className="text-xs text-slate-300 leading-relaxed">
-                      à¸—à¹ˆà¸²à¸™à¸ªà¸²à¸¡à¸²à¸£à¸–à¸¢à¸·à¹ˆà¸™à¸„à¸³à¸£à¹‰à¸­à¸‡à¸‚à¸­à¸•à¸£à¸§à¸ˆà¸ªà¸­à¸š à¸«à¸£à¸·à¸­à¸„à¸±à¸”à¸¥à¸­à¸à¹„à¸Ÿà¸¥à¹Œà¸›à¸£à¸°à¸§à¸±à¸•à¸´à¸à¸²à¸£à¸ˆà¸­à¸‡ à¸à¸²à¸£à¹€à¸‚à¹‰à¸²à¹ƒà¸Šà¹‰à¸šà¸£à¸´à¸à¸²à¸£ à¸›à¸£à¸°à¸§à¸±à¸•à¸´à¸žà¸™à¸±à¸à¸‡à¸²à¸™ à¸«à¸£à¸·à¸­à¸šà¸±à¸™à¸—à¸¶à¸à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸­à¸·à¹ˆà¸™à¸—à¸µà¹ˆà¹€à¸›à¹‡à¸™à¸‚à¸­à¸‡à¸—à¹ˆà¸²à¸™à¹„à¸”à¹‰à¸­à¸¢à¹ˆà¸²à¸‡à¸£à¸§à¸”à¹€à¸£à¹‡à¸§ à¸›à¸¥à¸­à¸”à¸ à¸±à¸¢ à¹à¸¥à¸°à¸–à¸¹à¸à¸•à¹‰à¸­à¸‡à¸•à¸²à¸¡à¸‚à¸±à¹‰à¸™à¸•à¸­à¸™
+                      ท่านสามารถยื่นคำร้องขอตรวจสอบ หรือคัดลอกไฟล์ประวัติการจอง การเข้าใช้บริการ ประวัติพนักงาน หรือบันทึกข้อมูลอื่นที่เป็นของท่านได้อย่างรวดเร็ว ปลอดภัย และถูกต้องตามขั้นตอน
                     </p>
                     <div className="flex flex-wrap gap-4 pt-3">
                       <button
@@ -3094,7 +3094,7 @@ export default function App() {
                       >
                         <div className="absolute inset-0 bg-white/20 w-full h-full transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-in-out"></div>
                         <FileText className="w-5 h-5 relative z-10" />
-                        <span className="relative z-10">à¸¢à¸·à¹ˆà¸™à¹à¸šà¸šà¸„à¸³à¸£à¹‰à¸­à¸‡à¸­à¸­à¸™à¹„à¸¥à¸™à¹Œ</span>
+                        <span className="relative z-10">ยื่นแบบคำร้องออนไลน์</span>
                       </button>
                       <button
                         onClick={() => {
@@ -3105,7 +3105,7 @@ export default function App() {
                         className="bg-white/10 hover:bg-white/20 text-white border border-white/20 text-base md:text-lg font-bold py-4 px-8 rounded-2xl shadow-lg transform hover:-translate-y-1 transition-all duration-300 flex items-center gap-3 backdrop-blur-md"
                       >
                         <Search className="w-5 h-5" />
-                        à¸•à¸´à¸”à¸•à¸²à¸¡à¸ªà¸–à¸²à¸™à¸°à¸„à¸³à¸£à¹‰à¸­à¸‡à¹€à¸”à¸´à¸¡
+                        ติดตามสถานะคำร้องเดิม
                       </button>
                     </div>
                   </div>
@@ -3117,31 +3117,31 @@ export default function App() {
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                   <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-2">
                     <div className="h-8 w-8 rounded-full bg-brand-100 text-brand-600 font-bold flex items-center justify-center text-sm">1</div>
-                    <span className="block font-bold text-slate-800 text-sm">à¸¢à¸·à¹ˆà¸™à¸„à¸³à¸‚à¸­à¹à¸¥à¸°à¸¢à¸·à¸™à¸¢à¸±à¸™à¸•à¸±à¸§</span>
-                    <p className="text-xs text-slate-500 leading-relaxed">à¸à¸£à¸­à¸à¸£à¸²à¸¢à¸¥à¸°à¹€à¸­à¸µà¸¢à¸”à¸„à¸³à¸‚à¸­ à¹€à¸¥à¸·à¸­à¸à¸‚à¸­à¸šà¹€à¸‚à¸•à¸‚à¹‰à¸­à¸¡à¸¹à¸¥ à¸­à¸±à¸›à¹‚à¸«à¸¥à¸”à¸ªà¸³à¹€à¸™à¸²à¸šà¸±à¸•à¸£à¸›à¸£à¸°à¸ˆà¸³à¸•à¸±à¸§à¸›à¸£à¸°à¸Šà¸²à¸Šà¸™ (à¸žà¸£à¹‰à¸­à¸¡à¸£à¸±à¸šà¸£à¸­à¸‡à¸ªà¸³à¹€à¸™à¸²à¸–à¸¹à¸à¸•à¹‰à¸­à¸‡) à¹à¸¥à¸°à¸¢à¸·à¸™à¸¢à¸±à¸™à¸•à¸±à¸§à¸•à¸™à¸œà¹ˆà¸²à¸™à¸£à¸«à¸±à¸ª OTP</p>
+                    <span className="block font-bold text-slate-800 text-sm">ยื่นคำขอและยืนยันตัว</span>
+                    <p className="text-xs text-slate-500 leading-relaxed">กรอกรายละเอียดคำขอ เลือกขอบเขตข้อมูล อัปโหลดสำเนาบัตรประจำตัวประชาชน (พร้อมรับรองสำเนาถูกต้อง) และยืนยันตัวตนผ่านรหัส OTP</p>
                   </div>
                   <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-2">
                     <div className="h-8 w-8 rounded-full bg-brand-100 text-brand-600 font-bold flex items-center justify-center text-sm">2</div>
-                    <span className="block font-bold text-slate-800 text-sm">à¸„à¸±à¸”à¸à¸£à¸­à¸‡à¸„à¸§à¸²à¸¡à¸ªà¸¡à¸šà¸¹à¸£à¸“à¹Œ</span>
-                    <p className="text-xs text-slate-500 leading-relaxed">à¹€à¸ˆà¹‰à¸²à¸«à¸™à¹‰à¸²à¸—à¸µà¹ˆà¸•à¸£à¸§à¸ˆà¸ªà¸­à¸šà¸„à¸§à¸²à¸¡à¸–à¸¹à¸à¸•à¹‰à¸­à¸‡à¹à¸¥à¸°à¸„à¸£à¸šà¸–à¹‰à¸§à¸™à¸‚à¸­à¸‡à¸„à¸³à¸‚à¸­à¸ à¸²à¸¢à¹ƒà¸™ 15 à¸§à¸±à¸™ à¸«à¸²à¸à¹€à¸­à¸à¸ªà¸²à¸£à¹„à¸¡à¹ˆà¸ªà¸¡à¸šà¸¹à¸£à¸“à¹Œà¸ˆà¸°à¹à¸ˆà¹‰à¸‡à¹ƒà¸«à¹‰à¸—à¹ˆà¸²à¸™à¸—à¸£à¸²à¸šà¹€à¸žà¸·à¹ˆà¸­à¸”à¸³à¹€à¸™à¸´à¸™à¸à¸²à¸£à¹à¸à¹‰à¹„à¸‚à¹€à¸žà¸´à¹ˆà¸¡à¹€à¸•à¸´à¸¡</p>
+                    <span className="block font-bold text-slate-800 text-sm">คัดกรองความสมบูรณ์</span>
+                    <p className="text-xs text-slate-500 leading-relaxed">เจ้าหน้าที่ตรวจสอบความถูกต้องและครบถ้วนของคำขอภายใน 15 วัน หากเอกสารไม่สมบูรณ์จะแจ้งให้ท่านทราบเพื่อดำเนินการแก้ไขเพิ่มเติม</p>
                   </div>
                   <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-2">
                     <div className="h-8 w-8 rounded-full bg-brand-100 text-brand-600 font-bold flex items-center justify-center text-sm">3</div>
-                    <span className="block font-bold text-slate-800 text-sm">à¸žà¸´à¸ˆà¸²à¸£à¸“à¸²à¹à¸¥à¸°à¸„à¸±à¸”à¸¥à¸­à¸</span>
-                    <p className="text-xs text-slate-500 leading-relaxed">à¸„à¹‰à¸™à¸«à¸² à¸£à¸§à¸šà¸£à¸§à¸¡ à¹à¸¥à¸°à¸›à¸à¸›à¸´à¸”à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸‚à¸­à¸‡à¸šà¸¸à¸„à¸„à¸¥à¸­à¸·à¹ˆà¸™ (à¸–à¹‰à¸²à¸¡à¸µ) à¸žà¸£à¹‰à¸­à¸¡à¸”à¸³à¹€à¸™à¸´à¸™à¸à¸²à¸£à¸•à¸²à¸¡à¸„à¸³à¸‚à¸­à¹ƒà¸«à¹‰à¹à¸¥à¹‰à¸§à¹€à¸ªà¸£à¹‡à¸ˆà¸ à¸²à¸¢à¹ƒà¸™ 30 à¸§à¸±à¸™ à¸™à¸±à¸šà¹à¸•à¹ˆà¸§à¸±à¸™à¸—à¸µà¹ˆà¹„à¸”à¹‰à¸£à¸±à¸šà¸„à¸³à¸‚à¸­à¸—à¸µà¹ˆà¸ªà¸¡à¸šà¸¹à¸£à¸“à¹Œ</p>
+                    <span className="block font-bold text-slate-800 text-sm">พิจารณาและคัดลอก</span>
+                    <p className="text-xs text-slate-500 leading-relaxed">ค้นหา รวบรวม และปกปิดข้อมูลของบุคคลอื่น (ถ้ามี) พร้อมดำเนินการตามคำขอให้แล้วเสร็จภายใน 30 วัน นับแต่วันที่ได้รับคำขอที่สมบูรณ์</p>
                   </div>
                   <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-2">
                     <div className="h-8 w-8 rounded-full bg-brand-100 text-brand-600 font-bold flex items-center justify-center text-sm">4</div>
-                    <span className="block font-bold text-slate-800 text-sm">à¸£à¸±à¸šà¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸›à¸¥à¸­à¸”à¸ à¸±à¸¢</span>
-                    <p className="text-xs text-slate-500 leading-relaxed">à¸£à¸±à¸šà¸£à¸«à¸±à¸ªà¸œà¹ˆà¸²à¸™à¸ªà¸³à¸«à¸£à¸±à¸šà¸”à¸²à¸§à¸™à¹Œà¹‚à¸«à¸¥à¸”à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸—à¸²à¸‡à¸£à¸°à¸šà¸šà¸­à¸´à¹€à¸¥à¹‡à¸à¸—à¸£à¸­à¸™à¸´à¸à¸ªà¹Œ (à¸¥à¸´à¸‡à¸à¹Œà¸¡à¸µà¸­à¸²à¸¢à¸¸à¸à¸²à¸£à¹ƒà¸Šà¹‰à¸‡à¸²à¸™à¸ˆà¸³à¸à¸±à¸”) à¸«à¸£à¸·à¸­à¸•à¸´à¸”à¸•à¹ˆà¸­à¸£à¸±à¸šà¹€à¸­à¸à¸ªà¸²à¸£à¸”à¹‰à¸§à¸¢à¸•à¸™à¹€à¸­à¸‡ à¸“ à¸ªà¸–à¸²à¸™à¸—à¸µà¹ˆà¸—à¸³à¸à¸²à¸£</p>
+                    <span className="block font-bold text-slate-800 text-sm">รับข้อมูลปลอดภัย</span>
+                    <p className="text-xs text-slate-500 leading-relaxed">รับรหัสผ่านสำหรับดาวน์โหลดข้อมูลทางระบบอิเล็กทรอนิกส์ (ลิงก์มีอายุการใช้งานจำกัด) หรือติดต่อรับเอกสารด้วยตนเอง ณ สถานที่ทำการ</p>
                   </div>
                 </div>
 
-                {/* à¸„à¹‰à¸™à¸«à¸²à¹à¸¥à¸°à¸•à¸´à¸”à¸•à¸²à¸¡à¸ªà¸–à¸²à¸™à¸°à¸„à¸³à¸‚à¸­ */}
+                {/* ค้นหาและติดตามสถานะคำขอ */}
                 <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-4">
                   <h3 className="font-bold text-slate-800 text-sm flex items-center gap-1.5">
                     <Search className="h-4 w-4 text-brand-600" />
-                    <span>à¸„à¹‰à¸™à¸«à¸²à¹à¸¥à¸°à¸•à¸´à¸”à¸•à¸²à¸¡à¸ªà¸–à¸²à¸™à¸°à¸„à¸³à¸£à¹‰à¸­à¸‡à¸‚à¸­à¸‚à¹‰à¸­à¸¡à¸¹à¸¥ (Search & Track Status)</span>
+                    <span>ค้นหาและติดตามสถานะคำร้องขอข้อมูล (Search & Track Status)</span>
                   </h3>
                   <form
                     onSubmit={(e) => {
@@ -3152,7 +3152,7 @@ export default function App() {
                   >
                     <input
                       type="text"
-                      placeholder="à¸žà¸´à¸¡à¸žà¹Œà¹€à¸¥à¸‚à¸„à¸³à¸‚à¸­ à¸«à¸£à¸·à¸­à¸„à¸³à¸„à¹‰à¸™à¸«à¸² à¹€à¸Šà¹ˆà¸™ 0008, DOPA, REQ-DOPA-2026-0008..."
+                      placeholder="พิมพ์เลขคำขอ หรือคำค้นหา เช่น 0008, DOPA, REQ-DOPA-2026-0008..."
                       value={trackNo}
                       onChange={(e) => setTrackNo(e.target.value)}
                       className="flex-1 text-xs border border-slate-300 rounded-lg px-3 py-2.5 outline-none focus:ring-1 focus:ring-brand-500 bg-white text-slate-900 font-medium"
@@ -3161,7 +3161,7 @@ export default function App() {
                       type="submit"
                       className="bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold py-2.5 px-6 rounded-lg transition shrink-0 shadow-sm"
                     >
-                      à¸„à¹‰à¸™à¸«à¸²à¸„à¸³à¸£à¹‰à¸­à¸‡
+                      ค้นหาคำร้อง
                     </button>
                   </form>
                   {trackingError && (
@@ -3176,9 +3176,9 @@ export default function App() {
                 <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex gap-3 text-amber-900 text-xs">
                   <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
                   <div>
-                    <span className="block font-bold mb-1">à¸‚à¹‰à¸­à¸žà¸´à¸ˆà¸²à¸£à¸“à¸²à¸—à¸²à¸‡à¸à¸Žà¸«à¸¡à¸²à¸¢ (Legal Note):</span>
+                    <span className="block font-bold mb-1">ข้อพิจารณาทางกฎหมาย (Legal Note):</span>
                     <p className="leading-relaxed">
-                      {config?.disclaimerText || 'à¸£à¸°à¸šà¸šà¸™à¸µà¹‰à¹€à¸›à¹‡à¸™à¹€à¸„à¸£à¸·à¹ˆà¸­à¸‡à¸¡à¸·à¸­à¸ªà¸™à¸±à¸šà¸ªà¸™à¸¸à¸™à¸à¸²à¸£à¸”à¸³à¹€à¸™à¸´à¸™à¸‡à¸²à¸™ à¹„à¸¡à¹ˆà¹ƒà¸Šà¹ˆà¸£à¸°à¸šà¸šà¹ƒà¸«à¹‰à¸„à¸³à¸›à¸£à¸¶à¸à¸©à¸²à¸à¸Žà¸«à¸¡à¸²à¸¢à¹‚à¸”à¸¢à¸­à¸±à¸•à¹‚à¸™à¸¡à¸±à¸•à¸´ à¸à¸²à¸£à¸­à¸™à¸¸à¸¡à¸±à¸•à¸´ à¸›à¸à¸´à¹€à¸ªà¸˜ à¸«à¸£à¸·à¸­à¹€à¸›à¸´à¸”à¹€à¸œà¸¢à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸•à¹‰à¸­à¸‡à¸œà¹ˆà¸²à¸™à¸à¸²à¸£à¸žà¸´à¸ˆà¸²à¸£à¸“à¸²à¸‚à¸­à¸‡à¹€à¸ˆà¹‰à¸²à¸«à¸™à¹‰à¸²à¸—à¸µà¹ˆà¸œà¸¹à¹‰à¸£à¸±à¸šà¸œà¸´à¸”à¸Šà¸­à¸š'}
+                      {config?.disclaimerText || 'ระบบนี้เป็นเครื่องมือสนับสนุนการดำเนินงาน ไม่ใช่ระบบให้คำปรึกษากฎหมายโดยอัตโนมัติ การอนุมัติ ปฏิเสธ หรือเปิดเผยข้อมูลต้องผ่านการพิจารณาของเจ้าหน้าที่ผู้รับผิดชอบ'}
                     </p>
                   </div>
                 </div>
@@ -3187,26 +3187,26 @@ export default function App() {
                 <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm space-y-4">
                   <h3 className="font-bold text-slate-800 text-sm flex items-center gap-1.5">
                     <BookOpen className="h-4 w-4 text-brand-600" />
-                    <span>à¸„à¸³à¸–à¸²à¸¡à¸—à¸µà¹ˆà¸žà¸šà¸šà¹ˆà¸­à¸¢à¹€à¸à¸µà¹ˆà¸¢à¸§à¸à¸±à¸šà¸à¸²à¸£à¸‚à¸­à¸ªà¸´à¸—à¸˜à¸´à¸‚à¹‰à¸­à¸¡à¸¹à¸¥ (FAQs)</span>
+                    <span>คำถามที่พบบ่อยเกี่ยวกับการขอสิทธิข้อมูล (FAQs)</span>
                   </h3>
                   
                   <div className="divide-y divide-slate-100 space-y-3 pt-2">
                     <div className="pt-2 space-y-1">
-                      <span className="block font-semibold text-slate-700 text-xs">à¸¡à¸µà¸„à¹ˆà¸²à¹ƒà¸Šà¹‰à¸ˆà¹ˆà¸²à¸¢à¹ƒà¸™à¸à¸²à¸£à¸¢à¸·à¹ˆà¸™à¸„à¸³à¸£à¹‰à¸­à¸‡à¸‚à¸­à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸«à¸£à¸·à¸­à¹„à¸¡à¹ˆ?</span>
+                      <span className="block font-semibold text-slate-700 text-xs">มีค่าใช้จ่ายในการยื่นคำร้องขอข้อมูลหรือไม่?</span>
                       <p className="text-xs text-slate-500 leading-relaxed">
-                        à¸à¸²à¸£à¸”à¸²à¸§à¸™à¹Œà¹‚à¸«à¸¥à¸”à¹€à¸­à¸à¸ªà¸²à¸£à¸­à¸´à¹€à¸¥à¹‡à¸à¸—à¸£à¸­à¸™à¸´à¸à¸ªà¹Œà¸œà¹ˆà¸²à¸™à¸£à¸°à¸šà¸šà¸žà¸­à¸£à¹Œà¸—à¸±à¸¥à¹„à¸¡à¹ˆà¸¡à¸µà¸„à¹ˆà¸²à¹ƒà¸Šà¹‰à¸ˆà¹ˆà¸²à¸¢ à¹à¸•à¹ˆà¸«à¸²à¸à¸•à¹‰à¸­à¸‡à¸à¸²à¸£à¹ƒà¸«à¹‰à¸ˆà¸±à¸”à¸žà¸´à¸¡à¸žà¹Œà¸ªà¸³à¹€à¸™à¸²à¸¥à¸‡à¸à¸£à¸°à¸”à¸²à¸© A4 (à¹„à¸¡à¹ˆà¹€à¸à¸´à¸™à¹à¸œà¹ˆà¸™à¸¥à¸° 1 à¸šà¸²à¸—) à¸«à¸£à¸·à¸­à¸£à¸±à¸šà¸£à¸­à¸‡à¸ªà¸³à¹€à¸™à¸²à¸–à¸¹à¸à¸•à¹‰à¸­à¸‡ (à¹„à¸¡à¹ˆà¹€à¸à¸´à¸™à¸„à¸³à¸£à¸±à¸šà¸£à¸­à¸‡à¸¥à¸° 5 à¸šà¸²à¸—) à¸ˆà¸°à¸¡à¸µà¸„à¹ˆà¸²à¸˜à¸£à¸£à¸¡à¹€à¸™à¸µà¸¢à¸¡à¸•à¸²à¸¡à¸—à¸µà¹ˆà¸­à¸‡à¸„à¹Œà¸à¸£à¸à¸³à¸«à¸™à¸”
+                        การดาวน์โหลดเอกสารอิเล็กทรอนิกส์ผ่านระบบพอร์ทัลไม่มีค่าใช้จ่าย แต่หากต้องการให้จัดพิมพ์สำเนาลงกระดาษ A4 (ไม่เกินแผ่นละ 1 บาท) หรือรับรองสำเนาถูกต้อง (ไม่เกินคำรับรองละ 5 บาท) จะมีค่าธรรมเนียมตามที่องค์กรกำหนด
                       </p>
                     </div>
                     <div className="pt-3 space-y-1">
-                      <span className="block font-semibold text-slate-700 text-xs">à¸«à¸²à¸à¸¢à¸·à¹ˆà¸™à¹€à¸­à¸à¸ªà¸²à¸£à¹„à¸¡à¹ˆà¸„à¸£à¸šà¸–à¹‰à¸§à¸™ à¸•à¹‰à¸­à¸‡à¸”à¸³à¹€à¸™à¸´à¸™à¸à¸²à¸£à¸ à¸²à¸¢à¹ƒà¸™à¸à¸µà¹ˆà¸§à¸±à¸™?</span>
+                      <span className="block font-semibold text-slate-700 text-xs">หากยื่นเอกสารไม่ครบถ้วน ต้องดำเนินการภายในกี่วัน?</span>
                       <p className="text-xs text-slate-500 leading-relaxed">
-                        à¸«à¸²à¸à¹€à¸ˆà¹‰à¸²à¸«à¸™à¹‰à¸²à¸—à¸µà¹ˆà¹à¸ˆà¹‰à¸‡à¸‚à¸­à¹€à¸­à¸à¸ªà¸²à¸£à¹€à¸žà¸´à¹ˆà¸¡à¹€à¸•à¸´à¸¡ à¸£à¸°à¸šà¸šà¸ˆà¸°à¸«à¸¢à¸¸à¸”à¸™à¸±à¸šà¹€à¸§à¸¥à¸² SLA à¸Šà¸±à¹ˆà¸§à¸„à¸£à¸²à¸§ à¹à¸¥à¸°à¸—à¹ˆà¸²à¸™à¸•à¹‰à¸­à¸‡à¸­à¸±à¸›à¹‚à¸«à¸¥à¸”à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¹€à¸žà¸´à¹ˆà¸¡à¹€à¸•à¸´à¸¡à¸ à¸²à¸¢à¹ƒà¸™à¹€à¸§à¸¥à¸²à¹„à¸¡à¹ˆà¸™à¹‰à¸­à¸¢à¸à¸§à¹ˆà¸² 10 à¸§à¸±à¸™à¸™à¸±à¸šà¸ˆà¸²à¸à¸§à¸±à¸™à¸—à¸µà¹ˆà¹„à¸”à¹‰à¸£à¸±à¸šà¹à¸ˆà¹‰à¸‡ à¸¡à¸´à¸‰à¸°à¸™à¸±à¹‰à¸™à¸„à¸³à¸‚à¸­à¸ˆà¸°à¸–à¸¹à¸à¸ˆà¸³à¸«à¸™à¹ˆà¸²à¸¢à¸•à¸²à¸¡à¸£à¸°à¸šà¸š
+                        หากเจ้าหน้าที่แจ้งขอเอกสารเพิ่มเติม ระบบจะหยุดนับเวลา SLA ชั่วคราว และท่านต้องอัปโหลดข้อมูลเพิ่มเติมภายในเวลาไม่น้อยกว่า 10 วันนับจากวันที่ได้รับแจ้ง มิฉะนั้นคำขอจะถูกจำหน่ายตามระบบ
                       </p>
                     </div>
                     <div className="pt-3 space-y-1">
-                      <span className="block font-semibold text-slate-700 text-xs">à¸„à¸§à¸²à¸¡à¸¡à¸±à¹ˆà¸™à¸„à¸‡à¸›à¸¥à¸­à¸”à¸ à¸±à¸¢à¸‚à¸­à¸‡à¸à¸²à¸£à¹à¸™à¸šà¸£à¸¹à¸›à¸šà¸±à¸•à¸£à¸›à¸£à¸°à¸Šà¸²à¸Šà¸™à¹€à¸›à¹‡à¸™à¸­à¸¢à¹ˆà¸²à¸‡à¹„à¸£?</span>
+                      <span className="block font-semibold text-slate-700 text-xs">ความมั่นคงปลอดภัยของการแนบรูปบัตรประชาชนเป็นอย่างไร?</span>
                       <p className="text-xs text-slate-500 leading-relaxed">
-                        à¸£à¸°à¸šà¸šà¸­à¸±à¸›à¹‚à¸«à¸¥à¸”à¸‚à¸­à¸‡à¹€à¸£à¸²à¸•à¸´à¸”à¸•à¸±à¹‰à¸‡à¸•à¸±à¸§à¸Šà¹ˆà¸§à¸¢à¹€à¸‹à¸™à¹€à¸‹à¸­à¸£à¹Œà¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸­à¹ˆà¸­à¸™à¹„à¸«à¸§à¸­à¸±à¸•à¹‚à¸™à¸¡à¸±à¸•à¸´à¸šà¸™à¹€à¸šà¸£à¸²à¸§à¹Œà¹€à¸‹à¸­à¸£à¹Œ à¹€à¸žà¸·à¹ˆà¸­à¹ƒà¸«à¹‰à¸—à¹ˆà¸²à¸™à¸›à¸à¸›à¸´à¸”à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸¨à¸²à¸ªà¸™à¸² à¹à¸¥à¸°à¹€à¸¥à¸‚à¹€à¸¥à¹€à¸‹à¸­à¸£à¹Œà¸šà¸²à¸£à¹Œà¹‚à¸„à¹‰à¸” à¸žà¸£à¹‰à¸­à¸¡à¸—à¸±à¹‰à¸‡à¸›à¸±à¹Šà¸¡à¸¥à¸²à¸¢à¸™à¹‰à¸³à¸£à¸°à¸šà¸¸à¸§à¸±à¸•à¸–à¸¸à¸›à¸£à¸°à¸ªà¸‡à¸„à¹Œà¹‚à¸”à¸¢à¸•à¸£à¸‡à¸à¹ˆà¸­à¸™à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸ˆà¸°à¸ªà¹ˆà¸‡à¸¡à¸²à¸–à¸¶à¸‡à¹€à¸‹à¸´à¸£à¹Œà¸Ÿà¹€à¸§à¸­à¸£à¹Œ
+                        ระบบอัปโหลดของเราติดตั้งตัวช่วยเซนเซอร์ข้อมูลอ่อนไหวอัตโนมัติบนเบราว์เซอร์ เพื่อให้ท่านปกปิดข้อมูลศาสนา และเลขเลเซอร์บาร์โค้ด พร้อมทั้งปั๊มลายน้ำระบุวัตถุประสงค์โดยตรงก่อนข้อมูลจะส่งมาถึงเซิร์ฟเวอร์
                       </p>
                     </div>
                   </div>
@@ -3220,11 +3220,11 @@ export default function App() {
               <div className="bg-white border border-slate-200 rounded-2xl shadow-sm max-w-3xl mx-auto">
                 <div className="bg-slate-50 border-b border-slate-100 p-6 flex justify-between items-center rounded-t-2xl">
                   <div>
-                    <h3 className="font-bold text-slate-800 text-base">à¹à¸šà¸šà¸„à¸³à¸‚à¸­à¸£à¸±à¸šà¸ªà¸´à¸—à¸˜à¸´à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸ªà¹ˆà¸§à¸™à¸šà¸¸à¸„à¸„à¸¥à¸­à¸­à¸™à¹„à¸¥à¸™à¹Œ</h3>
-                    <p className="text-xs text-slate-500">à¸à¸£à¸¸à¸“à¸²à¸à¸£à¸­à¸à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸ªà¹ˆà¸§à¸™à¸ªà¸³à¸„à¸±à¸à¸•à¸²à¸¡à¸‚à¸±à¹‰à¸™à¸•à¸­à¸™à¸à¸²à¸£à¸‚à¸­à¸ªà¸´à¸—à¸˜à¸´à¹Œ</p>
+                    <h3 className="font-bold text-slate-800 text-base">แบบคำขอรับสิทธิข้อมูลส่วนบุคคลออนไลน์</h3>
+                    <p className="text-xs text-slate-500">กรุณากรอกข้อมูลส่วนสำคัญตามขั้นตอนการขอสิทธิ์</p>
                   </div>
                   <span className="text-xs font-bold text-brand-600 bg-brand-50 px-2.5 py-1 rounded-full">
-                    à¸‚à¸±à¹‰à¸™à¸•à¸­à¸™à¸—à¸µà¹ˆ {wizardStep} / 3
+                    ขั้นตอนที่ {wizardStep} / 3
                   </span>
                 </div>
 
@@ -3239,10 +3239,10 @@ export default function App() {
                         <div className="flex items-center justify-between">
                           <label className="block text-xs font-bold text-slate-800 flex items-center gap-1.5">
                             <Building2 className="h-4 w-4 text-brand-600" />
-                            <span>ðŸ¢ à¸„à¹‰à¸™à¸«à¸²à¹à¸¥à¸°à¹€à¸¥à¸·à¸­à¸à¸«à¸™à¹ˆà¸§à¸¢à¸‡à¸²à¸™à¸—à¸µà¹ˆà¸—à¹ˆà¸²à¸™à¸•à¹‰à¸­à¸‡à¸à¸²à¸£à¸¢à¸·à¹ˆà¸™à¸„à¸³à¸‚à¸­ (Search Target Organization) *</span>
+                            <span>🏢 ค้นหาและเลือกหน่วยงานที่ท่านต้องการยื่นคำขอ (Search Target Organization) *</span>
                           </label>
                           <span className="text-[10px] bg-brand-100 text-brand-700 font-bold px-2 py-0.5 rounded-full">
-                            à¸„à¹‰à¸™à¸«à¸²à¸­à¸±à¸ˆà¸‰à¸£à¸´à¸¢à¸° âš¡
+                            ค้นหาอัจฉริยะ ⚡
                           </span>
                         </div>
 
@@ -3258,7 +3258,7 @@ export default function App() {
                             }}
                             onFocus={() => setIsTenantDropdownOpen(true)}
                             onClick={() => setIsTenantDropdownOpen(true)}
-                            placeholder="à¸žà¸´à¸¡à¸žà¹Œà¸Šà¸·à¹ˆà¸­à¸«à¸™à¹ˆà¸§à¸¢à¸‡à¸²à¸™ à¸«à¸£à¸·à¸­à¸„à¸¥à¸´à¸à¸—à¸µà¹ˆà¸™à¸µà¹ˆà¹€à¸žà¸·à¹ˆà¸­à¹€à¸¥à¸·à¸­à¸à¸ˆà¸²à¸à¸£à¸²à¸¢à¸Šà¸·à¹ˆà¸­à¸—à¸±à¹‰à¸‡à¸«à¸¡à¸”..."
+                            placeholder="พิมพ์ชื่อหน่วยงาน หรือคลิกที่นี่เพื่อเลือกจากรายชื่อทั้งหมด..."
                             className="w-full text-xs font-medium pl-10 pr-24 py-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 bg-white text-slate-900 shadow-inner cursor-pointer"
                           />
                           <div className="absolute right-2 top-1.5 flex items-center gap-1">
@@ -3269,9 +3269,9 @@ export default function App() {
                                   setTenantSearchQuery('');
                                 }}
                                 className="text-xs text-slate-400 hover:text-slate-600 font-bold px-1.5 py-1"
-                                title="à¸¥à¹‰à¸²à¸‡à¸„à¸³à¸„à¹‰à¸™à¸«à¸²"
+                                title="ล้างคำค้นหา"
                               >
-                                âœ•
+                                ✕
                               </button>
                             )}
                             <button
@@ -3279,7 +3279,7 @@ export default function App() {
                               onClick={() => setIsTenantDropdownOpen(!isTenantDropdownOpen)}
                               className="text-[10px] font-bold text-brand-600 hover:text-brand-800 bg-brand-50 hover:bg-brand-100 px-2 py-1 rounded-lg border border-brand-200 transition"
                             >
-                              {isTenantDropdownOpen ? 'à¸›à¸´à¸”à¸£à¸²à¸¢à¸Šà¸·à¹ˆà¸­' : 'à¸”à¸¹à¸£à¸²à¸¢à¸Šà¸·à¹ˆà¸­'}
+                              {isTenantDropdownOpen ? 'ปิดรายชื่อ' : 'ดูรายชื่อ'}
                             </button>
                           </div>
                         </div>
@@ -3292,15 +3292,15 @@ export default function App() {
                                 <Building2 className="h-5 w-5" />
                               </div>
                               <div>
-                                <span className="text-[10px] text-emerald-600 font-bold uppercase tracking-wider block">âœ“ à¸«à¸™à¹ˆà¸§à¸¢à¸‡à¸²à¸™à¸—à¸µà¹ˆà¹€à¸¥à¸·à¸­à¸à¸£à¸±à¸šà¹€à¸£à¸·à¹ˆà¸­à¸‡</span>
+                                <span className="text-[10px] text-emerald-600 font-bold uppercase tracking-wider block">✓ หน่วยงานที่เลือกรับเรื่อง</span>
                                 <h4 className="font-bold text-xs text-slate-900">
-                                  {organizations.find(o => o.id === selectedTargetOrgId)?.nameTh || 'à¸«à¸™à¹ˆà¸§à¸¢à¸‡à¸²à¸™à¸—à¸µà¹ˆà¹€à¸¥à¸·à¸­à¸'} 
+                                  {organizations.find(o => o.id === selectedTargetOrgId)?.nameTh || 'หน่วยงานที่เลือก'} 
                                   <span className="text-slate-500 font-normal ml-1">({selectedTargetOrgId})</span>
                                 </h4>
                               </div>
                             </div>
                             <span className="text-emerald-700 text-xs font-bold bg-emerald-100 px-2.5 py-1 rounded-full flex items-center gap-1">
-                              <CheckCircle2 className="h-3.5 w-3.5" /> à¹€à¸¥à¸·à¸­à¸à¹à¸¥à¹‰à¸§
+                              <CheckCircle2 className="h-3.5 w-3.5" /> เลือกแล้ว
                             </span>
                           </div>
                         )}
@@ -3311,19 +3311,19 @@ export default function App() {
                             <div className="flex items-center justify-between px-2 py-1 border-b border-slate-100">
                               <span className="text-[10px] text-slate-400 font-bold">
                                 {tenantSearchQuery.trim() !== ''
-                                  ? `à¸œà¸¥à¸à¸²à¸£à¸„à¹‰à¸™à¸«à¸²à¸«à¸™à¹ˆà¸§à¸¢à¸‡à¸²à¸™à¹ƒà¸à¸¥à¹‰à¹€à¸„à¸µà¸¢à¸‡ (${organizations.filter((org: any) =>
+                                  ? `ผลการค้นหาหน่วยงานใกล้เคียง (${organizations.filter((org: any) =>
                                       org.nameTh.toLowerCase().includes(tenantSearchQuery.toLowerCase()) ||
                                       org.nameEn.toLowerCase().includes(tenantSearchQuery.toLowerCase()) ||
                                       org.id.toLowerCase().includes(tenantSearchQuery.toLowerCase())
-                                    ).length} à¸£à¸²à¸¢à¸à¸²à¸£):`
-                                  : `à¸£à¸²à¸¢à¸Šà¸·à¹ˆà¸­à¸«à¸™à¹ˆà¸§à¸¢à¸‡à¸²à¸™à¸—à¸±à¹‰à¸‡à¸«à¸¡à¸”à¸—à¸µà¹ˆà¹€à¸›à¸´à¸”à¸£à¸±à¸šà¸„à¸³à¸‚à¸­à¸šà¸™à¸£à¸°à¸šà¸š (${organizations.length} à¸«à¸™à¹ˆà¸§à¸¢à¸‡à¸²à¸™):`}
+                                    ).length} รายการ):`
+                                  : `รายชื่อหน่วยงานทั้งหมดที่เปิดรับคำขอบนระบบ (${organizations.length} หน่วยงาน):`}
                               </span>
                               <button
                                 type="button"
                                 onClick={() => setIsTenantDropdownOpen(false)}
                                 className="text-[10px] text-slate-400 hover:text-slate-700 font-bold"
                               >
-                                âœ• à¸›à¸´à¸”
+                                ✕ ปิด
                               </button>
                             </div>
                             {organizations
@@ -3355,13 +3355,13 @@ export default function App() {
                                         {org.nameTh}
                                       </h5>
                                       <p className="text-[10px] text-slate-500 font-medium">
-                                        {org.nameEn} â€¢ <span className="font-mono text-slate-400">{org.id}</span>
+                                        {org.nameEn} • <span className="font-mono text-slate-400">{org.id}</span>
                                       </p>
                                     </div>
                                     <span className={`text-[10px] font-bold px-2.5 py-1 rounded-md shrink-0 ${
                                       isSelected ? 'bg-emerald-600 text-white' : 'bg-brand-50 text-brand-700 hover:bg-brand-600 hover:text-white'
                                     }`}>
-                                      {isSelected ? 'âœ“ à¹€à¸¥à¸·à¸­à¸à¹à¸¥à¹‰à¸§' : 'à¸à¸”à¹€à¸¥à¸·à¸­à¸à¸«à¸™à¹ˆà¸§à¸¢à¸‡à¸²à¸™à¸™à¸µà¹‰'}
+                                      {isSelected ? '✓ เลือกแล้ว' : 'กดเลือกหน่วยงานนี้'}
                                     </span>
                                   </button>
                                 );
@@ -3374,7 +3374,7 @@ export default function App() {
                               org.id.toLowerCase().includes(tenantSearchQuery.toLowerCase())
                             ).length === 0 && (
                               <div className="p-4 text-center text-xs text-slate-400">
-                                âŒ à¹„à¸¡à¹ˆà¸žà¸šà¸«à¸™à¹ˆà¸§à¸¢à¸‡à¸²à¸™à¸—à¸µà¹ˆà¸•à¸£à¸‡à¸à¸±à¸šà¸„à¸³à¸„à¹‰à¸™ "{tenantSearchQuery}" à¸à¸£à¸¸à¸“à¸²à¸•à¸£à¸§à¸ˆà¸ªà¸­à¸šà¸„à¸³à¸„à¹‰à¸™à¸«à¸²à¸­à¸µà¸à¸„à¸£à¸±à¹‰à¸‡
+                                ❌ ไม่พบหน่วยงานที่ตรงกับคำค้น "{tenantSearchQuery}" กรุณาตรวจสอบคำค้นหาอีกครั้ง
                               </div>
                             )}
                           </div>
@@ -3391,7 +3391,7 @@ export default function App() {
                             onChange={() => setReqType('self')}
                             className="text-brand-600 focus:ring-brand-500"
                           />
-                          <span>à¸‚à¸­à¸¢à¸·à¹ˆà¸™à¸„à¸³à¸‚à¸­à¹€à¸›à¹‡à¸™à¹€à¸ˆà¹‰à¸²à¸‚à¸­à¸‡à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸”à¹‰à¸§à¸¢à¸•à¸™à¹€à¸­à¸‡</span>
+                          <span>ขอยื่นคำขอเป็นเจ้าของข้อมูลด้วยตนเอง</span>
                         </label>
                         <label className="flex items-center gap-2 cursor-pointer text-xs font-bold">
                           <input
@@ -3401,28 +3401,28 @@ export default function App() {
                             onChange={() => setReqType('representative')}
                             className="text-brand-600 focus:ring-brand-500"
                           />
-                          <span>à¸‚à¸­à¸¢à¸·à¹ˆà¸™à¹à¸—à¸™à¹ƒà¸™à¸à¸²à¸™à¸°à¸œà¸¹à¹‰à¸£à¸±à¸šà¸¡à¸­à¸šà¸­à¸³à¸™à¸²à¸ˆ</span>
+                          <span>ขอยื่นแทนในฐานะผู้รับมอบอำนาจ</span>
                         </label>
                       </div>
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-1">
-                          <label className="text-xs font-medium text-slate-700">à¸Šà¸·à¹ˆà¸­à¸ˆà¸£à¸´à¸‡ (First Name) <span className="text-red-500">*</span></label>
+                          <label className="text-xs font-medium text-slate-700">ชื่อจริง (First Name) <span className="text-red-500">*</span></label>
                           <input
                             type="text"
                             required
-                            placeholder="à¹€à¸Šà¹ˆà¸™ à¸ªà¸¡à¸Šà¸²à¸¢ à¸«à¸£à¸·à¸­ Somchai"
+                            placeholder="เช่น สมชาย หรือ Somchai"
                             value={requesterForm.firstName}
                             onChange={(e) => setRequesterForm({...requesterForm, firstName: e.target.value})}
                             className="w-full text-xs border border-slate-300 rounded-lg p-2.5 focus:ring-1 focus:ring-brand-500"
                           />
                         </div>
                         <div className="space-y-1">
-                          <label className="text-xs font-medium text-slate-700">à¸™à¸²à¸¡à¸ªà¸à¸¸à¸¥ (Last Name) <span className="text-red-500">*</span></label>
+                          <label className="text-xs font-medium text-slate-700">นามสกุล (Last Name) <span className="text-red-500">*</span></label>
                           <input
                             type="text"
                             required
-                            placeholder="à¹€à¸Šà¹ˆà¸™ à¹ƒà¸ˆà¸”à¸µ à¸«à¸£à¸·à¸­ Jaidee"
+                            placeholder="เช่น ใจดี หรือ Jaidee"
                             value={requesterForm.lastName}
                             onChange={(e) => setRequesterForm({...requesterForm, lastName: e.target.value})}
                             className="w-full text-xs border border-slate-300 rounded-lg p-2.5 focus:ring-1 focus:ring-brand-500"
@@ -3433,13 +3433,13 @@ export default function App() {
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div className="space-y-1 md:col-span-2">
                           <label className="text-xs font-medium text-slate-700">
-                            à¹€à¸¥à¸‚à¸›à¸£à¸°à¸ˆà¸³à¸•à¸±à¸§à¸›à¸£à¸°à¸Šà¸²à¸Šà¸™ / à¸žà¸²à¸ªà¸›à¸­à¸£à¹Œà¸• (ID / Passport No.) <span className="text-red-500">*</span>
+                            เลขประจำตัวประชาชน / พาสปอร์ต (ID / Passport No.) <span className="text-red-500">*</span>
                           </label>
                           <input
                             type="text"
                             required
                             maxLength={17}
-                            placeholder="à¸•à¸±à¸§à¸­à¸¢à¹ˆà¸²à¸‡: 1-1002-00300-40-5 à¸«à¸£à¸·à¸­ Passport No."
+                            placeholder="ตัวอย่าง: 1-1002-00300-40-5 หรือ Passport No."
                             value={requesterForm.idNumber}
                             onChange={(e) => setRequesterForm({ ...requesterForm, idNumber: formatThaiCitizenIdMask(e.target.value) })}
                             className="w-full text-xs border border-slate-300 rounded-lg p-2.5 focus:ring-1 focus:ring-brand-500 font-mono tracking-wider font-bold"
@@ -3447,13 +3447,13 @@ export default function App() {
                         </div>
                         <div className="space-y-1">
                           <label className="text-xs font-medium text-slate-700">
-                            à¹€à¸šà¸­à¸£à¹Œà¹‚à¸—à¸£à¸¨à¸±à¸žà¸—à¹Œà¸•à¸´à¸”à¸•à¹ˆà¸­ <span className="text-red-500">*</span>
+                            เบอร์โทรศัพท์ติดต่อ <span className="text-red-500">*</span>
                           </label>
                           <input
                             type="tel"
                             required
                             maxLength={12}
-                            placeholder="à¸•à¸±à¸§à¸­à¸¢à¹ˆà¸²à¸‡: 0812345678 à¸«à¸£à¸·à¸­ 022218150"
+                            placeholder="ตัวอย่าง: 0812345678 หรือ 022218150"
                             value={requesterForm.phone}
                             onChange={(e) => setRequesterForm({...requesterForm, phone: e.target.value})}
                             className="w-full text-xs border border-slate-300 rounded-lg p-2.5 focus:ring-1 focus:ring-brand-500 font-mono"
@@ -3462,11 +3462,11 @@ export default function App() {
                       </div>
 
                       <div className="space-y-1">
-                        <label className="text-xs font-medium text-slate-700">à¸­à¸µà¹€à¸¡à¸¥à¸•à¸´à¸”à¸•à¹ˆà¸­ (Email Address) <span className="text-red-500">*</span></label>
+                        <label className="text-xs font-medium text-slate-700">อีเมลติดต่อ (Email Address) <span className="text-red-500">*</span></label>
                         <input
                           type="email"
                           required
-                          placeholder="à¸•à¸±à¸§à¸­à¸¢à¹ˆà¸²à¸‡: name@example.com"
+                          placeholder="ตัวอย่าง: name@example.com"
                           value={requesterForm.email}
                           onChange={(e) => setRequesterForm({...requesterForm, email: e.target.value})}
                           className="w-full text-xs border border-slate-300 rounded-lg p-2.5 focus:ring-1 focus:ring-brand-500"
@@ -3474,9 +3474,9 @@ export default function App() {
                       </div>
 
                       <div className="space-y-1">
-                        <label className="text-xs font-medium text-slate-700">à¸—à¸µà¹ˆà¸­à¸¢à¸¹à¹ˆà¸ˆà¸±à¸”à¸ªà¹ˆà¸‡à¹€à¸­à¸à¸ªà¸²à¸£à¸—à¸²à¸‡à¹„à¸›à¸£à¸©à¸“à¸µà¸¢à¹Œ (à¸£à¸°à¸šà¸¸à¸«à¸²à¸à¹€à¸¥à¸·à¸­à¸à¸ªà¹ˆà¸‡à¹„à¸›à¸£à¸©à¸“à¸µà¸¢à¹Œ)</label>
+                        <label className="text-xs font-medium text-slate-700">ที่อยู่จัดส่งเอกสารทางไปรษณีย์ (ระบุหากเลือกส่งไปรษณีย์)</label>
                         <textarea
-                          placeholder="à¸£à¸°à¸šà¸¸à¸—à¸µà¹ˆà¸­à¸¢à¸¹à¹ˆà¸ˆà¸±à¸”à¸ªà¹ˆà¸‡à¹‚à¸”à¸¢à¸¥à¸°à¹€à¸­à¸µà¸¢à¸”..."
+                          placeholder="ระบุที่อยู่จัดส่งโดยละเอียด..."
                           value={requesterForm.address}
                           onChange={(e) => setRequesterForm({...requesterForm, address: e.target.value})}
                           className="w-full text-xs border border-slate-300 rounded-lg p-2 focus:ring-1 focus:ring-brand-500 h-16"
@@ -3489,31 +3489,31 @@ export default function App() {
                           <div className="flex items-center justify-between border-b border-teal-200 pb-2">
                             <span className="font-bold text-teal-900 text-xs flex items-center gap-1.5">
                               <Users className="h-4 w-4 text-teal-700" />
-                              <span>à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸ªà¸³à¸«à¸£à¸±à¸šà¸œà¸¹à¹‰à¸£à¸±à¸šà¸¡à¸­à¸šà¸­à¸³à¸™à¸²à¸ˆ (Authorized Representative)</span>
+                              <span>ข้อมูลสำหรับผู้รับมอบอำนาจ (Authorized Representative)</span>
                             </span>
                             <span className="text-[10px] bg-teal-100 text-teal-800 font-bold px-2 py-0.5 rounded border border-teal-300">
-                              * à¸šà¸±à¸‡à¸„à¸±à¸šà¸à¸£à¸­à¸à¹€à¸‡à¸·à¹ˆà¸­à¸™à¹„à¸‚à¹à¸šà¸šà¹€à¸”à¸µà¸¢à¸§à¸à¸±à¸šà¹€à¸ˆà¹‰à¸²à¸‚à¸­à¸‡à¸ªà¸´à¸—à¸˜à¸´
+                              * บังคับกรอกเงื่อนไขแบบเดียวกับเจ้าของสิทธิ
                             </span>
                           </div>
 
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="space-y-1">
-                              <label className="text-xs font-medium text-slate-700">à¸Šà¸·à¹ˆà¸­à¸ˆà¸£à¸´à¸‡à¸œà¸¹à¹‰à¸£à¸±à¸šà¸¡à¸­à¸šà¸­à¸³à¸™à¸²à¸ˆ <span className="text-red-500">*</span></label>
+                              <label className="text-xs font-medium text-slate-700">ชื่อจริงผู้รับมอบอำนาจ <span className="text-red-500">*</span></label>
                               <input
                                 type="text"
                                 required
-                                placeholder="à¹€à¸Šà¹ˆà¸™ à¸™à¸²à¸¢à¸§à¸´à¸Šà¸±à¸¢ à¸«à¸£à¸·à¸­ Wichai"
+                                placeholder="เช่น นายวิชัย หรือ Wichai"
                                 value={repForm.firstName}
                                 onChange={(e) => setRepForm({...repForm, firstName: e.target.value})}
                                 className="w-full text-xs border border-slate-300 rounded-lg p-2.5 focus:ring-1 focus:ring-brand-500 bg-white"
                               />
                             </div>
                             <div className="space-y-1">
-                              <label className="text-xs font-medium text-slate-700">à¸™à¸²à¸¡à¸ªà¸à¸¸à¸¥à¸œà¸¹à¹‰à¸£à¸±à¸šà¸¡à¸­à¸šà¸­à¸³à¸™à¸²à¸ˆ <span className="text-red-500">*</span></label>
+                              <label className="text-xs font-medium text-slate-700">นามสกุลผู้รับมอบอำนาจ <span className="text-red-500">*</span></label>
                               <input
                                 type="text"
                                 required
-                                placeholder="à¹€à¸Šà¹ˆà¸™ à¸¡à¸µà¸ªà¸¸à¸‚ à¸«à¸£à¸·à¸­ Meesuk"
+                                placeholder="เช่น มีสุข หรือ Meesuk"
                                 value={repForm.lastName}
                                 onChange={(e) => setRepForm({...repForm, lastName: e.target.value})}
                                 className="w-full text-xs border border-slate-300 rounded-lg p-2.5 focus:ring-1 focus:ring-brand-500 bg-white"
@@ -3524,13 +3524,13 @@ export default function App() {
                           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <div className="space-y-1 md:col-span-2">
                               <label className="text-xs font-medium text-slate-700">
-                                à¹€à¸¥à¸‚à¸šà¸±à¸•à¸£à¸œà¸¹à¹‰à¹à¸—à¸™à¸ªà¸´à¸—à¸˜à¸´ / à¸žà¸²à¸ªà¸›à¸­à¸£à¹Œà¸• (ID / Passport No.) <span className="text-red-500">*</span>
+                                เลขบัตรผู้แทนสิทธิ / พาสปอร์ต (ID / Passport No.) <span className="text-red-500">*</span>
                               </label>
                               <input
                                 type="text"
                                 required
                                 maxLength={17}
-                                placeholder="à¸•à¸±à¸§à¸­à¸¢à¹ˆà¸²à¸‡: 1-1002-00300-40-5 à¸«à¸£à¸·à¸­ Passport No."
+                                placeholder="ตัวอย่าง: 1-1002-00300-40-5 หรือ Passport No."
                                 value={repForm.idNumber}
                                 onChange={(e) => setRepForm({ ...repForm, idNumber: formatThaiCitizenIdMask(e.target.value) })}
                                 className="w-full text-xs border border-slate-300 rounded-lg p-2.5 focus:ring-1 focus:ring-brand-500 font-mono tracking-wider font-bold bg-white"
@@ -3538,13 +3538,13 @@ export default function App() {
                             </div>
                             <div className="space-y-1">
                               <label className="text-xs font-medium text-slate-700">
-                                à¹€à¸šà¸­à¸£à¹Œà¹‚à¸—à¸£à¸œà¸¹à¹‰à¹à¸—à¸™ <span className="text-red-500">*</span>
+                                เบอร์โทรผู้แทน <span className="text-red-500">*</span>
                               </label>
                               <input
                                 type="tel"
                                 required
                                 maxLength={12}
-                                placeholder="à¸•à¸±à¸§à¸­à¸¢à¹ˆà¸²à¸‡: 0812345678"
+                                placeholder="ตัวอย่าง: 0812345678"
                                 value={repForm.phone}
                                 onChange={(e) => setRepForm({...repForm, phone: e.target.value})}
                                 className="w-full text-xs border border-slate-300 rounded-lg p-2.5 focus:ring-1 focus:ring-brand-500 font-mono bg-white"
@@ -3553,11 +3553,11 @@ export default function App() {
                           </div>
 
                           <div className="space-y-1">
-                            <label className="text-xs font-medium text-slate-700">à¸­à¸µà¹€à¸¡à¸¥à¸•à¸´à¸”à¸•à¹ˆà¸­à¸œà¸¹à¹‰à¹à¸—à¸™ (Email Address) <span className="text-red-500">*</span></label>
+                            <label className="text-xs font-medium text-slate-700">อีเมลติดต่อผู้แทน (Email Address) <span className="text-red-500">*</span></label>
                             <input
                               type="email"
                               required
-                              placeholder="à¸•à¸±à¸§à¸­à¸¢à¹ˆà¸²à¸‡: rep.name@example.com"
+                              placeholder="ตัวอย่าง: rep.name@example.com"
                               value={repForm.email}
                               onChange={(e) => setRepForm({...repForm, email: e.target.value})}
                               className="w-full text-xs border border-slate-300 rounded-lg p-2.5 focus:ring-1 focus:ring-brand-500 bg-white"
@@ -3565,11 +3565,11 @@ export default function App() {
                           </div>
 
                           <div className="space-y-1">
-                            <label className="text-xs font-medium text-slate-700">à¸‚à¸­à¸šà¹€à¸‚à¸•à¸­à¸³à¸™à¸²à¸ˆà¸à¸£à¸°à¸—à¸³à¸à¸²à¸£à¹à¸—à¸™à¸•à¸²à¸¡à¹ƒà¸šà¸¡à¸­à¸šà¸­à¸³à¸™à¸²à¸ˆ <span className="text-red-500">*</span></label>
+                            <label className="text-xs font-medium text-slate-700">ขอบเขตอำนาจกระทำการแทนตามใบมอบอำนาจ <span className="text-red-500">*</span></label>
                             <input
                               type="text"
                               required
-                              placeholder="à¹€à¸Šà¹ˆà¸™ à¸à¸²à¸£à¸¢à¸·à¹ˆà¸™à¸‚à¸­à¹ƒà¸Šà¹‰à¸ªà¸´à¸—à¸˜à¸´à¸”à¸¶à¸‡à¸›à¸£à¸°à¸§à¸±à¸•à¸´à¸à¸²à¸£à¹€à¸‡à¸´à¸™à¹à¸¥à¸°à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸ªà¹ˆà¸§à¸™à¸šà¸¸à¸„à¸„à¸¥à¹à¸—à¸™à¸œà¸¹à¹‰à¸¡à¸­à¸šà¸­à¸³à¸™à¸²à¸ˆà¸—à¸±à¹‰à¸‡à¸«à¸¡à¸”"
+                              placeholder="เช่น การยื่นขอใช้สิทธิดึงประวัติการเงินและข้อมูลส่วนบุคคลแทนผู้มอบอำนาจทั้งหมด"
                               value={repForm.scope}
                               onChange={(e) => setRepForm({...repForm, scope: e.target.value})}
                               className="w-full text-xs border border-slate-300 rounded-lg p-2.5 focus:ring-1 focus:ring-brand-500 bg-white"
@@ -3583,27 +3583,27 @@ export default function App() {
                           type="button"
                           onClick={() => {
                             if (!selectedTargetOrgId) {
-                              showNotify('âš ï¸ à¸à¸£à¸¸à¸“à¸²à¸„à¹‰à¸™à¸«à¸²à¹à¸¥à¸°à¸„à¸¥à¸´à¸à¹€à¸¥à¸·à¸­à¸ "à¸«à¸™à¹ˆà¸§à¸¢à¸‡à¸²à¸™à¸£à¸±à¸šà¹€à¸£à¸·à¹ˆà¸­à¸‡" à¸à¹ˆà¸­à¸™à¸à¸”à¸‚à¸±à¹‰à¸™à¸•à¸­à¸™à¸–à¸±à¸”à¹„à¸›');
+                              showNotify('⚠️ กรุณาค้นหาและคลิกเลือก "หน่วยงานรับเรื่อง" ก่อนกดขั้นตอนถัดไป');
                               return;
                             }
 
                             // 1. Validate Requester (Data Subject) First & Last Name
                             if (!requesterForm.firstName.trim() || !requesterForm.lastName.trim()) {
-                              showNotify('âš ï¸ à¸à¸£à¸¸à¸“à¸²à¸à¸£à¸­à¸ "à¸Šà¸·à¹ˆà¸­à¸ˆà¸£à¸´à¸‡" à¹à¸¥à¸° "à¸™à¸²à¸¡à¸ªà¸à¸¸à¸¥" à¸‚à¸­à¸‡à¹€à¸ˆà¹‰à¸²à¸‚à¸­à¸‡à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¹ƒà¸«à¹‰à¸„à¸£à¸šà¸–à¹‰à¸§à¸™');
+                              showNotify('⚠️ กรุณากรอก "ชื่อจริง" และ "นามสกุล" ของเจ้าของข้อมูลให้ครบถ้วน');
                               return;
                             }
 
                             // 2. Validate Requester ID / Passport Number
                             const cleanId = requesterForm.idNumber.replace(/[^a-zA-Z0-9]/g, '');
                             if (!cleanId || cleanId.length < 7) {
-                              showNotify('âš ï¸ à¸à¸£à¸¸à¸“à¸²à¸à¸£à¸­à¸ "à¹€à¸¥à¸‚à¸›à¸£à¸°à¸ˆà¸³à¸•à¸±à¸§à¸›à¸£à¸°à¸Šà¸²à¸Šà¸™ (13 à¸«à¸¥à¸±à¸)" à¸«à¸£à¸·à¸­ "à¹€à¸¥à¸‚à¸žà¸²à¸ªà¸›à¸­à¸£à¹Œà¸•" à¸‚à¸­à¸‡à¹€à¸ˆà¹‰à¸²à¸‚à¸­à¸‡à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¹ƒà¸«à¹‰à¸–à¸¹à¸à¸•à¹‰à¸­à¸‡');
+                              showNotify('⚠️ กรุณากรอก "เลขประจำตัวประชาชน (13 หลัก)" หรือ "เลขพาสปอร์ต" ของเจ้าของข้อมูลให้ถูกต้อง');
                               return;
                             }
 
                             // Enforce Thai Citizen ID Modulus 11 Checksum Algorithm for Requester
                             if (/^\d{13}$/.test(cleanId)) {
                               if (!validateThaiCitizenId(cleanId)) {
-                                showNotify('âŒ à¹€à¸¥à¸‚à¸›à¸£à¸°à¸ˆà¸³à¸•à¸±à¸§à¸›à¸£à¸°à¸Šà¸²à¸Šà¸™ 13 à¸«à¸¥à¸±à¸à¸‚à¸­à¸‡à¹€à¸ˆà¹‰à¸²à¸‚à¸­à¸‡à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¹„à¸¡à¹ˆà¸–à¸¹à¸à¸•à¹‰à¸­à¸‡à¸•à¸²à¸¡à¸ªà¸¹à¸•à¸£à¸„à¸³à¸™à¸§à¸“à¸‚à¸­à¸‡à¸à¸£à¸¡à¸à¸²à¸£à¸›à¸à¸„à¸£à¸­à¸‡ (Check Digit Mismatch)\n\nà¸à¸£à¸¸à¸“à¸²à¸•à¸£à¸§à¸ˆà¸ªà¸­à¸šà¸•à¸±à¸§à¹€à¸¥à¸‚ 13 à¸«à¸¥à¸±à¸à¸­à¸µà¸à¸„à¸£à¸±à¹‰à¸‡');
+                                showNotify('❌ เลขประจำตัวประชาชน 13 หลักของเจ้าของข้อมูลไม่ถูกต้องตามสูตรคำนวณของกรมการปกครอง (Check Digit Mismatch)\n\nกรุณาตรวจสอบตัวเลข 13 หลักอีกครั้ง');
                                 return;
                               }
                             }
@@ -3611,50 +3611,50 @@ export default function App() {
                             // 3. Validate Requester Phone Number
                             const cleanPhone = requesterForm.phone.replace(/[^0-9]/g, '');
                             if (!cleanPhone || cleanPhone.length < 9 || cleanPhone.length > 10) {
-                              showNotify('âš ï¸ à¸à¸£à¸¸à¸“à¸²à¸à¸£à¸­à¸ "à¹€à¸šà¸­à¸£à¹Œà¹‚à¸—à¸£à¸¨à¸±à¸žà¸—à¹Œà¸•à¸´à¸”à¸•à¹ˆà¸­" à¸‚à¸­à¸‡à¹€à¸ˆà¹‰à¸²à¸‚à¸­à¸‡à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¹ƒà¸«à¹‰à¸–à¸¹à¸à¸•à¹‰à¸­à¸‡ (à¹€à¸šà¸­à¸£à¹Œà¸¡à¸·à¸­à¸–à¸·à¸­ 10 à¸«à¸¥à¸±à¸ à¹€à¸Šà¹ˆà¸™ 0812345678 à¸«à¸£à¸·à¸­ à¹€à¸šà¸­à¸£à¹Œà¸ªà¸²à¸¢à¸•à¸£à¸‡ 9 à¸«à¸¥à¸±à¸ à¹€à¸Šà¹ˆà¸™ 022218150)');
+                              showNotify('⚠️ กรุณากรอก "เบอร์โทรศัพท์ติดต่อ" ของเจ้าของข้อมูลให้ถูกต้อง (เบอร์มือถือ 10 หลัก เช่น 0812345678 หรือ เบอร์สายตรง 9 หลัก เช่น 022218150)');
                               return;
                             }
 
                             // 4. Validate Requester Email Address
                             const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
                             if (!requesterForm.email.trim() || !emailRegex.test(requesterForm.email.trim())) {
-                              showNotify('âš ï¸ à¸à¸£à¸¸à¸“à¸²à¸à¸£à¸­à¸ "à¸­à¸µà¹€à¸¡à¸¥à¸•à¸´à¸”à¸•à¹ˆà¸­" à¸‚à¸­à¸‡à¹€à¸ˆà¹‰à¸²à¸‚à¸­à¸‡à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¹ƒà¸«à¹‰à¸–à¸¹à¸à¸•à¹‰à¸­à¸‡à¹ƒà¸™à¸£à¸¹à¸›à¹à¸šà¸šà¸—à¸µà¹ˆà¹ƒà¸Šà¹‰à¸‡à¸²à¸™à¹„à¸”à¹‰à¸ˆà¸£à¸´à¸‡ (à¹€à¸Šà¹ˆà¸™ name@example.com)');
+                              showNotify('⚠️ กรุณากรอก "อีเมลติดต่อ" ของเจ้าของข้อมูลให้ถูกต้องในรูปแบบที่ใช้งานได้จริง (เช่น name@example.com)');
                               return;
                             }
 
                             // 5. If Representative option is checked, validate Rep details with SAME STRICT CONDITIONS
                             if (reqType === 'representative') {
                               if (!repForm.firstName.trim() || !repForm.lastName.trim()) {
-                                showNotify('âš ï¸ à¸à¸£à¸¸à¸“à¸²à¸à¸£à¸­à¸ "à¸Šà¸·à¹ˆà¸­à¸ˆà¸£à¸´à¸‡" à¹à¸¥à¸° "à¸™à¸²à¸¡à¸ªà¸à¸¸à¸¥" à¸‚à¸­à¸‡à¸œà¸¹à¹‰à¸£à¸±à¸šà¸¡à¸­à¸šà¸­à¸³à¸™à¸²à¸ˆà¹ƒà¸«à¹‰à¸„à¸£à¸šà¸–à¹‰à¸§à¸™');
+                                showNotify('⚠️ กรุณากรอก "ชื่อจริง" และ "นามสกุล" ของผู้รับมอบอำนาจให้ครบถ้วน');
                                 return;
                               }
 
                               const cleanRepId = repForm.idNumber.replace(/[^a-zA-Z0-9]/g, '');
                               if (!cleanRepId || cleanRepId.length < 7) {
-                                showNotify('âš ï¸ à¸à¸£à¸¸à¸“à¸²à¸à¸£à¸­à¸ "à¹€à¸¥à¸‚à¸šà¸±à¸•à¸£à¸œà¸¹à¹‰à¹à¸—à¸™à¸ªà¸´à¸—à¸˜à¸´ / à¸žà¸²à¸ªà¸›à¸­à¸£à¹Œà¸• (13 à¸«à¸¥à¸±à¸)" à¸‚à¸­à¸‡à¸œà¸¹à¹‰à¸£à¸±à¸šà¸¡à¸­à¸šà¸­à¸³à¸™à¸²à¸ˆà¹ƒà¸«à¹‰à¸–à¸¹à¸à¸•à¹‰à¸­à¸‡');
+                                showNotify('⚠️ กรุณากรอก "เลขบัตรผู้แทนสิทธิ / พาสปอร์ต (13 หลัก)" ของผู้รับมอบอำนาจให้ถูกต้อง');
                                 return;
                               }
 
                               if (/^\d{13}$/.test(cleanRepId)) {
                                 if (!validateThaiCitizenId(cleanRepId)) {
-                                  showNotify('âŒ à¹€à¸¥à¸‚à¸šà¸±à¸•à¸£à¸›à¸£à¸°à¸ˆà¸³à¸•à¸±à¸§ 13 à¸«à¸¥à¸±à¸à¸‚à¸­à¸‡à¸œà¸¹à¹‰à¸£à¸±à¸šà¸¡à¸­à¸šà¸­à¸³à¸™à¸²à¸ˆà¹„à¸¡à¹ˆà¸–à¸¹à¸à¸•à¹‰à¸­à¸‡à¸•à¸²à¸¡à¸ªà¸¹à¸•à¸£à¸„à¸³à¸™à¸§à¸“à¸‚à¸­à¸‡à¸à¸£à¸¡à¸à¸²à¸£à¸›à¸à¸„à¸£à¸­à¸‡ (Check Digit Mismatch)\n\nà¸à¸£à¸¸à¸“à¸²à¸•à¸£à¸§à¸ˆà¸ªà¸­à¸šà¹€à¸¥à¸‚ 13 à¸«à¸¥à¸±à¸à¸‚à¸­à¸‡à¸œà¸¹à¹‰à¹à¸—à¸™à¸ªà¸´à¸—à¸˜à¸´à¸­à¸µà¸à¸„à¸£à¸±à¹‰à¸‡');
+                                  showNotify('❌ เลขบัตรประจำตัว 13 หลักของผู้รับมอบอำนาจไม่ถูกต้องตามสูตรคำนวณของกรมการปกครอง (Check Digit Mismatch)\n\nกรุณาตรวจสอบเลข 13 หลักของผู้แทนสิทธิอีกครั้ง');
                                   return;
                                 }
                               }
 
                               const cleanRepPhone = repForm.phone.replace(/[^0-9]/g, '');
                               if (!cleanRepPhone || cleanRepPhone.length < 9 || cleanRepPhone.length > 10) {
-                                showNotify('âš ï¸ à¸à¸£à¸¸à¸“à¸²à¸à¸£à¸­à¸ "à¹€à¸šà¸­à¸£à¹Œà¹‚à¸—à¸£à¸œà¸¹à¹‰à¹à¸—à¸™" à¹ƒà¸«à¹‰à¸–à¸¹à¸à¸•à¹‰à¸­à¸‡ (à¹€à¸šà¸­à¸£à¹Œà¸¡à¸·à¸­à¸–à¸·à¸­ 10 à¸«à¸¥à¸±à¸ à¸«à¸£à¸·à¸­ à¹€à¸šà¸­à¸£à¹Œà¸ªà¸²à¸¢à¸•à¸£à¸‡ 9 à¸«à¸¥à¸±à¸)');
+                                showNotify('⚠️ กรุณากรอก "เบอร์โทรผู้แทน" ให้ถูกต้อง (เบอร์มือถือ 10 หลัก หรือ เบอร์สายตรง 9 หลัก)');
                                 return;
                               }
 
                               if (!repForm.email.trim() || !emailRegex.test(repForm.email.trim())) {
-                                showNotify('âš ï¸ à¸à¸£à¸¸à¸“à¸²à¸à¸£à¸­à¸ "à¸­à¸µà¹€à¸¡à¸¥à¸•à¸´à¸”à¸•à¹ˆà¸­à¸œà¸¹à¹‰à¹à¸—à¸™" à¹ƒà¸«à¹‰à¸–à¸¹à¸à¸•à¹‰à¸­à¸‡à¹ƒà¸™à¸£à¸¹à¸›à¹à¸šà¸šà¸—à¸µà¹ˆà¹ƒà¸Šà¹‰à¸‡à¸²à¸™à¹„à¸”à¹‰à¸ˆà¸£à¸´à¸‡ (à¹€à¸Šà¹ˆà¸™ rep.name@example.com)');
+                                showNotify('⚠️ กรุณากรอก "อีเมลติดต่อผู้แทน" ให้ถูกต้องในรูปแบบที่ใช้งานได้จริง (เช่น rep.name@example.com)');
                                 return;
                               }
 
                               if (!repForm.scope.trim()) {
-                                showNotify('âš ï¸ à¸à¸£à¸¸à¸“à¸²à¸£à¸°à¸šà¸¸ "à¸‚à¸­à¸šà¹€à¸‚à¸•à¸­à¸³à¸™à¸²à¸ˆà¸à¸£à¸°à¸—à¸³à¸à¸²à¸£à¹à¸—à¸™à¸•à¸²à¸¡à¹ƒà¸šà¸¡à¸­à¸šà¸­à¸³à¸™à¸²à¸ˆ" à¹ƒà¸«à¹‰à¸Šà¸±à¸”à¹€à¸ˆà¸™');
+                                showNotify('⚠️ กรุณาระบุ "ขอบเขตอำนาจกระทำการแทนตามใบมอบอำนาจ" ให้ชัดเจน');
                                 return;
                               }
                             }
@@ -3663,7 +3663,7 @@ export default function App() {
                           }}
                           className="bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold py-2.5 px-6 rounded-lg transition shadow-md"
                         >
-                          à¸‚à¸±à¹‰à¸™à¸•à¸­à¸™à¸–à¸±à¸”à¹„à¸›
+                          ขั้นตอนถัดไป
                         </button>
                       </div>
                     </div>
@@ -3675,35 +3675,35 @@ export default function App() {
                       
                       {/* 1. Request Type */}
                       <div className="space-y-1">
-                        <label className="text-xs font-bold text-slate-800">1. à¸›à¸£à¸°à¹€à¸ à¸—à¸ªà¸´à¸—à¸˜à¸´à¸—à¸µà¹ˆà¸•à¹‰à¸­à¸‡à¸à¸²à¸£à¸‚à¸­à¹ƒà¸Šà¹‰ (Right Category) <span className="text-red-500">*</span></label>
+                        <label className="text-xs font-bold text-slate-800">1. ประเภทสิทธิที่ต้องการขอใช้ (Right Category) <span className="text-red-500">*</span></label>
                         <select
                           value={scopeForm.requestType}
                           onChange={(e) => setScopeForm({...scopeForm, requestType: e.target.value as any})}
                           className="w-full text-xs font-semibold border border-slate-300 rounded-lg p-2.5 focus:ring-1 focus:ring-brand-500 bg-white"
                         >
-                          <option value="access_and_copy">à¸‚à¸­à¹€à¸‚à¹‰à¸²à¸–à¸¶à¸‡à¸žà¸£à¹‰à¸­à¸¡à¸‚à¸­à¸£à¸±à¸šà¸ªà¸³à¹€à¸™à¸²à¸‚à¹‰à¸­à¸¡à¸¹à¸¥ (Access & Copy)</option>
-                          <option value="access">à¸‚à¸­à¹€à¸‚à¹‰à¸²à¸–à¸¶à¸‡à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸ªà¹ˆà¸§à¸™à¸šà¸¸à¸„à¸„à¸¥ (Right to Access)</option>
-                          <option value="copy">à¸‚à¸­à¸£à¸±à¸šà¸ªà¸³à¹€à¸™à¸²à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸ªà¹ˆà¸§à¸™à¸šà¸¸à¸„à¸„à¸¥ (Right to obtain a copy)</option>
-                          <option value="erasure">à¸‚à¸­à¹ƒà¸«à¹‰à¸¥à¸šà¸«à¸£à¸·à¸­à¸—à¸³à¸¥à¸²à¸¢à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸ªà¹ˆà¸§à¸™à¸šà¸¸à¸„à¸„à¸¥ (Right to Erasure)</option>
-                          <option value="rectification">à¸‚à¸­à¹à¸à¹‰à¹„à¸‚à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸ªà¹ˆà¸§à¸™à¸šà¸¸à¸„à¸„à¸¥à¹ƒà¸«à¹‰à¸–à¸¹à¸à¸•à¹‰à¸­à¸‡ (Right to Rectification)</option>
-                          <option value="restriction">à¸‚à¸­à¸£à¸°à¸‡à¸±à¸šà¸à¸²à¸£à¹ƒà¸Šà¹‰à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸ªà¹ˆà¸§à¸™à¸šà¸¸à¸„à¸„à¸¥ (Right to Restriction of Processing)</option>
-                          <option value="withdraw">à¸‚à¸­à¸–à¸­à¸™à¸„à¸§à¸²à¸¡à¸¢à¸´à¸™à¸¢à¸­à¸¡ (Right to Withdraw Consent)</option>
-                          <option value="object">à¸‚à¸­à¸„à¸±à¸”à¸„à¹‰à¸²à¸™à¸à¸²à¸£à¹€à¸à¹‡à¸šà¸£à¸§à¸šà¸£à¸§à¸¡ à¹ƒà¸Šà¹‰ à¸«à¸£à¸·à¸­à¹€à¸›à¸´à¸”à¹€à¸œà¸¢ (Right to Object)</option>
-                          <option value="portability">à¸‚à¸­à¹ƒà¸«à¹‰à¹‚à¸­à¸™à¸¢à¹‰à¸²à¸¢à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸ªà¹ˆà¸§à¸™à¸šà¸¸à¸„à¸„à¸¥ (Right to Data Portability)</option>
+                          <option value="access_and_copy">ขอเข้าถึงพร้อมขอรับสำเนาข้อมูล (Access & Copy)</option>
+                          <option value="access">ขอเข้าถึงข้อมูลส่วนบุคคล (Right to Access)</option>
+                          <option value="copy">ขอรับสำเนาข้อมูลส่วนบุคคล (Right to obtain a copy)</option>
+                          <option value="erasure">ขอให้ลบหรือทำลายข้อมูลส่วนบุคคล (Right to Erasure)</option>
+                          <option value="rectification">ขอแก้ไขข้อมูลส่วนบุคคลให้ถูกต้อง (Right to Rectification)</option>
+                          <option value="restriction">ขอระงับการใช้ข้อมูลส่วนบุคคล (Right to Restriction of Processing)</option>
+                          <option value="withdraw">ขอถอนความยินยอม (Right to Withdraw Consent)</option>
+                          <option value="object">ขอคัดค้านการเก็บรวบรวม ใช้ หรือเปิดเผย (Right to Object)</option>
+                          <option value="portability">ขอให้โอนย้ายข้อมูลส่วนบุคคล (Right to Data Portability)</option>
                         </select>
                       </div>
 
                       {/* 2. Systems selector Checklist (Government-Neutral Target Databases) - Moved to top */}
                       <div className="space-y-2 pt-1">
-                        <label className="text-xs font-bold text-slate-800">2. à¸£à¸°à¸šà¸¸à¸£à¸°à¸šà¸šà¸«à¸£à¸·à¸­à¸«à¸¡à¸§à¸”à¸«à¸¡à¸¹à¹ˆà¸à¸²à¸™à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸—à¸µà¹ˆà¹€à¸à¸µà¹ˆà¸¢à¸§à¸‚à¹‰à¸­à¸‡à¹€à¸—à¹ˆà¸²à¸—à¸µà¹ˆà¸—à¸£à¸²à¸š (Target Databases) <span className="text-red-500">*</span></label>
+                        <label className="text-xs font-bold text-slate-800">2. ระบุระบบหรือหมวดหมู่ฐานข้อมูลที่เกี่ยวข้องเท่าที่ทราบ (Target Databases) <span className="text-red-500">*</span></label>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                           {[
-                            'à¸ à¸²à¸žà¸šà¸±à¸™à¸—à¸¶à¸à¸ˆà¸²à¸à¸à¸¥à¹‰à¸­à¸‡à¸§à¸‡à¸ˆà¸£à¸›à¸´à¸”à¸™à¸´à¸£à¸ à¸±à¸¢ (CCTV Footage)',
-                            'à¸£à¸°à¸šà¸šà¸—à¸°à¹€à¸šà¸µà¸¢à¸™à¹à¸¥à¸°à¸šà¸£à¸´à¸à¸²à¸£à¸›à¸£à¸°à¸Šà¸²à¸Šà¸™ (Citizen & Registration Services)',
-                            'à¸£à¸°à¸šà¸šà¸šà¸£à¸´à¸«à¸²à¸£à¸—à¸£à¸±à¸žà¸¢à¸²à¸à¸£à¸šà¸¸à¸„à¸„à¸¥à¹à¸¥à¸°à¸šà¸¸à¸„à¸¥à¸²à¸à¸£ (HR & Personnel Records)',
-                            'à¸£à¸°à¸šà¸šà¸ªà¸¡à¸²à¸Šà¸´à¸ à¸žà¸­à¸£à¹Œà¸—à¸±à¸¥ à¹à¸¥à¸°à¹à¸­à¸›à¸žà¸¥à¸´à¹€à¸„à¸Šà¸±à¸™ (Portal & Digital Services)',
-                            'à¸£à¸°à¸šà¸šà¸ªà¸²à¸£à¸šà¸£à¸£à¸“à¹à¸¥à¸°à¸à¸²à¸™à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¹€à¸­à¸à¸ªà¸²à¸£à¸—à¸±à¹ˆà¸§à¹„à¸› (General Document & Records)',
-                            'à¸­à¸·à¹ˆà¸™ à¹† (à¹‚à¸›à¸£à¸”à¸£à¸°à¸šà¸¸à¸£à¸²à¸¢à¸¥à¸°à¹€à¸­à¸µà¸¢à¸”à¹€à¸žà¸´à¹ˆà¸¡à¹€à¸•à¸´à¸¡à¹ƒà¸™à¸Šà¹ˆà¸­à¸‡à¸—à¸µà¹ˆ 3) (Others)'
+                            'ภาพบันทึกจากกล้องวงจรปิดนิรภัย (CCTV Footage)',
+                            'ระบบทะเบียนและบริการประชาชน (Citizen & Registration Services)',
+                            'ระบบบริหารทรัพยากรบุคคลและบุคลากร (HR & Personnel Records)',
+                            'ระบบสมาชิก พอร์ทัล และแอปพลิเคชัน (Portal & Digital Services)',
+                            'ระบบสารบรรณและฐานข้อมูลเอกสารทั่วไป (General Document & Records)',
+                            'อื่น ๆ (โปรดระบุรายละเอียดเพิ่มเติมในช่องที่ 3) (Others)'
                           ].map((sys) => (
                             <label
                               key={sys}
@@ -3727,11 +3727,11 @@ export default function App() {
 
                       {/* 3. Detailed Request Description - Moved to bottom */}
                       <div className="space-y-1 pt-1">
-                        <label className="text-xs font-bold text-slate-800">3. à¸£à¸²à¸¢à¸¥à¸°à¹€à¸­à¸µà¸¢à¸”à¸£à¸°à¸šà¸¸à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸ªà¹ˆà¸§à¸™à¸šà¸¸à¸„à¸„à¸¥à¸—à¸µà¹ˆà¸•à¹‰à¸­à¸‡à¸à¸²à¸£à¹€à¸‚à¹‰à¸²à¸–à¸¶à¸‡à¹‚à¸”à¸¢à¸¥à¸°à¹€à¸­à¸µà¸¢à¸” <span className="text-red-500">*</span></label>
+                        <label className="text-xs font-bold text-slate-800">3. รายละเอียดระบุข้อมูลส่วนบุคคลที่ต้องการเข้าถึงโดยละเอียด <span className="text-red-500">*</span></label>
                         <textarea
                           required
                           rows={4}
-                          placeholder="à¸•à¸±à¸§à¸­à¸¢à¹ˆà¸²à¸‡: à¸‚à¸­à¹„à¸Ÿà¸¥à¹Œà¸ à¸²à¸žà¸à¸¥à¹‰à¸­à¸‡à¸§à¸‡à¸ˆà¸£à¸›à¸´à¸” CCTV à¸§à¸±à¸™à¸—à¸µà¹ˆ 20 à¸.à¸„. 2569 à¸Šà¹ˆà¸§à¸‡à¹€à¸§à¸¥à¸² 10:00 - 11:00 à¸™. à¸šà¸£à¸´à¹€à¸§à¸“à¸«à¸™à¹‰à¸²à¸›à¸£à¸°à¸•à¸¹à¸—à¸²à¸‡à¹€à¸‚à¹‰à¸²à¸­à¸²à¸„à¸²à¸£ 1 à¸«à¸£à¸·à¸­ à¸‚à¸­à¸ªà¸³à¹€à¸™à¸²à¸›à¸£à¸°à¸§à¸±à¸•à¸´à¸à¸²à¸£à¸¢à¸·à¹ˆà¸™à¸„à¸³à¸‚à¸­à¸¢à¹‰à¸­à¸™à¸«à¸¥à¸±à¸‡..."
+                          placeholder="ตัวอย่าง: ขอไฟล์ภาพกล้องวงจรปิด CCTV วันที่ 20 ก.ค. 2569 ช่วงเวลา 10:00 - 11:00 น. บริเวณหน้าประตูทางเข้าอาคาร 1 หรือ ขอสำเนาประวัติการยื่นคำขอย้อนหลัง..."
                           value={scopeForm.description}
                           onChange={(e) => setScopeForm({...scopeForm, description: e.target.value})}
                           className="w-full text-xs border border-slate-300 rounded-lg p-2.5 focus:ring-1 focus:ring-brand-500 leading-relaxed"
@@ -3741,9 +3741,9 @@ export default function App() {
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-1">
                           <label className="text-xs font-medium text-slate-700 flex justify-between">
-                            <span>à¸‚à¸­à¸šà¹€à¸‚à¸•à¸§à¸±à¸™à¹à¸¥à¸°à¹€à¸§à¸¥à¸²à¹€à¸£à¸´à¹ˆà¸¡à¸•à¹‰à¸™à¸‚à¹‰à¸­à¸¡à¸¹à¸¥</span>
+                            <span>ขอบเขตวันและเวลาเริ่มต้นข้อมูล</span>
                             <span className="text-[10px] text-slate-400">
-                              {scopeForm.timeframeEnd ? `à¹„à¸¡à¹ˆà¹€à¸à¸´à¸™ ${convertToThaiDate(scopeForm.timeframeEnd)}` : 'à¹„à¸¡à¹ˆà¹€à¸à¸´à¸™à¸§à¸±à¸™à¸›à¸±à¸ˆà¸ˆà¸¸à¸šà¸±à¸™'}
+                              {scopeForm.timeframeEnd ? `ไม่เกิน ${convertToThaiDate(scopeForm.timeframeEnd)}` : 'ไม่เกินวันปัจจุบัน'}
                             </span>
                           </label>
                           <ThaiDatePicker
@@ -3752,11 +3752,11 @@ export default function App() {
                             onChange={(selected) => {
                               const today = new Date().toLocaleDateString('sv-SE');
                               if (selected > today) {
-                                showNotify('âš ï¸ à¹„à¸¡à¹ˆà¸ªà¸²à¸¡à¸²à¸£à¸–à¹€à¸¥à¸·à¸­à¸à¸§à¸±à¸™à¸—à¸µà¹ˆà¹€à¸£à¸´à¹ˆà¸¡à¸•à¹‰à¸™à¹€à¸à¸´à¸™ "à¸§à¸±à¸™à¸—à¸µà¹ˆà¸›à¸±à¸ˆà¸ˆà¸¸à¸šà¸±à¸™" à¹„à¸”à¹‰');
+                                showNotify('⚠️ ไม่สามารถเลือกวันที่เริ่มต้นเกิน "วันที่ปัจจุบัน" ได้');
                                 return;
                               }
                               if (scopeForm.timeframeEnd && selected > scopeForm.timeframeEnd) {
-                                showNotify('âš ï¸ "à¸§à¸±à¸™à¸—à¸µà¹ˆà¹€à¸£à¸´à¹ˆà¸¡à¸•à¹‰à¸™" à¸•à¹‰à¸­à¸‡à¹„à¸¡à¹ˆà¸¥à¹ˆà¸§à¸‡à¸«à¸™à¹‰à¸²à¸à¸§à¹ˆà¸² "à¸§à¸±à¸™à¸—à¸µà¹ˆà¸ªà¸´à¹‰à¸™à¸ªà¸¸à¸”" à¸à¸£à¸¸à¸“à¸²à¹€à¸¥à¸·à¸­à¸à¸§à¸±à¸™à¸—à¸µà¹ˆà¹ƒà¸«à¹‰à¸–à¸¹à¸à¸•à¹‰à¸­à¸‡');
+                                showNotify('⚠️ "วันที่เริ่มต้น" ต้องไม่ล่วงหน้ากว่า "วันที่สิ้นสุด" กรุณาเลือกวันที่ให้ถูกต้อง');
                                 return;
                               }
                               setScopeForm({...scopeForm, timeframeStart: selected});
@@ -3765,9 +3765,9 @@ export default function App() {
                         </div>
                         <div className="space-y-1">
                           <label className="text-xs font-medium text-slate-700 flex justify-between">
-                            <span>à¸‚à¸­à¸šà¹€à¸‚à¸•à¸§à¸±à¸™à¹à¸¥à¸°à¹€à¸§à¸¥à¸²à¸ªà¸´à¹‰à¸™à¸ªà¸¸à¸”à¸‚à¹‰à¸­à¸¡à¸¹à¸¥</span>
+                            <span>ขอบเขตวันและเวลาสิ้นสุดข้อมูล</span>
                             <span className="text-[10px] text-slate-400">
-                              {scopeForm.timeframeStart ? `à¸•à¸±à¹‰à¸‡à¹à¸•à¹ˆ ${convertToThaiDate(scopeForm.timeframeStart)} à¸–à¸¶à¸‡à¸›à¸±à¸ˆà¸ˆà¸¸à¸šà¸±à¸™` : 'à¹„à¸¡à¹ˆà¹€à¸à¸´à¸™à¸§à¸±à¸™à¸›à¸±à¸ˆà¸ˆà¸¸à¸šà¸±à¸™'}
+                              {scopeForm.timeframeStart ? `ตั้งแต่ ${convertToThaiDate(scopeForm.timeframeStart)} ถึงปัจจุบัน` : 'ไม่เกินวันปัจจุบัน'}
                             </span>
                           </label>
                           <ThaiDatePicker
@@ -3777,11 +3777,11 @@ export default function App() {
                             onChange={(selected) => {
                               const today = new Date().toLocaleDateString('sv-SE');
                               if (selected > today) {
-                                showNotify('âš ï¸ à¹„à¸¡à¹ˆà¸ªà¸²à¸¡à¸²à¸£à¸–à¹€à¸¥à¸·à¸­à¸à¸§à¸±à¸™à¸—à¸µà¹ˆà¸ªà¸´à¹‰à¸™à¸ªà¸¸à¸”à¹€à¸à¸´à¸™ "à¸§à¸±à¸™à¸—à¸µà¹ˆà¸›à¸±à¸ˆà¸ˆà¸¸à¸šà¸±à¸™" à¹„à¸”à¹‰');
+                                showNotify('⚠️ ไม่สามารถเลือกวันที่สิ้นสุดเกิน "วันที่ปัจจุบัน" ได้');
                                 return;
                               }
                               if (scopeForm.timeframeStart && selected < scopeForm.timeframeStart) {
-                                showNotify('âš ï¸ "à¸§à¸±à¸™à¸—à¸µà¹ˆà¸ªà¸´à¹‰à¸™à¸ªà¸¸à¸”" à¸•à¹‰à¸­à¸‡à¹„à¸¡à¹ˆà¸à¹ˆà¸­à¸™à¸«à¸™à¹‰à¸² "à¸§à¸±à¸™à¸—à¸µà¹ˆà¹€à¸£à¸´à¹ˆà¸¡à¸•à¹‰à¸™" à¸à¸£à¸¸à¸“à¸²à¹€à¸¥à¸·à¸­à¸à¸§à¸±à¸™à¸—à¸µà¹ˆà¹ƒà¸«à¹‰à¸–à¸¹à¸à¸•à¹‰à¸­à¸‡');
+                                showNotify('⚠️ "วันที่สิ้นสุด" ต้องไม่ก่อนหน้า "วันที่เริ่มต้น" กรุณาเลือกวันที่ให้ถูกต้อง');
                                 return;
                               }
                               setScopeForm({...scopeForm, timeframeEnd: selected});
@@ -3791,12 +3791,12 @@ export default function App() {
                       </div>
 
                       <div className="space-y-1">
-                        <label className="text-xs font-medium text-slate-700">à¸£à¸¹à¸›à¹à¸šà¸šà¸à¸²à¸£à¸£à¸±à¸šà¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸—à¸µà¹ˆà¸•à¹‰à¸­à¸‡à¸à¸²à¸£ (Delivery preference) <span className="text-red-500">*</span></label>
+                        <label className="text-xs font-medium text-slate-700">รูปแบบการรับข้อมูลที่ต้องการ (Delivery preference) <span className="text-red-500">*</span></label>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-2 pt-1">
                           {[
-                            { code: 'secure_download', label: 'à¸”à¸²à¸§à¸™à¹Œà¹‚à¸«à¸¥à¸”à¹„à¸Ÿà¸¥à¹Œà¸­à¸­à¸™à¹„à¸¥à¸™à¹Œà¸›à¸¥à¸­à¸”à¸ à¸±à¸¢', desc: 'à¹„à¸¡à¹ˆà¸¡à¸µà¸„à¹ˆà¸²à¸˜à¸£à¸£à¸¡à¹€à¸™à¸µà¸¢à¸¡' },
-                            { code: 'pickup', label: 'à¹€à¸‚à¹‰à¸²à¸•à¸£à¸§à¸ˆà¸”à¸¹ à¸“ à¸ªà¸³à¸™à¸±à¸à¸‡à¸²à¸™', desc: 'à¹„à¸¡à¹ˆà¸¡à¸µà¸„à¹ˆà¸²à¸˜à¸£à¸£à¸¡à¹€à¸™à¸µà¸¢à¸¡' },
-                            { code: 'registered_mail', label: 'à¸ˆà¸±à¸”à¸ªà¹ˆà¸‡à¸ªà¸³à¹€à¸™à¸²à¸—à¸²à¸‡à¹„à¸›à¸£à¸©à¸“à¸µà¸¢à¹Œ', desc: 'à¸„à¸´à¸”à¸„à¹ˆà¸²à¸˜à¸£à¸£à¸¡à¹€à¸™à¸µà¸¢à¸¡à¸à¸£à¸°à¸”à¸²à¸©/à¸ªà¹ˆà¸‡' }
+                            { code: 'secure_download', label: 'ดาวน์โหลดไฟล์ออนไลน์ปลอดภัย', desc: 'ไม่มีค่าธรรมเนียม' },
+                            { code: 'pickup', label: 'เข้าตรวจดู ณ สำนักงาน', desc: 'ไม่มีค่าธรรมเนียม' },
+                            { code: 'registered_mail', label: 'จัดส่งสำเนาทางไปรษณีย์', desc: 'คิดค่าธรรมเนียมกระดาษ/ส่ง' }
                           ].map((del) => (
                             <label
                               key={del.code}
@@ -3826,20 +3826,20 @@ export default function App() {
                           onClick={() => setWizardStep(1)}
                           className="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold py-2 px-6 rounded-lg transition"
                         >
-                          à¸¢à¹‰à¸­à¸™à¸à¸¥à¸±à¸š
+                          ย้อนกลับ
                         </button>
                         <button
                           type="button"
                           onClick={() => {
                             // 1. Mandatory Description Check
                             if (!scopeForm.description.trim()) {
-                              showNotify('âš ï¸ à¸à¸£à¸¸à¸“à¸²à¸à¸£à¸­à¸ "à¸‚à¹‰à¸­ 3. à¸£à¸²à¸¢à¸¥à¸°à¹€à¸­à¸µà¸¢à¸”à¸£à¸°à¸šà¸¸à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸ªà¹ˆà¸§à¸™à¸šà¸¸à¸„à¸„à¸¥à¸—à¸µà¹ˆà¸•à¹‰à¸­à¸‡à¸à¸²à¸£à¹€à¸‚à¹‰à¸²à¸–à¸¶à¸‡à¹‚à¸”à¸¢à¸¥à¸°à¹€à¸­à¸µà¸¢à¸”"');
+                              showNotify('⚠️ กรุณากรอก "ข้อ 3. รายละเอียดระบุข้อมูลส่วนบุคคลที่ต้องการเข้าถึงโดยละเอียด"');
                               return;
                             }
 
                             // 2. Mandatory Target Database Checklist Check
                             if (scopeForm.systems.length === 0) {
-                              showNotify('âš ï¸ à¸à¸£à¸¸à¸“à¸²à¸„à¸¥à¸´à¸à¹€à¸¥à¸·à¸­à¸à¸«à¸¡à¸§à¸”à¸«à¸¡à¸¹à¹ˆ "à¸£à¸°à¸šà¸šà¸«à¸£à¸·à¸­à¸à¸²à¸™à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸—à¸µà¹ˆà¹€à¸à¸µà¹ˆà¸¢à¸§à¸‚à¹‰à¸­à¸‡à¹€à¸—à¹ˆà¸²à¸—à¸µà¹ˆà¸—à¸£à¸²à¸š" à¸­à¸¢à¹ˆà¸²à¸‡à¸™à¹‰à¸­à¸¢ 1 à¸£à¸²à¸¢à¸à¸²à¸£');
+                              showNotify('⚠️ กรุณาคลิกเลือกหมวดหมู่ "ระบบหรือฐานข้อมูลที่เกี่ยวข้องเท่าที่ทราบ" อย่างน้อย 1 รายการ');
                               return;
                             }
 
@@ -3847,17 +3847,17 @@ export default function App() {
                             const todayStr = new Date().toISOString().split('T')[0];
 
                             if (scopeForm.timeframeStart && scopeForm.timeframeStart > todayStr) {
-                              showNotify('âš ï¸ "à¸‚à¸­à¸šà¹€à¸‚à¸•à¸§à¸±à¸™à¸—à¸µà¹ˆà¹€à¸£à¸´à¹ˆà¸¡à¸•à¹‰à¸™à¸‚à¹‰à¸­à¸¡à¸¹à¸¥" à¸•à¹‰à¸­à¸‡à¹„à¸¡à¹ˆà¹€à¸à¸´à¸™à¸§à¸±à¸™à¸—à¸µà¹ˆà¸›à¸±à¸ˆà¸ˆà¸¸à¸šà¸±à¸™');
+                              showNotify('⚠️ "ขอบเขตวันที่เริ่มต้นข้อมูล" ต้องไม่เกินวันที่ปัจจุบัน');
                               return;
                             }
 
                             if (scopeForm.timeframeEnd && scopeForm.timeframeEnd > todayStr) {
-                              showNotify('âš ï¸ "à¸‚à¸­à¸šà¹€à¸‚à¸•à¸§à¸±à¸™à¸—à¸µà¹ˆà¸ªà¸´à¹‰à¸™à¸ªà¸¸à¸”à¸‚à¹‰à¸­à¸¡à¸¹à¸¥" à¸•à¹‰à¸­à¸‡à¹„à¸¡à¹ˆà¹€à¸à¸´à¸™à¸§à¸±à¸™à¸—à¸µà¹ˆà¸›à¸±à¸ˆà¸ˆà¸¸à¸šà¸±à¸™');
+                              showNotify('⚠️ "ขอบเขตวันที่สิ้นสุดข้อมูล" ต้องไม่เกินวันที่ปัจจุบัน');
                               return;
                             }
 
                             if (scopeForm.timeframeStart && scopeForm.timeframeEnd && scopeForm.timeframeStart > scopeForm.timeframeEnd) {
-                              showNotify('âš ï¸ "à¸‚à¸­à¸šà¹€à¸‚à¸•à¸§à¸±à¸™à¸—à¸µà¹ˆà¹€à¸£à¸´à¹ˆà¸¡à¸•à¹‰à¸™à¸‚à¹‰à¸­à¸¡à¸¹à¸¥" à¸•à¹‰à¸­à¸‡à¹„à¸¡à¹ˆà¸¡à¸²à¸à¸à¸§à¹ˆà¸² "à¸‚à¸­à¸šà¹€à¸‚à¸•à¸§à¸±à¸™à¸—à¸µà¹ˆà¸ªà¸´à¹‰à¸™à¸ªà¸¸à¸”à¸‚à¹‰à¸­à¸¡à¸¹à¸¥"');
+                              showNotify('⚠️ "ขอบเขตวันที่เริ่มต้นข้อมูล" ต้องไม่มากกว่า "ขอบเขตวันที่สิ้นสุดข้อมูล"');
                               return;
                             }
 
@@ -3865,7 +3865,7 @@ export default function App() {
                           }}
                           className="bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold py-2 px-6 rounded-lg transition shadow-md"
                         >
-                          à¸‚à¸±à¹‰à¸™à¸•à¸­à¸™à¸–à¸±à¸”à¹„à¸›
+                          ขั้นตอนถัดไป
                         </button>
                       </div>
                     </div>
@@ -3879,49 +3879,49 @@ export default function App() {
                       <div className="space-y-4">
                         <div>
                           <label className="text-xs font-bold text-slate-800 block">
-                            à¸­à¸±à¸›à¹‚à¸«à¸¥à¸”à¸«à¸¥à¸±à¸à¸à¸²à¸™à¸¢à¸·à¸™à¸¢à¸±à¸™à¸•à¸±à¸§à¸•à¸™ à¹à¸¥à¸°à¸›à¹‰à¸­à¸‡à¸à¸±à¸™à¸„à¸§à¸²à¸¡à¹€à¸›à¹‡à¸™à¸ªà¹ˆà¸§à¸™à¸•à¸±à¸§ (Identity & Document Upload)
+                            อัปโหลดหลักฐานยืนยันตัวตน และป้องกันความเป็นส่วนตัว (Identity & Document Upload)
                           </label>
                           <p className="text-[11px] text-slate-500 mt-0.5">
-                            à¸à¸£à¸¸à¸“à¸²à¸­à¸±à¸›à¹‚à¸«à¸¥à¸”à¹€à¸­à¸à¸ªà¸²à¸£à¸¢à¸·à¸™à¸¢à¸±à¸™à¸•à¸±à¸§à¸•à¸™ (à¸£à¸­à¸‡à¸£à¸±à¸šà¸£à¸¹à¸›à¸ à¸²à¸ž JPEG, PNG à¸«à¸£à¸·à¸­ à¹€à¸­à¸à¸ªà¸²à¸£ PDF à¸ªà¸³à¹€à¸™à¸²à¸—à¸µà¹ˆà¸¡à¸µà¸à¸²à¸£à¸£à¸±à¸šà¸£à¸­à¸‡à¸–à¸¹à¸à¸•à¹‰à¸­à¸‡)
+                            กรุณาอัปโหลดเอกสารยืนยันตัวตน (รองรับรูปภาพ JPEG, PNG หรือ เอกสาร PDF สำเนาที่มีการรับรองถูกต้อง)
                           </p>
                         </div>
 
                         {reqType === 'self' ? (
                           <WatermarkedUpload
-                            label="à¸ªà¸³à¹€à¸™à¸²à¸šà¸±à¸•à¸£à¸›à¸£à¸°à¸Šà¸²à¸Šà¸™/à¹€à¸­à¸à¸ªà¸²à¸£à¸¢à¸·à¸™à¸¢à¸±à¸™à¸•à¸±à¸§à¸•à¸™à¹€à¸ˆà¹‰à¸²à¸‚à¸­à¸‡à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸ªà¹ˆà¸§à¸™à¸šà¸¸à¸„à¸„à¸¥ (JPEG, PNG, PDF)"
-                            orgName={organizations.find((o: any) => o.id === selectedTargetOrgId)?.nameTh || 'à¸«à¸™à¹ˆà¸§à¸¢à¸‡à¸²à¸™à¸œà¸¹à¹‰à¸£à¸±à¸šà¸„à¸³à¸‚à¸­'}
+                            label="สำเนาบัตรประชาชน/เอกสารยืนยันตัวตนเจ้าของข้อมูลส่วนบุคคล (JPEG, PNG, PDF)"
+                            orgName={organizations.find((o: any) => o.id === selectedTargetOrgId)?.nameTh || 'หน่วยงานผู้รับคำขอ'}
                             onFileProcessed={handleFileUpload}
                           />
                         ) : (
                           <div className="space-y-4">
                             {/* 1. Data Subject ID Card */}
                             <WatermarkedUpload
-                              label="1. à¸ªà¸³à¹€à¸™à¸²à¸šà¸±à¸•à¸£à¸›à¸£à¸°à¸ˆà¸³à¸•à¸±à¸§à¸›à¸£à¸°à¸Šà¸²à¸Šà¸™à¸œà¸¹à¹‰à¸¡à¸­à¸šà¸­à¸³à¸™à¸²à¸ˆ (à¹€à¸ˆà¹‰à¸²à¸‚à¸­à¸‡à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸ªà¹ˆà¸§à¸™à¸šà¸¸à¸„à¸„à¸¥) (JPEG, PNG, PDF)"
-                              orgName={organizations.find((o: any) => o.id === selectedTargetOrgId)?.nameTh || 'à¸«à¸™à¹ˆà¸§à¸¢à¸‡à¸²à¸™à¸œà¸¹à¹‰à¸£à¸±à¸šà¸„à¸³à¸‚à¸­'}
-                              onFileProcessed={(fileName, dataUrl) => handleFileUpload(`[à¸œà¸¹à¹‰à¸¡à¸­à¸šà¸­à¸³à¸™à¸²à¸ˆ] ${fileName}`, dataUrl)}
+                              label="1. สำเนาบัตรประจำตัวประชาชนผู้มอบอำนาจ (เจ้าของข้อมูลส่วนบุคคล) (JPEG, PNG, PDF)"
+                              orgName={organizations.find((o: any) => o.id === selectedTargetOrgId)?.nameTh || 'หน่วยงานผู้รับคำขอ'}
+                              onFileProcessed={(fileName, dataUrl) => handleFileUpload(`[ผู้มอบอำนาจ] ${fileName}`, dataUrl)}
                             />
 
                             {/* 2. Authorized Representative ID Card */}
                             <WatermarkedUpload
-                              label="2. à¸ªà¸³à¹€à¸™à¸²à¸šà¸±à¸•à¸£à¸›à¸£à¸°à¸ˆà¸³à¸•à¸±à¸§à¸›à¸£à¸°à¸Šà¸²à¸Šà¸™à¸œà¸¹à¹‰à¸£à¸±à¸šà¸¡à¸­à¸šà¸­à¸³à¸™à¸²à¸ˆ (Authorized Representative) (JPEG, PNG, PDF)"
-                              orgName={organizations.find((o: any) => o.id === selectedTargetOrgId)?.nameTh || 'à¸«à¸™à¹ˆà¸§à¸¢à¸‡à¸²à¸™à¸œà¸¹à¹‰à¸£à¸±à¸šà¸„à¸³à¸‚à¸­'}
-                              onFileProcessed={(fileName, dataUrl) => handleFileUpload(`[à¸œà¸¹à¹‰à¸£à¸±à¸šà¸¡à¸­à¸šà¸­à¸³à¸™à¸²à¸ˆ] ${fileName}`, dataUrl)}
+                              label="2. สำเนาบัตรประจำตัวประชาชนผู้รับมอบอำนาจ (Authorized Representative) (JPEG, PNG, PDF)"
+                              orgName={organizations.find((o: any) => o.id === selectedTargetOrgId)?.nameTh || 'หน่วยงานผู้รับคำขอ'}
+                              onFileProcessed={(fileName, dataUrl) => handleFileUpload(`[ผู้รับมอบอำนาจ] ${fileName}`, dataUrl)}
                             />
 
                             {/* 3. Power of Attorney Document */}
                             <div className="border border-teal-200 rounded-xl p-4 space-y-2.5 bg-teal-50/60 shadow-sm">
                               <span className="block text-xs font-bold text-teal-950 flex items-center gap-1.5">
                                 <FileText className="h-4 w-4 text-teal-700" />
-                                <span>3. à¹à¸™à¸šà¹€à¸­à¸à¸ªà¸²à¸£à¸«à¸™à¸±à¸‡à¸ªà¸·à¸­à¸¡à¸­à¸šà¸­à¸³à¸™à¸²à¸ˆà¸‰à¸šà¸±à¸šà¸ˆà¸£à¸´à¸‡à¸«à¸£à¸·à¸­à¸ªà¸³à¹€à¸™à¸²à¸—à¸µà¹ˆà¸¡à¸µà¸à¸²à¸£à¸£à¸±à¸šà¸£à¸­à¸‡ (Power of Attorney)</span>
+                                <span>3. แนบเอกสารหนังสือมอบอำนาจฉบับจริงหรือสำเนาที่มีการรับรอง (Power of Attorney)</span>
                               </span>
-                              <p className="text-[10px] text-teal-800">à¸£à¸­à¸‡à¸£à¸±à¸šà¹„à¸Ÿà¸¥à¹Œà¹€à¸­à¸à¸ªà¸²à¸£ PDF à¸«à¸£à¸·à¸­à¸£à¸¹à¸›à¸ à¸²à¸ž (PDF, JPEG, PNG) à¸‚à¸™à¸²à¸”à¹„à¸¡à¹ˆà¹€à¸à¸´à¸™ 5MB</p>
+                              <p className="text-[10px] text-teal-800">รองรับไฟล์เอกสาร PDF หรือรูปภาพ (PDF, JPEG, PNG) ขนาดไม่เกิน 5MB</p>
                               <input
                                 type="file"
                                 accept=".pdf,.png,.jpg,.jpeg,application/pdf"
                                 onChange={(e) => {
                                   const file = e.target.files?.[0];
                                   if (file) {
-                                    handleFileUpload(`[à¸«à¸™à¸±à¸‡à¸ªà¸·à¸­à¸¡à¸­à¸šà¸­à¸³à¸™à¸²à¸ˆ] ${file.name}`, 'mock_pdf_poa_blob');
+                                    handleFileUpload(`[หนังสือมอบอำนาจ] ${file.name}`, 'mock_pdf_poa_blob');
                                   }
                                 }}
                                 className="text-xs block w-full text-slate-600 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-teal-600 file:text-white hover:file:bg-teal-700 cursor-pointer"
@@ -3949,7 +3949,7 @@ export default function App() {
                             onChange={(e) => setConsentAccepted(e.target.checked)}
                             className="rounded text-brand-600 focus:ring-brand-500 mt-0.5"
                           />
-                          <span>à¸‚à¸­à¸¢à¸´à¸™à¸¢à¸­à¸¡à¹ƒà¸«à¹‰à¸­à¸‡à¸„à¹Œà¸à¸£à¹€à¸à¹‡à¸š à¸£à¸§à¸šà¸£à¸§à¸¡ à¹à¸¥à¸°à¸›à¸£à¸°à¸¡à¸§à¸¥à¸œà¸¥à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸ªà¹ˆà¸§à¸™à¸šà¸¸à¸„à¸„à¸¥à¸‚à¸­à¸‡à¸‚à¹‰à¸²à¸žà¹€à¸ˆà¹‰à¸²à¸—à¸µà¹ˆà¸¢à¸·à¹ˆà¸™à¹ƒà¸™à¸„à¸³à¸‚à¸­à¸™à¸µà¹‰ à¹€à¸žà¸·à¹ˆà¸­à¹ƒà¸Šà¹‰à¸ªà¸³à¸«à¸£à¸±à¸šà¸•à¸£à¸§à¸ˆà¸ªà¸­à¸šà¸ªà¸´à¸—à¸˜à¸´à¹à¸¥à¸°à¸ˆà¸±à¸”à¸ªà¹ˆà¸‡à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸•à¸²à¸¡à¸„à¸§à¸²à¸¡à¸•à¹‰à¸­à¸‡à¸à¸²à¸£à¸‚à¸­à¸‡à¸ªà¸´à¸—à¸˜à¸´à¸•à¸²à¸¡ <button type="button" onClick={() => setShowPrivacyModal(true)} className="text-brand-600 hover:underline font-bold bg-transparent border-none p-0 cursor-pointer">à¸™à¹‚à¸¢à¸šà¸²à¸¢à¸„à¸§à¸²à¸¡à¹€à¸›à¹‡à¸™à¸ªà¹ˆà¸§à¸™à¸•à¸±à¸§ (Privacy Notice)</button></span>
+                          <span>ขอยินยอมให้องค์กรเก็บ รวบรวม และประมวลผลข้อมูลส่วนบุคคลของข้าพเจ้าที่ยื่นในคำขอนี้ เพื่อใช้สำหรับตรวจสอบสิทธิและจัดส่งข้อมูลตามความต้องการของสิทธิตาม <button type="button" onClick={() => setShowPrivacyModal(true)} className="text-brand-600 hover:underline font-bold bg-transparent border-none p-0 cursor-pointer">นโยบายความเป็นส่วนตัว (Privacy Notice)</button></span>
                         </label>
                         <label className="flex items-start gap-2.5 cursor-pointer text-xs text-slate-600">
                           <input
@@ -3959,7 +3959,7 @@ export default function App() {
                             onChange={(e) => setAccuracyCertified(e.target.checked)}
                             className="rounded text-brand-600 focus:ring-brand-500 mt-0.5"
                           />
-                          <span>à¸‚à¸­à¸£à¸±à¸šà¸£à¸­à¸‡à¸§à¹ˆà¸²à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸‚à¹‰à¸²à¸‡à¸•à¹‰à¸™ à¹€à¸­à¸à¸ªà¸²à¸£à¸›à¸£à¸°à¸ˆà¸³à¸•à¸±à¸§ à¹à¸¥à¸°à¸«à¸™à¸±à¸‡à¸ªà¸·à¸­à¸¡à¸­à¸šà¸­à¸³à¸™à¸²à¸ˆ (à¸–à¹‰à¸²à¸¡à¸µ) à¹€à¸›à¹‡à¸™à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸—à¸µà¹ˆà¸–à¸¹à¸à¸•à¹‰à¸­à¸‡à¹à¸¥à¸°à¹à¸—à¹‰à¸ˆà¸£à¸´à¸‡à¸—à¸¸à¸à¸›à¸£à¸°à¸à¸²à¸£</span>
+                          <span>ขอรับรองว่าข้อมูลข้างต้น เอกสารประจำตัว และหนังสือมอบอำนาจ (ถ้ามี) เป็นข้อมูลที่ถูกต้องและแท้จริงทุกประการ</span>
                         </label>
                       </div>
 
@@ -3969,7 +3969,7 @@ export default function App() {
                           onClick={() => setWizardStep(2)}
                           className="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold py-2 px-6 rounded-lg transition"
                         >
-                          à¸¢à¹‰à¸­à¸™à¸à¸¥à¸±à¸š
+                          ย้อนกลับ
                         </button>
                         <button
                           type="submit"
@@ -3979,10 +3979,10 @@ export default function App() {
                           {isSendingOtp ? (
                             <>
                               <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                              <span>à¸à¸³à¸¥à¸±à¸‡à¸›à¸£à¸°à¸¡à¸§à¸¥à¸œà¸¥...</span>
+                              <span>กำลังประมวลผล...</span>
                             </>
                           ) : (
-                            'à¸¢à¸·à¸™à¸¢à¸±à¸™à¸à¸²à¸£à¸ªà¹ˆà¸‡à¸„à¸³à¸‚à¸­à¸­à¸¢à¹ˆà¸²à¸‡à¹€à¸›à¹‡à¸™à¸—à¸²à¸‡à¸à¸²à¸£'
+                            'ยืนยันการส่งคำขออย่างเป็นทางการ'
                           )}
                         </button>
                       </div>
@@ -4001,25 +4001,25 @@ export default function App() {
                   <CheckCircle className="h-10 w-10" />
                 </div>
                 <div className="space-y-2">
-                  <h3 className="font-bold text-slate-800 text-lg">à¸¢à¸·à¹ˆà¸™à¸„à¸³à¸‚à¸­à¸£à¸±à¸šà¸ªà¸´à¸—à¸˜à¸´à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸ªà¹ˆà¸§à¸™à¸šà¸¸à¸„à¸„à¸¥à¸ªà¸³à¹€à¸£à¹‡à¸ˆ!</h3>
+                  <h3 className="font-bold text-slate-800 text-lg">ยื่นคำขอรับสิทธิข้อมูลส่วนบุคคลสำเร็จ!</h3>
                   <p className="text-xs text-slate-500">
-                    à¸„à¸³à¸£à¹‰à¸­à¸‡à¸‚à¸­à¸‡à¸—à¹ˆà¸²à¸™à¹„à¸”à¹‰à¸£à¸±à¸šà¸à¸²à¸£à¸šà¸±à¸™à¸—à¸¶à¸à¹€à¸‚à¹‰à¸²à¸£à¸°à¸šà¸šà¹à¸¥à¹‰à¸§ à¹à¸¥à¸°à¹€à¸£à¸´à¹ˆà¸¡à¸à¸£à¸°à¸šà¸§à¸™à¸à¸²à¸£à¸„à¸±à¸”à¸à¸£à¸­à¸‡à¸•à¸±à¸§à¸•à¸™
+                    คำร้องของท่านได้รับการบันทึกเข้าระบบแล้ว และเริ่มกระบวนการคัดกรองตัวตน
                   </p>
                 </div>
 
                 <div className="bg-slate-50 border border-slate-100 rounded-xl p-4 space-y-2 max-w-sm mx-auto">
-                  <span className="text-xs text-slate-400 block font-bold">à¹€à¸¥à¸‚à¸­à¹‰à¸²à¸‡à¸­à¸´à¸‡à¸•à¸´à¸”à¸•à¸²à¸¡à¸œà¸¥à¸„à¸³à¸‚à¸­ (Tracking Number)</span>
+                  <span className="text-xs text-slate-400 block font-bold">เลขอ้างอิงติดตามผลคำขอ (Tracking Number)</span>
                   <span className="text-xl font-mono font-bold text-slate-800 block select-all">
                     {isNewRequestSuccess.trackingNo}
                   </span>
                   <span className="text-[10px] text-slate-400 block font-medium">
-                    *à¸à¸£à¸¸à¸“à¸²à¸ˆà¸”à¸ˆà¸³à¹€à¸¥à¸‚à¸™à¸µà¹‰à¹€à¸žà¸·à¹ˆà¸­à¸•à¸´à¸”à¸•à¸²à¸¡à¸ªà¸–à¸²à¸™à¸°à¸œà¸¥à¹à¸¥à¸°à¸”à¸²à¸§à¸™à¹Œà¹‚à¸«à¸¥à¸”à¹„à¸Ÿà¸¥à¹Œ*
+                    *กรุณาจดจำเลขนี้เพื่อติดตามสถานะผลและดาวน์โหลดไฟล์*
                   </span>
                 </div>
 
                 <div className="p-3 bg-brand-50 border border-brand-100 text-brand-800 rounded-xl text-[11px] leading-relaxed max-w-sm mx-auto">
-                  <strong>à¸„à¸³à¹à¸™à¸°à¸™à¸³à¹€à¸žà¸·à¹ˆà¸­à¸„à¸§à¸²à¸¡à¸›à¸¥à¸­à¸”à¸ à¸±à¸¢à¹ƒà¸™à¸à¸²à¸£à¸ªà¸·à¸šà¸„à¹‰à¸™à¸ªà¸–à¸²à¸™à¸°:</strong> <br />
-                  à¸£à¸«à¸±à¸ªà¸œà¹ˆà¸²à¸™à¹à¸šà¸šà¹ƒà¸Šà¹‰à¸„à¸£à¸±à¹‰à¸‡à¹€à¸”à¸µà¸¢à¸§ (OTP) à¸ªà¸³à¸«à¸£à¸±à¸šà¸¢à¸·à¸™à¸¢à¸±à¸™à¸•à¸±à¸§à¸•à¸™à¹€à¸žà¸·à¹ˆà¸­à¸ªà¸·à¸šà¸„à¹‰à¸™à¸ªà¸–à¸²à¸™à¸° à¸ˆà¸°à¸ªà¹ˆà¸‡à¹„à¸›à¸¢à¸±à¸‡à¸­à¸µà¹€à¸¡à¸¥à¸‚à¸­à¸‡à¸„à¸¸à¸“
+                  <strong>คำแนะนำเพื่อความปลอดภัยในการสืบค้นสถานะ:</strong> <br />
+                  รหัสผ่านแบบใช้ครั้งเดียว (OTP) สำหรับยืนยันตัวตนเพื่อสืบค้นสถานะ จะส่งไปยังอีเมลของคุณ
                 </div>
 
                 <div className="flex gap-2 justify-center pt-2">
@@ -4027,7 +4027,7 @@ export default function App() {
                     onClick={() => setPublicTab('landing')}
                     className="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold py-2 px-5 rounded-lg transition"
                   >
-                    à¸à¸¥à¸±à¸šà¸ªà¸¹à¹ˆà¸«à¸™à¹‰à¸²à¹à¸£à¸
+                    กลับสู่หน้าแรก
                   </button>
                   <button
                     onClick={() => {
@@ -4038,7 +4038,7 @@ export default function App() {
                     }}
                     className="bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold py-2 px-5 rounded-lg transition shadow-sm"
                   >
-                    à¹€à¸›à¸´à¸”à¸«à¸™à¹‰à¸²à¸•à¸´à¸”à¸•à¸²à¸¡à¸œà¸¥à¹€à¸¥à¸¢
+                    เปิดหน้าติดตามผลเลย
                   </button>
                 </div>
               </div>
@@ -4058,10 +4058,10 @@ export default function App() {
                 className="text-xs text-slate-500 hover:text-slate-700 flex items-center gap-1 transition"
               >
                 <ArrowLeft className="h-4 w-4" />
-                <span>à¸à¸¥à¸±à¸šà¸žà¸­à¸£à¹Œà¸—à¸±à¸¥à¸ªà¸²à¸˜à¸²à¸£à¸“à¸°</span>
+                <span>กลับพอร์ทัลสาธารณะ</span>
               </button>
               <div className="text-right">
-                <span className="text-xs text-slate-400 block">à¸•à¸´à¸”à¸•à¸²à¸¡à¸„à¸³à¸‚à¸­à¹€à¸¥à¸‚à¸—à¸µà¹ˆ</span>
+                <span className="text-xs text-slate-400 block">ติดตามคำขอเลขที่</span>
                 <span className="text-sm font-bold text-slate-800">{trackedRequest.trackingNo}</span>
               </div>
             </div>
@@ -4074,7 +4074,7 @@ export default function App() {
               
               {/* Status card */}
               <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-4">
-                <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider">à¸ªà¸–à¸²à¸™à¸°à¸„à¸³à¸£à¹‰à¸­à¸‡à¸›à¸±à¸ˆà¸ˆà¸¸à¸šà¸±à¸™</span>
+                <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider">สถานะคำร้องปัจจุบัน</span>
                 
                 <div>
                   <span className="inline-block bg-brand-50 text-brand-700 border border-brand-100 rounded-full px-3 py-1 text-xs font-bold">
@@ -4084,21 +4084,21 @@ export default function App() {
 
                 <div className="border-t border-slate-100 pt-3 space-y-2 text-xs text-slate-600">
                   <div className="flex justify-between">
-                    <span>à¸œà¸¹à¹‰à¸¢à¸·à¹ˆà¸™à¸„à¸³à¸‚à¸­:</span>
+                    <span>ผู้ยื่นคำขอ:</span>
                     <span className="font-bold text-slate-900">{trackedRequest.requester?.firstName} {trackedRequest.requester?.lastName}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>à¸§à¸±à¸™à¸—à¸µà¹ˆà¸ªà¹ˆà¸‡à¸„à¸³à¸‚à¸­:</span>
+                    <span>วันที่ส่งคำขอ:</span>
                     <span className="font-semibold">{convertToThaiDate(trackedRequest.submissionDate)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>à¸›à¸£à¸°à¹€à¸ à¸—à¸ªà¸´à¸—à¸˜à¸´:</span>
+                    <span>ประเภทสิทธิ:</span>
                     <span className="font-semibold uppercase">{trackedRequest.requestDetails?.requestType || 'N/A'}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>à¸Šà¹ˆà¸­à¸‡à¸—à¸²à¸‡à¸£à¸±à¸šà¸¡à¸­à¸š:</span>
+                    <span>ช่องทางรับมอบ:</span>
                     <span className="font-semibold text-brand-600">
-                      {trackedRequest.requestDetails?.deliveryMethod === 'secure_download' ? 'à¸”à¸²à¸§à¸™à¹Œà¹‚à¸«à¸¥à¸”à¸­à¸­à¸™à¹„à¸¥à¸™à¹Œ' : trackedRequest.requestDetails?.deliveryMethod === 'pickup' ? 'à¸£à¸±à¸š à¸“ à¸ªà¸³à¸™à¸±à¸à¸‡à¸²à¸™' : 'à¸ªà¹ˆà¸‡à¸—à¸²à¸‡à¹„à¸›à¸£à¸©à¸“à¸µà¸¢à¹Œ'}
+                      {trackedRequest.requestDetails?.deliveryMethod === 'secure_download' ? 'ดาวน์โหลดออนไลน์' : trackedRequest.requestDetails?.deliveryMethod === 'pickup' ? 'รับ ณ สำนักงาน' : 'ส่งทางไปรษณีย์'}
                     </span>
                   </div>
                 </div>
@@ -4111,7 +4111,7 @@ export default function App() {
                       className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-4 rounded-lg text-xs flex items-center justify-center gap-1.5 transition shadow-sm"
                     >
                       <Download className="h-4 w-4" />
-                      <span>à¸”à¸²à¸§à¸™à¹Œà¹‚à¸«à¸¥à¸”à¸ªà¸³à¹€à¸™à¸²à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸‚à¸­à¸‡à¸—à¹ˆà¸²à¸™</span>
+                      <span>ดาวน์โหลดสำเนาข้อมูลของท่าน</span>
                     </button>
                   </div>
                 )}
@@ -4123,28 +4123,28 @@ export default function App() {
                   <div className="flex items-center justify-between">
                     <span className="font-bold text-amber-900 text-xs flex items-center gap-1.5">
                       <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" />
-                      <span>à¹€à¸ˆà¹‰à¸²à¸«à¸™à¹‰à¸²à¸—à¸µà¹ˆà¹à¸ˆà¹‰à¸‡à¸‚à¸­à¹€à¸­à¸à¸ªà¸²à¸£à¹€à¸žà¸´à¹ˆà¸¡à¹€à¸•à¸´à¸¡ (Action Required)</span>
+                      <span>เจ้าหน้าที่แจ้งขอเอกสารเพิ่มเติม (Action Required)</span>
                     </span>
                     <span className="text-[10px] bg-amber-200 text-amber-900 font-bold px-2 py-0.5 rounded-full">
-                      SLA à¸«à¸¢à¸¸à¸”à¸™à¸±à¸šà¸Šà¸±à¹ˆà¸§à¸„à¸£à¸²à¸§
+                      SLA หยุดนับชั่วคราว
                     </span>
                   </div>
 
                   <div className="bg-white border border-amber-200 rounded-xl p-3 text-xs text-amber-900 leading-relaxed font-medium space-y-1">
-                    <span className="block font-bold text-amber-800">à¸£à¸²à¸¢à¸¥à¸°à¹€à¸­à¸µà¸¢à¸”à¹€à¸­à¸à¸ªà¸²à¸£à¸—à¸µà¹ˆà¸£à¹‰à¸­à¸‡à¸‚à¸­à¹€à¸žà¸´à¹ˆà¸¡:</span>
+                    <span className="block font-bold text-amber-800">รายละเอียดเอกสารที่ร้องขอเพิ่ม:</span>
                     <p className="text-slate-700 bg-amber-50/50 p-2 rounded border border-amber-100 font-mono text-[11px]">
-                      {(trackedRequest.statusHistory || []).find(h => h.status === 'Awaiting Additional Information')?.comment || 'à¹‚à¸›à¸£à¸”à¹à¸™à¸šà¸£à¸¹à¸›à¸–à¹ˆà¸²à¸¢à¸ªà¸³à¹€à¸™à¸²à¸šà¸±à¸•à¸£à¸›à¸£à¸°à¸ˆà¸³à¸•à¸±à¸§à¸›à¸£à¸°à¸Šà¸²à¸Šà¸™à¹€à¸žà¸´à¹ˆà¸¡à¹€à¸•à¸´à¸¡à¹€à¸žà¸·à¹ˆà¸­à¸¢à¸·à¸™à¸¢à¸±à¸™à¸•à¸±à¸§à¸•à¸™'}
+                      {(trackedRequest.statusHistory || []).find(h => h.status === 'Awaiting Additional Information')?.comment || 'โปรดแนบรูปถ่ายสำเนาบัตรประจำตัวประชาชนเพิ่มเติมเพื่อยืนยันตัวตน'}
                     </p>
                     <p className="text-[10px] text-amber-700 pt-1 font-semibold">
-                      â±ï¸ à¸à¸£à¸¸à¸“à¸²à¸­à¸±à¸›à¹‚à¸«à¸¥à¸”à¹€à¸žà¸´à¹ˆà¸¡à¹€à¸•à¸´à¸¡à¸ à¸²à¸¢à¹ƒà¸™à¹€à¸§à¸¥à¸²à¸—à¸µà¹ˆà¸à¸³à¸«à¸™à¸” (10 à¸§à¸±à¸™) à¸¡à¸´à¸‰à¸°à¸™à¸±à¹‰à¸™à¹€à¸£à¸·à¹ˆà¸­à¸‡à¸ˆà¸°à¸–à¸¹à¸à¸¢à¸à¹€à¸¥à¸´à¸à¸„à¸³à¸‚à¸­à¸•à¸²à¸¡à¸£à¸°à¸šà¸šà¸­à¸±à¸•à¹‚à¸™à¸¡à¸±à¸•à¸´
+                      ⏱️ กรุณาอัปโหลดเพิ่มเติมภายในเวลาที่กำหนด (10 วัน) มิฉะนั้นเรื่องจะถูกยกเลิกคำขอตามระบบอัตโนมัติ
                     </p>
                   </div>
                   
                   <div className="space-y-1">
-                    <span className="text-xs font-bold text-slate-800 block">à¸­à¸±à¸›à¹‚à¸«à¸¥à¸”à¸£à¸¹à¸›à¸ à¸²à¸žà¸šà¸±à¸•à¸£à¸›à¸£à¸°à¸Šà¸²à¸Šà¸™ / à¹€à¸­à¸à¸ªà¸²à¸£à¹€à¸žà¸´à¹ˆà¸¡à¹€à¸•à¸´à¸¡à¸—à¸µà¹ˆà¸™à¸µà¹ˆ:</span>
+                    <span className="text-xs font-bold text-slate-800 block">อัปโหลดรูปภาพบัตรประชาชน / เอกสารเพิ่มเติมที่นี่:</span>
                     <WatermarkedUpload
-                      label="à¹à¸™à¸šà¸£à¸¹à¸›à¸–à¹ˆà¸²à¸¢à¸šà¸±à¸•à¸£à¸›à¸£à¸°à¸Šà¸²à¸Šà¸™ à¸«à¸£à¸·à¸­ à¹€à¸­à¸à¸ªà¸²à¸£à¹€à¸žà¸´à¹ˆà¸¡à¹€à¸•à¸´à¸¡à¸—à¸µà¹ˆà¸£à¹‰à¸­à¸‡à¸‚à¸­"
-                      orgName={organizations.find((o: any) => o.id === trackedRequest.targetOrgId)?.nameTh || trackedRequest.targetOrgName || 'à¸«à¸™à¹ˆà¸§à¸¢à¸‡à¸²à¸™à¸œà¸¹à¹‰à¸£à¸±à¸šà¸„à¸³à¸‚à¸­'}
+                      label="แนบรูปถ่ายบัตรประชาชน หรือ เอกสารเพิ่มเติมที่ร้องขอ"
+                      orgName={organizations.find((o: any) => o.id === trackedRequest.targetOrgId)?.nameTh || trackedRequest.targetOrgName || 'หน่วยงานผู้รับคำขอ'}
                       onFileProcessed={handleUploadAdditionalTrack}
                     />
                   </div>
@@ -4163,7 +4163,7 @@ export default function App() {
                     }}
                     className="text-xs text-rose-600 hover:text-rose-700 font-bold transition flex items-center justify-center gap-1.5 w-full py-1"
                   >
-                    <span>âš ï¸ à¸•à¹‰à¸­à¸‡à¸à¸²à¸£à¸–à¸­à¸™à¸„à¸³à¸£à¹‰à¸­à¸‡à¸‚à¸­à¹€à¸‚à¹‰à¸²à¸–à¸¶à¸‡à¸‚à¹‰à¸­à¸¡à¸¹à¸¥ (Withdraw Request)</span>
+                    <span>⚠️ ต้องการถอนคำร้องขอเข้าถึงข้อมูล (Withdraw Request)</span>
                   </button>
                 </div>
               )}
@@ -4174,18 +4174,18 @@ export default function App() {
               
               {/* Timeline list with Thai Time */}
               <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm space-y-4">
-                <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider">à¸šà¸±à¸™à¸—à¸¶à¸à¸‚à¸±à¹‰à¸™à¸•à¸­à¸™à¸à¸²à¸£à¸”à¸³à¹€à¸™à¸´à¸™à¸à¸²à¸£ (TIMELINE HISTORY)</span>
+                <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider">บันทึกขั้นตอนการดำเนินการ (TIMELINE HISTORY)</span>
                 
                 <div className="relative pl-6 border-l border-slate-200 space-y-6 pt-2">
                   {(trackedRequest.statusHistory || []).slice().reverse().map((h, i) => (
                     <div key={i} className="relative">
                       {/* Timeline dot */}
                       <span className="absolute -left-[30px] top-0.5 h-4.5 w-4.5 rounded-full border-2 border-white bg-brand-500 flex items-center justify-center text-[10px] text-white">
-                        âœ“
+                        ✓
                       </span>
                       <div className="text-xs font-bold text-slate-800">{h.status}</div>
                       <div className="text-[11px] text-slate-500 font-medium">
-                        {convertToThaiDate(h.changedAt, true)} à¹‚à¸”à¸¢ <span className="font-semibold text-slate-700">{h.changedBy}</span>
+                        {convertToThaiDate(h.changedAt, true)} โดย <span className="font-semibold text-slate-700">{h.changedBy}</span>
                       </div>
                       {h.comment && (
                         <div className="mt-1 p-2 bg-slate-50 border border-slate-100 rounded text-slate-600 text-[11px] leading-relaxed">
@@ -4200,15 +4200,15 @@ export default function App() {
               {/* Chat Communication panel */}
               <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden flex flex-col h-96">
                 <div className="bg-slate-50 border-b border-slate-100 p-4">
-                  <span className="block font-bold text-slate-800 text-xs">à¸Šà¹ˆà¸­à¸‡à¸—à¸²à¸‡à¸•à¸´à¸”à¸•à¹ˆà¸­à¹€à¸ˆà¹‰à¸²à¸«à¸™à¹‰à¸²à¸—à¸µà¹ˆà¹‚à¸”à¸¢à¸•à¸£à¸‡ (Message Board)</span>
-                  <span className="text-[10px] text-slate-500">à¸ªà¸­à¸šà¸–à¸²à¸¡à¸£à¸²à¸¢à¸¥à¸°à¹€à¸­à¸µà¸¢à¸” à¸¢à¸·à¹ˆà¸™à¸‚à¹‰à¸­à¸‹à¸±à¸à¸–à¸²à¸¡ à¸«à¸£à¸·à¸­à¸ªà¹ˆà¸‡à¸„à¸³à¸­à¸˜à¸´à¸šà¸²à¸¢à¹€à¸žà¸´à¹ˆà¸¡à¹€à¸•à¸´à¸¡</span>
+                  <span className="block font-bold text-slate-800 text-xs">ช่องทางติดต่อเจ้าหน้าที่โดยตรง (Message Board)</span>
+                  <span className="text-[10px] text-slate-500">สอบถามรายละเอียด ยื่นข้อซักถาม หรือส่งคำอธิบายเพิ่มเติม</span>
                 </div>
                 
                 {/* Chat items */}
                 <div className="flex-1 p-4 overflow-y-auto space-y-3">
                   {(trackedRequest.messageThread || []).length === 0 ? (
                     <div className="text-center py-10 text-slate-400 text-xs">
-                      à¸¢à¸±à¸‡à¹„à¸¡à¹ˆà¸¡à¸µà¸›à¸£à¸°à¸§à¸±à¸•à¸´à¸à¸²à¸£à¸ªà¹ˆà¸‡à¸‚à¹‰à¸­à¸„à¸§à¸²à¸¡ à¸ªà¸™à¸—à¸™à¸²à¸–à¸²à¸¡à¸•à¸­à¸šà¸”à¹‰à¸²à¸™à¸¥à¹ˆà¸²à¸‡à¹„à¸”à¹‰à¸—à¸±à¸™à¸—à¸µ
+                      ยังไม่มีประวัติการส่งข้อความ สนทนาถามตอบด้านล่างได้ทันที
                     </div>
                   ) : (
                     (trackedRequest.messageThread || []).map((msg) => (
@@ -4237,7 +4237,7 @@ export default function App() {
                   <input
                     type="text"
                     required
-                    placeholder="à¸žà¸´à¸¡à¸žà¹Œà¸‚à¹‰à¸­à¸„à¸§à¸²à¸¡à¸ªà¸­à¸šà¸–à¸²à¸¡à¸ªà¹ˆà¸‡à¹€à¸ˆà¹‰à¸²à¸«à¸™à¹‰à¸²à¸—à¸µà¹ˆà¸—à¸µà¹ˆà¸™à¸µà¹ˆ..."
+                    placeholder="พิมพ์ข้อความสอบถามส่งเจ้าหน้าที่ที่นี่..."
                     value={chatMessage}
                     onChange={(e) => setChatMessage(e.target.value)}
                     className="flex-1 text-xs border border-slate-300 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-1 focus:ring-brand-500"
@@ -4264,7 +4264,7 @@ export default function App() {
             
             <div className="text-center space-y-2">
               <Lock className="h-12 w-12 text-brand-500 mx-auto" />
-              <h3 className="font-bold text-lg">à¸£à¸°à¸šà¸šà¸”à¸²à¸§à¸™à¹Œà¹‚à¸«à¸¥à¸”à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¹€à¸‚à¹‰à¸²à¸£à¸«à¸±à¸ªà¸›à¸¥à¸­à¸”à¸ à¸±à¸¢</h3>
+              <h3 className="font-bold text-lg">ระบบดาวน์โหลดข้อมูลเข้ารหัสปลอดภัย</h3>
               <p className="text-xs text-slate-400">
                 Secure Data Download Portal (Section 3.9)
               </p>
@@ -4279,15 +4279,15 @@ export default function App() {
                     onClick={() => setView('public')}
                     className="bg-red-800 hover:bg-red-700 text-white px-4 py-2 rounded text-xs font-semibold w-full sm:w-auto"
                   >
-                    à¸à¸¥à¸±à¸šà¸«à¸™à¹‰à¸²à¹à¸£à¸à¸žà¸­à¸£à¹Œà¸—à¸±à¸¥
+                    กลับหน้าแรกพอร์ทัล
                   </button>
-                  {downloadError.includes('à¸«à¸¡à¸”à¸­à¸²à¸¢à¸¸') && downloadRequest && (
+                  {downloadError.includes('หมดอายุ') && downloadRequest && (
                     <button
                       type="button"
                       onClick={handleRequestExtensionPublic}
                       className="bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded text-xs font-semibold w-full sm:w-auto"
                     >
-                      à¸¢à¸·à¹ˆà¸™à¹€à¸£à¸·à¹ˆà¸­à¸‡à¸‚à¸­à¸•à¹ˆà¸­à¸­à¸²à¸¢à¸¸à¸à¸²à¸£à¸”à¸²à¸§à¸™à¹Œà¹‚à¸«à¸¥à¸”
+                      ยื่นเรื่องขอต่ออายุการดาวน์โหลด
                     </button>
                   )}
                 </div>
@@ -4295,17 +4295,17 @@ export default function App() {
             ) : showDownloadOtpModal && downloadRequest ? (
                 <form onSubmit={handleVerifyDownloadOtp} className="space-y-4">
                   <div className="p-3.5 bg-brand-950/40 border border-brand-900 text-brand-300 rounded-xl text-xs leading-relaxed space-y-1">
-                    <span className="block font-bold">à¸¢à¸·à¸™à¸¢à¸±à¸™à¸£à¸«à¸±à¸ªà¹€à¸‚à¹‰à¸²à¸–à¸¶à¸‡ (Two-Factor OTP Verification):</span>
-                    <span>à¸£à¸°à¸šà¸šà¹„à¸”à¹‰à¸ˆà¸±à¸”à¸ªà¹ˆà¸‡à¸£à¸«à¸±à¸ª OTP 6 à¸«à¸¥à¸±à¸ à¹„à¸›à¸—à¸µà¹ˆà¸­à¸µà¹€à¸¡à¸¥ {maskEmail(downloadRequest.requester.email)} à¸‚à¸­à¸‡à¸—à¹ˆà¸²à¸™à¹à¸¥à¹‰à¸§</span>
+                    <span className="block font-bold">ยืนยันรหัสเข้าถึง (Two-Factor OTP Verification):</span>
+                    <span>ระบบได้จัดส่งรหัส OTP 6 หลัก ไปที่อีเมล {maskEmail(downloadRequest.requester.email)} ของท่านแล้ว</span>
                     {downloadRequest.downloadExpiresAt && (
                       <span className="block text-amber-400 mt-2">
-                        * à¹€à¸­à¸à¸ªà¸²à¸£à¸™à¸µà¹‰à¸”à¸²à¸§à¸™à¹Œà¹‚à¸«à¸¥à¸”à¹„à¸”à¹‰à¸–à¸¶à¸‡à¸§à¸±à¸™à¸—à¸µà¹ˆ {new Date(downloadRequest.downloadExpiresAt).toLocaleDateString('th-TH')}
+                        * เอกสารนี้ดาวน์โหลดได้ถึงวันที่ {new Date(downloadRequest.downloadExpiresAt).toLocaleDateString('th-TH')}
                       </span>
                     )}
                   </div>
 
                   <div className="space-y-1 text-slate-300">
-                    <label className="text-xs font-medium">à¸£à¸°à¸šà¸¸à¸£à¸«à¸±à¸ª OTP 6 à¸«à¸¥à¸±à¸</label>
+                    <label className="text-xs font-medium">ระบุรหัส OTP 6 หลัก</label>
                     <input
                       type="text"
                       maxLength={6}
@@ -4321,7 +4321,7 @@ export default function App() {
                     type="submit"
                     className="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-2.5 px-4 rounded-lg transition shadow-md"
                   >
-                    à¸–à¸­à¸”à¸£à¸«à¸±à¸ªà¸¥à¸±à¸šà¹à¸¥à¸°à¸”à¸²à¸§à¸™à¹Œà¹‚à¸«à¸¥à¸”à¸£à¸²à¸¢à¸‡à¸²à¸™à¸‚à¹‰à¸­à¸¡à¸¹à¸¥
+                    ถอดรหัสลับและดาวน์โหลดรายงานข้อมูล
                   </button>
                   
                   <button
@@ -4329,7 +4329,7 @@ export default function App() {
                     onClick={() => setView('public')}
                     className="w-full text-slate-400 hover:text-slate-300 text-xs py-1.5 transition"
                   >
-                    à¸¢à¸à¹€à¸¥à¸´à¸à¸à¸£à¸°à¸šà¸§à¸™à¸à¸²à¸£
+                    ยกเลิกกระบวนการ
                   </button>
                 </form>
             ) : (
@@ -4342,7 +4342,7 @@ export default function App() {
                   window.location.href = `/dl/${trackingNo}`;
                 }} className="space-y-4">
                   <div className="space-y-1 text-slate-300">
-                    <label className="text-xs font-medium">à¸£à¸°à¸šà¸¸à¸£à¸«à¸±à¸ªà¸­à¹‰à¸²à¸‡à¸­à¸´à¸‡ (Tracking Number)</label>
+                    <label className="text-xs font-medium">ระบุรหัสอ้างอิง (Tracking Number)</label>
                     <input
                       type="text"
                       name="trackingNo"
@@ -4355,20 +4355,20 @@ export default function App() {
                     type="submit"
                     className="w-full bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold py-2.5 px-4 rounded-lg transition shadow-md"
                   >
-                    à¸”à¸³à¹€à¸™à¸´à¸™à¸à¸²à¸£à¸•à¹ˆà¸­ (Continue)
+                    ดำเนินการต่อ (Continue)
                   </button>
                   <button
                     type="button"
                     onClick={() => setView('public')}
                     className="w-full text-slate-400 hover:text-slate-300 text-xs py-1.5 transition"
                   >
-                    à¸à¸¥à¸±à¸šà¸«à¸™à¹‰à¸²à¹à¸£à¸ (Back to Home)
+                    กลับหน้าแรก (Back to Home)
                   </button>
                 </form>
             )}
 
             <div className="text-[10px] text-slate-600 text-center">
-              à¸ªà¸´à¸—à¸˜à¸´à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸ªà¹ˆà¸§à¸™à¸šà¸¸à¸„à¸„à¸¥à¸‚à¸­à¸‡à¸«à¸™à¹ˆà¸§à¸¢à¸‡à¸²à¸™ à¸ž.à¸£.à¸š. à¸„à¸¸à¹‰à¸¡à¸„à¸£à¸­à¸‡à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸ªà¹ˆà¸§à¸™à¸šà¸¸à¸„à¸„à¸¥ à¸ž.à¸¨. 2562
+              สิทธิข้อมูลส่วนบุคคลของหน่วยงาน พ.ร.บ. คุ้มครองข้อมูลส่วนบุคคล พ.ศ. 2562
             </div>
           </div>
         </div>
@@ -4387,22 +4387,22 @@ export default function App() {
                   PDPA
                 </div>
                 <div>
-                  <span className="block font-bold text-white text-xs">à¸«à¸™à¹ˆà¸§à¸¢à¸‡à¸²à¸™à¸„à¸§à¸šà¸„à¸¸à¸¡à¸‚à¹‰à¸­à¸¡à¸¹à¸¥</span>
-                  <span className="block text-[9px] text-slate-500">à¸£à¸°à¸šà¸šà¸šà¸£à¸´à¸«à¸²à¸£à¸ˆà¸±à¸”à¸à¸²à¸£à¸ªà¸´à¸—à¸˜à¸´ (DSR)</span>
+                  <span className="block font-bold text-white text-xs">หน่วยงานควบคุมข้อมูล</span>
+                  <span className="block text-[9px] text-slate-500">ระบบบริหารจัดการสิทธิ (DSR)</span>
                 </div>
               </div>
 
               {/* Navigation Items */}
               <nav className="space-y-1">
                 {[
-                  { id: 'dashboard', label: 'à¸«à¸™à¹‰à¸²à¹à¸œà¸‡à¸„à¸§à¸šà¸„à¸¸à¸¡à¸«à¸¥à¸±à¸', icon: Layers, roles: ['admin', 'intake', 'dpo', 'approver', 'auditor'] },
-                  { id: 'requests', label: 'à¸£à¸²à¸¢à¸à¸²à¸£à¸„à¸³à¸‚à¸­à¸—à¸±à¹‰à¸‡à¸«à¸¡à¸”', icon: List, roles: ['admin', 'intake', 'dpo', 'approver', 'auditor', 'owner'] },
-                  { id: 'kanban', label: 'Kanban à¸šà¸­à¸£à¹Œà¸”à¸ªà¸´à¸—à¸˜à¸´à¹Œ', icon: Layers, roles: ['admin', 'intake', 'dpo', 'approver', 'owner'] },
-                  { id: 'users', label: 'à¸ˆà¸±à¸”à¸à¸²à¸£à¸œà¸¹à¹‰à¹ƒà¸Šà¹‰à¹à¸¥à¸°à¸ªà¸´à¸—à¸˜à¸´à¹Œ', icon: UserCheck, roles: ['admin'] },
-                  { id: 'compliance', label: 'Compliance à¸•à¸±à¹‰à¸‡à¸„à¹ˆà¸²à¸à¸Žà¸«à¸¡à¸²à¸¢', icon: Scale, roles: ['admin'] },
-                  { id: 'templates', label: 'Template à¸«à¸™à¸±à¸‡à¸ªà¸·à¸­à¸£à¸²à¸Šà¸à¸²à¸£', icon: FileCheck2, roles: ['admin'] },
-                  { id: 'retention', label: 'à¸—à¸³à¸¥à¸²à¸¢à¹à¸¥à¸°à¸ˆà¸±à¸”à¹€à¸à¹‡à¸šà¸‚à¹‰à¸­à¸¡à¸¹à¸¥', icon: Trash2, roles: ['admin'] },
-                  { id: 'audit', label: 'à¸£à¸²à¸¢à¸‡à¸²à¸™à¸šà¸±à¸™à¸—à¸¶à¸à¸•à¸£à¸§à¸ˆà¸ªà¸­à¸šà¸ªà¸´à¸—à¸˜à¸´à¹Œ', icon: Lock, roles: ['admin', 'auditor', 'dpo'] }
+                  { id: 'dashboard', label: 'หน้าแผงควบคุมหลัก', icon: Layers, roles: ['admin', 'intake', 'dpo', 'approver', 'auditor'] },
+                  { id: 'requests', label: 'รายการคำขอทั้งหมด', icon: List, roles: ['admin', 'intake', 'dpo', 'approver', 'auditor', 'owner'] },
+                  { id: 'kanban', label: 'Kanban บอร์ดสิทธิ์', icon: Layers, roles: ['admin', 'intake', 'dpo', 'approver', 'owner'] },
+                  { id: 'users', label: 'จัดการผู้ใช้และสิทธิ์', icon: UserCheck, roles: ['admin'] },
+                  { id: 'compliance', label: 'Compliance ตั้งค่ากฎหมาย', icon: Scale, roles: ['admin'] },
+                  { id: 'templates', label: 'Template หนังสือราชการ', icon: FileCheck2, roles: ['admin'] },
+                  { id: 'retention', label: 'ทำลายและจัดเก็บข้อมูล', icon: Trash2, roles: ['admin'] },
+                  { id: 'audit', label: 'รายงานบันทึกตรวจสอบสิทธิ์', icon: Lock, roles: ['admin', 'auditor', 'dpo'] }
                 ].map((item) => {
                   const hasAccess = activeUser.role === 'superadmin' || item.roles.includes(activeUser.role);
                   if (!hasAccess) return null;
@@ -4460,11 +4460,11 @@ export default function App() {
               <div className="bg-amber-50 border-2 border-amber-300 rounded-xl p-4 flex gap-3 text-amber-900 text-xs shadow-sm">
                 <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
                 <div>
-                  <span className="font-bold block text-sm mb-1 text-amber-900">à¹à¸ˆà¹‰à¸‡à¹€à¸•à¸·à¸­à¸™à¸„à¸§à¸²à¸¡à¹€à¸ªà¸µà¹ˆà¸¢à¸‡à¸«à¸¥à¸±à¸à¸à¸²à¸£à¸„à¸²à¸™à¸­à¸³à¸™à¸²à¸ˆ (Segregation of Duties - SOD Warning):</span>
+                  <span className="font-bold block text-sm mb-1 text-amber-900">แจ้งเตือนความเสี่ยงหลักการคานอำนาจ (Segregation of Duties - SOD Warning):</span>
                   {activeUser.sodWarnings.map((warn, idx) => (
                     <p key={idx} className="leading-relaxed font-medium">{warn}</p>
                   ))}
-                  <span className="block text-[10px] text-amber-700 mt-1 font-mono">à¸‚à¹‰à¸­à¹à¸™à¸°à¸™à¸³: à¸šà¸±à¸à¸Šà¸µà¸œà¸¹à¹‰à¹ƒà¸Šà¹‰à¸™à¸µà¹‰à¸–à¸·à¸­à¸ªà¸´à¸—à¸˜à¸´à¹Œà¸‹à¹‰à¸³à¸‹à¹‰à¸­à¸™ à¸„à¸§à¸£à¹à¸¢à¸à¸ªà¸´à¸—à¸˜à¸´à¹Œà¹ƒà¸«à¹‰à¹€à¸ˆà¹‰à¸²à¸«à¸™à¹‰à¸²à¸—à¸µà¹ˆà¸­à¸·à¹ˆà¸™à¸¥à¸‡à¸™à¸²à¸¡à¸­à¸™à¸¸à¸¡à¸±à¸•à¸´à¹€à¸žà¸·à¹ˆà¸­à¸„à¸§à¸²à¸¡à¸ªà¸­à¸”à¸„à¸¥à¹‰à¸­à¸‡à¸•à¸²à¸¡à¸¡à¸²à¸•à¸£à¸à¸²à¸™ Audit</span>
+                  <span className="block text-[10px] text-amber-700 mt-1 font-mono">ข้อแนะนำ: บัญชีผู้ใช้นี้ถือสิทธิ์ซ้ำซ้อน ควรแยกสิทธิ์ให้เจ้าหน้าที่อื่นลงนามอนุมัติเพื่อความสอดคล้องตามมาตรฐาน Audit</span>
                 </div>
               </div>
             )}
@@ -4488,15 +4488,15 @@ export default function App() {
                         </span>
                         {activeRequestObj.slaPaused && (
                           <span className="bg-amber-100 text-amber-800 text-[10px] px-2 py-0.5 rounded-full font-bold">
-                            SLA Paused (à¸£à¸­à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸œà¸¹à¹‰à¸¢à¸·à¹ˆà¸™)
+                            SLA Paused (รอข้อมูลผู้ยื่น)
                           </span>
                         )}
                       </div>
                       <div className="flex items-center gap-1.5 text-xs text-slate-600 mt-1 font-medium">
                         <User className="h-3.5 w-3.5 text-brand-600 shrink-0" />
-                        <span>à¸œà¸¹à¹‰à¸¢à¸·à¹ˆà¸™à¸„à¸³à¸‚à¸­: <strong className="text-slate-900 font-bold">{activeRequestObj.requester.firstName} {activeRequestObj.requester.lastName}</strong></span>
+                        <span>ผู้ยื่นคำขอ: <strong className="text-slate-900 font-bold">{activeRequestObj.requester.firstName} {activeRequestObj.requester.lastName}</strong></span>
                         <span className="text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.2 rounded">
-                          ({activeRequestObj.requesterType === 'self' ? 'à¹€à¸ˆà¹‰à¸²à¸‚à¸­à¸‡à¸ªà¸´à¸—à¸˜à¸´à¸¢à¸·à¹ˆà¸™à¹€à¸­à¸‡' : 'à¸œà¸¹à¹‰à¹à¸—à¸™à¸•à¸²à¸¡à¸«à¸™à¸±à¸‡à¸ªà¸·à¸­à¸¡à¸­à¸šà¸­à¸³à¸™à¸²à¸ˆ'})
+                          ({activeRequestObj.requesterType === 'self' ? 'เจ้าของสิทธิยื่นเอง' : 'ผู้แทนตามหนังสือมอบอำนาจ'})
                         </span>
                       </div>
                     </div>
@@ -4505,15 +4505,15 @@ export default function App() {
                   {/* SLA Countdowns (Section 5) */}
                   <div className="flex gap-4 text-xs font-bold text-slate-700">
                     <div className="text-center p-2 bg-slate-50 rounded border border-slate-200 min-w-[100px]">
-                      <span className="block text-[9px] text-slate-400 font-bold uppercase">SLA à¸”à¸³à¹€à¸™à¸´à¸™à¸à¸²à¸£</span>
+                      <span className="block text-[9px] text-slate-400 font-bold uppercase">SLA ดำเนินการ</span>
                       <span className={`text-sm block ${activeRequestObj.slaRemainingDays < 0 ? 'text-rose-600 animate-pulse' : activeRequestObj.slaRemainingDays <= 7 ? 'text-amber-600' : 'text-slate-800'}`}>
-                        {activeRequestObj.slaRemainingDays} à¸§à¸±à¸™
+                        {activeRequestObj.slaRemainingDays} วัน
                       </span>
                     </div>
                     <div className="text-center p-2 bg-slate-50 rounded border border-slate-200 min-w-[100px] flex flex-col justify-between items-center">
-                      <span className="block text-[9px] text-slate-400 font-bold uppercase">à¸‚à¸¢à¸²à¸¢à¸£à¸°à¸¢à¸°à¹€à¸§à¸¥à¸²</span>
+                      <span className="block text-[9px] text-slate-400 font-bold uppercase">ขยายระยะเวลา</span>
                       <span className="text-xs block text-slate-800 font-bold">
-                        {activeRequestObj.slaExtended ? 'à¸‚à¸¢à¸²à¸¢à¹à¸¥à¹‰à¸§ (+30 à¸§à¸±à¸™)' : 'à¸¢à¸±à¸‡à¹„à¸¡à¹ˆà¹€à¸„à¸¢à¸‚à¸¢à¸²à¸¢'}
+                        {activeRequestObj.slaExtended ? 'ขยายแล้ว (+30 วัน)' : 'ยังไม่เคยขยาย'}
                       </span>
                       {!activeRequestObj.slaExtended && ['admin', 'dpo'].includes(activeUser.role) && !['Closed', 'Delivered', 'Withdrawn', 'Destroyed'].includes(activeRequestObj.status) && (
                         <button
@@ -4523,7 +4523,7 @@ export default function App() {
                           }}
                           className="mt-1 bg-amber-500 hover:bg-amber-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded transition"
                         >
-                          à¸‚à¸¢à¸²à¸¢à¹€à¸§à¸¥à¸² +30 à¸§à¸±à¸™
+                          ขยายเวลา +30 วัน
                         </button>
                       )}
                     </div>
@@ -4541,46 +4541,46 @@ export default function App() {
                       <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                         <span className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
                           <User className="h-4 w-4 text-brand-600" />
-                          <span>à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸œà¸¹à¹‰à¸¢à¸·à¹ˆà¸™à¸„à¸³à¸‚à¸­à¹à¸¥à¸°à¹€à¸ˆà¹‰à¸²à¸‚à¸­à¸‡à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸ªà¹ˆà¸§à¸™à¸šà¸¸à¸„à¸„à¸¥ (Data Subject Profile)</span>
+                          <span>ข้อมูลผู้ยื่นคำขอและเจ้าของข้อมูลส่วนบุคคล (Data Subject Profile)</span>
                         </span>
                         <span className="text-[10px] bg-brand-50 text-brand-700 font-bold px-2.5 py-1 rounded-full border border-brand-200">
-                          {activeRequestObj.requesterType === 'self' ? 'ðŸ‘¤ à¸¢à¸·à¹ˆà¸™à¸„à¸³à¸‚à¸­à¸”à¹‰à¸§à¸¢à¸•à¸™à¹€à¸­à¸‡ (Self)' : 'ðŸ‘¥ à¸¢à¸·à¹ˆà¸™à¹à¸—à¸™à¹‚à¸”à¸¢à¸œà¸¹à¹‰à¸£à¸±à¸šà¸¡à¸­à¸šà¸­à¸³à¸™à¸²à¸ˆ (Representative)'}
+                          {activeRequestObj.requesterType === 'self' ? '👤 ยื่นคำขอด้วยตนเอง (Self)' : '👥 ยื่นแทนโดยผู้รับมอบอำนาจ (Representative)'}
                         </span>
                       </div>
 
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
                         <div className="space-y-1 bg-slate-50 p-2.5 rounded-lg border border-slate-100">
-                          <span className="text-slate-400 block font-semibold text-[11px]">à¸Šà¸·à¹ˆà¸­-à¸™à¸²à¸¡à¸ªà¸à¸¸à¸¥ à¸œà¸¹à¹‰à¸¢à¸·à¹ˆà¸™à¸„à¸³à¸‚à¸­:</span>
+                          <span className="text-slate-400 block font-semibold text-[11px]">ชื่อ-นามสกุล ผู้ยื่นคำขอ:</span>
                           <span className="font-bold text-slate-900 text-sm block">
                             {activeRequestObj.requester.firstName} {activeRequestObj.requester.lastName}
                           </span>
                         </div>
 
                         <div className="space-y-1 bg-slate-50 p-2.5 rounded-lg border border-slate-100">
-                          <span className="text-slate-400 block font-semibold text-[11px]">à¹€à¸¥à¸‚à¸šà¸±à¸•à¸£à¸›à¸£à¸°à¸ˆà¸³à¸•à¸±à¸§à¸›à¸£à¸°à¸Šà¸²à¸Šà¸™:</span>
+                          <span className="text-slate-400 block font-semibold text-[11px]">เลขบัตรประจำตัวประชาชน:</span>
                           <span className="font-bold text-slate-800 font-mono text-xs block">
-                            {activeRequestObj.requester.idNumber || 'à¹„à¸¡à¹ˆà¸£à¸°à¸šà¸¸'}
+                            {activeRequestObj.requester.idNumber || 'ไม่ระบุ'}
                           </span>
                         </div>
 
                         <div className="space-y-1 bg-slate-50 p-2.5 rounded-lg border border-slate-100">
-                          <span className="text-slate-400 block font-semibold text-[11px]">à¸­à¸µà¹€à¸¡à¸¥à¸•à¸´à¸”à¸•à¹ˆà¸­ (Email Address):</span>
+                          <span className="text-slate-400 block font-semibold text-[11px]">อีเมลติดต่อ (Email Address):</span>
                           <span className="font-bold text-brand-700 font-mono text-xs block truncate">
-                            {activeRequestObj.requester.email || 'à¹„à¸¡à¹ˆà¸£à¸°à¸šà¸¸'}
+                            {activeRequestObj.requester.email || 'ไม่ระบุ'}
                           </span>
                         </div>
 
                         <div className="space-y-1 bg-slate-50 p-2.5 rounded-lg border border-slate-100">
-                          <span className="text-slate-400 block font-semibold text-[11px]">à¹€à¸šà¸­à¸£à¹Œà¹‚à¸—à¸£à¸¨à¸±à¸žà¸—à¹Œà¸•à¸´à¸”à¸•à¹ˆà¸­:</span>
+                          <span className="text-slate-400 block font-semibold text-[11px]">เบอร์โทรศัพท์ติดต่อ:</span>
                           <span className="font-bold text-slate-800 font-mono text-xs block">
-                            {activeRequestObj.requester.phone || 'à¹„à¸¡à¹ˆà¸£à¸°à¸šà¸¸'}
+                            {activeRequestObj.requester.phone || 'ไม่ระบุ'}
                           </span>
                         </div>
 
                         <div className="md:col-span-2 space-y-1 bg-slate-50 p-2.5 rounded-lg border border-slate-100">
-                          <span className="text-slate-400 block font-semibold text-[11px]">à¸—à¸µà¹ˆà¸­à¸¢à¸¹à¹ˆà¸•à¸´à¸”à¸•à¹ˆà¸­/à¸ˆà¸±à¸”à¸ªà¹ˆà¸‡à¸‚à¹‰à¸­à¸¡à¸¹à¸¥:</span>
+                          <span className="text-slate-400 block font-semibold text-[11px]">ที่อยู่ติดต่อ/จัดส่งข้อมูล:</span>
                           <span className="font-semibold text-slate-800 text-xs block">
-                            {activeRequestObj.requester.address || 'à¹„à¸¡à¹ˆà¸£à¸°à¸šà¸¸à¸—à¸µà¹ˆà¸­à¸¢à¸¹à¹ˆ'}
+                            {activeRequestObj.requester.address || 'ไม่ระบุที่อยู่'}
                           </span>
                         </div>
                       </div>
@@ -4590,16 +4590,16 @@ export default function App() {
                         <div className="mt-3 p-3.5 bg-amber-50/70 border border-amber-200 rounded-xl text-xs space-y-2">
                           <span className="font-bold text-amber-900 block flex items-center gap-1.5 text-xs">
                             <UserCheck className="h-4 w-4 text-amber-700 shrink-0" />
-                            <span>à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸œà¸¹à¹‰à¸£à¸±à¸šà¸¡à¸­à¸šà¸­à¸³à¸™à¸²à¸ˆà¸à¸£à¸°à¸—à¸³à¸à¸²à¸£à¹à¸—à¸™ (Authorized Representative):</span>
+                            <span>ข้อมูลผู้รับมอบอำนาจกระทำการแทน (Authorized Representative):</span>
                           </span>
                           <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-[11px] text-amber-950 pt-1">
-                            <div><span className="text-amber-800 font-semibold">à¸œà¸¹à¹‰à¹à¸—à¸™:</span> <strong>{activeRequestObj.representative.firstName} {activeRequestObj.representative.lastName}</strong></div>
-                            <div><span className="text-amber-800 font-semibold">à¹€à¸¥à¸‚à¸šà¸±à¸•à¸£à¸œà¸¹à¹‰à¹à¸—à¸™:</span> <span className="font-mono font-bold">{activeRequestObj.representative.idNumber}</span></div>
-                            <div><span className="text-amber-800 font-semibold">à¸•à¸´à¸”à¸•à¹ˆà¸­:</span> {activeRequestObj.representative.email} ({activeRequestObj.representative.phone})</div>
+                            <div><span className="text-amber-800 font-semibold">ผู้แทน:</span> <strong>{activeRequestObj.representative.firstName} {activeRequestObj.representative.lastName}</strong></div>
+                            <div><span className="text-amber-800 font-semibold">เลขบัตรผู้แทน:</span> <span className="font-mono font-bold">{activeRequestObj.representative.idNumber}</span></div>
+                            <div><span className="text-amber-800 font-semibold">ติดต่อ:</span> {activeRequestObj.representative.email} ({activeRequestObj.representative.phone})</div>
                             <div className="md:col-span-3 bg-white/80 p-2 rounded border border-amber-200">
-                              <span className="text-amber-800 font-semibold block">à¸‚à¸­à¸šà¹€à¸‚à¸•à¸­à¸³à¸™à¸²à¸ˆà¸à¸£à¸°à¸—à¸³à¸à¸²à¸£à¹à¸—à¸™:</span>
+                              <span className="text-amber-800 font-semibold block">ขอบเขตอำนาจกระทำการแทน:</span>
                               <p className="text-slate-800 font-medium">{activeRequestObj.representative.scopeOfAuthority}</p>
-                              <span className="text-[10px] text-slate-400 block mt-0.5">à¸£à¸°à¸¢à¸°à¹€à¸§à¸¥à¸²à¸«à¸™à¸±à¸‡à¸ªà¸·à¸­à¸¡à¸­à¸šà¸­à¸³à¸™à¸²à¸ˆ: {activeRequestObj.representative.validFrom} à¸–à¸¶à¸‡ {activeRequestObj.representative.validTo}</span>
+                              <span className="text-[10px] text-slate-400 block mt-0.5">ระยะเวลาหนังสือมอบอำนาจ: {activeRequestObj.representative.validFrom} ถึง {activeRequestObj.representative.validTo}</span>
                             </div>
                           </div>
                         </div>
@@ -4608,7 +4608,7 @@ export default function App() {
 
                     {/* General Request Metadata */}
                     <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-4 order-2">
-                      <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider">à¸‚à¸­à¸šà¹€à¸‚à¸•à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸—à¸µà¹ˆà¸£à¹‰à¸­à¸‡à¸‚à¸­ (Request Scope)</span>
+                      <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider">ขอบเขตข้อมูลที่ร้องขอ (Request Scope)</span>
                       
                       <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg text-xs leading-relaxed text-slate-800">
                         {activeRequestObj.requestDetails.description}
@@ -4616,22 +4616,22 @@ export default function App() {
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
                         <div className="space-y-1">
-                          <span className="text-slate-400 block font-semibold">à¹€à¸›à¹‰à¸²à¸«à¸¡à¸²à¸¢à¸£à¸°à¸šà¸šà¸‡à¸²à¸™à¸ªà¸·à¸šà¸„à¹‰à¸™:</span>
+                          <span className="text-slate-400 block font-semibold">เป้าหมายระบบงานสืบค้น:</span>
                           <span className="font-bold text-slate-800">
-                            {activeRequestObj.requestDetails.targetSystems.join(', ') || 'à¸ªà¸·à¸šà¸„à¹‰à¸™à¸—à¸¸à¸à¸£à¸°à¸šà¸šà¸—à¸µà¹ˆà¸šà¸±à¸™à¸—à¸¶à¸à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸šà¸¸à¸„à¸„à¸¥'}
+                            {activeRequestObj.requestDetails.targetSystems.join(', ') || 'สืบค้นทุกระบบที่บันทึกข้อมูลบุคคล'}
                           </span>
                         </div>
                         <div className="space-y-1">
-                          <span className="text-slate-400 block font-semibold">à¸Šà¹ˆà¸§à¸‡à¹€à¸§à¸¥à¸²à¸‚à¹‰à¸­à¸¡à¸¹à¸¥:</span>
+                          <span className="text-slate-400 block font-semibold">ช่วงเวลาข้อมูล:</span>
                           <span className="font-bold text-slate-800">
-                            {activeRequestObj.requestDetails.timeframeStart ? `${convertToThaiDate(activeRequestObj.requestDetails.timeframeStart)} à¸–à¸¶à¸‡ ${convertToThaiDate(activeRequestObj.requestDetails.timeframeEnd)}` : 'à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸—à¸±à¹‰à¸‡à¸«à¸¡à¸”à¸—à¸µà¹ˆà¸¡à¸µà¸›à¸£à¸°à¸§à¸±à¸•à¸´'}
+                            {activeRequestObj.requestDetails.timeframeStart ? `${convertToThaiDate(activeRequestObj.requestDetails.timeframeStart)} ถึง ${convertToThaiDate(activeRequestObj.requestDetails.timeframeEnd)}` : 'ข้อมูลทั้งหมดที่มีประวัติ'}
                           </span>
                         </div>
                       </div>
 
                       {/* Attachments Section */}
                       <div className="space-y-2">
-                        <span className="text-slate-400 text-xs font-semibold block">à¹€à¸­à¸à¸ªà¸²à¸£à¸›à¸£à¸°à¸à¸­à¸šà¸à¸²à¸£à¸¢à¸·à¹ˆà¸™à¸ªà¸´à¸—à¸˜à¸´à¹Œ:</span>
+                        <span className="text-slate-400 text-xs font-semibold block">เอกสารประกอบการยื่นสิทธิ์:</span>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                           {activeRequestObj.attachments.map((att) => (
                             <div key={att.id} className="flex items-center justify-between border border-slate-200 rounded-lg p-2 text-xs bg-white hover:bg-slate-50">
@@ -4656,13 +4656,13 @@ export default function App() {
                                 <button
                                   type="button"
                                   onClick={() => {
-                                    addAuditLog('VIEW_FILE', `à¹€à¸ˆà¹‰à¸²à¸«à¸™à¹‰à¸²à¸—à¸µà¹ˆà¹€à¸›à¸´à¸”à¸”à¸¹à¹€à¸­à¸à¸ªà¸²à¸£à¸›à¸£à¸°à¸à¸­à¸š: ${att.name}`, activeUser, activeRequestObj.id, activeRequestObj.trackingNo);
+                                    addAuditLog('VIEW_FILE', `เจ้าหน้าที่เปิดดูเอกสารประกอบ: ${att.name}`, activeUser, activeRequestObj.id, activeRequestObj.trackingNo);
                                     setPreviewAttachment(att);
                                   }}
                                   className="bg-brand-50 hover:bg-brand-100 text-brand-700 font-bold px-2.5 py-1 rounded transition text-[11px] flex items-center gap-1 border border-brand-200"
                                 >
                                   <Search className="h-3 w-3" />
-                                  <span>à¸”à¸¹à¹„à¸Ÿà¸¥à¹Œà¹€à¸­à¸à¸ªà¸²à¸£</span>
+                                  <span>ดูไฟล์เอกสาร</span>
                                 </button>
                               </div>
                             </div>
@@ -4679,17 +4679,17 @@ export default function App() {
                           <div className="flex flex-wrap justify-between items-center gap-2">
                             <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
                               <UserCheck className="h-4 w-4 text-brand-600" />
-                              <span>à¸à¸²à¸£à¸•à¸£à¸§à¸ˆà¸ªà¸­à¸šà¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¹à¸¥à¸°à¸ªà¸´à¸—à¸˜à¸´à¸¢à¸·à¹ˆà¸™à¹€à¸£à¸·à¹ˆà¸­à¸‡ (Intake Verification & Completeness)</span>
+                              <span>การตรวจสอบข้อมูลและสิทธิยื่นเรื่อง (Intake Verification & Completeness)</span>
                             </span>
-                            <CitizenRequestForm request={activeRequestObj} orgData={organizations?.find((o: any) => o.id === activeRequestObj.orgId) || { nameTh: 'à¸«à¸™à¹ˆà¸§à¸¢à¸‡à¸²à¸™à¸œà¸¹à¹‰à¸£à¸±à¸šà¸„à¸³à¸‚à¸­' }} />
+                            <CitizenRequestForm request={activeRequestObj} orgData={organizations?.find((o: any) => o.id === activeRequestObj.orgId) || { nameTh: 'หน่วยงานผู้รับคำขอ' }} />
                           </div>
 
                         {/* Assurance select */}
                         <div className="flex gap-4 items-center flex-wrap pb-2 border-b border-slate-100">
                           <div className="text-xs">
-                            <span className="block font-semibold text-slate-500">à¸œà¸¥à¸¢à¸·à¸™à¸¢à¸±à¸™à¸•à¸™:</span>
+                            <span className="block font-semibold text-slate-500">ผลยืนยันตน:</span>
                             <span className={`font-bold ${activeRequestObj.identityVerification.status === 'verified' ? 'text-emerald-600' : 'text-amber-600'}`}>
-                              {activeRequestObj.identityVerification.status === 'verified' ? 'à¸œà¹ˆà¸²à¸™à¸à¸²à¸£à¸¢à¸·à¸™à¸¢à¸±à¸™à¹à¸¥à¹‰à¸§' : 'à¸¢à¸±à¸‡à¹„à¸¡à¹ˆà¸œà¹ˆà¸²à¸™/à¸£à¸­à¸à¸²à¸£à¸•à¸£à¸§à¸ˆ'}
+                              {activeRequestObj.identityVerification.status === 'verified' ? 'ผ่านการยืนยันแล้ว' : 'ยังไม่ผ่าน/รอการตรวจ'}
                             </span>
                           </div>
                           
@@ -4700,14 +4700,14 @@ export default function App() {
                                 onClick={() => handleVerifyIdentityQuick(activeRequestObj.id, 'verified', 'medium')}
                                 className="bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold py-1 px-3 rounded transition"
                               >
-                                à¸¢à¸·à¸™à¸¢à¸±à¸™à¸œà¹ˆà¸²à¸™ (Medium Assurance)
+                                ยืนยันผ่าน (Medium Assurance)
                               </button>
                               <button
                                 type="button"
                                 onClick={() => handleVerifyIdentityQuick(activeRequestObj.id, 'verified', 'high')}
                                 className="bg-teal-600 hover:bg-teal-700 text-white text-xs font-semibold py-1 px-3 rounded transition"
                               >
-                                à¸œà¹ˆà¸²à¸™ (High Assurance)
+                                ผ่าน (High Assurance)
                               </button>
                             </div>
                           )}
@@ -4715,17 +4715,17 @@ export default function App() {
 
                         {/* Checklist tools */}
                         <div className="space-y-3">
-                          <span className="block text-xs font-semibold text-slate-600">à¹€à¸Šà¹‡à¸„à¸¥à¸´à¸ªà¸•à¹Œà¸•à¸£à¸§à¸ˆà¹€à¸­à¸à¸ªà¸²à¸£à¸ªà¸´à¸—à¸˜à¸´à¸•à¸²à¸¡à¸›à¸£à¸°à¸à¸²à¸¨ à¸ž.à¸£.à¸š. (Section 3.4)</span>
+                          <span className="block text-xs font-semibold text-slate-600">เช็คลิสต์ตรวจเอกสารสิทธิตามประกาศ พ.ร.บ. (Section 3.4)</span>
                           
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
                             {[
-                              { key: 'name', label: 'à¸Šà¸·à¹ˆà¸­-à¸™à¸²à¸¡à¸ªà¸à¸¸à¸¥à¸„à¸£à¸šà¸–à¹‰à¸§à¸™à¸Šà¸±à¸”à¹€à¸ˆà¸™' },
-                              { key: 'contact', label: 'à¸—à¸µà¹ˆà¸­à¸¢à¸¹à¹ˆ/à¹€à¸šà¸­à¸£à¹Œà¸•à¸´à¸”à¸•à¹ˆà¸­à¸„à¸£à¸šà¸–à¹‰à¸§à¸™' },
-                              { key: 'scope', label: 'à¸£à¸²à¸¢à¸¥à¸°à¹€à¸­à¸µà¸¢à¸”à¸£à¸°à¸šà¸¸à¸•à¸±à¸§à¸•à¸™à¸„à¸£à¸šà¸–à¹‰à¸§à¸™' },
-                              { key: 'identity', label: 'à¸«à¸¥à¸±à¸à¸à¸²à¸™à¹à¸ªà¸”à¸‡à¸•à¸±à¸§à¸•à¸™à¸œà¹ˆà¸²à¸™à¹€à¸à¸“à¸‘à¹Œ' },
-                              { key: 'signature', label: 'à¸¥à¸‡à¸™à¸²à¸¡à¸¥à¸²à¸¢à¸¡à¸·à¸­à¸Šà¸·à¹ˆà¸­à¸­à¸´à¹€à¸¥à¹‡à¸à¸—à¸£à¸­à¸™à¸´à¸à¸ªà¹Œ' },
-                              { key: 'repDocs', label: 'à¸«à¸™à¸±à¸‡à¸ªà¸·à¸­à¸¡à¸­à¸šà¸­à¸³à¸™à¸²à¸ˆà¹à¸¥à¸°à¹€à¸­à¸à¸ªà¸²à¸£à¸›à¸£à¸°à¸à¸­à¸š (à¸–à¹‰à¸²à¸¡à¸µ)' },
-                              { key: 'noticeConsent', label: 'à¸à¸²à¸£à¸£à¸±à¸šà¸—à¸£à¸²à¸šà¹€à¸‡à¸·à¹ˆà¸­à¸™à¹„à¸‚ Privacy Notice' }
+                              { key: 'name', label: 'ชื่อ-นามสกุลครบถ้วนชัดเจน' },
+                              { key: 'contact', label: 'ที่อยู่/เบอร์ติดต่อครบถ้วน' },
+                              { key: 'scope', label: 'รายละเอียดระบุตัวตนครบถ้วน' },
+                              { key: 'identity', label: 'หลักฐานแสดงตัวตนผ่านเกณฑ์' },
+                              { key: 'signature', label: 'ลงนามลายมือชื่ออิเล็กทรอนิกส์' },
+                              { key: 'repDocs', label: 'หนังสือมอบอำนาจและเอกสารประกอบ (ถ้ามี)' },
+                              { key: 'noticeConsent', label: 'การรับทราบเงื่อนไข Privacy Notice' }
                             ].map((item) => (
                               <label
                                 key={item.key}
@@ -4754,28 +4754,28 @@ export default function App() {
                                   <div className="flex items-center justify-between">
                                     <span className="text-xs font-bold text-amber-900 flex items-center gap-1.5">
                                       <AlertTriangle className="h-4 w-4 text-amber-600" />
-                                      <span>à¸£à¸°à¸šà¸¸à¸£à¸²à¸¢à¸¥à¸°à¹€à¸­à¸µà¸¢à¸”à¹€à¸­à¸à¸ªà¸²à¸£à¸«à¸¥à¸±à¸à¸à¸²à¸™à¸—à¸µà¹ˆà¸•à¹‰à¸­à¸‡à¹à¸™à¸šà¹€à¸žà¸´à¹ˆà¸¡à¹€à¸•à¸´à¸¡ (Deficiency Notice)</span>
+                                      <span>ระบุรายละเอียดเอกสารหลักฐานที่ต้องแนบเพิ่มเติม (Deficiency Notice)</span>
                                     </span>
                                     <span className="text-[10px] bg-amber-200 text-amber-900 font-bold px-2 py-0.5 rounded-full">
-                                      à¸«à¸¢à¸¸à¸”à¸™à¸±à¸šà¹€à¸§à¸¥à¸² SLA à¸­à¸±à¸•à¹‚à¸™à¸¡à¸±à¸•à¸´ (Pause SLA)
+                                      หยุดนับเวลา SLA อัตโนมัติ (Pause SLA)
                                     </span>
                                   </div>
 
                                   <div className="space-y-1">
-                                    <label className="block text-[11px] font-semibold text-slate-700">à¸£à¸²à¸¢à¸¥à¸°à¹€à¸­à¸µà¸¢à¸”à¹€à¸­à¸à¸ªà¸²à¸£à¸—à¸µà¹ˆà¸‚à¸²à¸” / à¸‚à¹‰à¸­à¸šà¸à¸žà¸£à¹ˆà¸­à¸‡à¸—à¸µà¹ˆà¸•à¹‰à¸­à¸‡à¹à¸à¹‰à¹„à¸‚:</label>
+                                    <label className="block text-[11px] font-semibold text-slate-700">รายละเอียดเอกสารที่ขาด / ข้อบกพร่องที่ต้องแก้ไข:</label>
                                     <textarea
                                       required
                                       rows={2}
                                       value={incompleteComment}
                                       onChange={(e) => setIncompleteComment(e.target.value)}
-                                      placeholder="à¸•à¸±à¸§à¸­à¸¢à¹ˆà¸²à¸‡: à¹„à¸¡à¹ˆà¸žà¸šà¸à¸²à¸£à¹à¸™à¸šà¸ªà¸³à¹€à¸™à¸²à¸šà¸±à¸•à¸£à¸›à¸£à¸°à¸Šà¸²à¸Šà¸™ à¸à¸£à¸¸à¸“à¸²à¸–à¹ˆà¸²à¸¢à¸£à¸¹à¸›à¸ à¸²à¸žà¸šà¸±à¸•à¸£à¸›à¸£à¸°à¸Šà¸²à¸Šà¸™à¸—à¸µà¹ˆà¸›à¸´à¸”à¸šà¸±à¸‡à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸¨à¸²à¸ªà¸™à¸²à¹à¸¥à¸°à¹à¸™à¸šà¹€à¸žà¸´à¹ˆà¸¡à¹€à¸•à¸´à¸¡..."
+                                      placeholder="ตัวอย่าง: ไม่พบการแนบสำเนาบัตรประชาชน กรุณาถ่ายรูปภาพบัตรประชาชนที่ปิดบังข้อมูลศาสนาและแนบเพิ่มเติม..."
                                       className="w-full text-xs border border-amber-300 rounded-lg p-2.5 bg-white focus:ring-1 focus:ring-amber-500"
                                     />
                                   </div>
 
                                   <div className="flex items-center justify-between gap-4 flex-wrap pt-1">
                                     <div className="text-[11px] text-amber-800 font-medium">
-                                      â±ï¸ à¹ƒà¸«à¹‰à¸£à¸°à¸¢à¸°à¹€à¸§à¸¥à¸²à¸›à¸£à¸°à¸Šà¸²à¸Šà¸™à¹à¸à¹‰à¹„à¸‚: <strong>10 à¸§à¸±à¸™</strong> (à¸«à¸²à¸à¹€à¸à¸´à¸™à¸à¸³à¸«à¸™à¸” à¸„à¸³à¸‚à¸­à¸ˆà¸°à¸–à¸¹à¸à¸¢à¸à¹€à¸¥à¸´à¸à¸­à¸±à¸•à¹‚à¸™à¸¡à¸±à¸•à¸´)
+                                      ⏱️ ให้ระยะเวลาประชาชนแก้ไข: <strong>10 วัน</strong> (หากเกินกำหนด คำขอจะถูกยกเลิกอัตโนมัติ)
                                     </div>
                                     <div className="flex gap-2">
                                       <button
@@ -4783,7 +4783,7 @@ export default function App() {
                                         onClick={() => setShowIncompletePanel(false)}
                                         className="bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold text-xs px-3 py-1.5 rounded-lg transition"
                                       >
-                                        à¸¢à¸à¹€à¸¥à¸´à¸
+                                        ยกเลิก
                                       </button>
                                       <button
                                         type="button"
@@ -4791,7 +4791,7 @@ export default function App() {
                                         className="bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs py-1.5 px-4 rounded-lg transition shadow-sm flex items-center gap-1.5"
                                       >
                                         <AlertTriangle className="h-3.5 w-3.5" />
-                                        <span>à¸ªà¹ˆà¸‡à¹à¸ˆà¹‰à¸‡à¸•à¸µà¸à¸¥à¸±à¸šà¹€à¸­à¸à¸ªà¸²à¸£ (Pause SLA)</span>
+                                        <span>ส่งแจ้งตีกลับเอกสาร (Pause SLA)</span>
                                       </button>
                                     </div>
                                   </div>
@@ -4804,7 +4804,7 @@ export default function App() {
                                     className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-5 rounded-xl text-xs transition shadow-sm flex items-center gap-1.5"
                                   >
                                     <CheckCircle2 className="h-4 w-4" />
-                                    <span>à¹€à¸­à¸à¸ªà¸²à¸£à¸„à¸£à¸šà¸–à¹‰à¸§à¸™à¹à¸¥à¹‰à¸§ (Mark Complete)</span>
+                                    <span>เอกสารครบถ้วนแล้ว (Mark Complete)</span>
                                   </button>
                                   <button
                                     type="button"
@@ -4812,7 +4812,7 @@ export default function App() {
                                     className="bg-amber-500 hover:bg-amber-600 text-white font-bold py-2.5 px-5 rounded-xl text-xs transition shadow-sm flex items-center gap-1.5"
                                   >
                                     <AlertTriangle className="h-4 w-4" />
-                                    <span>à¸•à¸µà¸à¸¥à¸±à¸šà¸‚à¸­à¹€à¸­à¸à¸ªà¸²à¸£à¹€à¸žà¸´à¹ˆà¸¡ (Pause SLA)</span>
+                                    <span>ตีกลับขอเอกสารเพิ่ม (Pause SLA)</span>
                                   </button>
                                 </>
                               )}
@@ -4831,14 +4831,14 @@ export default function App() {
                           <div>
                             <span className="block font-bold text-sm text-white flex items-center gap-2">
                               <MessageSquare className="h-4 w-4 text-brand-400" />
-                              <span>à¸Šà¹ˆà¸­à¸‡à¸—à¸²à¸‡à¸•à¸´à¸”à¸•à¹ˆà¸­à¹à¸¥à¸°à¸ªà¹ˆà¸‡à¸‚à¹‰à¸­à¸„à¸§à¸²à¸¡à¸«à¸²à¸›à¸£à¸°à¸Šà¸²à¸Šà¸™à¹‚à¸”à¸¢à¸•à¸£à¸‡ (Direct Message Board)</span>
+                              <span>ช่องทางติดต่อและส่งข้อความหาประชาชนโดยตรง (Direct Message Board)</span>
                             </span>
                             <span className="text-[10px] text-slate-300">
-                              à¸à¸£à¸°à¸”à¸²à¸™à¸‚à¹‰à¸­à¸„à¸§à¸²à¸¡à¸ªà¸™à¸—à¸™à¸²à¹‚à¸•à¹‰à¸•à¸­à¸šà¹à¸šà¸šà¸šà¸±à¸™à¸—à¸¶à¸à¸›à¸£à¸°à¸§à¸±à¸•à¸´à¸à¸±à¸šà¸œà¸¹à¹‰à¸¢à¸·à¹ˆà¸™à¸„à¸³à¸‚à¸­ ({activeRequestObj.requester.firstName} {activeRequestObj.requester.lastName})
+                              กระดานข้อความสนทนาโต้ตอบแบบบันทึกประวัติกับผู้ยื่นคำขอ ({activeRequestObj.requester.firstName} {activeRequestObj.requester.lastName})
                             </span>
                           </div>
                           <span className="text-[10px] bg-emerald-500/20 text-emerald-300 font-bold px-2.5 py-1 rounded-full border border-emerald-500/30">
-                            â— à¸ªà¸·à¹ˆà¸­à¸ªà¸²à¸£à¸•à¸£à¸‡
+                            ● สื่อสารตรง
                           </span>
                         </div>
                         
@@ -4846,7 +4846,7 @@ export default function App() {
                         <div className="flex-1 p-4 overflow-y-auto space-y-3 bg-slate-50">
                           {activeRequestObj.messageThread.length === 0 ? (
                             <div className="text-center py-12 text-slate-400 text-xs font-medium">
-                              à¸¢à¸±à¸‡à¹„à¸¡à¹ˆà¸¡à¸µà¸›à¸£à¸°à¸§à¸±à¸•à¸´à¸à¸²à¸£à¸ªà¹ˆà¸‡à¸‚à¹‰à¸­à¸„à¸§à¸²à¸¡ à¸ªà¸²à¸¡à¸²à¸£à¸–à¸žà¸´à¸¡à¸žà¹Œà¸‚à¹‰à¸­à¸„à¸§à¸²à¸¡à¹à¸™à¸°à¸™à¸³à¸ªà¹ˆà¸‡à¸–à¸¶à¸‡à¸›à¸£à¸°à¸Šà¸²à¸Šà¸™à¹„à¸”à¹‰à¸ˆà¸²à¸à¸Šà¹ˆà¸­à¸‡à¸”à¹‰à¸²à¸™à¸¥à¹ˆà¸²à¸‡
+                              ยังไม่มีประวัติการส่งข้อความ สามารถพิมพ์ข้อความแนะนำส่งถึงประชาชนได้จากช่องด้านล่าง
                             </div>
                           ) : (
                             activeRequestObj.messageThread.map((msg) => (
@@ -4859,7 +4859,7 @@ export default function App() {
                                 }`}
                               >
                                 <span className={`font-bold text-[10px] mb-1 ${msg.sender === 'staff' ? 'text-brand-100' : 'text-brand-700'}`}>
-                                  {msg.senderName} {msg.sender === 'staff' ? '(à¹€à¸ˆà¹‰à¸²à¸«à¸™à¹‰à¸²à¸—à¸µà¹ˆ)' : '(à¸œà¸¹à¹‰à¸¢à¸·à¹ˆà¸™à¸„à¸³à¸‚à¸­)'}
+                                  {msg.senderName} {msg.sender === 'staff' ? '(เจ้าหน้าที่)' : '(ผู้ยื่นคำขอ)'}
                                 </span>
                                 <p className="leading-relaxed font-medium">{msg.message}</p>
                                 <span className={`text-[9px] text-right mt-1.5 ${msg.sender === 'staff' ? 'text-brand-200' : 'text-slate-400'}`}>
@@ -4877,7 +4877,7 @@ export default function App() {
                           <input
                             type="text"
                             required
-                            placeholder="à¸žà¸´à¸¡à¸žà¹Œà¸‚à¹‰à¸­à¸„à¸§à¸²à¸¡à¸ªà¸·à¹ˆà¸­à¸ªà¸²à¸£à¸•à¸­à¸šà¸à¸¥à¸±à¸šà¸ªà¹ˆà¸‡à¸–à¸¶à¸‡à¸›à¸£à¸°à¸Šà¸²à¸Šà¸™à¸œà¸¹à¹‰à¸¢à¸·à¹ˆà¸™à¸„à¸³à¸‚à¸­à¸—à¸µà¹ˆà¸™à¸µà¹ˆ..."
+                            placeholder="พิมพ์ข้อความสื่อสารตอบกลับส่งถึงประชาชนผู้ยื่นคำขอที่นี่..."
                             value={chatMessage}
                             onChange={(e) => setChatMessage(e.target.value)}
                             className="flex-1 text-xs border border-slate-300 rounded-xl px-3.5 py-2.5 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500"
@@ -4887,7 +4887,7 @@ export default function App() {
                             className="bg-brand-600 hover:bg-brand-700 text-white font-bold px-4 py-2.5 rounded-xl transition flex items-center gap-1.5 text-xs shadow-sm"
                           >
                             <Send className="h-4 w-4" />
-                            <span>à¸ªà¹ˆà¸‡à¸‚à¹‰à¸­à¸„à¸§à¸²à¸¡</span>
+                            <span>ส่งข้อความ</span>
                           </button>
                         </form>
                       </div>
@@ -4896,13 +4896,13 @@ export default function App() {
                     {/* Close Request and Delivery management */}
                     {['intake', 'admin'].includes(activeUser.role) && activeRequestObj.status === 'Ready for Delivery' && (
                       <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-4 order-last">
-                        <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider">à¸ˆà¸±à¸”à¸ªà¹ˆà¸‡à¸ªà¸³à¹€à¸™à¸²à¹à¸¥à¸°à¸›à¸´à¸”à¹€à¸£à¸·à¹ˆà¸­à¸‡ (Delivery & Archive)</span>
-                        <p className="text-xs text-slate-500">à¸•à¸£à¸§à¸ˆà¸ªà¸­à¸šà¸ªà¸–à¸²à¸™à¸°à¸Šà¸³à¸£à¸°à¸„à¹ˆà¸²à¸˜à¸£à¸£à¸¡à¹€à¸™à¸µà¸¢à¸¡ (à¸–à¹‰à¸²à¸¡à¸µ) à¹€à¸£à¸µà¸¢à¸šà¸£à¹‰à¸­à¸¢à¹à¸¥à¹‰à¸§ à¸à¸”à¸›à¸¸à¹ˆà¸¡à¹€à¸žà¸·à¹ˆà¸­à¸šà¸±à¸™à¸—à¸¶à¸à¸à¸²à¸£à¸ªà¹ˆà¸‡à¸¡à¸­à¸šà¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸›à¸¥à¸­à¸”à¸ à¸±à¸¢</p>
+                        <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider">จัดส่งสำเนาและปิดเรื่อง (Delivery & Archive)</span>
+                        <p className="text-xs text-slate-500">ตรวจสอบสถานะชำระค่าธรรมเนียม (ถ้ามี) เรียบร้อยแล้ว กดปุ่มเพื่อบันทึกการส่งมอบข้อมูลปลอดภัย</p>
                         
                         <button
                           onClick={() => {
-                            showNotify('à¸¢à¸·à¸™à¸¢à¸±à¸™à¸à¸²à¸£à¸ˆà¸±à¸”à¸ªà¹ˆà¸‡à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¹ƒà¸«à¹‰à¹€à¸ˆà¹‰à¸²à¸‚à¸­à¸‡à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¹à¸¥à¸°à¸›à¸´à¸”à¹€à¸£à¸·à¹ˆà¸­à¸‡à¸„à¸³à¸‚à¸­à¸™à¸µà¹‰?', 'confirm', 'à¸¢à¸·à¸™à¸¢à¸±à¸™à¸à¸²à¸£à¸ˆà¸±à¸”à¸ªà¹ˆà¸‡à¹à¸¥à¸°à¸›à¸´à¸”à¹€à¸£à¸·à¹ˆà¸­à¸‡', async () => {
-                              await changeRequestStatus(getRequestClone(activeRequestObj.id), 'Closed', activeUser, 'à¸ˆà¸±à¸”à¸ªà¹ˆà¸‡à¸¡à¸­à¸šà¸¥à¸´à¸‡à¸à¹Œà¸”à¸²à¸§à¸™à¹Œà¹‚à¸«à¸¥à¸”à¸­à¸¢à¹ˆà¸²à¸‡à¸›à¸¥à¸­à¸”à¸ à¸±à¸¢à¹à¸¥à¸°à¸›à¸´à¸”à¹€à¸£à¸·à¹ˆà¸­à¸‡à¸ªà¸³à¹€à¸£à¹‡à¸ˆ', config || undefined);
+                            showNotify('ยืนยันการจัดส่งข้อมูลให้เจ้าของข้อมูลและปิดเรื่องคำขอนี้?', 'confirm', 'ยืนยันการจัดส่งและปิดเรื่อง', async () => {
+                              await changeRequestStatus(getRequestClone(activeRequestObj.id), 'Closed', activeUser, 'จัดส่งมอบลิงก์ดาวน์โหลดอย่างปลอดภัยและปิดเรื่องสำเร็จ', config || undefined);
                               reloadData();
                               setSelectedRequestId(null);
                             });
@@ -4910,7 +4910,7 @@ export default function App() {
                           className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm px-4 py-3 rounded-xl transition flex items-center justify-center gap-2"
                         >
                           <CheckCircle2 className="h-5 w-5" />
-                          <span>à¸šà¸±à¸™à¸—à¸¶à¸à¸à¸²à¸£à¸ˆà¸±à¸”à¸ªà¹ˆà¸‡à¹à¸¥à¸°à¸›à¸´à¸”à¹€à¸£à¸·à¹ˆà¸­à¸‡à¸„à¸³à¸‚à¸­ (Close Request)</span>
+                          <span>บันทึกการจัดส่งและปิดเรื่องคำขอ (Close Request)</span>
                         </button>
                       </div>
                     )}
@@ -4920,40 +4920,40 @@ export default function App() {
                       <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-4 order-4">
                         <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
                           <Search className="h-4 w-4 text-brand-600" />
-                          <span>à¸‡à¸²à¸™à¸„à¹‰à¸™à¸«à¸²à¹à¸¥à¸°à¸ªà¸·à¸šà¸„à¹‰à¸™à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸£à¸°à¸šà¸šà¸ à¸²à¸¢à¹ƒà¸™ (Data Discovery & Gathering)</span>
+                          <span>งานค้นหาและสืบค้นข้อมูลระบบภายใน (Data Discovery & Gathering)</span>
                         </span>
 
                         {/* Task assigner form for admin/DPO/owner */}
                         {['admin', 'intake', 'dpo', 'owner'].includes(activeUser.role) && ['Documents Verified', 'Assigned', 'Data Collection'].includes(activeRequestObj.status) && (
                           <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 space-y-3">
-                            <span className="block font-bold text-slate-700 text-xs">à¸ªà¸£à¹‰à¸²à¸‡à¸‡à¸²à¸™à¸„à¹‰à¸™à¸«à¸²à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸£à¸°à¸šà¸šà¹ƒà¸«à¸¡à¹ˆ</span>
+                            <span className="block font-bold text-slate-700 text-xs">สร้างงานค้นหาข้อมูลระบบใหม่</span>
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-2 items-end">
                               <div className="space-y-1">
-                                <label className="text-[10px] text-slate-500 font-bold block">à¹€à¸¥à¸·à¸­à¸à¸à¸²à¸™à¸‚à¹‰à¸­à¸¡à¸¹à¸¥:</label>
+                                <label className="text-[10px] text-slate-500 font-bold block">เลือกฐานข้อมูล:</label>
                                 <select
                                   value={selectedTaskSystem}
                                   onChange={(e) => setSelectedTaskSystem(e.target.value)}
                                   className="w-full text-xs border border-slate-300 rounded p-1.5 bg-white"
                                 >
-                                  <option value="">-- à¹‚à¸›à¸£à¸”à¹€à¸¥à¸·à¸­à¸à¸£à¸°à¸šà¸š --</option>
+                                  <option value="">-- โปรดเลือกระบบ --</option>
                                   {activeRequestObj.requestDetails.targetSystems && activeRequestObj.requestDetails.targetSystems.length > 0 ? (
                                     activeRequestObj.requestDetails.targetSystems.map((sys, idx) => (
                                       <option key={idx} value={sys}>{sys}</option>
                                     ))
                                   ) : (
-                                    <option value="à¸ªà¸·à¸šà¸„à¹‰à¸™à¸—à¸¸à¸à¸£à¸°à¸šà¸šà¸—à¸µà¹ˆà¸šà¸±à¸™à¸—à¸¶à¸à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸šà¸¸à¸„à¸„à¸¥">à¸ªà¸·à¸šà¸„à¹‰à¸™à¸—à¸¸à¸à¸£à¸°à¸šà¸šà¸—à¸µà¹ˆà¸šà¸±à¸™à¸—à¸¶à¸à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸šà¸¸à¸„à¸„à¸¥</option>
+                                    <option value="สืบค้นทุกระบบที่บันทึกข้อมูลบุคคล">สืบค้นทุกระบบที่บันทึกข้อมูลบุคคล</option>
                                   )}
                                 </select>
                               </div>
                               
                               <div className="space-y-1">
-                                <label className="text-[10px] text-slate-500 font-bold block">à¸œà¸¹à¹‰à¸£à¸±à¸šà¸œà¸´à¸”à¸Šà¸­à¸šà¸‡à¸²à¸™:</label>
+                                <label className="text-[10px] text-slate-500 font-bold block">ผู้รับผิดชอบงาน:</label>
                                 <select
                                   value={taskAssignee}
                                   onChange={(e) => setTaskAssignee(e.target.value)}
                                   className="w-full text-xs border border-slate-300 rounded p-1.5 bg-white"
                                 >
-                                  <option value="">-- à¹€à¸¥à¸·à¸­à¸à¸œà¸¹à¹‰à¸£à¸±à¸šà¸œà¸´à¸”à¸Šà¸­à¸š --</option>
+                                  <option value="">-- เลือกผู้รับผิดชอบ --</option>
                                   {backendUsers
                                     .filter(u => u.orgId === currentViewOrgId)
                                     .map(u => (
@@ -4971,7 +4971,7 @@ export default function App() {
                                 }`}
                               >
                                 <Plus className="h-3.5 w-3.5" />
-                                <span>à¸¡à¸­à¸šà¸«à¸¡à¸²à¸¢à¸ªà¸·à¸šà¸„à¹‰à¸™</span>
+                                <span>มอบหมายสืบค้น</span>
                               </button>
                             </div>
                           </div>
@@ -4979,10 +4979,10 @@ export default function App() {
 
                         {/* Discovery Tasks list */}
                         <div className="space-y-3 pt-2">
-                          <span className="block text-xs font-semibold text-slate-600">à¸£à¸²à¸¢à¸à¸²à¸£à¸ à¸²à¸£à¸à¸´à¸ˆà¸—à¸µà¹ˆà¸à¸³à¸¥à¸±à¸‡à¸„à¹‰à¸™à¸«à¸²:</span>
+                          <span className="block text-xs font-semibold text-slate-600">รายการภารกิจที่กำลังค้นหา:</span>
                           {activeRequestObj.dataCollectionTasks.length === 0 ? (
                             <div className="text-center py-6 text-slate-400 text-xs border border-dashed border-slate-200 rounded-lg">
-                              à¸¢à¸±à¸‡à¹„à¸¡à¹ˆà¹„à¸”à¹‰à¸¡à¸­à¸šà¸«à¸¡à¸²à¸¢à¸ à¸²à¸£à¸à¸´à¸ˆà¸£à¸°à¸šà¸šà¸ªà¸·à¸šà¸„à¹‰à¸™à¹ƒà¸™à¸„à¸³à¸£à¹‰à¸­à¸‡à¸™à¸µà¹‰
+                              ยังไม่ได้มอบหมายภารกิจระบบสืบค้นในคำร้องนี้
                             </div>
                           ) : (
                             <div className="space-y-3">
@@ -4992,14 +4992,14 @@ export default function App() {
                                     <div className="flex flex-col gap-0.5 max-w-[200px]">
                                       <span className="font-bold text-slate-800">{t.systemName}</span>
                                       <span className="text-[10px] text-slate-400 block flex items-center gap-1">
-                                        à¸œà¸¹à¹‰à¸£à¸±à¸šà¸œà¸´à¸”à¸Šà¸­à¸š: {t.assignee}
+                                        ผู้รับผิดชอบ: {t.assignee}
                                         {['admin', 'dpo', 'owner'].includes(activeUser.role) && activeRequestObj.status === 'Data Collection' && (
                                           <button
                                             type="button"
                                             onClick={() => handleUnassignTask(activeRequestObj.id, t.id)}
                                             className="text-rose-500 hover:text-rose-700 underline text-[9px]"
                                           >
-                                            (à¸¢à¸à¹€à¸¥à¸´à¸à¸à¸²à¸£à¸¡à¸­à¸šà¸«à¸¡à¸²à¸¢)
+                                            (ยกเลิกการมอบหมาย)
                                           </button>
                                         )}
                                       </span>
@@ -5010,12 +5010,12 @@ export default function App() {
                                       t.status === 'in_progress' ? 'bg-amber-100 text-amber-800 animate-pulse' :
                                       'bg-slate-100 text-slate-500'
                                     }`}>
-                                      {t.status === 'found' ? 'à¸žà¸šà¸‚à¹‰à¸­à¸¡à¸¹à¸¥' : t.status === 'not_found' ? 'à¹„à¸¡à¹ˆà¸žà¸šà¸‚à¹‰à¸­à¸¡à¸¹à¸¥' : t.status === 'in_progress' ? 'à¸à¸³à¸¥à¸±à¸‡à¸ªà¸·à¸šà¸„à¹‰à¸™' : 'à¸£à¸­à¸à¸²à¸£à¸”à¸³à¹€à¸™à¸´à¸™à¸‡à¸²à¸™'}
+                                      {t.status === 'found' ? 'พบข้อมูล' : t.status === 'not_found' ? 'ไม่พบข้อมูล' : t.status === 'in_progress' ? 'กำลังสืบค้น' : 'รอการดำเนินงาน'}
                                     </span>
                                   </div>
 
                                   <div className="text-[10px] text-slate-500 bg-slate-50 p-1.5 rounded font-mono break-all">
-                                    à¸„à¸³à¸ªà¸·à¸šà¸„à¹‰à¸™: {t.queryUsed}
+                                    คำสืบค้น: {t.queryUsed}
                                   </div>
 
                                   {/* Lineage documentation (Section 3.5) */}
@@ -5030,7 +5030,7 @@ export default function App() {
                                     <div className="mt-2 mb-2 flex items-center justify-between bg-slate-50 p-2 rounded border border-slate-200">
                                       <div className="text-[10px] text-slate-500 flex items-center gap-1.5">
                                         <Plus className="h-3 w-3 text-emerald-600" />
-                                        <span>à¹à¸™à¸šà¹„à¸Ÿà¸¥à¹Œà¹€à¸­à¸à¸ªà¸²à¸£à¸ªà¸³à¸«à¸£à¸±à¸šà¸‡à¸²à¸™à¸ªà¸·à¸šà¸„à¹‰à¸™à¸™à¸µà¹‰ (PDF)</span>
+                                        <span>แนบไฟล์เอกสารสำหรับงานสืบค้นนี้ (PDF)</span>
                                       </div>
                                       <div className="flex items-center gap-2">
                                         {t.status === 'pending' && (
@@ -5039,7 +5039,7 @@ export default function App() {
                                             onClick={() => handleMarkTaskNotFound(activeRequestObj.id, t.id)}
                                             className="bg-rose-100 hover:bg-rose-200 text-rose-700 text-[10px] font-bold py-1 px-3 rounded shadow-sm transition cursor-pointer"
                                           >
-                                            à¹à¸ˆà¹‰à¸‡à¹„à¸¡à¹ˆà¸žà¸šà¸‚à¹‰à¸­à¸¡à¸¹à¸¥
+                                            แจ้งไม่พบข้อมูล
                                           </button>
                                         )}
                                         <button
@@ -5047,7 +5047,7 @@ export default function App() {
                                           onClick={() => document.getElementById(`upload-task-${t.id}`)?.click()}
                                           className="bg-slate-700 hover:bg-slate-800 text-white text-[10px] font-bold py-1 px-3 rounded shadow-sm transition cursor-pointer"
                                         >
-                                          à¸­à¸±à¸›à¹‚à¸«à¸¥à¸”à¹€à¸­à¸à¸ªà¸²à¸£
+                                          อัปโหลดเอกสาร
                                         </button>
                                       </div>
                                       <input 
@@ -5080,7 +5080,7 @@ export default function App() {
                                                 onClick={() => handleTaskFileReview(activeRequestObj.id, t.id, f)}
                                                 className="bg-white border border-blue-300 text-blue-700 text-[9px] font-bold py-0.5 px-2 rounded hover:bg-blue-100 transition"
                                               >
-                                                à¸”à¸¹à¹€à¸­à¸à¸ªà¸²à¸£
+                                                ดูเอกสาร
                                               </button>
                                             )}
                                             {(!f.isDeleted && (activeUser.role === 'owner' || activeUser.role === 'admin') && activeRequestObj.status === 'Data Collection') && (
@@ -5088,7 +5088,7 @@ export default function App() {
                                                 type="button"
                                                 onClick={() => handleTaskFileDelete(activeRequestObj.id, t.id, f.id)}
                                                 className="bg-white border border-rose-300 text-rose-600 p-0.5 rounded hover:bg-rose-50 transition"
-                                                title="à¸¥à¸šà¹„à¸Ÿà¸¥à¹Œà¸™à¸µà¹‰"
+                                                title="ลบไฟล์นี้"
                                               >
                                                 <Trash2 className="h-3 w-3" />
                                               </button>
@@ -5110,7 +5110,7 @@ export default function App() {
                                       onClick={() => handleOwnerCompleteFlow(activeRequestObj.id)}
                                       className="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold py-2.5 px-4 rounded-lg shadow-sm transition"
                                     >
-                                      à¸ªà¹ˆà¸‡à¹€à¸£à¸·à¹ˆà¸­à¸‡à¹„à¸›à¸¢à¸±à¸‡ Flow à¸•à¹ˆà¸­à¹„à¸›
+                                      ส่งเรื่องไปยัง Flow ต่อไป
                                     </button>
                                   ) : (
                                     <button
@@ -5118,7 +5118,7 @@ export default function App() {
                                       onClick={() => handleOwnerEscalateFlow(activeRequestObj.id)}
                                       className="w-full bg-rose-600 hover:bg-rose-700 text-white text-sm font-bold py-2.5 px-4 rounded-lg shadow-sm transition"
                                     >
-                                      à¹à¸ˆà¹‰à¸‡à¸§à¹ˆà¸²à¹„à¸¡à¹ˆà¸žà¸šà¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¹à¸¥à¸°à¸ªà¹ˆà¸‡à¹€à¸£à¸·à¹ˆà¸­à¸‡à¹„à¸›à¸¢à¸±à¸‡à¸œà¸¹à¹‰à¸šà¸£à¸´à¸«à¸²à¸£
+                                      แจ้งว่าไม่พบข้อมูลและส่งเรื่องไปยังผู้บริหาร
                                     </button>
                                   )}
                                 </div>
@@ -5150,7 +5150,7 @@ export default function App() {
                       <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-4">
                         <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
                           <DollarSign className="h-4.5 w-4.5 text-brand-600" />
-                          <span>à¸à¸²à¸£à¸ˆà¸±à¸”à¸à¸²à¸£à¸„à¹ˆà¸²à¸˜à¸£à¸£à¸¡à¹€à¸™à¸µà¸¢à¸¡à¸ªà¸´à¸—à¸˜à¸´ (Fee Management)</span>
+                          <span>การจัดการค่าธรรมเนียมสิทธิ (Fee Management)</span>
                         </span>
 
                         <form onSubmit={(e) => handleFeeSubmit(e, activeRequestObj.id)} className="space-y-3">
@@ -5161,13 +5161,13 @@ export default function App() {
                               onChange={(e) => setFeeForm({ ...feeForm, noFee: e.target.checked })}
                               className="rounded text-brand-600 focus:ring-brand-500"
                             />
-                            <span>à¸‚à¸­à¸¢à¸à¹€à¸§à¹‰à¸™à¸„à¹ˆà¸²à¸˜à¸£à¸£à¸¡à¹€à¸™à¸µà¸¢à¸¡à¹ƒà¸«à¹‰à¸„à¸³à¸‚à¸­à¸£à¹‰à¸­à¸‡à¸™à¸µà¹‰</span>
+                            <span>ขอยกเว้นค่าธรรมเนียมให้คำขอร้องนี้</span>
                           </label>
 
                           {!feeForm.noFee && (
                             <div className="space-y-2.5 pt-1 border-t border-slate-100 text-xs">
                               <div className="flex justify-between items-center">
-                                <span>à¸„à¸±à¸”à¸ªà¸³à¹€à¸™à¸²à¸à¸£à¸°à¸”à¸²à¸© A4 (à¹à¸œà¹ˆà¸™à¸¥à¸° {config?.feeRates.paperCopyRate} à¸š.):</span>
+                                <span>คัดสำเนากระดาษ A4 (แผ่นละ {config?.feeRates.paperCopyRate} บ.):</span>
                                 <input
                                   type="number"
                                   min={0}
@@ -5178,7 +5178,7 @@ export default function App() {
                               </div>
                               
                               <div className="flex justify-between items-center">
-                                <span>à¸ªà¸±à¹ˆà¸‡à¸žà¸´à¸¡à¸žà¹Œà¸„à¸­à¸¡à¸žà¸´à¸§à¹€à¸•à¸­à¸£à¹Œ A4 (à¹à¸œà¹ˆà¸™à¸¥à¸° {config?.feeRates.computerPrintRate} à¸š.):</span>
+                                <span>สั่งพิมพ์คอมพิวเตอร์ A4 (แผ่นละ {config?.feeRates.computerPrintRate} บ.):</span>
                                 <input
                                   type="number"
                                   min={0}
@@ -5189,7 +5189,7 @@ export default function App() {
                               </div>
 
                               <div className="flex justify-between items-center">
-                                <span>à¸£à¸±à¸šà¸£à¸­à¸‡à¸ªà¸³à¹€à¸™à¸²à¸–à¸¹à¸à¸•à¹‰à¸­à¸‡ (à¸Šà¸¸à¸”à¸¥à¸° {config?.feeRates.certificationRate} à¸š.):</span>
+                                <span>รับรองสำเนาถูกต้อง (ชุดละ {config?.feeRates.certificationRate} บ.):</span>
                                 <input
                                   type="number"
                                   min={0}
@@ -5202,14 +5202,14 @@ export default function App() {
                               <div className="grid grid-cols-2 gap-2 pt-1 border-t border-slate-100">
                                 <input
                                   type="text"
-                                  placeholder="à¸„à¹ˆà¸²à¸ªà¹ˆà¸‡ / à¸„à¹ˆà¸²à¹à¸£à¸‡à¸žà¸´à¹€à¸¨à¸©"
+                                  placeholder="ค่าส่ง / ค่าแรงพิเศษ"
                                   value={feeForm.otherItem}
                                   onChange={(e) => setFeeForm({ ...feeForm, otherItem: e.target.value })}
                                   className="border rounded p-1 text-xs"
                                 />
                                 <input
                                   type="number"
-                                  placeholder="à¸šà¸²à¸—"
+                                  placeholder="บาท"
                                   value={feeForm.otherCost || ''}
                                   onChange={(e) => setFeeForm({ ...feeForm, otherCost: parseInt(e.target.value) || 0 })}
                                   className="border rounded p-1 text-xs text-center"
@@ -5219,14 +5219,14 @@ export default function App() {
                           )}
 
                           <div className="flex justify-between items-center pt-2 font-bold text-xs text-slate-800">
-                            <span>à¸„à¸³à¸™à¸§à¸“à¸£à¸²à¸„à¸²à¸ªà¸¸à¸—à¸˜à¸´:</span>
+                            <span>คำนวณราคาสุทธิ:</span>
                             <span className="text-sm text-brand-600">
                               {feeForm.noFee ? 0 : (
                                 feeForm.paperPages * (config?.feeRates.paperCopyRate || 1.0) +
                                 feeForm.computerPages * (config?.feeRates.computerPrintRate || 3.0) +
                                 feeForm.certifications * (config?.feeRates.certificationRate || 5.0) +
                                 feeForm.otherCost
-                              )} à¸šà¸²à¸—
+                              )} บาท
                             </span>
                           </div>
 
@@ -5238,7 +5238,7 @@ export default function App() {
                                 : 'bg-brand-600 hover:bg-brand-700 text-white'
                             }`}
                           >
-                            {activeRequestObj.feeCalculation?.isApproved ? 'âœ“ à¸›à¸£à¸°à¹€à¸¡à¸´à¸™à¸£à¸²à¸„à¸²à¹€à¸£à¸µà¸¢à¸šà¸£à¹‰à¸­à¸¢ (à¸šà¸±à¸™à¸—à¸¶à¸à¹ƒà¸«à¸¡à¹ˆ)' : 'à¸šà¸±à¸™à¸—à¸¶à¸à¸à¸²à¸£à¸›à¸£à¸°à¹€à¸¡à¸´à¸™à¸£à¸²à¸„à¸²'}
+                            {activeRequestObj.feeCalculation?.isApproved ? '✓ ประเมินราคาเรียบร้อย (บันทึกใหม่)' : 'บันทึกการประเมินราคา'}
                           </button>
                         </form>
 
@@ -5246,9 +5246,9 @@ export default function App() {
                         {activeRequestObj.feeCalculation.totalCalculated > 0 && (
                           <div className="pt-3 border-t border-slate-100 space-y-2 text-xs">
                             <div className="flex justify-between text-xs text-slate-600">
-                              <span>à¸ªà¸–à¸²à¸™à¸°à¸Šà¸³à¸£à¸°à¹€à¸‡à¸´à¸™:</span>
+                              <span>สถานะชำระเงิน:</span>
                               <span className={`font-bold ${activeRequestObj.feeCalculation.paymentStatus === 'paid' ? 'text-emerald-600' : 'text-amber-600 animate-pulse'}`}>
-                                {activeRequestObj.feeCalculation.paymentStatus === 'paid' ? 'à¸Šà¸³à¸£à¸°à¹à¸¥à¸°à¸­à¸­à¸à¸šà¸´à¸¥à¹à¸¥à¹‰à¸§' : 'à¸£à¸­à¸¢à¸·à¸™à¸¢à¸±à¸™à¸à¸²à¸£à¹‚à¸­à¸™'}
+                                {activeRequestObj.feeCalculation.paymentStatus === 'paid' ? 'ชำระและออกบิลแล้ว' : 'รอยืนยันการโอน'}
                               </span>
                             </div>
                             
@@ -5258,14 +5258,14 @@ export default function App() {
                                 onClick={() => handleMarkAsPaid(activeRequestObj.id)}
                                 className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-1.5 rounded text-xs font-semibold transition"
                               >
-                                âœ“ à¸¢à¸·à¸™à¸¢à¸±à¸™à¸ªà¸¥à¸´à¸›à¹‚à¸­à¸™à¹€à¸‡à¸´à¸™ (Mark Paid)
+                                ✓ ยืนยันสลิปโอนเงิน (Mark Paid)
                               </button>
                             )}
                           </div>
                         )}
                       </div>
                     )}
-                    {/* Module D.5: à¸•à¸±à¸§à¸­à¸¢à¹ˆà¸²à¸‡à¹€à¸­à¸à¸ªà¸²à¸£à¸ªà¹ˆà¸‡à¸­à¸­à¸ (Final Delivery Preview) */}
+                    {/* Module D.5: ตัวอย่างเอกสารส่งออก (Final Delivery Preview) */}
                     {['dpo', 'admin', 'approver'].includes(activeUser.role) && (
                       <div className="bg-gradient-to-r from-slate-50 to-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-4 text-center">
                         <div className="flex flex-col items-center justify-center gap-2">
@@ -5273,14 +5273,14 @@ export default function App() {
                             <FileCheck2 className="h-6 w-6" />
                           </div>
                           <span className="block text-sm font-bold text-slate-700">
-                            {['Ready for Delivery', 'Delivered', 'Closed'].includes(activeRequestObj.status) ? 'à¹€à¸­à¸à¸ªà¸²à¸£à¸ªà¹ˆà¸‡à¸¡à¸­à¸š (Delivery Package)' : 'à¸ˆà¸³à¸¥à¸­à¸‡à¹€à¸­à¸à¸ªà¸²à¸£à¸ªà¹ˆà¸‡à¸­à¸­à¸à¸‰à¸šà¸±à¸šà¸£à¹ˆà¸²à¸‡ (Draft Preview)'}
+                            {['Ready for Delivery', 'Delivered', 'Closed'].includes(activeRequestObj.status) ? 'เอกสารส่งมอบ (Delivery Package)' : 'จำลองเอกสารส่งออกฉบับร่าง (Draft Preview)'}
                           </span>
                           <p className="text-[11px] text-slate-500 max-w-sm mx-auto">
                             {['Ready for Delivery', 'Delivered', 'Closed'].includes(activeRequestObj.status) 
-                              ? 'à¹€à¸›à¸´à¸”à¸”à¸¹à¹à¸¥à¸°à¸žà¸´à¸¡à¸žà¹Œà¹€à¸­à¸à¸ªà¸²à¸£à¸‰à¸šà¸±à¸šà¸ªà¸¡à¸šà¸¹à¸£à¸“à¹Œà¸—à¸µà¹ˆà¸žà¸£à¹‰à¸­à¸¡à¸ªà¹ˆà¸‡à¸¡à¸­à¸šà¹ƒà¸«à¹‰à¸œà¸¹à¹‰à¸¢à¸·à¹ˆà¸™à¸„à¸³à¸£à¹‰à¸­à¸‡'
+                              ? 'เปิดดูและพิมพ์เอกสารฉบับสมบูรณ์ที่พร้อมส่งมอบให้ผู้ยื่นคำร้อง'
                               : activeUser.role === 'approver' 
-                                ? 'à¸•à¸£à¸§à¸ˆà¸ªà¸­à¸šà¹€à¸™à¸·à¹‰à¸­à¸«à¸²à¸ˆà¸”à¸«à¸¡à¸²à¸¢à¸‰à¸šà¸±à¸šà¸£à¹ˆà¸²à¸‡à¸—à¸µà¹ˆà¸œà¹ˆà¸²à¸™à¸à¸²à¸£à¸£à¹ˆà¸²à¸‡à¹‚à¸”à¸¢ DPO à¸à¹ˆà¸­à¸™à¸à¸”à¸­à¸™à¸¸à¸¡à¸±à¸•à¸´'
-                                : 'à¸žà¸£à¸µà¸§à¸´à¸§à¸•à¸£à¸§à¸ˆà¸ªà¸­à¸šà¸„à¸§à¸²à¸¡à¸–à¸¹à¸à¸•à¹‰à¸­à¸‡à¸‚à¸­à¸‡à¹€à¸™à¸·à¹‰à¸­à¸«à¸²à¹ƒà¸™à¸«à¸™à¸±à¸‡à¸ªà¸·à¸­à¸£à¸²à¸Šà¸à¸²à¸£à¸—à¸µà¹ˆà¸ˆà¸°à¸–à¸¹à¸à¸ªà¸£à¹‰à¸²à¸‡à¸‚à¸¶à¹‰à¸™ (à¸‚à¹‰à¸­à¸„à¸§à¸²à¸¡à¸ˆà¸°à¸ªà¸­à¸”à¸„à¸¥à¹‰à¸­à¸‡à¸à¸±à¸šà¸œà¸¥à¸§à¸´à¸™à¸´à¸ˆà¸‰à¸±à¸¢à¸—à¸µà¹ˆà¸„à¸¸à¸“à¸à¸³à¸¥à¸±à¸‡à¹€à¸¥à¸·à¸­à¸à¸­à¸¢à¸¹à¹ˆ)'}
+                                ? 'ตรวจสอบเนื้อหาจดหมายฉบับร่างที่ผ่านการร่างโดย DPO ก่อนกดอนุมัติ'
+                                : 'พรีวิวตรวจสอบความถูกต้องของเนื้อหาในหนังสือราชการที่จะถูกสร้างขึ้น (ข้อความจะสอดคล้องกับผลวินิจฉัยที่คุณกำลังเลือกอยู่)'}
                           </p>
                         </div>
                         
@@ -5291,21 +5291,21 @@ export default function App() {
                             className="bg-brand-600 hover:bg-brand-700 text-white font-bold py-2.5 px-6 rounded-lg text-xs transition shadow-md w-full sm:w-auto inline-flex items-center justify-center gap-2"
                           >
                             <FileCheck2 className="h-4 w-4" />
-                            {['Ready for Delivery', 'Delivered', 'Closed'].includes(activeRequestObj.status) ? 'à¹€à¸›à¸´à¸”à¹€à¸­à¸à¸ªà¸²à¸£à¸ªà¹ˆà¸‡à¸¡à¸­à¸š' : 'à¸ˆà¸³à¸¥à¸­à¸‡à¸«à¸™à¹‰à¸²à¸•à¸²à¹€à¸­à¸à¸ªà¸²à¸£à¸ªà¹ˆà¸‡à¸¡à¸­à¸š'}
+                            {['Ready for Delivery', 'Delivered', 'Closed'].includes(activeRequestObj.status) ? 'เปิดเอกสารส่งมอบ' : 'จำลองหน้าตาเอกสารส่งมอบ'}
                           </button>
                           
                           {['Ready for Delivery', 'Delivered', 'Closed'].includes(activeRequestObj.status) && activeRequestObj.downloadExpiresAt && activeUser.role === 'admin' && (
                             <button
                               type="button"
                               onClick={() => {
-                                showNotify('à¸„à¸¸à¸“à¸•à¹‰à¸­à¸‡à¸à¸²à¸£à¸•à¹ˆà¸­à¸­à¸²à¸¢à¸¸à¸à¸²à¸£à¸”à¸²à¸§à¸™à¹Œà¹‚à¸«à¸¥à¸”à¹€à¸­à¸à¸ªà¸²à¸£à¸­à¸µà¸ 30 à¸§à¸±à¸™à¸«à¸£à¸·à¸­à¹„à¸¡à¹ˆ? (à¸ªà¸¹à¸‡à¸ªà¸¸à¸”à¹„à¸¡à¹ˆà¹€à¸à¸´à¸™ 1 à¸›à¸µà¸ˆà¸²à¸à¸§à¸±à¸™à¸­à¸™à¸¸à¸¡à¸±à¸•à¸´)', 'confirm', 'à¸¢à¸·à¸™à¸¢à¸±à¸™à¸•à¹ˆà¸­à¸­à¸²à¸¢à¸¸à¸à¸²à¸£à¸”à¸²à¸§à¸™à¹Œà¹‚à¸«à¸¥à¸”', () => {
+                                showNotify('คุณต้องการต่ออายุการดาวน์โหลดเอกสารอีก 30 วันหรือไม่? (สูงสุดไม่เกิน 1 ปีจากวันอนุมัติ)', 'confirm', 'ยืนยันต่ออายุการดาวน์โหลด', () => {
                                   handleExtendDownloadExpiration(activeRequestObj.id);
                                 });
                               }}
                               className="bg-white hover:bg-slate-50 text-brand-600 border border-brand-200 font-bold py-2.5 px-4 rounded-lg text-xs transition shadow-sm w-full sm:w-auto inline-flex items-center justify-center gap-2"
                             >
                               <Clock className="h-4 w-4" />
-                              à¸•à¹ˆà¸­à¸­à¸²à¸¢à¸¸ (à¸«à¸¡à¸”à¸­à¸²à¸¢à¸¸ {new Date(activeRequestObj.downloadExpiresAt).toLocaleDateString('th-TH')})
+                              ต่ออายุ (หมดอายุ {new Date(activeRequestObj.downloadExpiresAt).toLocaleDateString('th-TH')})
                             </button>
                           )}
                         </div>
@@ -5317,36 +5317,36 @@ export default function App() {
                       <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-4">
                         <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
                           <Scale className="h-4.5 w-4.5 text-brand-600" />
-                          <span>à¸à¸²à¸£à¸§à¸´à¸™à¸´à¸ˆà¸‰à¸±à¸¢à¹à¸¥à¸°à¸­à¸™à¸¸à¸¡à¸±à¸•à¸´à¸ªà¸´à¸—à¸˜à¸´à¹Œ (Decision Maker)</span>
+                          <span>การวินิจฉัยและอนุมัติสิทธิ์ (Decision Maker)</span>
                         </span>
 
                         {/* DPO input form */}
                         {(activeUser.role === 'dpo' || activeUser.role === 'admin') && !['Approval Pending', 'Ready for Delivery', 'Fee Notification', 'Delivered', 'Closed'].includes(activeRequestObj.status) ? (
                           <div className="space-y-3 text-xs">
                             <div className="space-y-1">
-                              <label className="font-semibold text-slate-700">à¸œà¸¥à¸§à¸´à¸™à¸´à¸ˆà¸‰à¸±à¸¢à¸‚à¹‰à¸­à¹€à¸ªà¸™à¸­à¸ªà¸´à¸—à¸˜à¸´à¹Œ:</label>
+                              <label className="font-semibold text-slate-700">ผลวินิจฉัยข้อเสนอสิทธิ์:</label>
                               <select
                                 value={decisionType}
                                 onChange={(e) => setDecisionType(e.target.value as any)}
                                 className="w-full border rounded p-1.5 bg-white"
                               >
-                                <option value="approved">à¸­à¸™à¸¸à¸¡à¸±à¸•à¸´à¸„à¸³à¸‚à¸­à¸—à¸±à¹‰à¸‡à¸«à¸¡à¸” (Approve All)</option>
-                                <option value="partially_approved">à¸­à¸™à¸¸à¸¡à¸±à¸•à¸´à¸šà¸²à¸‡à¸ªà¹ˆà¸§à¸™ / à¸–à¸¡à¸”à¸³ (Partial)</option>
-                                <option value="denied">à¸›à¸à¸´à¹€à¸ªà¸˜à¸ªà¸´à¸—à¸˜à¸´à¸—à¸±à¹‰à¸‡à¸«à¸¡à¸” (Deny Request)</option>
-                                <option value="no_data">à¹„à¸¡à¹ˆà¸žà¸šà¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸œà¸¹à¹‰à¸‚à¸­à¹ƒà¸™à¸£à¸°à¸šà¸š (No Data)</option>
+                                <option value="approved">อนุมัติคำขอทั้งหมด (Approve All)</option>
+                                <option value="partially_approved">อนุมัติบางส่วน / ถมดำ (Partial)</option>
+                                <option value="denied">ปฏิเสธสิทธิทั้งหมด (Deny Request)</option>
+                                <option value="no_data">ไม่พบข้อมูลผู้ขอในระบบ (No Data)</option>
                               </select>
                             </div>
 
                             {decisionType === 'denied' && (
                               <div className="space-y-1">
-                                <label className="font-semibold text-slate-700 text-red-700">à¹€à¸«à¸•à¸¸à¸œà¸¥à¸‚à¹‰à¸­à¸¢à¸à¹€à¸§à¹‰à¸™à¹ƒà¸™à¸à¸²à¸£à¸›à¸à¸´à¹€à¸ªà¸˜à¸„à¸³à¸‚à¸­:</label>
+                                <label className="font-semibold text-slate-700 text-red-700">เหตุผลข้อยกเว้นในการปฏิเสธคำขอ:</label>
                                 <select
                                   value={denialBasisCode}
                                   onChange={(e) => setDenialBasisCode(e.target.value)}
                                   required
                                   className="w-full border border-red-300 rounded p-1.5 bg-white text-red-900"
                                 >
-                                  <option value="">-- à¸£à¸°à¸šà¸¸à¸‚à¹‰à¸­à¸¢à¸à¹€à¸§à¹‰à¸™à¸à¸Žà¸«à¸¡à¸²à¸¢ --</option>
+                                  <option value="">-- ระบุข้อยกเว้นกฎหมาย --</option>
                                   {config?.rejectionReasons.map(r => (
                                     <option key={r.code} value={r.code}>{r.labelTh}</option>
                                   ))}
@@ -5355,7 +5355,7 @@ export default function App() {
                             )}
 
                             <div className="space-y-1">
-                              <label className="font-semibold text-slate-700">à¸à¸²à¸™à¸­à¹‰à¸²à¸‡à¸­à¸´à¸‡à¸à¸Žà¸«à¸¡à¸²à¸¢ (Legal Basis):</label>
+                              <label className="font-semibold text-slate-700">ฐานอ้างอิงกฎหมาย (Legal Basis):</label>
                               <input
                                 type="text"
                                 value={legalBasisInput}
@@ -5365,12 +5365,12 @@ export default function App() {
                             </div>
 
                             <div className="space-y-1">
-                              <label className="font-semibold text-slate-700">à¸šà¸±à¸™à¸—à¸¶à¸à¸‚à¹‰à¸­à¹€à¸ªà¸™à¸­à¸‚à¸­à¸‡ DPO:</label>
+                              <label className="font-semibold text-slate-700">บันทึกข้อเสนอของ DPO:</label>
                               <textarea
                                 rows={2}
                                 value={decisionNotes}
                                 onChange={(e) => setDecisionNotes(e.target.value)}
-                                placeholder="à¸šà¸±à¸™à¸—à¸¶à¸à¸„à¸§à¸²à¸¡à¸„à¸´à¸”à¹€à¸«à¹‡à¸™à¸•à¸²à¸¡ à¸ž.à¸£.à¸š. à¸„à¸¸à¹‰à¸¡à¸„à¸£à¸­à¸‡à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸ªà¹ˆà¸‡à¸œà¸¹à¹‰à¸­à¸™à¸¸à¸¡à¸±à¸•à¸´..."
+                                placeholder="บันทึกความคิดเห็นตาม พ.ร.บ. คุ้มครองข้อมูลส่งผู้อนุมัติ..."
                                 className="w-full border rounded p-1.5 bg-white"
                               />
                             </div>
@@ -5380,7 +5380,7 @@ export default function App() {
                               onClick={() => handleSubmitDecisionProposal(activeRequestObj.id)}
                               className="w-full bg-brand-600 hover:bg-brand-700 text-white font-bold py-2 rounded-lg text-xs transition"
                             >
-                              à¸ªà¹ˆà¸‡à¸‚à¸­à¸­à¸™à¸¸à¸¡à¸±à¸•à¸´à¸‚à¹‰à¸­à¸§à¸´à¸™à¸´à¸ˆà¸‰à¸±à¸¢ (Submit Proposal)
+                              ส่งขออนุมัติข้อวินิจฉัย (Submit Proposal)
                             </button>
                           </div>
                         ) : null}
@@ -5388,19 +5388,19 @@ export default function App() {
                         {/* Executive Approver action & DPO Read-only view */}
                         {(activeUser.role === 'approver' || ((activeUser.role === 'dpo' || activeUser.role === 'admin') && ['Approval Pending', 'Ready for Delivery', 'Fee Notification', 'Delivered', 'Closed'].includes(activeRequestObj.status))) ? (
                           <div className="p-3 bg-teal-50 border border-teal-200 rounded-lg space-y-3 text-xs text-teal-900">
-                            <span className="block font-bold">à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸à¸²à¸£à¸§à¸´à¸™à¸´à¸ˆà¸‰à¸±à¸¢à¹à¸¥à¸°à¸žà¸´à¸ˆà¸²à¸£à¸“à¸²à¸­à¸™à¸¸à¸¡à¸±à¸•à¸´:</span>
+                            <span className="block font-bold">ข้อมูลการวินิจฉัยและพิจารณาอนุมัติ:</span>
                             
                             {activeRequestObj.decision ? (
                               <div className="space-y-2">
                                 <p className="text-[11px] leading-relaxed">
-                                  <strong>DPO à¹€à¸ªà¸™à¸­à¸§à¸´à¸™à¸´à¸ˆà¸‰à¸±à¸¢:</strong> {activeRequestObj.decision.result.toUpperCase()} <br />
-                                  <strong>à¸šà¸±à¸™à¸—à¸¶à¸à¸„à¸§à¸²à¸¡à¹€à¸«à¹‡à¸™:</strong> {activeRequestObj.decision.dpoRecommendation || '-'}
+                                  <strong>DPO เสนอวินิจฉัย:</strong> {activeRequestObj.decision.result.toUpperCase()} <br />
+                                  <strong>บันทึกความเห็น:</strong> {activeRequestObj.decision.dpoRecommendation || '-'}
                                 </p>
                                 
                                 {activeRequestObj.decision.approvedAt || ['Ready for Delivery', 'Fee Notification', 'Delivered', 'Closed'].includes(activeRequestObj.status) ? (
                                   <div className="p-2 bg-emerald-100 text-emerald-800 text-xs rounded border border-emerald-200 mt-2">
-                                    <span className="font-bold flex items-center gap-1">âœ… à¸­à¸™à¸¸à¸¡à¸±à¸•à¸´à¹à¸¥à¹‰à¸§</span>
-                                    à¹‚à¸”à¸¢ {activeRequestObj.decision.approverName || 'à¸œà¸¹à¹‰à¸¡à¸µà¸­à¸³à¸™à¸²à¸ˆà¸¥à¸‡à¸™à¸²à¸¡'} à¹€à¸¡à¸·à¹ˆà¸­ {activeRequestObj.decision.approvedAt ? new Date(activeRequestObj.decision.approvedAt).toLocaleDateString('th-TH') : new Date().toLocaleDateString('th-TH')}
+                                    <span className="font-bold flex items-center gap-1">✅ อนุมัติแล้ว</span>
+                                    โดย {activeRequestObj.decision.approverName || 'ผู้มีอำนาจลงนาม'} เมื่อ {activeRequestObj.decision.approvedAt ? new Date(activeRequestObj.decision.approvedAt).toLocaleDateString('th-TH') : new Date().toLocaleDateString('th-TH')}
                                   </div>
                                 ) : (
                                   <div className="grid grid-cols-2 gap-2 pt-1">
@@ -5411,19 +5411,19 @@ export default function App() {
                                           onClick={() => handleApproverSign(activeRequestObj.id, activeRequestObj.decision?.result === 'approved' ? 'Approved' : activeRequestObj.decision?.result === 'partially_approved' ? 'Partially Approved' : 'Denied')}
                                           className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-1.5 px-2 rounded transition"
                                         >
-                                          à¸­à¸™à¸¸à¸¡à¸±à¸•à¸´à¸•à¸²à¸¡à¹€à¸ªà¸™à¸­
+                                          อนุมัติตามเสนอ
                                         </button>
                                         <button
                                           type="button"
-                                          onClick={async () => await changeRequestStatus(getRequestClone(activeRequestObj.id), 'DPO or Legal Review', activeUser, 'à¸ªà¹ˆà¸‡à¸à¸¥à¸±à¸šà¹à¸à¹‰à¹„à¸‚à¸„à¸§à¸²à¸¡à¹€à¸«à¹‡à¸™à¸žà¸´à¸ˆà¸²à¸£à¸“à¸²à¸à¸Žà¸«à¸¡à¸²à¸¢', config || undefined)}
+                                          onClick={async () => await changeRequestStatus(getRequestClone(activeRequestObj.id), 'DPO or Legal Review', activeUser, 'ส่งกลับแก้ไขความเห็นพิจารณากฎหมาย', config || undefined)}
                                           className="bg-rose-600 hover:bg-rose-700 text-white font-bold py-1.5 px-2 rounded transition"
                                         >
-                                          à¸ªà¹ˆà¸‡à¸à¸¥à¸±à¸šà¹à¸à¹‰à¹„à¸‚
+                                          ส่งกลับแก้ไข
                                         </button>
                                       </>
                                     ) : (
                                       <div className="col-span-2 text-center text-amber-700 font-semibold p-2 bg-amber-50 rounded border border-amber-200">
-                                        â³ à¸£à¸­à¸œà¸¹à¹‰à¸¡à¸µà¸­à¸³à¸™à¸²à¸ˆà¸¥à¸‡à¸™à¸²à¸¡ (Four-eyes Approval)
+                                        ⏳ รอผู้มีอำนาจลงนาม (Four-eyes Approval)
                                       </div>
                                     )}
                                   </div>
@@ -5431,7 +5431,7 @@ export default function App() {
                               </div>
                             ) : (
                               <p className="text-[11px] text-teal-800">
-                                à¸£à¸­à¸¢à¸·à¹ˆà¸™à¸§à¸´à¸™à¸´à¸ˆà¸‰à¸±à¸¢à¸—à¸²à¸‡à¸à¸Žà¸«à¸¡à¸²à¸¢à¹à¸¥à¸°à¸‚à¹‰à¸­à¹€à¸ªà¸™à¸­à¸‚à¸­à¸‡ DPO / à¸ªà¸³à¸™à¸±à¸à¸à¸Žà¸«à¸¡à¸²à¸¢ à¸à¹ˆà¸­à¸™à¸¥à¸‡à¸™à¸²à¸¡à¸­à¸™à¸¸à¸¡à¸±à¸•à¸´à¸ªà¸´à¸—à¸˜à¸´à¹Œ
+                                รอยื่นวินิจฉัยทางกฎหมายและข้อเสนอของ DPO / สำนักกฎหมาย ก่อนลงนามอนุมัติสิทธิ์
                               </p>
                             )}
                           </div>
@@ -5466,15 +5466,15 @@ export default function App() {
                     {/* Close Request and Delivery management */}
                     {['intake', 'admin'].includes(activeUser.role) && activeRequestObj.status === 'Ready for Delivery' && (
                       <div className="no-print bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-4">
-                        <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider">à¸ˆà¸±à¸”à¸ªà¹ˆà¸‡à¸ªà¸³à¹€à¸™à¸²à¹à¸¥à¸°à¸›à¸´à¸”à¹€à¸£à¸·à¹ˆà¸­à¸‡ (Delivery & Archive)</span>
-                        <p className="text-xs text-slate-500">à¸•à¸£à¸§à¸ˆà¸ªà¸­à¸šà¸ªà¸–à¸²à¸™à¸°à¸Šà¸³à¸£à¸°à¸„à¹ˆà¸²à¸˜à¸£à¸£à¸¡à¹€à¸™à¸µà¸¢à¸¡ (à¸–à¹‰à¸²à¸¡à¸µ) à¹€à¸£à¸µà¸¢à¸šà¸£à¹‰à¸­à¸¢à¹à¸¥à¹‰à¸§ à¸à¸”à¸›à¸¸à¹ˆà¸¡à¹€à¸žà¸·à¹ˆà¸­à¸šà¸±à¸™à¸—à¸¶à¸à¸à¸²à¸£à¸ªà¹ˆà¸‡à¸¡à¸­à¸šà¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸›à¸¥à¸­à¸”à¸ à¸±à¸¢</p>
+                        <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider">จัดส่งสำเนาและปิดเรื่อง (Delivery & Archive)</span>
+                        <p className="text-xs text-slate-500">ตรวจสอบสถานะชำระค่าธรรมเนียม (ถ้ามี) เรียบร้อยแล้ว กดปุ่มเพื่อบันทึกการส่งมอบข้อมูลปลอดภัย</p>
                         
                         <button
                           type="button"
                           onClick={() => handleMarkAsDelivered(activeRequestObj.id)}
                           className="w-full bg-brand-600 hover:bg-brand-700 text-white font-bold py-2.5 rounded-lg text-xs transition shadow-sm"
                         >
-                          à¸šà¸±à¸™à¸—à¸¶à¸à¸ªà¹ˆà¸‡à¸¡à¸­à¸šà¹€à¸£à¸µà¸¢à¸šà¸£à¹‰à¸­à¸¢ & à¸›à¸´à¸”à¹€à¸„à¸ª (Deliver & Close)
+                          บันทึกส่งมอบเรียบร้อย & ปิดเคส (Deliver & Close)
                         </button>
                       </div>
                     )}
@@ -5482,18 +5482,18 @@ export default function App() {
                     {/* Closed Status & Resend Delivery Email */}
                     {['intake', 'admin'].includes(activeUser.role) && ['Closed', 'Delivered'].includes(activeRequestObj.status) && (
                       <div className="no-print bg-slate-50 border border-slate-200 rounded-xl p-5 shadow-sm space-y-4">
-                        <span className="block text-xs font-bold text-slate-500 uppercase tracking-wider">à¸¢à¸·à¸™à¸¢à¸±à¸™à¸à¸²à¸£à¸›à¸´à¸”à¹€à¸£à¸·à¹ˆà¸­à¸‡à¹€à¸ªà¸£à¹‡à¸ˆà¸ªà¸¡à¸šà¸¹à¸£à¸“à¹Œ</span>
-                        <p className="text-xs text-slate-600">à¸à¸²à¸£à¸”à¸³à¹€à¸™à¸´à¸™à¸à¸²à¸£à¸•à¸²à¸¡à¸„à¸³à¸£à¹‰à¸­à¸‡à¸ªà¸´à¹‰à¸™à¸ªà¸¸à¸”à¹à¸¥à¹‰à¸§ à¸«à¸²à¸à¸œà¸¹à¹‰à¸£à¹‰à¸­à¸‡à¸‚à¸­à¹„à¸¡à¹ˆà¹„à¸”à¹‰à¸£à¸±à¸šà¸­à¸µà¹€à¸¡à¸¥à¹à¸ˆà¹‰à¸‡à¸œà¸¥à¹à¸¥à¸°à¸¥à¸´à¸‡à¸à¹Œà¸”à¸²à¸§à¸™à¹Œà¹‚à¸«à¸¥à¸” à¸„à¸¸à¸“à¸ªà¸²à¸¡à¸²à¸£à¸–à¸à¸”à¸ªà¹ˆà¸‡à¸‹à¹‰à¸³à¸­à¸µà¸à¸„à¸£à¸±à¹‰à¸‡à¹„à¸”à¹‰</p>
+                        <span className="block text-xs font-bold text-slate-500 uppercase tracking-wider">ยืนยันการปิดเรื่องเสร็จสมบูรณ์</span>
+                        <p className="text-xs text-slate-600">การดำเนินการตามคำร้องสิ้นสุดแล้ว หากผู้ร้องขอไม่ได้รับอีเมลแจ้งผลและลิงก์ดาวน์โหลด คุณสามารถกดส่งซ้ำอีกครั้งได้</p>
                         
                         <button
                           type="button"
                           onClick={() => {
-                            showNotify('à¸•à¹‰à¸­à¸‡à¸à¸²à¸£à¸ªà¹ˆà¸‡à¸­à¸µà¹€à¸¡à¸¥à¹à¸ˆà¹‰à¸‡à¸œà¸¥à¸à¸²à¸£à¸žà¸´à¸ˆà¸²à¸£à¸“à¸²à¹à¸¥à¸°à¸¥à¸´à¸‡à¸à¹Œà¸”à¸²à¸§à¸™à¹Œà¹‚à¸«à¸¥à¸”à¹„à¸›à¹ƒà¸«à¹‰à¸œà¸¹à¹‰à¸£à¹‰à¸­à¸‡à¸‚à¸­à¸­à¸µà¸à¸„à¸£à¸±à¹‰à¸‡à¸«à¸£à¸·à¸­à¹„à¸¡à¹ˆ?', 'confirm', 'à¸¢à¸·à¸™à¸¢à¸±à¸™à¸à¸²à¸£à¸ªà¹ˆà¸‡à¸­à¸µà¹€à¸¡à¸¥à¸‹à¹‰à¸³', async () => {
+                            showNotify('ต้องการส่งอีเมลแจ้งผลการพิจารณาและลิงก์ดาวน์โหลดไปให้ผู้ร้องขออีกครั้งหรือไม่?', 'confirm', 'ยืนยันการส่งอีเมลซ้ำ', async () => {
                               const jwtToken = sessionStorage.getItem('pdpa_token') || sessionStorage.getItem('pdpa_jwt_token') || '';
                               const req = getRequestClone(activeRequestObj.id);
                               if (!req) return;
                               try {
-                                showNotify('à¸à¸³à¸¥à¸±à¸‡à¸ªà¹ˆà¸‡à¸­à¸µà¹€à¸¡à¸¥à¸­à¸µà¸à¸„à¸£à¸±à¹‰à¸‡...', 'info');
+                                showNotify('กำลังส่งอีเมลอีกครั้ง...', 'info');
                                 const res = await fetch(`/api/requests/${activeRequestObj.id}/deliver`, {
                                   method: 'POST',
                                   headers: {
@@ -5508,18 +5508,18 @@ export default function App() {
                                 });
                                 if (!res.ok) {
                                   const errBody = await res.json().catch(() => ({}));
-                                  showNotify(`à¸ªà¹ˆà¸‡à¹„à¸¡à¹ˆà¸ªà¸³à¹€à¸£à¹‡à¸ˆ: ${errBody.message || 'à¹€à¸‹à¸´à¸£à¹Œà¸Ÿà¹€à¸§à¸­à¸£à¹Œà¸›à¸à¸´à¹€à¸ªà¸˜à¸à¸²à¸£à¸ªà¹ˆà¸‡à¸­à¸µà¹€à¸¡à¸¥'}`, 'error');
+                                  showNotify(`ส่งไม่สำเร็จ: ${errBody.message || 'เซิร์ฟเวอร์ปฏิเสธการส่งอีเมล'}`, 'error');
                                   return;
                                 }
-                                showNotify('à¸ªà¹ˆà¸‡à¸­à¸µà¹€à¸¡à¸¥à¹à¸ˆà¹‰à¸‡à¸œà¸¥à¹ƒà¸«à¹‰à¸œà¸¹à¹‰à¸£à¹‰à¸­à¸‡à¸‚à¸­à¸­à¸µà¸à¸„à¸£à¸±à¹‰à¸‡à¹€à¸£à¸µà¸¢à¸šà¸£à¹‰à¸­à¸¢à¹à¸¥à¹‰à¸§!', 'success');
+                                showNotify('ส่งอีเมลแจ้งผลให้ผู้ร้องขออีกครั้งเรียบร้อยแล้ว!', 'success');
                               } catch(e) {
-                                showNotify('à¹€à¸à¸´à¸”à¸‚à¹‰à¸­à¸œà¸´à¸”à¸žà¸¥à¸²à¸”à¹ƒà¸™à¸à¸²à¸£à¹€à¸Šà¸·à¹ˆà¸­à¸¡à¸•à¹ˆà¸­à¹€à¸‹à¸´à¸£à¹Œà¸Ÿà¹€à¸§à¸­à¸£à¹Œ', 'error');
+                                showNotify('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์', 'error');
                               }
                             });
                           }}
                           className="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-2.5 rounded-lg text-xs transition shadow-sm flex items-center justify-center gap-2"
                         >
-                          <Mail className="w-4 h-4" /> à¸ªà¹ˆà¸‡à¹€à¸­à¸à¸ªà¸²à¸£à¸—à¸²à¸‡à¸­à¸µà¹€à¸¡à¸¥à¸­à¸µà¸à¸„à¸£à¸±à¹‰à¸‡ (Resend Email)
+                          <Mail className="w-4 h-4" /> ส่งเอกสารทางอีเมลอีกครั้ง (Resend Email)
                         </button>
                       </div>
                     )}
@@ -5528,8 +5528,8 @@ export default function App() {
                     {['admin', 'dpo'].includes(activeUser.role) && (
                       <div className="no-print bg-white border border-slate-200 rounded-xl p-4 shadow-sm text-xs flex justify-between items-center">
                         <div>
-                          <span className="block font-bold text-slate-800">à¸£à¸°à¸‡à¸±à¸šà¸à¸²à¸£à¸—à¸³à¸¥à¸²à¸¢à¸«à¸¥à¸±à¸à¸à¸²à¸™ (Legal Hold)</span>
-                          <span className="text-[10px] text-slate-400">à¸«à¹‰à¸²à¸¡à¸—à¸³à¸¥à¸²à¸¢à¹„à¸Ÿà¸¥à¹Œà¹à¸¡à¹‰à¸«à¸¡à¸”à¸­à¸²à¸¢à¸¸à¸à¸²à¸£à¹€à¸à¹‡à¸šà¸£à¸±à¸à¸©à¸² 2 à¸›à¸µ à¹ƒà¸™à¸à¸£à¸“à¸µà¸¡à¸µà¸„à¸”à¸µà¸„à¹‰à¸²à¸‡à¸„à¸²</span>
+                          <span className="block font-bold text-slate-800">ระงับการทำลายหลักฐาน (Legal Hold)</span>
+                          <span className="text-[10px] text-slate-400">ห้ามทำลายไฟล์แม้หมดอายุการเก็บรักษา 2 ปี ในกรณีมีคดีค้างคา</span>
                         </div>
                         <button
                           type="button"
@@ -5538,7 +5538,7 @@ export default function App() {
                             activeRequestObj.legalHold ? 'bg-red-600 text-white' : 'bg-slate-100 text-slate-700'
                           }`}
                         >
-                          {activeRequestObj.legalHold ? 'à¹€à¸›à¸´à¸” Legal Hold' : 'à¸›à¸´à¸”'}
+                          {activeRequestObj.legalHold ? 'เปิด Legal Hold' : 'ปิด'}
                         </button>
                       </div>
                     )}
@@ -5559,22 +5559,22 @@ export default function App() {
                     {/* Title Heading */}
                     <div className="flex justify-between items-center border-b border-slate-200 pb-4">
                       <div>
-                        <h2 className="text-xl font-bold text-slate-800">à¹à¸œà¸‡à¸„à¸§à¸šà¸„à¸¸à¸¡à¸£à¸°à¸šà¸šà¸•à¸£à¸§à¸ˆà¸ªà¸­à¸šà¸ªà¸´à¸—à¸˜à¸´à¹Œà¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸ªà¹ˆà¸§à¸™à¸šà¸¸à¸„à¸„à¸¥</h2>
-                        <p className="text-xs text-slate-500 mt-0.5">à¸ à¸²à¸žà¸£à¸§à¸¡à¸£à¸²à¸¢à¸à¸²à¸£à¸¢à¸·à¹ˆà¸™à¸„à¸³à¸‚à¸­à¹ƒà¸Šà¹‰à¸ªà¸´à¸—à¸˜à¸´à¸¯ à¹à¸¥à¸°à¸ªà¸–à¸²à¸™à¸° SLA à¸”à¸³à¹€à¸™à¸´à¸™à¸‡à¸²à¸™à¸‚à¸­à¸‡à¸­à¸‡à¸„à¹Œà¸à¸£</p>
+                        <h2 className="text-xl font-bold text-slate-800">แผงควบคุมระบบตรวจสอบสิทธิ์ข้อมูลส่วนบุคคล</h2>
+                        <p className="text-xs text-slate-500 mt-0.5">ภาพรวมรายการยื่นคำขอใช้สิทธิฯ และสถานะ SLA ดำเนินงานขององค์กร</p>
                       </div>
                       <span className="bg-brand-50 text-brand-600 text-xs px-2.5 py-1 rounded font-bold">
-                        à¸›à¸µà¸‡à¸šà¸›à¸£à¸°à¸¡à¸²à¸“ à¸ž.à¸¨. {new Date().getFullYear() + 543}
+                        ปีงบประมาณ พ.ศ. {new Date().getFullYear() + 543}
                       </span>
                     </div>
 
                     {/* Operational counter grid (Clickable Interactive Cards) */}
                     <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                       {[
-                        { label: 'à¸„à¸³à¸‚à¸­à¹€à¸‚à¹‰à¸²à¹ƒà¸«à¸¡à¹ˆà¸—à¸±à¹‰à¸‡à¸«à¸¡à¸”', count: filteredRequests.length, color: 'border-l-brand-500 hover:border-brand-500 hover:shadow-md text-brand-600', statuses: null },
-                        { label: 'à¸£à¸­à¸•à¸£à¸§à¸ˆà¸ªà¸­à¸šà¸•à¸±à¸§à¸•à¸™', count: getBadgeCount(['Submitted', 'Received', 'Identity Verification', 'Completeness Review']), color: 'border-l-indigo-500 hover:border-indigo-500 hover:shadow-md text-indigo-600', statuses: ['Submitted', 'Received', 'Identity Verification', 'Completeness Review'] as RequestStatus[] },
-                        { label: 'à¸­à¸¢à¸¹à¹ˆà¸£à¸°à¸«à¸§à¹ˆà¸²à¸‡à¸ªà¸·à¸šà¸„à¹‰à¸™à¸‚à¹‰à¸­à¸¡à¸¹à¸¥', count: getBadgeCount(['Documents Verified', 'Assigned', 'Data Collection']), color: 'border-l-amber-500 hover:border-amber-500 hover:shadow-md text-amber-600', statuses: ['Documents Verified', 'Assigned', 'Data Collection'] as RequestStatus[] },
-                        { label: 'à¸£à¸­à¸à¹ˆà¸²à¸¢à¸à¸Žà¸«à¸¡à¸²à¸¢/DPO à¸•à¸£à¸§à¸ˆ', count: getBadgeCount(['Data Owner Review', 'DPO or Legal Review', 'Redaction Required', 'Approval Pending']), color: 'border-l-rose-500 hover:border-rose-500 hover:shadow-md text-rose-600', statuses: ['Data Owner Review', 'DPO or Legal Review', 'Redaction Required', 'Approval Pending'] as RequestStatus[] },
-                        { label: 'à¸žà¸£à¹‰à¸­à¸¡à¸ªà¹ˆà¸‡à¸¡à¸­à¸š / à¸›à¸´à¸”à¹€à¸„à¸ª', count: getBadgeCount(['Ready for Delivery', 'Delivered', 'Closed']), color: 'border-l-emerald-500 hover:border-emerald-500 hover:shadow-md text-emerald-600', statuses: ['Ready for Delivery', 'Delivered', 'Closed'] as RequestStatus[] }
+                        { label: 'คำขอเข้าใหม่ทั้งหมด', count: filteredRequests.length, color: 'border-l-brand-500 hover:border-brand-500 hover:shadow-md text-brand-600', statuses: null },
+                        { label: 'รอตรวจสอบตัวตน', count: getBadgeCount(['Submitted', 'Received', 'Identity Verification', 'Completeness Review']), color: 'border-l-indigo-500 hover:border-indigo-500 hover:shadow-md text-indigo-600', statuses: ['Submitted', 'Received', 'Identity Verification', 'Completeness Review'] as RequestStatus[] },
+                        { label: 'อยู่ระหว่างสืบค้นข้อมูล', count: getBadgeCount(['Documents Verified', 'Assigned', 'Data Collection']), color: 'border-l-amber-500 hover:border-amber-500 hover:shadow-md text-amber-600', statuses: ['Documents Verified', 'Assigned', 'Data Collection'] as RequestStatus[] },
+                        { label: 'รอฝ่ายกฎหมาย/DPO ตรวจ', count: getBadgeCount(['Data Owner Review', 'DPO or Legal Review', 'Redaction Required', 'Approval Pending']), color: 'border-l-rose-500 hover:border-rose-500 hover:shadow-md text-rose-600', statuses: ['Data Owner Review', 'DPO or Legal Review', 'Redaction Required', 'Approval Pending'] as RequestStatus[] },
+                        { label: 'พร้อมส่งมอบ / ปิดเคส', count: getBadgeCount(['Ready for Delivery', 'Delivered', 'Closed']), color: 'border-l-emerald-500 hover:border-emerald-500 hover:shadow-md text-emerald-600', statuses: ['Ready for Delivery', 'Delivered', 'Closed'] as RequestStatus[] }
                       ].map((card, i) => (
                         <div
                           key={i}
@@ -5587,7 +5587,7 @@ export default function App() {
                           <span className="text-[10px] text-slate-400 block font-bold uppercase group-hover:text-slate-600 transition">{card.label}</span>
                           <div className="flex items-baseline justify-between mt-1">
                             <span className="text-2xl font-bold text-slate-800 block group-hover:scale-105 transition origin-left">{card.count}</span>
-                            <span className="text-[10px] font-bold text-slate-400 opacity-0 group-hover:opacity-100 transition">à¸„à¸¥à¸´à¸à¸”à¸¹à¹€à¸£à¸·à¹ˆà¸­à¸‡ â†’</span>
+                            <span className="text-[10px] font-bold text-slate-400 opacity-0 group-hover:opacity-100 transition">คลิกดูเรื่อง →</span>
                           </div>
                         </div>
                       ))}
@@ -5598,7 +5598,7 @@ export default function App() {
 
                     {/* Quick overview of latest requests */}
                     <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-4">
-                      <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider">à¸„à¸³à¸£à¹‰à¸­à¸‡à¸—à¸µà¹ˆà¸•à¹‰à¸­à¸‡à¸à¸²à¸£à¸„à¸§à¸²à¸¡à¸Šà¹ˆà¸§à¸¢à¹€à¸«à¸¥à¸·à¸­à¹€à¸£à¹ˆà¸‡à¸”à¹ˆà¸§à¸™ (Urgent SLA Action)</span>
+                      <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider">คำร้องที่ต้องการความช่วยเหลือเร่งด่วน (Urgent SLA Action)</span>
                       
                       <div className="divide-y divide-slate-100">
                         {filteredRequests.slice(0, 3).map((req) => (
@@ -5606,7 +5606,7 @@ export default function App() {
                             key={req.id}
                             onClick={() => {
                               if (activeUser && !canManageRequestFlow(req, activeUser)) {
-                                showNotify('à¸„à¸³à¸£à¹‰à¸­à¸‡à¸™à¸µà¹‰à¸¢à¸±à¸‡à¹„à¸¡à¹ˆà¸­à¸¢à¸¹à¹ˆà¹ƒà¸™à¸‚à¸±à¹‰à¸™à¸•à¸­à¸™à¸—à¸µà¹ˆà¸—à¹ˆà¸²à¸™à¸ªà¸²à¸¡à¸²à¸£à¸–à¸ˆà¸±à¸”à¸à¸²à¸£à¹„à¸”à¹‰ (à¸£à¸­à¸”à¸³à¹€à¸™à¸´à¸™à¸à¸²à¸£à¸•à¸²à¸¡ FLOW)', 'warning');
+                                showNotify('คำร้องนี้ยังไม่อยู่ในขั้นตอนที่ท่านสามารถจัดการได้ (รอดำเนินการตาม FLOW)', 'warning');
                                 return;
                               }
                               setSelectedRequestId(req.id);
@@ -5615,14 +5615,14 @@ export default function App() {
                           >
                             <div className="space-y-0.5">
                               <span className="font-bold text-slate-800 block">{req.trackingNo} - {req.requester.firstName} {req.requester.lastName}</span>
-                              <span className="text-slate-400 block">à¸‚à¸­à¸šà¹€à¸‚à¸•: {req.requestDetails.description.substring(0, 50)}...</span>
+                              <span className="text-slate-400 block">ขอบเขต: {req.requestDetails.description.substring(0, 50)}...</span>
                             </div>
                             <div className="text-right">
                               <span className="inline-block bg-amber-50 text-amber-700 px-2 py-0.5 rounded text-[10px] font-bold">
                                 {req.status}
                               </span>
                               <span className="block text-[10px] text-slate-400 mt-1 font-bold">
-                                à¹€à¸«à¸¥à¸·à¸­à¹€à¸§à¸¥à¸² SLA: {req.slaRemainingDays} à¸§à¸±à¸™
+                                เหลือเวลา SLA: {req.slaRemainingDays} วัน
                               </span>
                             </div>
                           </div>
@@ -5645,45 +5645,45 @@ export default function App() {
                   <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden p-6 max-w-4xl mx-auto space-y-6">
                     <div className="flex items-center justify-between border-b border-slate-100 pb-4">
                       <div>
-                        <h3 className="font-bold text-lg text-slate-800">à¸šà¸±à¸™à¸—à¸¶à¸à¸„à¸³à¸£à¹‰à¸­à¸‡à¹ƒà¸«à¸¡à¹ˆ (Manual Entry)</h3>
-                        <p className="text-xs text-slate-500">à¸ªà¸³à¸«à¸£à¸±à¸šà¹€à¸ˆà¹‰à¸²à¸«à¸™à¹‰à¸²à¸—à¸µà¹ˆà¸šà¸±à¸™à¸—à¸¶à¸à¸„à¸³à¸£à¹‰à¸­à¸‡à¸—à¸µà¹ˆà¹„à¸”à¹‰à¸£à¸±à¸šà¸ˆà¸²à¸à¸Šà¹ˆà¸­à¸‡à¸—à¸²à¸‡à¸­à¸·à¹ˆà¸™ (à¹„à¸›à¸£à¸©à¸“à¸µà¸¢à¹Œ, à¸ªà¸³à¸™à¸±à¸à¸‡à¸²à¸™, à¸­à¸µà¹€à¸¡à¸¥, e-Service)</p>
+                        <h3 className="font-bold text-lg text-slate-800">บันทึกคำร้องใหม่ (Manual Entry)</h3>
+                        <p className="text-xs text-slate-500">สำหรับเจ้าหน้าที่บันทึกคำร้องที่ได้รับจากช่องทางอื่น (ไปรษณีย์, สำนักงาน, อีเมล, e-Service)</p>
                       </div>
                       <button
                         type="button"
                         onClick={() => setInternalTab('requests')}
                         className="text-slate-500 hover:text-slate-700 text-xs font-bold underline"
                       >
-                        à¸¢à¸à¹€à¸¥à¸´à¸à¹à¸¥à¸°à¸à¸¥à¸±à¸šà¹„à¸›à¸«à¸™à¹‰à¸²à¸£à¸²à¸¢à¸à¸²à¸£
+                        ยกเลิกและกลับไปหน้ารายการ
                       </button>
                     </div>
 
                     <form onSubmit={handleManualSubmit} className="space-y-6">
                       {/* Section 1: Channel & Reference */}
                       <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-4">
-                        <h4 className="font-bold text-slate-700 text-sm border-b border-slate-200 pb-2">1. à¸Šà¹ˆà¸­à¸‡à¸—à¸²à¸‡à¸£à¸±à¸šà¹€à¸£à¸·à¹ˆà¸­à¸‡</h4>
+                        <h4 className="font-bold text-slate-700 text-sm border-b border-slate-200 pb-2">1. ช่องทางรับเรื่อง</h4>
                         
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div className="space-y-1">
-                            <label className="text-xs font-medium text-slate-700">à¸£à¸±à¸šà¹€à¸£à¸·à¹ˆà¸­à¸‡à¸ˆà¸²à¸à¸Šà¹ˆà¸­à¸‡à¸—à¸²à¸‡ <span className="text-red-500">*</span></label>
+                            <label className="text-xs font-medium text-slate-700">รับเรื่องจากช่องทาง <span className="text-red-500">*</span></label>
                             <select
                               required
                               value={manualChannel}
                               onChange={(e) => setManualChannel(e.target.value as any)}
                               className="w-full text-xs border border-slate-300 rounded-lg p-2.5 focus:ring-1 focus:ring-brand-500 bg-white"
                             >
-                              <option value="office">Walk-in (à¸ªà¸³à¸™à¸±à¸à¸‡à¸²à¸™)</option>
-                              <option value="email">à¸­à¸µà¹€à¸¡à¸¥ (Email)</option>
-                              <option value="post">à¹„à¸›à¸£à¸©à¸“à¸µà¸¢à¹Œ (Post)</option>
-                              <option value="e-service">à¸£à¸°à¸šà¸š E-Service (à¸­à¸·à¹ˆà¸™à¹†)</option>
+                              <option value="office">Walk-in (สำนักงาน)</option>
+                              <option value="email">อีเมล (Email)</option>
+                              <option value="post">ไปรษณีย์ (Post)</option>
+                              <option value="e-service">ระบบ E-Service (อื่นๆ)</option>
                             </select>
                           </div>
                           
                           {manualChannel !== 'office' && (
                             <div className="space-y-1">
-                              <label className="text-xs font-medium text-slate-700">à¹€à¸¥à¸‚à¸—à¸µà¹ˆà¸­à¹‰à¸²à¸‡à¸­à¸´à¸‡ (à¸–à¹‰à¸²à¸¡à¸µ)</label>
+                              <label className="text-xs font-medium text-slate-700">เลขที่อ้างอิง (ถ้ามี)</label>
                               <input
                                 type="text"
-                                placeholder="à¹€à¸Šà¹ˆà¸™ à¹€à¸¥à¸‚à¸—à¸µà¹ˆà¹€à¸­à¸à¸ªà¸²à¸£à¸£à¸±à¸šà¹€à¸‚à¹‰à¸² à¸«à¸£à¸·à¸­à¸£à¸«à¸±à¸ªà¸—à¸´à¸à¹€à¸à¹‡à¸•"
+                                placeholder="เช่น เลขที่เอกสารรับเข้า หรือรหัสทิกเก็ต"
                                 value={manualRefNo}
                                 onChange={(e) => setManualRefNo(e.target.value)}
                                 className="w-full text-xs border border-slate-300 rounded-lg p-2.5 focus:ring-1 focus:ring-brand-500"
@@ -5695,7 +5695,7 @@ export default function App() {
 
                       {/* Section 2: Requester Type */}
                       <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-4">
-                        <h4 className="font-bold text-slate-700 text-sm border-b border-slate-200 pb-2">2. à¸›à¸£à¸°à¹€à¸ à¸—à¸œà¸¹à¹‰à¸¢à¸·à¹ˆà¸™à¸„à¸³à¸£à¹‰à¸­à¸‡</h4>
+                        <h4 className="font-bold text-slate-700 text-sm border-b border-slate-200 pb-2">2. ประเภทผู้ยื่นคำร้อง</h4>
                         <div className="flex gap-4">
                           <label className="flex items-center gap-2 cursor-pointer text-xs font-bold">
                             <input
@@ -5705,7 +5705,7 @@ export default function App() {
                               onChange={() => setReqType('self')}
                               className="text-brand-600 focus:ring-brand-500"
                             />
-                            <span>à¹€à¸ˆà¹‰à¸²à¸‚à¸­à¸‡à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸¢à¸·à¹ˆà¸™à¸”à¹‰à¸§à¸¢à¸•à¸™à¹€à¸­à¸‡</span>
+                            <span>เจ้าของข้อมูลยื่นด้วยตนเอง</span>
                           </label>
                           <label className="flex items-center gap-2 cursor-pointer text-xs font-bold">
                             <input
@@ -5715,17 +5715,17 @@ export default function App() {
                               onChange={() => setReqType('representative')}
                               className="text-brand-600 focus:ring-brand-500"
                             />
-                            <span>à¸£à¸±à¸šà¸¡à¸­à¸šà¸­à¸³à¸™à¸²à¸ˆ</span>
+                            <span>รับมอบอำนาจ</span>
                           </label>
                         </div>
                       </div>
 
                       {/* Section 3: Requester Details */}
                       <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-4">
-                        <h4 className="font-bold text-slate-700 text-sm border-b border-slate-200 pb-2">3. à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸œà¸¹à¹‰à¸¢à¸·à¹ˆà¸™à¸„à¸³à¸£à¹‰à¸­à¸‡ (à¸œà¸¹à¹‰à¸•à¸´à¸”à¸•à¹ˆà¸­à¸«à¸¥à¸±à¸)</h4>
+                        <h4 className="font-bold text-slate-700 text-sm border-b border-slate-200 pb-2">3. ข้อมูลผู้ยื่นคำร้อง (ผู้ติดต่อหลัก)</h4>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div className="space-y-1">
-                            <label className="text-xs font-medium text-slate-700">à¸Šà¸·à¹ˆà¸­à¸ˆà¸£à¸´à¸‡ <span className="text-red-500">*</span></label>
+                            <label className="text-xs font-medium text-slate-700">ชื่อจริง <span className="text-red-500">*</span></label>
                             <input
                               type="text"
                               required
@@ -5735,7 +5735,7 @@ export default function App() {
                             />
                           </div>
                           <div className="space-y-1">
-                            <label className="text-xs font-medium text-slate-700">à¸™à¸²à¸¡à¸ªà¸à¸¸à¸¥ <span className="text-red-500">*</span></label>
+                            <label className="text-xs font-medium text-slate-700">นามสกุล <span className="text-red-500">*</span></label>
                             <input
                               type="text"
                               required
@@ -5746,7 +5746,7 @@ export default function App() {
                           </div>
                           <div className="space-y-1 md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="space-y-1">
-                              <label className="text-xs font-medium text-slate-700">à¹€à¸šà¸­à¸£à¹Œà¹‚à¸—à¸£à¸¨à¸±à¸žà¸—à¹Œ <span className="text-red-500">*</span></label>
+                              <label className="text-xs font-medium text-slate-700">เบอร์โทรศัพท์ <span className="text-red-500">*</span></label>
                               <input
                                 type="tel"
                                 required
@@ -5758,7 +5758,7 @@ export default function App() {
                             </div>
                             <div className="space-y-1">
                               <label className="text-xs font-medium text-slate-700">
-                                à¸­à¸µà¹€à¸¡à¸¥ {manualChannel === 'email' ? <span className="text-red-500">*</span> : '(à¸–à¹‰à¸²à¸¡à¸µ)'}
+                                อีเมล {manualChannel === 'email' ? <span className="text-red-500">*</span> : '(ถ้ามี)'}
                               </label>
                               <input
                                 type="email"
@@ -5770,7 +5770,7 @@ export default function App() {
                             </div>
                           </div>
                           <div className="space-y-1 md:col-span-2">
-                            <label className="text-xs font-medium text-slate-700">à¹€à¸¥à¸‚à¸šà¸±à¸•à¸£à¸›à¸£à¸°à¸Šà¸²à¸Šà¸™ / Passport ID <span className="text-red-500">*</span></label>
+                            <label className="text-xs font-medium text-slate-700">เลขบัตรประชาชน / Passport ID <span className="text-red-500">*</span></label>
                             <input
                               type="text"
                               required
@@ -5781,7 +5781,7 @@ export default function App() {
                             />
                           </div>
                           <div className="space-y-1 md:col-span-2">
-                            <label className="text-xs font-medium text-slate-700">à¸—à¸µà¹ˆà¸­à¸¢à¸¹à¹ˆà¸•à¸´à¸”à¸•à¹ˆà¸­à¹„à¸”à¹‰</label>
+                            <label className="text-xs font-medium text-slate-700">ที่อยู่ติดต่อได้</label>
                             <textarea
                               rows={2}
                               value={requesterForm.address}
@@ -5798,12 +5798,12 @@ export default function App() {
                           <div className="flex items-center justify-between border-b border-teal-200 pb-2">
                             <span className="font-bold text-teal-900 text-sm flex items-center gap-1.5">
                               <Users className="h-4 w-4 text-teal-700" />
-                              <span>à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸ªà¸³à¸«à¸£à¸±à¸šà¸œà¸¹à¹‰à¸£à¸±à¸šà¸¡à¸­à¸šà¸­à¸³à¸™à¸²à¸ˆ (Authorized Representative)</span>
+                              <span>ข้อมูลสำหรับผู้รับมอบอำนาจ (Authorized Representative)</span>
                             </span>
                           </div>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="space-y-1">
-                              <label className="text-xs font-medium text-slate-700">à¸Šà¸·à¹ˆà¸­à¸ˆà¸£à¸´à¸‡ <span className="text-red-500">*</span></label>
+                              <label className="text-xs font-medium text-slate-700">ชื่อจริง <span className="text-red-500">*</span></label>
                               <input
                                 type="text"
                                 required
@@ -5813,7 +5813,7 @@ export default function App() {
                               />
                             </div>
                             <div className="space-y-1">
-                              <label className="text-xs font-medium text-slate-700">à¸™à¸²à¸¡à¸ªà¸à¸¸à¸¥ <span className="text-red-500">*</span></label>
+                              <label className="text-xs font-medium text-slate-700">นามสกุล <span className="text-red-500">*</span></label>
                               <input
                                 type="text"
                                 required
@@ -5824,7 +5824,7 @@ export default function App() {
                             </div>
                             <div className="space-y-1 md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
                               <div className="space-y-1">
-                                <label className="text-xs font-medium text-slate-700">à¹€à¸šà¸­à¸£à¹Œà¹‚à¸—à¸£à¸¨à¸±à¸žà¸—à¹Œ <span className="text-red-500">*</span></label>
+                                <label className="text-xs font-medium text-slate-700">เบอร์โทรศัพท์ <span className="text-red-500">*</span></label>
                                 <input
                                   type="tel"
                                   required
@@ -5836,7 +5836,7 @@ export default function App() {
                               </div>
                               <div className="space-y-1">
                                 <label className="text-xs font-medium text-slate-700">
-                                  à¸­à¸µà¹€à¸¡à¸¥ {manualChannel === 'email' ? <span className="text-red-500">*</span> : '(à¸–à¹‰à¸²à¸¡à¸µ)'}
+                                  อีเมล {manualChannel === 'email' ? <span className="text-red-500">*</span> : '(ถ้ามี)'}
                                 </label>
                                 <input
                                   type="email"
@@ -5848,7 +5848,7 @@ export default function App() {
                               </div>
                             </div>
                             <div className="space-y-1 md:col-span-2">
-                              <label className="text-xs font-medium text-slate-700">à¹€à¸¥à¸‚à¸šà¸±à¸•à¸£à¸›à¸£à¸°à¸Šà¸²à¸Šà¸™ / Passport ID <span className="text-red-500">*</span></label>
+                              <label className="text-xs font-medium text-slate-700">เลขบัตรประชาชน / Passport ID <span className="text-red-500">*</span></label>
                               <input
                                 type="text"
                                 required
@@ -5859,7 +5859,7 @@ export default function App() {
                               />
                             </div>
                             <div className="space-y-1 md:col-span-2">
-                              <label className="text-xs font-medium text-slate-700">à¸—à¸µà¹ˆà¸­à¸¢à¸¹à¹ˆà¸•à¸´à¸”à¸•à¹ˆà¸­à¹„à¸”à¹‰</label>
+                              <label className="text-xs font-medium text-slate-700">ที่อยู่ติดต่อได้</label>
                               <textarea
                                 rows={2}
                                 value={repForm.address}
@@ -5868,11 +5868,11 @@ export default function App() {
                               />
                             </div>
                             <div className="space-y-1 md:col-span-2">
-                              <label className="text-xs font-medium text-slate-700">à¸‚à¸­à¸šà¹€à¸‚à¸•à¸à¸²à¸£à¸¡à¸­à¸šà¸­à¸³à¸™à¸²à¸ˆ <span className="text-red-500">*</span></label>
+                              <label className="text-xs font-medium text-slate-700">ขอบเขตการมอบอำนาจ <span className="text-red-500">*</span></label>
                               <textarea
                                 required
                                 rows={2}
-                                placeholder="à¹€à¸Šà¹ˆà¸™ à¸”à¸³à¹€à¸™à¸´à¸™à¸à¸²à¸£à¸¢à¸·à¹ˆà¸™à¸„à¸³à¸‚à¸­à¹à¸¥à¸°à¸£à¸±à¸šà¹€à¸­à¸à¸ªà¸²à¸£à¹à¸—à¸™"
+                                placeholder="เช่น ดำเนินการยื่นคำขอและรับเอกสารแทน"
                                 value={repForm.scope}
                                 onChange={(e) => setRepForm({...repForm, scope: e.target.value})}
                                 className="w-full text-xs border border-slate-300 rounded-lg p-2.5 focus:ring-1 focus:ring-brand-500"
@@ -5884,29 +5884,29 @@ export default function App() {
 
                       {/* Section 4: Request Details */}
                       <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-4">
-                        <h4 className="font-bold text-slate-700 text-sm border-b border-slate-200 pb-2">4. à¸£à¸²à¸¢à¸¥à¸°à¹€à¸­à¸µà¸¢à¸”à¸„à¸³à¸‚à¸­</h4>
+                        <h4 className="font-bold text-slate-700 text-sm border-b border-slate-200 pb-2">4. รายละเอียดคำขอ</h4>
                         <div className="space-y-4">
                           <div className="space-y-1">
-                            <label className="text-xs font-medium text-slate-700">à¸›à¸£à¸°à¹€à¸ à¸—à¸„à¸³à¸‚à¸­ <span className="text-red-500">*</span></label>
+                            <label className="text-xs font-medium text-slate-700">ประเภทคำขอ <span className="text-red-500">*</span></label>
                             <select
                               required
                               value={scopeForm.requestType}
                               onChange={(e) => setScopeForm({...scopeForm, requestType: e.target.value as any})}
                               className="w-full text-xs border border-slate-300 rounded-lg p-2.5 bg-white"
                             >
-                              <option value="access_and_copy">à¸‚à¸­à¹€à¸‚à¹‰à¸²à¸–à¸¶à¸‡à¸žà¸£à¹‰à¸­à¸¡à¸‚à¸­à¸£à¸±à¸šà¸ªà¸³à¹€à¸™à¸²à¸‚à¹‰à¸­à¸¡à¸¹à¸¥ (Access & Copy)</option>
-                              <option value="access">à¸‚à¸­à¹€à¸‚à¹‰à¸²à¸–à¸¶à¸‡à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸ªà¹ˆà¸§à¸™à¸šà¸¸à¸„à¸„à¸¥ (Right to Access)</option>
-                              <option value="copy">à¸‚à¸­à¸£à¸±à¸šà¸ªà¸³à¹€à¸™à¸²à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸ªà¹ˆà¸§à¸™à¸šà¸¸à¸„à¸„à¸¥ (Right to obtain a copy)</option>
-                              <option value="erasure">à¸‚à¸­à¹ƒà¸«à¹‰à¸¥à¸šà¸«à¸£à¸·à¸­à¸—à¸³à¸¥à¸²à¸¢à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸ªà¹ˆà¸§à¸™à¸šà¸¸à¸„à¸„à¸¥ (Right to Erasure)</option>
-                              <option value="rectification">à¸‚à¸­à¹à¸à¹‰à¹„à¸‚à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸ªà¹ˆà¸§à¸™à¸šà¸¸à¸„à¸„à¸¥à¹ƒà¸«à¹‰à¸–à¸¹à¸à¸•à¹‰à¸­à¸‡ (Right to Rectification)</option>
-                              <option value="restriction">à¸‚à¸­à¸£à¸°à¸‡à¸±à¸šà¸à¸²à¸£à¹ƒà¸Šà¹‰à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸ªà¹ˆà¸§à¸™à¸šà¸¸à¸„à¸„à¸¥ (Right to Restriction of Processing)</option>
-                              <option value="withdraw">à¸‚à¸­à¸–à¸­à¸™à¸„à¸§à¸²à¸¡à¸¢à¸´à¸™à¸¢à¸­à¸¡ (Right to Withdraw Consent)</option>
-                              <option value="object">à¸‚à¸­à¸„à¸±à¸”à¸„à¹‰à¸²à¸™à¸à¸²à¸£à¹€à¸à¹‡à¸šà¸£à¸§à¸šà¸£à¸§à¸¡ à¹ƒà¸Šà¹‰ à¸«à¸£à¸·à¸­à¹€à¸›à¸´à¸”à¹€à¸œà¸¢ (Right to Object)</option>
-                              <option value="portability">à¸‚à¸­à¹ƒà¸«à¹‰à¹‚à¸­à¸™à¸¢à¹‰à¸²à¸¢à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸ªà¹ˆà¸§à¸™à¸šà¸¸à¸„à¸„à¸¥ (Right to Data Portability)</option>
+                              <option value="access_and_copy">ขอเข้าถึงพร้อมขอรับสำเนาข้อมูล (Access & Copy)</option>
+                              <option value="access">ขอเข้าถึงข้อมูลส่วนบุคคล (Right to Access)</option>
+                              <option value="copy">ขอรับสำเนาข้อมูลส่วนบุคคล (Right to obtain a copy)</option>
+                              <option value="erasure">ขอให้ลบหรือทำลายข้อมูลส่วนบุคคล (Right to Erasure)</option>
+                              <option value="rectification">ขอแก้ไขข้อมูลส่วนบุคคลให้ถูกต้อง (Right to Rectification)</option>
+                              <option value="restriction">ขอระงับการใช้ข้อมูลส่วนบุคคล (Right to Restriction of Processing)</option>
+                              <option value="withdraw">ขอถอนความยินยอม (Right to Withdraw Consent)</option>
+                              <option value="object">ขอคัดค้านการเก็บรวบรวม ใช้ หรือเปิดเผย (Right to Object)</option>
+                              <option value="portability">ขอให้โอนย้ายข้อมูลส่วนบุคคล (Right to Data Portability)</option>
                             </select>
                           </div>
                           <div className="space-y-1">
-                            <label className="text-xs font-medium text-slate-700">à¸£à¸²à¸¢à¸¥à¸°à¹€à¸­à¸µà¸¢à¸”à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸—à¸µà¹ˆà¸•à¹‰à¸­à¸‡à¸à¸²à¸£ <span className="text-red-500">*</span></label>
+                            <label className="text-xs font-medium text-slate-700">รายละเอียดข้อมูลที่ต้องการ <span className="text-red-500">*</span></label>
                             <textarea
                               required
                               rows={3}
@@ -5916,12 +5916,12 @@ export default function App() {
                             />
                           </div>
                           <div className="space-y-1">
-                            <label className="text-xs font-medium text-slate-700">à¸£à¸°à¸šà¸š / à¸à¸²à¸™à¸‚à¹‰à¸­à¸¡à¸¹à¸¥ / à¸à¹ˆà¸²à¸¢à¸—à¸µà¹ˆà¹€à¸à¸µà¹ˆà¸¢à¸§à¸‚à¹‰à¸­à¸‡</label>
+                            <label className="text-xs font-medium text-slate-700">ระบบ / ฐานข้อมูล / ฝ่ายที่เกี่ยวข้อง</label>
                             <input
                               type="text"
                               value={scopeForm.systems.join(', ')}
                               onChange={(e) => setScopeForm({...scopeForm, systems: e.target.value.split(',').map(s => s.trim())})}
-                              placeholder="à¹€à¸Šà¹ˆà¸™ à¸£à¸°à¸šà¸š CRM, à¹à¸œà¸™à¸à¸šà¸¸à¸„à¸„à¸¥ (à¸„à¸±à¹ˆà¸™à¸”à¹‰à¸§à¸¢à¸¥à¸¹à¸à¸™à¹‰à¸³)"
+                              placeholder="เช่น ระบบ CRM, แผนกบุคคล (คั่นด้วยลูกน้ำ)"
                               className="w-full text-xs border border-slate-300 rounded-lg p-2.5"
                             />
                           </div>
@@ -5934,13 +5934,13 @@ export default function App() {
                           onClick={() => setInternalTab('requests')}
                           className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2.5 px-6 rounded-lg text-xs transition"
                         >
-                          à¸¢à¸à¹€à¸¥à¸´à¸
+                          ยกเลิก
                         </button>
                         <button
                           type="submit"
                           className="bg-brand-600 hover:bg-brand-700 text-white font-bold py-2.5 px-8 rounded-lg text-xs transition shadow-sm"
                         >
-                          à¸šà¸±à¸™à¸—à¸¶à¸à¸„à¸³à¸£à¹‰à¸­à¸‡à¹€à¸‚à¹‰à¸²à¸£à¸°à¸šà¸š
+                          บันทึกคำร้องเข้าระบบ
                         </button>
                       </div>
                     </form>
@@ -5954,10 +5954,10 @@ export default function App() {
                       <div>
                         <h3 className="font-bold text-sm text-slate-800 flex items-center gap-2">
                           <UserCheck className="h-4 w-4 text-brand-600" />
-                          <span>à¸à¸²à¸£à¸ˆà¸±à¸”à¸à¸²à¸£à¸šà¸±à¸à¸Šà¸µà¸œà¸¹à¹‰à¹ƒà¸Šà¹‰à¹à¸¥à¸°à¸à¸³à¸«à¸™à¸”à¸ªà¸´à¸—à¸˜à¸´à¹Œ (User & Access Control Management)</span>
+                          <span>การจัดการบัญชีผู้ใช้และกำหนดสิทธิ์ (User & Access Control Management)</span>
                         </h3>
                         <p className="text-xs text-slate-400 mt-0.5">
-                          à¸à¸²à¸£à¸šà¸£à¸´à¸«à¸²à¸£à¸ˆà¸±à¸”à¸à¸²à¸£à¸£à¸²à¸¢à¸Šà¸·à¹ˆà¸­à¹€à¸ˆà¹‰à¸²à¸«à¸™à¹‰à¸²à¸—à¸µà¹ˆ à¸ªà¸´à¸—à¸˜à¸´à¹Œà¸à¸²à¸£à¹€à¸‚à¹‰à¸²à¸–à¸¶à¸‡ (Multi-Role) à¹à¸¥à¸°à¸à¸²à¸£à¸•à¸£à¸§à¸ˆà¸ªà¸­à¸šà¸„à¸§à¸²à¸¡à¹€à¸ªà¸µà¹ˆà¸¢à¸‡ SOD à¸•à¸²à¸¡à¸¡à¸²à¸•à¸£à¸à¸²à¸™à¸„à¸§à¸²à¸¡à¸¡à¸±à¹ˆà¸™à¸„à¸‡à¸›à¸¥à¸­à¸”à¸ à¸±à¸¢
+                          การบริหารจัดการรายชื่อเจ้าหน้าที่ สิทธิ์การเข้าถึง (Multi-Role) และการตรวจสอบความเสี่ยง SOD ตามมาตรฐานความมั่นคงปลอดภัย
                         </p>
                       </div>
                       <button
@@ -5969,7 +5969,7 @@ export default function App() {
                             fullNameTh: '',
                             fullNameEn: '',
                             email: '',
-                            department: 'à¸¨à¸¹à¸™à¸¢à¹Œà¸£à¸±à¸šà¹€à¸£à¸·à¹ˆà¸­à¸‡à¸£à¹‰à¸­à¸‡à¹€à¸£à¸µà¸¢à¸™ (à¸à¸£à¸¡à¸à¸²à¸£à¸›à¸à¸„à¸£à¸­à¸‡)',
+                            department: 'ศูนย์รับเรื่องร้องเรียน (กรมการปกครอง)',
                             role: 'intake',
                             roles: ['intake']
                           });
@@ -5978,7 +5978,7 @@ export default function App() {
                         className="bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs px-3.5 py-2 rounded-lg transition shadow-sm flex items-center gap-1.5"
                       >
                         <Plus className="h-4 w-4" />
-                        <span>+ à¹€à¸žà¸´à¹ˆà¸¡à¸œà¸¹à¹‰à¹ƒà¸Šà¹‰à¸‡à¸²à¸™à¹ƒà¸«à¸¡à¹ˆ (Add User)</span>
+                        <span>+ เพิ่มผู้ใช้งานใหม่ (Add User)</span>
                       </button>
                     </div>
 
@@ -5987,12 +5987,12 @@ export default function App() {
                       <table className="w-full text-left text-xs border-collapse">
                         <thead>
                           <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold">
-                            <th className="p-3">à¸Šà¸·à¹ˆà¸­-à¸™à¸²à¸¡à¸ªà¸à¸¸à¸¥</th>
-                            <th className="p-3">Username / à¸­à¸µà¹€à¸¡à¸¥</th>
-                            <th className="p-3">à¸«à¸™à¹ˆà¸§à¸¢à¸‡à¸²à¸™ / à¹à¸œà¸™à¸</th>
-                            <th className="p-3">à¸šà¸—à¸šà¸²à¸—à¸ªà¸´à¸—à¸˜à¸´à¹Œà¸–à¸·à¸­à¸„à¸£à¸­à¸‡ (Roles)</th>
-                            <th className="p-3">à¸ªà¸–à¸²à¸™à¸°à¸„à¸§à¸²à¸¡à¹€à¸ªà¸µà¹ˆà¸¢à¸‡ SOD</th>
-                            <th className="p-3 text-center">à¸ˆà¸±à¸”à¸à¸²à¸£</th>
+                            <th className="p-3">ชื่อ-นามสกุล</th>
+                            <th className="p-3">Username / อีเมล</th>
+                            <th className="p-3">หน่วยงาน / แผนก</th>
+                            <th className="p-3">บทบาทสิทธิ์ถือครอง (Roles)</th>
+                            <th className="p-3">สถานะความเสี่ยง SOD</th>
+                            <th className="p-3 text-center">จัดการ</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 text-slate-700">
@@ -6025,11 +6025,11 @@ export default function App() {
                                   {user.sodWarnings && user.sodWarnings.length > 0 ? (
                                     <span className="bg-amber-100 text-amber-900 border border-amber-300 px-2 py-0.5 rounded text-[10px] font-bold flex items-center gap-1 w-fit">
                                       <AlertTriangle className="h-3 w-3 text-amber-600" />
-                                      <span>âš ï¸ SOD Conflict</span>
+                                      <span>⚠️ SOD Conflict</span>
                                     </span>
                                   ) : (
                                     <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded text-[10px] font-bold">
-                                      âœ“ Compliant (Normal)
+                                      ✓ Compliant (Normal)
                                     </span>
                                   )}
                                 </td>
@@ -6051,7 +6051,7 @@ export default function App() {
                                     }}
                                     className="bg-slate-100 hover:bg-brand-50 text-slate-700 hover:text-brand-700 border border-slate-200 hover:border-brand-300 px-2.5 py-1 rounded text-[11px] font-semibold transition"
                                   >
-                                    à¹à¸à¹‰à¹„à¸‚à¸ªà¸´à¸—à¸˜à¸´à¹Œ
+                                    แก้ไขสิทธิ์
                                   </button>
                                 </td>
                               </tr>
@@ -6066,8 +6066,8 @@ export default function App() {
                     
                     <div className="p-4 border-b border-slate-100 bg-slate-50 flex flex-wrap items-center justify-between gap-4">
                       <span className="text-xs font-bold text-slate-800">
-                        à¸•à¸²à¸£à¸²à¸‡à¸ªà¸·à¸šà¸„à¹‰à¸™à¹à¸¥à¸°à¸”à¸³à¹€à¸™à¸´à¸™à¸‡à¸²à¸™à¸„à¸³à¸£à¹‰à¸­à¸‡à¸‚à¸­à¹ƒà¸Šà¹‰à¸ªà¸´à¸—à¸˜à¸´à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸ªà¹ˆà¸§à¸™à¸šà¸¸à¸„à¸„à¸¥ (Data Subject Access Requests) 
-                        ({filteredRequests.length} à¸£à¸²à¸¢à¸à¸²à¸£)
+                        ตารางสืบค้นและดำเนินงานคำร้องขอใช้สิทธิข้อมูลส่วนบุคคล (Data Subject Access Requests) 
+                        ({filteredRequests.length} รายการ)
                       </span>
                       {['intake', 'admin'].includes(activeUser.role) && (
                         <button
@@ -6079,7 +6079,7 @@ export default function App() {
                           className="bg-brand-600 hover:bg-brand-700 text-white font-bold text-[11px] px-3 py-1.5 rounded transition shadow-sm flex items-center gap-1.5"
                         >
                           <Plus className="w-3.5 h-3.5" />
-                          à¸šà¸±à¸™à¸—à¸¶à¸à¸„à¸³à¸£à¹‰à¸­à¸‡à¹ƒà¸«à¸¡à¹ˆ (Manual Entry)
+                          บันทึกคำร้องใหม่ (Manual Entry)
                         </button>
                       )}
                     </div>
@@ -6088,13 +6088,13 @@ export default function App() {
                       <table className="w-full text-left text-xs border-collapse">
                         <thead>
                           <tr className="bg-slate-100/50 border-b border-slate-200 text-slate-500 font-bold">
-                            <th className="p-3">à¹€à¸¥à¸‚à¸•à¸´à¸”à¸•à¸²à¸¡ (Tracking)</th>
-                            <th className="p-3">à¸œà¸¹à¹‰à¸¢à¸·à¹ˆà¸™à¸„à¸³à¸‚à¸­</th>
-                            <th className="p-3">à¸›à¸£à¸°à¹€à¸ à¸—à¸ªà¸´à¸—à¸˜à¸´à¹Œ</th>
-                            <th className="p-3">à¸§à¸±à¸™à¸¢à¸·à¹ˆà¸™à¹€à¸£à¸·à¹ˆà¸­à¸‡</th>
-                            <th className="p-3">à¸ªà¸–à¸²à¸™à¸°à¸‚à¸±à¹‰à¸™à¸•à¸­à¸™</th>
-                            <th className="p-3">SLA à¹€à¸«à¸¥à¸·à¸­</th>
-                            <th className="p-3 text-center">à¸ˆà¸±à¸”à¸à¸²à¸£</th>
+                            <th className="p-3">เลขติดตาม (Tracking)</th>
+                            <th className="p-3">ผู้ยื่นคำขอ</th>
+                            <th className="p-3">ประเภทสิทธิ์</th>
+                            <th className="p-3">วันยื่นเรื่อง</th>
+                            <th className="p-3">สถานะขั้นตอน</th>
+                            <th className="p-3">SLA เหลือ</th>
+                            <th className="p-3 text-center">จัดการ</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 text-slate-700">
@@ -6119,7 +6119,7 @@ export default function App() {
                               </td>
                               <td className="p-3 font-bold">
                                 <span className={req.slaRemainingDays < 0 ? 'text-rose-600' : req.slaRemainingDays <= 7 ? 'text-amber-600' : 'text-slate-700'}>
-                                  {req.slaRemainingDays} à¸§à¸±à¸™
+                                  {req.slaRemainingDays} วัน
                                 </span>
                               </td>
                               <td className="p-3 text-center">
@@ -6127,14 +6127,14 @@ export default function App() {
                                   type="button"
                                   onClick={() => {
                                     if (activeUser && !canManageRequestFlow(req, activeUser)) {
-                                      showNotify('à¸„à¸³à¸£à¹‰à¸­à¸‡à¸™à¸µà¹‰à¸¢à¸±à¸‡à¹„à¸¡à¹ˆà¸­à¸¢à¸¹à¹ˆà¹ƒà¸™à¸‚à¸±à¹‰à¸™à¸•à¸­à¸™à¸—à¸µà¹ˆà¸—à¹ˆà¸²à¸™à¸ªà¸²à¸¡à¸²à¸£à¸–à¸ˆà¸±à¸”à¸à¸²à¸£à¹„à¸”à¹‰ (à¸£à¸­à¸”à¸³à¹€à¸™à¸´à¸™à¸à¸²à¸£à¸•à¸²à¸¡ FLOW)', 'warning');
+                                      showNotify('คำร้องนี้ยังไม่อยู่ในขั้นตอนที่ท่านสามารถจัดการได้ (รอดำเนินการตาม FLOW)', 'warning');
                                       return;
                                     }
                                     setSelectedRequestId(req.id);
                                   }}
                                   className="text-brand-600 hover:text-brand-800 font-bold hover:underline"
                                 >
-                                  à¸•à¸£à¸§à¸ˆà¸ªà¸­à¸šà¹€à¸„à¸ª
+                                  ตรวจสอบเคส
                                 </button>
                               </td>
                             </tr>
@@ -6148,17 +6148,17 @@ export default function App() {
                 {/* 4.3 Kanban workflow board view (Section 4) */}
                 {internalTab === 'kanban' && (
                   <div className="space-y-4">
-                    <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider">à¸šà¸­à¸£à¹Œà¸”à¸¥à¸­à¸¢à¸‡à¸²à¸™à¸•à¸²à¸¡à¸‚à¸±à¹‰à¸™à¸•à¸­à¸™à¸à¸Žà¸«à¸¡à¸²à¸¢ (Workflow Kanban board)</span>
+                    <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider">บอร์ดลอยงานตามขั้นตอนกฎหมาย (Workflow Kanban board)</span>
                     
                     <div className="grid grid-cols-1 md:grid-cols-5 gap-4 overflow-x-auto pb-4">
                       
                       {/* Column 1: Intake */}
                       {[
-                        { title: '1. à¸•à¸£à¸§à¸ˆà¸£à¸±à¸šà¸„à¸³à¸‚à¸­ (Intake)', statuses: ['Submitted', 'Received', 'Identity Verification', 'Awaiting Identity Evidence', 'Completeness Review'] },
-                        { title: '2. à¸ªà¸·à¸šà¸„à¹‰à¸™à¸£à¸°à¸šà¸š (Gathering)', statuses: ['Documents Verified', 'Assigned', 'Data Collection'] },
-                        { title: '3. à¸à¸Žà¸«à¸¡à¸²à¸¢/DPO (Legal Check)', statuses: ['Data Owner Review', 'DPO or Legal Review', 'Redaction Required'] },
-                        { title: '4. à¸£à¸­à¸­à¸™à¸¸à¸¡à¸±à¸•à¸´/à¸Šà¸³à¸£à¸°à¹€à¸‡à¸´à¸™ (Approval)', statuses: ['Approval Pending', 'Fee Notification', 'Awaiting Payment'] },
-                        { title: '5. à¹€à¸•à¸£à¸µà¸¢à¸¡à¸ªà¹ˆà¸‡à¸¡à¸­à¸š/à¸›à¸´à¸”à¸‡à¸²à¸™ (Delivery)', statuses: ['Approved', 'Partially Approved', 'Ready for Delivery', 'Delivered', 'Closed'] }
+                        { title: '1. ตรวจรับคำขอ (Intake)', statuses: ['Submitted', 'Received', 'Identity Verification', 'Awaiting Identity Evidence', 'Completeness Review'] },
+                        { title: '2. สืบค้นระบบ (Gathering)', statuses: ['Documents Verified', 'Assigned', 'Data Collection'] },
+                        { title: '3. กฎหมาย/DPO (Legal Check)', statuses: ['Data Owner Review', 'DPO or Legal Review', 'Redaction Required'] },
+                        { title: '4. รออนุมัติ/ชำระเงิน (Approval)', statuses: ['Approval Pending', 'Fee Notification', 'Awaiting Payment'] },
+                        { title: '5. เตรียมส่งมอบ/ปิดงาน (Delivery)', statuses: ['Approved', 'Partially Approved', 'Ready for Delivery', 'Delivered', 'Closed'] }
                       ].map((col, idx) => {
                         const colRequests = filteredRequests.filter(r => col.statuses.includes(r.status));
                         return (
@@ -6174,7 +6174,7 @@ export default function App() {
                                   key={req.id}
                                   onClick={() => {
                                     if (activeUser && !canManageRequestFlow(req, activeUser)) {
-                                      showNotify('à¸„à¸³à¸£à¹‰à¸­à¸‡à¸™à¸µà¹‰à¸¢à¸±à¸‡à¹„à¸¡à¹ˆà¸­à¸¢à¸¹à¹ˆà¹ƒà¸™à¸‚à¸±à¹‰à¸™à¸•à¸­à¸™à¸—à¸µà¹ˆà¸—à¹ˆà¸²à¸™à¸ªà¸²à¸¡à¸²à¸£à¸–à¸ˆà¸±à¸”à¸à¸²à¸£à¹„à¸”à¹‰ (à¸£à¸­à¸”à¸³à¹€à¸™à¸´à¸™à¸à¸²à¸£à¸•à¸²à¸¡ FLOW)', 'warning');
+                                      showNotify('คำร้องนี้ยังไม่อยู่ในขั้นตอนที่ท่านสามารถจัดการได้ (รอดำเนินการตาม FLOW)', 'warning');
                                       return;
                                     }
                                     setSelectedRequestId(req.id);
@@ -6207,16 +6207,16 @@ export default function App() {
                     <div>
                       <h3 className="font-bold text-slate-800 text-base flex items-center gap-1.5">
                         <Scale className="h-5 w-5 text-brand-600" />
-                        <span>à¸•à¸±à¹‰à¸‡à¸„à¹ˆà¸²à¸à¸²à¸£à¸›à¸à¸´à¸šà¸±à¸•à¸´à¸•à¸²à¸¡à¸‚à¹‰à¸­à¸šà¸±à¸‡à¸„à¸±à¸šà¸„à¸¸à¹‰à¸¡à¸„à¸£à¸­à¸‡à¸‚à¹‰à¸­à¸¡à¸¹à¸¥ (Compliance Configurator)</span>
+                        <span>ตั้งค่าการปฏิบัติตามข้อบังคับคุ้มครองข้อมูล (Compliance Configurator)</span>
                       </h3>
-                      <p className="text-xs text-slate-500 mt-0.5">à¹€à¸§à¸­à¸£à¹Œà¸Šà¸±à¸™à¹ƒà¸Šà¹‰à¸‡à¸²à¸™à¸›à¸±à¸ˆà¸ˆà¸¸à¸šà¸±à¸™: v{config.version} | à¹à¸à¹‰à¹„à¸‚à¹‚à¸”à¸¢: {config.updatedBy} ({convertToThaiDate(config.updatedAt)})</p>
+                      <p className="text-xs text-slate-500 mt-0.5">เวอร์ชันใช้งานปัจจุบัน: v{config.version} | แก้ไขโดย: {config.updatedBy} ({convertToThaiDate(config.updatedAt)})</p>
                     </div>
 
                     <form onSubmit={handleSaveConfig} className="space-y-4 text-xs">
                       
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-1">
-                          <label className="font-semibold text-slate-700">à¸•à¸£à¸§à¸ˆà¸ªà¸­à¸šà¸„à¸§à¸²à¸¡à¸„à¸£à¸šà¸–à¹‰à¸§à¸™à¸‚à¸­à¸‡à¹€à¸­à¸à¸ªà¸²à¸£ (à¸§à¸±à¸™):</label>
+                          <label className="font-semibold text-slate-700">ตรวจสอบความครบถ้วนของเอกสาร (วัน):</label>
                           <input
                             type="number"
                             min={1}
@@ -6226,7 +6226,7 @@ export default function App() {
                           />
                         </div>
                         <div className="space-y-1">
-                          <label className="font-semibold text-slate-700">à¸‚à¸µà¸”à¸à¸³à¸«à¸™à¸”à¹ƒà¸«à¹‰à¸œà¸¹à¹‰à¸¢à¸·à¹ˆà¸™à¹à¸à¹‰à¹„à¸‚à¹€à¸­à¸à¸ªà¸²à¸£à¹€à¸žà¸´à¹ˆà¸¡à¹€à¸•à¸´à¸¡ (à¸§à¸±à¸™ - à¸«à¹‰à¸²à¸¡à¸•à¹ˆà¸³à¸à¸§à¹ˆà¸² 10 à¸§à¸±à¸™):</label>
+                          <label className="font-semibold text-slate-700">ขีดกำหนดให้ผู้ยื่นแก้ไขเอกสารเพิ่มเติม (วัน - ห้ามต่ำกว่า 10 วัน):</label>
                           <input
                             type="number"
                             min={10}
@@ -6239,7 +6239,7 @@ export default function App() {
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-1">
-                          <label className="font-semibold text-slate-700">à¸£à¸°à¸¢à¸°à¹€à¸§à¸¥à¸²à¸”à¸³à¹€à¸™à¸´à¸™à¸à¸²à¸£à¸›à¸£à¸°à¸¡à¸§à¸¥à¸œà¸¥à¸ªà¸´à¸—à¸˜à¸´à¹Œà¸«à¸¥à¸±à¸ (à¸§à¸±à¸™ - à¸›à¸à¸•à¸´ 30 à¸§à¸±à¸™):</label>
+                          <label className="font-semibold text-slate-700">ระยะเวลาดำเนินการประมวลผลสิทธิ์หลัก (วัน - ปกติ 30 วัน):</label>
                           <input
                             type="number"
                             min={1}
@@ -6249,7 +6249,7 @@ export default function App() {
                           />
                         </div>
                         <div className="space-y-1">
-                          <label className="font-semibold text-slate-700">à¸£à¸°à¸¢à¸°à¹€à¸§à¸¥à¸²à¸ªà¸¹à¸‡à¸ªà¸¸à¸”à¸‚à¸¢à¸²à¸¢à¸£à¸°à¸¢à¸°à¹€à¸§à¸¥à¸²à¸­à¸­à¸à¸‡à¸²à¸™à¹„à¸”à¹‰à¸­à¸µà¸ (à¸§à¸±à¸™):</label>
+                          <label className="font-semibold text-slate-700">ระยะเวลาสูงสุดขยายระยะเวลาออกงานได้อีก (วัน):</label>
                           <input
                             type="number"
                             min={1}
@@ -6261,10 +6261,10 @@ export default function App() {
                       </div>
 
                       <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg space-y-3">
-                        <span className="block font-bold text-slate-700">à¸­à¸±à¸•à¸£à¸²à¸ˆà¸±à¸”à¹€à¸à¹‡à¸šà¸„à¹ˆà¸²à¸˜à¸£à¸£à¸¡à¹€à¸™à¸µà¸¢à¸¡à¸ªà¸¹à¸‡à¸ªà¸¸à¸” (à¸šà¸²à¸—):</span>
+                        <span className="block font-bold text-slate-700">อัตราจัดเก็บค่าธรรมเนียมสูงสุด (บาท):</span>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
                           <div className="space-y-1">
-                            <label className="text-[10px] text-slate-400 block font-bold">à¸ªà¸³à¹€à¸™à¸²à¸à¸£à¸°à¸”à¸²à¸© A4 (à¸ªà¸¹à¸‡à¸ªà¸¸à¸” 1 à¸š.):</label>
+                            <label className="text-[10px] text-slate-400 block font-bold">สำเนากระดาษ A4 (สูงสุด 1 บ.):</label>
                             <input
                               type="number"
                               step={0.1}
@@ -6275,7 +6275,7 @@ export default function App() {
                             />
                           </div>
                           <div className="space-y-1">
-                            <label className="text-[10px] text-slate-400 block font-bold">à¸„à¸­à¸¡à¸žà¸´à¸§à¹€à¸•à¸­à¸£à¹Œà¸›à¸£à¸´à¹‰à¸™à¸—à¹Œ A4 (à¸ªà¸¹à¸‡à¸ªà¸¸à¸” 3 à¸š.):</label>
+                            <label className="text-[10px] text-slate-400 block font-bold">คอมพิวเตอร์ปริ้นท์ A4 (สูงสุด 3 บ.):</label>
                             <input
                               type="number"
                               step={0.1}
@@ -6286,7 +6286,7 @@ export default function App() {
                             />
                           </div>
                           <div className="space-y-1">
-                            <label className="text-[10px] text-slate-400 block font-bold">à¸„à¹ˆà¸²à¹€à¸‹à¹‡à¸™à¸£à¸±à¸šà¸£à¸­à¸‡ (à¸ªà¸¹à¸‡à¸ªà¸¸à¸” 5 à¸š.):</label>
+                            <label className="text-[10px] text-slate-400 block font-bold">ค่าเซ็นรับรอง (สูงสุด 5 บ.):</label>
                             <input
                               type="number"
                               step={0.1}
@@ -6300,11 +6300,11 @@ export default function App() {
                       </div>
 
                       <div className="space-y-1">
-                        <label className="font-semibold text-slate-700">à¹€à¸«à¸•à¸¸à¸œà¸¥à¸›à¸£à¸°à¸à¸­à¸šà¸à¸²à¸£à¸šà¸±à¸™à¸—à¸¶à¸à¹à¸à¹‰à¹„à¸‚ (Audit Reason) <span className="text-red-500">*</span></label>
+                        <label className="font-semibold text-slate-700">เหตุผลประกอบการบันทึกแก้ไข (Audit Reason) <span className="text-red-500">*</span></label>
                         <input
                           type="text"
                           required
-                          placeholder="à¸£à¸°à¸šà¸¸à¹€à¸«à¸•à¸¸à¸œà¸¥à¸à¸²à¸£à¸­à¸­à¸à¸™à¹‚à¸¢à¸šà¸²à¸¢à¸‰à¸šà¸±à¸šà¹à¸à¹‰à¹„à¸‚..."
+                          placeholder="ระบุเหตุผลการออกนโยบายฉบับแก้ไข..."
                           value={configForm.changeReason}
                           onChange={(e) => setConfigForm({ ...configForm, changeReason: e.target.value })}
                           className="w-full border rounded p-2 bg-white font-semibold"
@@ -6315,7 +6315,7 @@ export default function App() {
                         type="submit"
                         className="w-full bg-brand-600 hover:bg-brand-700 text-white font-bold py-2 rounded-lg transition"
                       >
-                        à¸¢à¸·à¸™à¸¢à¸±à¸™à¸à¸²à¸£à¸šà¸±à¸™à¸—à¸¶à¸ à¹à¸¥à¸°à¹€à¸›à¸¥à¸µà¹ˆà¸¢à¸™à¹€à¸§à¸­à¸£à¹Œà¸Šà¸±à¸™ config
+                        ยืนยันการบันทึก และเปลี่ยนเวอร์ชัน config
                       </button>
 
                     </form>
@@ -6326,19 +6326,19 @@ export default function App() {
                 {internalTab === 'templates' && (
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
-                      <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider">à¹à¸¡à¹ˆà¹à¸šà¸šà¸«à¸™à¸±à¸‡à¸ªà¸·à¸­à¸£à¸²à¸Šà¸à¸²à¸£à¸„à¸¸à¹‰à¸¡à¸„à¸£à¸­à¸‡à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸ªà¹ˆà¸§à¸™à¸šà¸¸à¸„à¸„à¸¥ (PDPA Document Templates)</span>
+                      <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider">แม่แบบหนังสือราชการคุ้มครองข้อมูลส่วนบุคคล (PDPA Document Templates)</span>
                       <button
                         type="button"
                         onClick={() => {
-                          showNotify('à¸¢à¸·à¸™à¸¢à¸±à¸™à¸à¸²à¸£à¸£à¸µà¹€à¸‹à¹‡à¸•à¸‚à¹‰à¸­à¸„à¸§à¸²à¸¡à¹à¸¡à¹ˆà¹à¸šà¸šà¸—à¸±à¹‰à¸‡à¸«à¸¡à¸”à¸à¸¥à¸±à¸šà¹€à¸›à¹‡à¸™à¸„à¹ˆà¸²à¹€à¸£à¸´à¹ˆà¸¡à¸•à¹‰à¸™à¸¡à¸²à¸•à¸£à¸à¸²à¸™à¸‚à¸­à¸‡à¸£à¸°à¸šà¸šà¸«à¸£à¸·à¸­à¹„à¸¡à¹ˆ?', 'confirm', 'à¸¢à¸·à¸™à¸¢à¸±à¸™à¸à¸²à¸£à¸£à¸µà¹€à¸‹à¹‡à¸•à¹à¸¡à¹ˆà¹à¸šà¸š', async () => {
+                          showNotify('ยืนยันการรีเซ็ตข้อความแม่แบบทั้งหมดกลับเป็นค่าเริ่มต้นมาตรฐานของระบบหรือไม่?', 'confirm', 'ยืนยันการรีเซ็ตแม่แบบ', async () => {
                             const defaults = await resetDocumentTemplates();
                             setTemplates(defaults);
-                            showNotify('à¸£à¸µà¹€à¸‹à¹‡à¸•à¸‚à¹‰à¸­à¸„à¸§à¸²à¸¡à¹à¸¡à¹ˆà¹à¸šà¸šà¸«à¸™à¸±à¸‡à¸ªà¸·à¸­à¸£à¸²à¸Šà¸à¸²à¸£à¸—à¸±à¹‰à¸‡à¸«à¸¡à¸”à¸à¸¥à¸±à¸šà¹€à¸›à¹‡à¸™à¸„à¹ˆà¸²à¹€à¸£à¸´à¹ˆà¸¡à¸•à¹‰à¸™à¹€à¸£à¸µà¸¢à¸šà¸£à¹‰à¸­à¸¢à¹à¸¥à¹‰à¸§', 'success', 'à¸£à¸µà¹€à¸‹à¹‡à¸•à¸ªà¸³à¹€à¸£à¹‡à¸ˆ');
+                            showNotify('รีเซ็ตข้อความแม่แบบหนังสือราชการทั้งหมดกลับเป็นค่าเริ่มต้นเรียบร้อยแล้ว', 'success', 'รีเซ็ตสำเร็จ');
                           });
                         }}
                         className="text-[11px] bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded font-semibold transition"
                       >
-                        ðŸ”„ à¸£à¸µà¹€à¸‹à¹‡à¸•à¹à¸¡à¹ˆà¹à¸šà¸šà¹€à¸£à¸´à¹ˆà¸¡à¸•à¹‰à¸™ (Reset Defaults)
+                        🔄 รีเซ็ตแม่แบบเริ่มต้น (Reset Defaults)
                       </button>
                     </div>
                     
@@ -6348,7 +6348,7 @@ export default function App() {
                           <div className="flex justify-between items-start">
                             <div>
                               <span className="font-bold text-slate-800 block">{temp.nameTh}</span>
-                              <span className="text-[10px] text-slate-400 block">à¸£à¸«à¸±à¸ª: {temp.id} | à¹€à¸§à¸­à¸£à¹Œà¸Šà¸±à¸™: {temp.version}</span>
+                              <span className="text-[10px] text-slate-400 block">รหัส: {temp.id} | เวอร์ชัน: {temp.version}</span>
                             </div>
                             <span className="bg-slate-100 text-slate-600 border border-slate-200 px-1.5 py-0.5 rounded text-[10px] font-bold">
                               {temp.confidentialityLevel}
@@ -6356,7 +6356,7 @@ export default function App() {
                           </div>
 
                           <div className="space-y-1">
-                            <span className="text-slate-400 block font-semibold">à¸Šà¸·à¹ˆà¸­à¹€à¸£à¸·à¹ˆà¸­à¸‡à¸«à¸™à¸±à¸‡à¸ªà¸·à¸­à¸£à¸²à¸Šà¸à¸²à¸£:</span>
+                            <span className="text-slate-400 block font-semibold">ชื่อเรื่องหนังสือราชการ:</span>
                             <span className="font-bold text-slate-800">{temp.subjectTemplate}</span>
                           </div>
 
@@ -6369,7 +6369,7 @@ export default function App() {
                             onClick={() => setEditingTemplate({ ...temp })}
                             className="w-full bg-brand-50 hover:bg-brand-100 text-brand-700 font-semibold py-1.5 rounded transition text-center"
                           >
-                            à¹à¸à¹‰à¹„à¸‚à¸‚à¹‰à¸­à¸„à¸§à¸²à¸¡à¹à¸¡à¹ˆà¹à¸šà¸š (Edit Template)
+                            แก้ไขข้อความแม่แบบ (Edit Template)
                           </button>
                         </div>
                       ))}
@@ -6381,20 +6381,20 @@ export default function App() {
                 {internalTab === 'retention' && (
                   <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
                     <div className="p-4 border-b border-slate-100 bg-slate-50">
-                      <span className="text-xs font-bold text-slate-800">à¸™à¹‚à¸¢à¸šà¸²à¸¢à¸à¸²à¸£à¸ˆà¸±à¸”à¹€à¸à¹‡à¸šà¹à¸¥à¸°à¸—à¸³à¸¥à¸²à¸¢à¹€à¸­à¸à¸ªà¸²à¸£à¸«à¸¥à¸±à¸à¸à¸²à¸™ (Data Retention & Disposal Schedule)</span>
-                      <p className="text-[10px] text-slate-400 mt-0.5">à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸«à¸¥à¸±à¸à¸à¸²à¸™à¸›à¸£à¸°à¸à¸­à¸šà¸à¸²à¸£à¸‚à¸­à¸ªà¸´à¸—à¸˜à¸´ à¸¡à¸µà¹€à¸à¸“à¸‘à¹Œà¸—à¸³à¸¥à¸²à¸¢à¸–à¸²à¸§à¸£ 2 à¸›à¸µ à¸™à¸±à¸šà¸ˆà¸²à¸à¹€à¸ªà¸£à¹‡à¸ˆà¸ªà¸´à¹‰à¸™à¸à¸²à¸£à¸ªà¹ˆà¸‡à¸¡à¸­à¸š</p>
+                      <span className="text-xs font-bold text-slate-800">นโยบายการจัดเก็บและทำลายเอกสารหลักฐาน (Data Retention & Disposal Schedule)</span>
+                      <p className="text-[10px] text-slate-400 mt-0.5">ข้อมูลหลักฐานประกอบการขอสิทธิ มีเกณฑ์ทำลายถาวร 2 ปี นับจากเสร็จสิ้นการส่งมอบ</p>
                     </div>
 
                     <div className="overflow-x-auto">
                       <table className="w-full text-left text-xs border-collapse">
                         <thead>
                           <tr className="bg-slate-100/50 border-b border-slate-200 text-slate-500 font-bold">
-                            <th className="p-3">à¹€à¸¥à¸‚à¸•à¸´à¸”à¸•à¸²à¸¡</th>
-                            <th className="p-3">à¹€à¸ˆà¹‰à¸²à¸‚à¸­à¸‡à¸ªà¸´à¸—à¸˜à¸´à¹Œ</th>
-                            <th className="p-3">à¸§à¸±à¸™à¸›à¸´à¸”à¹€à¸„à¸ª</th>
-                            <th className="p-3">à¸à¸³à¸«à¸™à¸”à¸—à¸³à¸¥à¸²à¸¢</th>
-                            <th className="p-3">à¸ªà¸–à¸²à¸™à¸°à¸ˆà¸±à¸”à¹€à¸à¹‡à¸š</th>
-                            <th className="p-3 text-center">à¸„à¸³à¸ªà¸±à¹ˆà¸‡à¸—à¸³à¸¥à¸²à¸¢</th>
+                            <th className="p-3">เลขติดตาม</th>
+                            <th className="p-3">เจ้าของสิทธิ์</th>
+                            <th className="p-3">วันปิดเคส</th>
+                            <th className="p-3">กำหนดทำลาย</th>
+                            <th className="p-3">สถานะจัดเก็บ</th>
+                            <th className="p-3 text-center">คำสั่งทำลาย</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 text-slate-700">
@@ -6415,7 +6415,7 @@ export default function App() {
                                     req.legalHold ? 'bg-red-100 text-red-800 animate-pulse' :
                                     'bg-emerald-100 text-emerald-800'
                                   }`}>
-                                    {req.status === 'Destroyed' ? 'à¸—à¸³à¸¥à¸²à¸¢à¸–à¸²à¸§à¸£à¹à¸¥à¹‰à¸§' : req.legalHold ? 'Legal Hold (à¸«à¹‰à¸²à¸¡à¸¥à¸š)' : 'à¸­à¸¢à¸¹à¹ˆà¹ƒà¸™à¸à¸³à¸«à¸™à¸”à¸£à¸±à¸à¸©à¸²'}
+                                    {req.status === 'Destroyed' ? 'ทำลายถาวรแล้ว' : req.legalHold ? 'Legal Hold (ห้ามลบ)' : 'อยู่ในกำหนดรักษา'}
                                   </span>
                                 </td>
                                 <td className="p-3 text-center">
@@ -6430,7 +6430,7 @@ export default function App() {
                                     }`}
                                   >
                                     <Trash2 className="h-3 w-3" />
-                                    <span>à¸¥à¸šà¸—à¸³à¸¥à¸²à¸¢à¸–à¸²à¸§à¸£</span>
+                                    <span>ลบทำลายถาวร</span>
                                   </button>
                                 </td>
                               </tr>
@@ -6447,15 +6447,15 @@ export default function App() {
                   <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
                     <div className="p-4 border-b border-slate-100 bg-slate-50 flex items-center justify-between flex-wrap gap-4">
                       <div>
-                        <span className="text-xs font-bold text-slate-800">à¸ªà¸¡à¸¸à¸”à¸šà¸±à¸™à¸—à¸¶à¸à¸à¸´à¸ˆà¸à¸£à¸£à¸¡à¸£à¸°à¸šà¸š (Append-only System Audit Logs)</span>
-                        <p className="text-[10px] text-slate-400 mt-0.5">à¸šà¸±à¸™à¸—à¸¶à¸à¸—à¸¸à¸à¸à¸²à¸£à¹€à¸›à¸´à¸”à¸”à¸¹à¹„à¸Ÿà¸¥à¹Œ, à¹€à¸›à¸¥à¸µà¹ˆà¸¢à¸™à¹à¸›à¸¥à¸‡à¸ªà¸–à¸²à¸™à¸° à¹à¸¥à¸°à¸ªà¸´à¸—à¸˜à¸´à¹Œà¹€à¸‚à¹‰à¸²à¸–à¸¶à¸‡à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸žà¸£à¹‰à¸­à¸¡à¸¥à¸²à¸¢à¹€à¸‹à¹‡à¸™à¸”à¸´à¸ˆà¸´à¸—à¸±à¸¥à¹€à¸Šà¹‡à¸„à¸‹à¸±à¸¡</p>
+                        <span className="text-xs font-bold text-slate-800">สมุดบันทึกกิจกรรมระบบ (Append-only System Audit Logs)</span>
+                        <p className="text-[10px] text-slate-400 mt-0.5">บันทึกทุกการเปิดดูไฟล์, เปลี่ยนแปลงสถานะ และสิทธิ์เข้าถึงข้อมูลพร้อมลายเซ็นดิจิทัลเช็คซัม</p>
                       </div>
                       
                       <div className="flex gap-2 w-full sm:w-auto mt-2 sm:mt-0">
                         <div className="relative flex-1 sm:w-64">
                           <input
                             type="text"
-                            placeholder="à¸„à¹‰à¸™à¸«à¸²à¸Šà¸·à¹ˆà¸­, à¸à¸²à¸£à¸à¸£à¸°à¸—à¸³, à¸«à¸£à¸·à¸­à¸£à¸²à¸¢à¸¥à¸°à¹€à¸­à¸µà¸¢à¸”..."
+                            placeholder="ค้นหาชื่อ, การกระทำ, หรือรายละเอียด..."
                             value={auditSearchTerm}
                             onChange={(e) => {
                               setAuditSearchTerm(e.target.value);
@@ -6470,7 +6470,7 @@ export default function App() {
                           className="bg-brand-600 hover:bg-brand-700 text-white text-[11px] font-semibold py-1.5 px-3 rounded flex items-center gap-1.5 transition whitespace-nowrap"
                         >
                           <FileSpreadsheet className="h-3.5 w-3.5" />
-                          <span>à¸ªà¹ˆà¸‡à¸­à¸­à¸ CSV</span>
+                          <span>ส่งออก CSV</span>
                         </button>
                       </div>
                     </div>
@@ -6479,11 +6479,11 @@ export default function App() {
                       <table className="w-full text-left text-[11px] border-collapse">
                         <thead>
                           <tr className="bg-slate-100/50 border-b border-slate-200 text-slate-500 font-bold">
-                            <th className="p-3">à¸§à¸±à¸™à¹à¸¥à¸°à¹€à¸§à¸¥à¸² (Timestamp)</th>
-                            <th className="p-3">à¸œà¸¹à¹‰à¸›à¸à¸´à¸šà¸±à¸•à¸´à¸‡à¸²à¸™ (User)</th>
-                            <th className="p-3">à¸Šà¸·à¹ˆà¸­à¹€à¸ˆà¹‰à¸²à¸‚à¸­à¸‡à¸‚à¹‰à¸­à¸¡à¸¹à¸¥ (Data Subject Name)</th>
-                            <th className="p-3">à¸šà¸—à¸šà¸²à¸—</th>
-                            <th className="p-3 text-center">à¸£à¸²à¸¢à¸¥à¸°à¹€à¸­à¸µà¸¢à¸”</th>
+                            <th className="p-3">วันและเวลา (Timestamp)</th>
+                            <th className="p-3">ผู้ปฏิบัติงาน (User)</th>
+                            <th className="p-3">ชื่อเจ้าของข้อมูล (Data Subject Name)</th>
+                            <th className="p-3">บทบาท</th>
+                            <th className="p-3 text-center">รายละเอียด</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 text-slate-700 font-mono">
@@ -6503,7 +6503,7 @@ export default function App() {
                                 {paginated.length === 0 ? (
                                   <tr>
                                     <td colSpan={5} className="p-8 text-center text-slate-400 font-sans">
-                                      à¹„à¸¡à¹ˆà¸žà¸šà¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸—à¸µà¹ˆà¸„à¹‰à¸™à¸«à¸²
+                                      ไม่พบข้อมูลที่ค้นหา
                                     </td>
                                   </tr>
                                 ) : (
@@ -6523,7 +6523,7 @@ export default function App() {
                                             onClick={() => setSelectedAuditLog(log)}
                                             className="text-brand-600 hover:text-brand-700 underline text-[11px] font-sans font-semibold"
                                           >
-                                            à¸”à¸¹à¸£à¸²à¸¢à¸¥à¸°à¹€à¸­à¸µà¸¢à¸”
+                                            ดูรายละเอียด
                                           </button>
                                         </td>
 
@@ -6537,7 +6537,7 @@ export default function App() {
                                     <td colSpan={7} className="p-3 bg-slate-50 border-t border-slate-200 font-sans">
                                       <div className="flex items-center justify-between text-[11px]">
                                         <span className="text-slate-500">
-                                          à¹à¸ªà¸”à¸‡ {startIndex + 1} à¸–à¸¶à¸‡ {Math.min(startIndex + auditLogsPerPage, filtered.length)} à¸ˆà¸²à¸à¸—à¸±à¹‰à¸‡à¸«à¸¡à¸” {filtered.length} à¸£à¸²à¸¢à¸à¸²à¸£
+                                          แสดง {startIndex + 1} ถึง {Math.min(startIndex + auditLogsPerPage, filtered.length)} จากทั้งหมด {filtered.length} รายการ
                                         </span>
                                         <div className="flex gap-1">
                                           <button 
@@ -6545,17 +6545,17 @@ export default function App() {
                                             disabled={auditPage === 1}
                                             className="px-2 py-1 rounded border border-slate-300 bg-white text-slate-600 disabled:opacity-50 hover:bg-slate-50"
                                           >
-                                            à¸à¹ˆà¸­à¸™à¸«à¸™à¹‰à¸²
+                                            ก่อนหน้า
                                           </button>
                                           <span className="px-3 py-1 font-bold text-slate-700">
-                                            à¸«à¸™à¹‰à¸²à¸—à¸µà¹ˆ {auditPage} / {totalPages}
+                                            หน้าที่ {auditPage} / {totalPages}
                                           </span>
                                           <button 
                                             onClick={() => setAuditPage(p => Math.min(totalPages, p + 1))}
                                             disabled={auditPage === totalPages}
                                             className="px-2 py-1 rounded border border-slate-300 bg-white text-slate-600 disabled:opacity-50 hover:bg-slate-50"
                                           >
-                                            à¸–à¸±à¸”à¹„à¸›
+                                            ถัดไป
                                           </button>
                                         </div>
                                       </div>
@@ -6576,7 +6576,7 @@ export default function App() {
                         <div className="bg-slate-50 p-4 border-b border-slate-100 flex items-center justify-between">
                           <h2 className="text-sm font-bold text-slate-800 flex items-center gap-2">
                             <Activity className="h-4 w-4 text-brand-600" />
-                            à¸£à¸²à¸¢à¸¥à¸°à¹€à¸­à¸µà¸¢à¸”à¸à¸²à¸£à¸—à¸³à¸‡à¸²à¸™à¸‚à¸­à¸‡à¸£à¸°à¸šà¸š (Audit Log)
+                            รายละเอียดการทำงานของระบบ (Audit Log)
                           </h2>
                           <button
                             onClick={() => setSelectedAuditLog(null)}
@@ -6588,30 +6588,30 @@ export default function App() {
                         <div className="p-6 overflow-y-auto font-mono text-[11px] text-slate-700 space-y-4">
                           <div className="grid grid-cols-2 gap-4">
                             <div>
-                              <span className="text-slate-400 font-sans block mb-1">à¸§à¸±à¸™à¹à¸¥à¸°à¹€à¸§à¸¥à¸² (Timestamp)</span>
+                              <span className="text-slate-400 font-sans block mb-1">วันและเวลา (Timestamp)</span>
                               <span className="font-bold text-slate-800">{new Date(selectedAuditLog.timestamp).toLocaleString('th-TH')}</span>
                             </div>
                             <div>
-                              <span className="text-slate-400 font-sans block mb-1">à¸œà¸¹à¹‰à¸›à¸à¸´à¸šà¸±à¸•à¸´à¸‡à¸²à¸™ (User)</span>
+                              <span className="text-slate-400 font-sans block mb-1">ผู้ปฏิบัติงาน (User)</span>
                               <span className="font-bold text-slate-800">{selectedAuditLog.actorName}</span>
                             </div>
                             <div>
-                              <span className="text-slate-400 font-sans block mb-1">à¸šà¸—à¸šà¸²à¸— (Role)</span>
+                              <span className="text-slate-400 font-sans block mb-1">บทบาท (Role)</span>
                               <span className="uppercase text-brand-600 font-bold">{selectedAuditLog.actorRole}</span>
                             </div>
                             <div>
-                              <span className="text-slate-400 font-sans block mb-1">à¹€à¸¥à¸‚à¹„à¸­à¸žà¸µ (IP Address)</span>
+                              <span className="text-slate-400 font-sans block mb-1">เลขไอพี (IP Address)</span>
                               <span>{selectedAuditLog.ipAddress}</span>
                             </div>
                           </div>
                           
                           <div className="border-t border-slate-100 pt-4">
-                            <span className="text-slate-400 font-sans block mb-1">à¸à¸²à¸£à¸à¸£à¸°à¸—à¸³ (Action)</span>
+                            <span className="text-slate-400 font-sans block mb-1">การกระทำ (Action)</span>
                             <span className="text-brand-700 font-bold text-[12px]">{selectedAuditLog.action}</span>
                           </div>
                           
                           <div className="border-t border-slate-100 pt-4">
-                            <span className="text-slate-400 font-sans block mb-1">à¸£à¸²à¸¢à¸¥à¸°à¹€à¸­à¸µà¸¢à¸” (Details)</span>
+                            <span className="text-slate-400 font-sans block mb-1">รายละเอียด (Details)</span>
                             <div className="bg-slate-50 p-3 rounded border border-slate-200 whitespace-pre-wrap font-sans text-slate-700 text-sm">
                               {selectedAuditLog.details}
                             </div>
@@ -6619,7 +6619,7 @@ export default function App() {
 
                           <div className="border-t border-slate-100 pt-4 grid grid-cols-2 gap-4">
                             <div>
-                              <span className="text-slate-400 font-sans block mb-1">à¸•à¸£à¸§à¸ˆà¸ªà¸­à¸šà¸„à¸§à¸²à¸¡à¸›à¸¥à¸­à¸”à¸ à¸±à¸¢ (Integrity Check)</span>
+                              <span className="text-slate-400 font-sans block mb-1">ตรวจสอบความปลอดภัย (Integrity Check)</span>
                               <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-green-50 text-green-700 border border-green-200 rounded text-[10px] font-bold">
                                 <CheckCircle className="h-3 w-3" />
                                 Verified ({selectedAuditLog.checksum})
@@ -6627,7 +6627,7 @@ export default function App() {
                             </div>
                             {selectedAuditLog.requestId && (
                               <div>
-                                <span className="text-slate-400 font-sans block mb-1">à¸£à¸«à¸±à¸ªà¸­à¹‰à¸²à¸‡à¸­à¸´à¸‡à¸„à¸³à¸‚à¸­ (Request ID)</span>
+                                <span className="text-slate-400 font-sans block mb-1">รหัสอ้างอิงคำขอ (Request ID)</span>
                                 <span>{selectedAuditLog.requestTrackingNo || selectedAuditLog.requestId}</span>
                               </div>
                             )}
@@ -6638,7 +6638,7 @@ export default function App() {
                             onClick={() => setSelectedAuditLog(null)}
                             className="bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 px-4 py-1.5 rounded font-semibold text-xs transition"
                           >
-                            à¸›à¸´à¸”à¸«à¸™à¹‰à¸²à¸•à¹ˆà¸²à¸‡
+                            ปิดหน้าต่าง
                           </button>
                         </div>
                       </div>
@@ -6658,18 +6658,18 @@ export default function App() {
       {/* Footer disclaimer */}
       <footer className="bg-slate-900 border-t border-slate-800 text-slate-400 px-6 py-4 text-center text-xs select-none space-y-1">
         <p className="font-semibold text-slate-300">
-          Â© {new Date().getFullYear() + 543} à¸£à¸°à¸šà¸šà¸šà¸£à¸´à¸«à¸²à¸£à¸ˆà¸±à¸”à¸à¸²à¸£à¸à¸²à¸£à¸›à¸à¸´à¸šà¸±à¸•à¸´à¸•à¸²à¸¡à¸à¸Žà¸«à¸¡à¸²à¸¢à¸„à¸¸à¹‰à¸¡à¸„à¸£à¸­à¸‡à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸ªà¹ˆà¸§à¸™à¸šà¸¸à¸„à¸„à¸¥ (PDPA Compliance Management)
+          © {new Date().getFullYear() + 543} ระบบบริหารจัดการการปฏิบัติตามกฎหมายคุ้มครองข้อมูลส่วนบุคคล (PDPA Compliance Management)
         </p>
         <p className="text-[11px] text-brand-400 font-medium">
-          à¸ªà¸‡à¸§à¸™à¸¥à¸´à¸‚à¸ªà¸´à¸—à¸˜à¸´à¹Œ Â© à¸šà¸£à¸´à¸©à¸±à¸— à¸¢à¸¹à¹‚à¸—à¹€à¸›à¸µà¸¢ à¹€à¸­à¹‡à¸™à¹à¸­à¸™à¸”à¹Œà¹€à¸­à¹‡à¸™ à¸ˆà¸³à¸à¸±à¸” (Utopia N&N Co., Ltd.) All Rights Reserved.
+          สงวนลิขสิทธิ์ © บริษัท ยูโทเปีย เอ็นแอนด์เอ็น จำกัด (Utopia N&N Co., Ltd.) All Rights Reserved.
         </p>
         <div className="relative flex flex-col md:flex-row justify-center items-center w-full">
           <p className="text-[10px] text-slate-500">
-            à¸žà¸±à¸’à¸™à¸²à¸ªà¸­à¸”à¸„à¸¥à¹‰à¸­à¸‡à¸•à¸²à¸¡à¸¡à¸²à¸•à¸£à¸à¸²à¸™à¸žà¸£à¸°à¸£à¸²à¸Šà¸šà¸±à¸à¸à¸±à¸•à¸´à¸„à¸¸à¹‰à¸¡à¸„à¸£à¸­à¸‡à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸ªà¹ˆà¸§à¸™à¸šà¸¸à¸„à¸„à¸¥ à¸ž.à¸¨. 2562 (à¸à¸²à¸£à¸£à¸­à¸‡à¸£à¸±à¸šà¸à¸²à¸£à¹ƒà¸Šà¹‰à¸ªà¸´à¸—à¸˜à¸´à¸‚à¸­à¸‡à¹€à¸ˆà¹‰à¸²à¸‚à¸­à¸‡à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸ªà¹ˆà¸§à¸™à¸šà¸¸à¸„à¸„à¸¥)
+            พัฒนาสอดคล้องตามมาตรฐานพระราชบัญญัติคุ้มครองข้อมูลส่วนบุคคล พ.ศ. 2562 (การรองรับการใช้สิทธิของเจ้าของข้อมูลส่วนบุคคล)
           </p>
           {typeof __APP_VERSION__ !== 'undefined' && (
             <span className="md:absolute md:right-0 text-[10px] text-slate-400 hover:text-white transition-colors font-mono mt-2 md:mt-0">
-              v1.1.0-beta â€¢ rev: {__APP_VERSION__} ({__BUILD_DATE__})
+              v1.1.0-beta • rev: {__APP_VERSION__} ({__BUILD_DATE__})
             </span>
           )}
         </div>
@@ -6681,9 +6681,9 @@ export default function App() {
           <div className="bg-white rounded-2xl border border-slate-200 p-6 max-w-sm w-full space-y-4 shadow-xl">
             <div className="text-center space-y-1">
               <Mail className="h-10 w-10 text-brand-600 mx-auto" />
-              <h4 className="font-bold text-slate-800 text-sm">à¸à¸²à¸£à¸¢à¸·à¸™à¸¢à¸±à¸™à¸£à¸«à¸±à¸ª OTP à¹€à¸žà¸·à¹ˆà¸­à¸„à¸§à¸²à¸¡à¸›à¸¥à¸­à¸”à¸ à¸±à¸¢</h4>
+              <h4 className="font-bold text-slate-800 text-sm">การยืนยันรหัส OTP เพื่อความปลอดภัย</h4>
               <p className="text-xs text-slate-400">
-                à¸£à¸°à¸šà¸šà¸ˆà¸°à¸ªà¹ˆà¸‡à¸£à¸«à¸±à¸ª OTP à¹„à¸›à¸—à¸µà¹ˆà¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸•à¸´à¸”à¸•à¹ˆà¸­ ({maskEmail(getContactInfo(trackedRequest).email)})
+                ระบบจะส่งรหัส OTP ไปที่ข้อมูลติดต่อ ({maskEmail(getContactInfo(trackedRequest).email)})
               </p>
             </div>
 
@@ -6700,23 +6700,23 @@ export default function App() {
                   }}
                   className="w-full bg-brand-600 hover:bg-brand-700 text-white font-bold py-2.5 rounded-lg text-sm transition"
                 >
-                  à¸„à¸¥à¸´à¸à¹€à¸žà¸·à¹ˆà¸­à¸ªà¹ˆà¸‡ OTP à¹„à¸›à¸¢à¸±à¸‡à¸­à¸µà¹€à¸¡à¸¥
+                  คลิกเพื่อส่ง OTP ไปยังอีเมล
                 </button>
                 <button
                   type="button"
                   onClick={() => setShowOtpModal(false)}
                   className="w-full text-slate-500 hover:text-slate-700 text-xs py-1"
                 >
-                  à¸¢à¸à¹€à¸¥à¸´à¸
+                  ยกเลิก
                 </button>
               </div>
             ) : (
               <form onSubmit={handleVerifyOtp} className="space-y-3 pt-2">
                 <div className="space-y-1.5">
                   <label className="text-xs text-emerald-600 font-bold block text-center">
-                    âœ“ à¸ªà¹ˆà¸‡ OTP à¸ªà¸³à¹€à¸£à¹‡à¸ˆà¹à¸¥à¹‰à¸§ à¸à¸£à¸¸à¸“à¸²à¹€à¸Šà¹‡à¸„à¸­à¸µà¹€à¸¡à¸¥ ({maskEmail(getContactInfo(trackedRequest).email)})
+                    ✓ ส่ง OTP สำเร็จแล้ว กรุณาเช็คอีเมล ({maskEmail(getContactInfo(trackedRequest).email)})
                   </label>
-                  <label className="text-xs text-slate-600 block text-center mt-2">à¸à¸£à¸­à¸à¸£à¸«à¸±à¸ªà¸¢à¸·à¸™à¸¢à¸±à¸™ OTP 6 à¸«à¸¥à¸±à¸</label>
+                  <label className="text-xs text-slate-600 block text-center mt-2">กรอกรหัสยืนยัน OTP 6 หลัก</label>
                   <input
                     type="text"
                     maxLength={6}
@@ -6733,14 +6733,14 @@ export default function App() {
                   type="submit"
                   className="w-full bg-brand-600 hover:bg-brand-700 text-white font-bold py-2 rounded-lg text-xs transition"
                 >
-                  à¸¢à¸·à¸™à¸¢à¸±à¸™à¹€à¸žà¸·à¹ˆà¸­à¸•à¸´à¸”à¸•à¸²à¸¡à¸ªà¸–à¸²à¸™à¸°à¸ªà¸´à¸—à¸˜à¸´à¹Œ
+                  ยืนยันเพื่อติดตามสถานะสิทธิ์
                 </button>
                 <button
                   type="button"
                   onClick={() => { setShowOtpModal(false); setOtpSent(false); }}
                   className="w-full text-slate-500 hover:text-slate-700 text-xs py-1 transition"
                 >
-                  à¸¢à¸à¹€à¸¥à¸´à¸
+                  ยกเลิก
                 </button>
               </form>
             )}
@@ -6754,9 +6754,9 @@ export default function App() {
           <div className="bg-white rounded-2xl border border-slate-200 p-6 max-w-md w-full space-y-4 shadow-2xl">
             <div className="text-center space-y-1">
               <AlertTriangle className="h-10 w-10 text-rose-600 mx-auto" />
-              <h4 className="font-bold text-slate-800 text-sm">à¸‚à¸­à¸¢à¸·à¸™à¸¢à¸±à¸™à¸à¸²à¸£à¸–à¸­à¸™à¸„à¸³à¸£à¹‰à¸­à¸‡à¸‚à¸­à¹€à¸‚à¹‰à¸²à¸–à¸¶à¸‡à¸‚à¹‰à¸­à¸¡à¸¹à¸¥ (Withdraw Request)</h4>
+              <h4 className="font-bold text-slate-800 text-sm">ขอยืนยันการถอนคำร้องขอเข้าถึงข้อมูล (Withdraw Request)</h4>
               <p className="text-xs text-slate-500">
-                à¹€à¸¥à¸‚à¸„à¸³à¸‚à¸­: <strong className="text-slate-800">{trackedRequest.trackingNo}</strong>
+                เลขคำขอ: <strong className="text-slate-800">{trackedRequest.trackingNo}</strong>
               </p>
             </div>
 
@@ -6765,7 +6765,7 @@ export default function App() {
                 onSubmit={(e) => {
                   e.preventDefault();
                   if (!withdrawReasonText.trim()) {
-                    showNotify('âš ï¸ à¸à¸£à¸¸à¸“à¸²à¸à¸£à¸­à¸à¹€à¸«à¸•à¸¸à¸œà¸¥à¸„à¸§à¸²à¸¡à¸ˆà¸³à¹€à¸›à¹‡à¸™à¹ƒà¸™à¸à¸²à¸£à¸‚à¸­à¸–à¸­à¸™à¸ªà¸´à¸—à¸˜à¸´à¸¢à¸·à¹ˆà¸™à¸„à¸³à¸‚à¸­à¸™à¸µà¹‰');
+                    showNotify('⚠️ กรุณากรอกเหตุผลความจำเป็นในการขอถอนสิทธิยื่นคำขอนี้');
                     return;
                   }
                   const contact = getContactInfo(trackedRequest);
@@ -6776,12 +6776,12 @@ export default function App() {
               >
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-slate-700 block">
-                    à¹€à¸«à¸•à¸¸à¸œà¸¥à¸„à¸§à¸²à¸¡à¸ˆà¸³à¹€à¸›à¹‡à¸™à¹ƒà¸™à¸à¸²à¸£à¸‚à¸­à¸–à¸­à¸™à¸„à¸³à¸£à¹‰à¸­à¸‡à¸‚à¸­ <span className="text-red-500">*</span>
+                    เหตุผลความจำเป็นในการขอถอนคำร้องขอ <span className="text-red-500">*</span>
                   </label>
                   <textarea
                     required
                     rows={3}
-                    placeholder="à¸à¸£à¸¸à¸“à¸²à¸£à¸°à¸šà¸¸à¹€à¸«à¸•à¸¸à¸œà¸¥à¸à¸²à¸£à¸¢à¸à¹€à¸¥à¸´à¸à¸„à¸³à¸‚à¸­..."
+                    placeholder="กรุณาระบุเหตุผลการยกเลิกคำขอ..."
                     value={withdrawReasonText}
                     onChange={(e) => setWithdrawReasonText(e.target.value)}
                     className="w-full text-xs border border-slate-300 rounded-lg p-2.5 focus:ring-1 focus:ring-rose-500"
@@ -6794,13 +6794,13 @@ export default function App() {
                     onClick={() => setShowWithdrawModal(false)}
                     className="w-1/2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2 rounded-lg text-xs transition"
                   >
-                    à¸¢à¸à¹€à¸¥à¸´à¸
+                    ยกเลิก
                   </button>
                   <button
                     type="submit"
                     className="w-1/2 bg-rose-600 hover:bg-rose-700 text-white font-bold py-2 rounded-lg text-xs transition shadow-sm"
                   >
-                    à¸–à¸±à¸”à¹„à¸› (à¸£à¸±à¸šà¸£à¸«à¸±à¸ª OTP)
+                    ถัดไป (รับรหัส OTP)
                   </button>
                 </div>
               </form>
@@ -6817,17 +6817,17 @@ export default function App() {
                   
                   handleWithdrawRequest(trackedRequest.id, withdrawReasonText);
                   setShowWithdrawModal(false);
-                  showNotify('âœ… à¸£à¸°à¸šà¸šà¸—à¸³à¸à¸²à¸£à¸–à¸­à¸™à¸„à¸³à¸£à¹‰à¸­à¸‡à¸‚à¸­à¹€à¸£à¸µà¸¢à¸šà¸£à¹‰à¸­à¸¢à¹à¸¥à¹‰à¸§');
+                  showNotify('✅ ระบบทำการถอนคำร้องขอเรียบร้อยแล้ว');
                 }}
                 className="space-y-4"
               >
                 <div className="p-3 bg-rose-50 border border-rose-100 rounded-xl text-center space-y-1">
-                  <span className="text-xs font-bold text-rose-900 block">à¸£à¸°à¸šà¸šà¸ªà¹ˆà¸‡à¸£à¸«à¸±à¸ª OTP 6 à¸«à¸¥à¸±à¸à¹„à¸›à¸¢à¸±à¸‡à¸­à¸µà¹€à¸¡à¸¥à¹€à¸£à¸µà¸¢à¸šà¸£à¹‰à¸­à¸¢à¹à¸¥à¹‰à¸§</span>
-                  <span className="text-[11px] text-rose-700 block">à¸ªà¹ˆà¸‡à¸–à¸¶à¸‡: {maskEmail(getContactInfo(trackedRequest).email)}</span>
+                  <span className="text-xs font-bold text-rose-900 block">ระบบส่งรหัส OTP 6 หลักไปยังอีเมลเรียบร้อยแล้ว</span>
+                  <span className="text-[11px] text-rose-700 block">ส่งถึง: {maskEmail(getContactInfo(trackedRequest).email)}</span>
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-xs text-slate-600 block text-center">à¸à¸£à¸­à¸à¸£à¸«à¸±à¸ªà¸¢à¸·à¸™à¸¢à¸±à¸™ OTP 6 à¸«à¸¥à¸±à¸</label>
+                  <label className="text-xs text-slate-600 block text-center">กรอกรหัสยืนยัน OTP 6 หลัก</label>
                   <input
                     type="text"
                     maxLength={6}
@@ -6845,13 +6845,13 @@ export default function App() {
                     onClick={() => setWithdrawStep('reason')}
                     className="w-1/2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2 rounded-lg text-xs transition"
                   >
-                    à¸¢à¹‰à¸­à¸™à¸à¸¥à¸±à¸š
+                    ย้อนกลับ
                   </button>
                   <button
                     type="submit"
                     className="w-1/2 bg-rose-600 hover:bg-rose-700 text-white font-bold py-2 rounded-lg text-xs transition shadow-sm"
                   >
-                    à¸¢à¸·à¸™à¸¢à¸±à¸™à¸–à¸­à¸™à¸„à¸³à¸£à¹‰à¸­à¸‡à¸‚à¸­
+                    ยืนยันถอนคำร้องขอ
                   </button>
                 </div>
               </form>
@@ -6868,9 +6868,9 @@ export default function App() {
               <div className="h-12 w-12 rounded-2xl bg-brand-50 border border-brand-100 text-brand-600 flex items-center justify-center mx-auto mb-2">
                 <Search className="h-6 w-6" />
               </div>
-              <h4 className="font-bold text-slate-900 text-base">à¸„à¹‰à¸™à¸«à¸²à¹à¸¥à¸°à¸•à¸´à¸”à¸•à¸²à¸¡à¸ªà¸–à¸²à¸™à¸°à¸„à¸³à¸£à¹‰à¸­à¸‡à¸‚à¸­</h4>
+              <h4 className="font-bold text-slate-900 text-base">ค้นหาและติดตามสถานะคำร้องขอ</h4>
               <p className="text-xs text-slate-500">
-                à¸£à¸°à¸šà¸šà¸„à¹‰à¸™à¸«à¸²à¸­à¸±à¸ˆà¸‰à¸£à¸´à¸¢à¸° (à¸ªà¸²à¸¡à¸²à¸£à¸–à¸£à¸°à¸šà¸¸à¹€à¸¥à¸‚à¸„à¸³à¸‚à¸­à¹€à¸•à¹‡à¸¡ à¸«à¸£à¸·à¸­à¸žà¸´à¸¡à¸žà¹Œà¹€à¸‰à¸žà¸²à¸°à¸•à¸±à¸§à¹€à¸¥à¸‚/à¸£à¸«à¸±à¸ªà¸¢à¹ˆà¸­à¹„à¸”à¹‰)
+                ระบบค้นหาอัจฉริยะ (สามารถระบุเลขคำขอเต็ม หรือพิมพ์เฉพาะตัวเลข/รหัสย่อได้)
               </p>
             </div>
 
@@ -6878,7 +6878,7 @@ export default function App() {
               <div className="space-y-4">
                 <div className="bg-brand-50 border border-brand-100 p-3 rounded-xl">
                   <span className="text-xs text-brand-800 font-medium">
-                    à¸žà¸šà¸„à¸³à¸‚à¸­à¸—à¸µà¹ˆà¸•à¸£à¸‡à¸à¸±à¸šà¹€à¸‡à¸·à¹ˆà¸­à¸™à¹„à¸‚à¸ˆà¸³à¸™à¸§à¸™ {searchLookupResults.length} à¸£à¸²à¸¢à¸à¸²à¸£ à¹‚à¸›à¸£à¸”à¸„à¸¥à¸´à¸à¹€à¸¥à¸·à¸­à¸à¸£à¸²à¸¢à¸à¸²à¸£à¸—à¸µà¹ˆà¸–à¸¹à¸à¸•à¹‰à¸­à¸‡:
+                    พบคำขอที่ตรงกับเงื่อนไขจำนวน {searchLookupResults.length} รายการ โปรดคลิกเลือกรายการที่ถูกต้อง:
                   </span>
                 </div>
                 <div className="max-h-64 overflow-y-auto space-y-2 pr-1">
@@ -6901,8 +6901,8 @@ export default function App() {
                         </span>
                       </div>
                       <div className="text-xs text-slate-500 flex justify-between mt-1">
-                        <span>à¸œà¸¹à¹‰à¸¢à¸·à¹ˆà¸™: {req.requester?.firstName?.substring(0, 1) || '*'}***** {req.requester?.lastName?.substring(0, 1) || '*'}*****</span>
-                        <span>à¸§à¸±à¸™à¸—à¸µà¹ˆ: {req.submissionDate ? new Date(req.submissionDate).toLocaleDateString('th-TH') : '-'}</span>
+                        <span>ผู้ยื่น: {req.requester?.firstName?.substring(0, 1) || '*'}***** {req.requester?.lastName?.substring(0, 1) || '*'}*****</span>
+                        <span>วันที่: {req.submissionDate ? new Date(req.submissionDate).toLocaleDateString('th-TH') : '-'}</span>
                       </div>
                     </button>
                   ))}
@@ -6913,7 +6913,7 @@ export default function App() {
                     onClick={() => setSearchLookupResults(null)}
                     className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2.5 rounded-xl text-xs transition"
                   >
-                    à¸à¸¥à¸±à¸šà¹„à¸›à¸„à¹‰à¸™à¸«à¸²à¹ƒà¸«à¸¡à¹ˆ
+                    กลับไปค้นหาใหม่
                   </button>
                 </div>
               </div>
@@ -6927,13 +6927,13 @@ export default function App() {
               >
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-slate-700 block">
-                    à¸žà¸´à¸¡à¸žà¹Œà¸„à¸³à¸„à¹‰à¸™à¸«à¸² à¸«à¸£à¸·à¸­ à¹€à¸¥à¸‚à¸—à¸µà¹ˆà¸„à¸³à¸‚à¸­ <span className="text-red-500">*</span>
+                    พิมพ์คำค้นหา หรือ เลขที่คำขอ <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
                     required
                     autoFocus
-                    placeholder="à¸•à¸±à¸§à¸­à¸¢à¹ˆà¸²à¸‡: 0008, DOPA, REQ-DOPA-2026-0008..."
+                    placeholder="ตัวอย่าง: 0008, DOPA, REQ-DOPA-2026-0008..."
                     value={searchKeyword}
                     onChange={(e) => {
                       setSearchKeyword(e.target.value);
@@ -6959,14 +6959,14 @@ export default function App() {
                     }}
                     className="w-1/2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2.5 rounded-xl text-xs transition"
                   >
-                    à¸¢à¸à¹€à¸¥à¸´à¸
+                    ยกเลิก
                   </button>
                   <button
                     type="submit"
                     className="w-1/2 bg-brand-600 hover:bg-brand-700 text-white font-bold py-2.5 rounded-xl text-xs transition shadow-md flex items-center justify-center gap-1.5"
                   >
                     <Search className="h-4 w-4" />
-                    <span>à¸„à¹‰à¸™à¸«à¸²à¸‚à¹‰à¸­à¸¡à¸¹à¸¥</span>
+                    <span>ค้นหาข้อมูล</span>
                   </button>
                 </div>
               </form>
@@ -6987,8 +6987,8 @@ export default function App() {
                 <div>
                   <h3 className="font-bold text-sm text-white">{previewAttachment.name}</h3>
                   <p className="text-[10px] text-slate-400">
-                    à¸‚à¸™à¸²à¸”à¹„à¸Ÿà¸¥à¹Œ: {Math.round(previewAttachment.size / 1024)} KB 
-                    {previewAttachment.isMasked && <span className="ml-2 text-emerald-400 font-bold">â€¢ à¸œà¹ˆà¸²à¸™à¸à¸²à¸£ Masked à¸›à¸´à¸”à¸šà¸±à¸‡à¸‚à¹‰à¸­à¸¡à¸¹à¸¥</span>}
+                    ขนาดไฟล์: {Math.round(previewAttachment.size / 1024)} KB 
+                    {previewAttachment.isMasked && <span className="ml-2 text-emerald-400 font-bold">• ผ่านการ Masked ปิดบังข้อมูล</span>}
                   </p>
                 </div>
               </div>
@@ -6997,7 +6997,7 @@ export default function App() {
                 onClick={() => setPreviewAttachment(null)}
                 className="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold h-8 w-8 rounded-full flex items-center justify-center transition"
               >
-                âœ•
+                ✕
               </button>
             </div>
 
@@ -7011,7 +7011,7 @@ export default function App() {
                     title={previewAttachment.name}
                   />
                   <div className="bg-slate-50 border-t border-slate-200 p-2 text-center">
-                    <span className="text-[10px] text-slate-400 font-mono">âœ“ à¹à¸ªà¸”à¸‡à¸œà¸¥à¹€à¸­à¸à¸ªà¸²à¸£ PDF (à¹„à¸¡à¹ˆà¸­à¸™à¸¸à¸à¸²à¸•à¹ƒà¸«à¹‰à¸”à¸²à¸§à¸™à¹Œà¹‚à¸«à¸¥à¸”)</span>
+                    <span className="text-[10px] text-slate-400 font-mono">✓ แสดงผลเอกสาร PDF (ไม่อนุญาตให้ดาวน์โหลด)</span>
                   </div>
                 </div>
               ) : (previewAttachment.fileUrl?.startsWith('data:image') || previewAttachment.fileUrl?.startsWith('blob:') || previewAttachment.name.toLowerCase().endsWith('.png') || previewAttachment.name.toLowerCase().endsWith('.jpg')) ? (
@@ -7022,7 +7022,7 @@ export default function App() {
                     className="max-h-[60vh] mx-auto object-contain rounded-lg border border-slate-100"
                   />
                   <span className="text-[10px] text-slate-400 block font-mono">
-                    âœ“ à¹à¸ªà¸”à¸‡à¸œà¸¥à¹„à¸Ÿà¸¥à¹Œà¸ à¸²à¸žà¹€à¸­à¸à¸ªà¸²à¸£à¸ªà¸´à¸—à¸˜à¸´à¹Œà¸„à¸§à¸²à¸¡à¸¥à¸°à¹€à¸­à¸µà¸¢à¸”à¸ªà¸¹à¸‡
+                    ✓ แสดงผลไฟล์ภาพเอกสารสิทธิ์ความละเอียดสูง
                   </span>
                 </div>
               ) : (
@@ -7030,7 +7030,7 @@ export default function App() {
                   <FileText className="h-16 w-16 text-brand-600 mx-auto" />
                   <h4 className="font-bold text-slate-800 text-sm">{previewAttachment.name}</h4>
                   <p className="text-xs text-slate-500 leading-relaxed">
-                    à¹„à¸¡à¹ˆà¸ªà¸²à¸¡à¸²à¸£à¸–à¹à¸ªà¸”à¸‡à¸•à¸±à¸§à¸­à¸¢à¹ˆà¸²à¸‡à¹„à¸Ÿà¸¥à¹Œà¸™à¸µà¹‰à¹„à¸”à¹‰ (à¸£à¸­à¸‡à¸£à¸±à¸šà¹€à¸‰à¸žà¸²à¸° PDF à¹à¸¥à¸°à¸£à¸¹à¸›à¸ à¸²à¸ž)
+                    ไม่สามารถแสดงตัวอย่างไฟล์นี้ได้ (รองรับเฉพาะ PDF และรูปภาพ)
                   </p>
                 </div>
               )}
@@ -7039,14 +7039,14 @@ export default function App() {
             {/* Modal Footer Controls */}
             <div className="bg-white border-t border-slate-200 px-6 py-3.5 flex justify-between items-center">
               <span className="text-[11px] text-slate-400 font-medium">
-                ðŸ”’ à¸šà¸±à¸™à¸—à¸¶à¸à¸›à¸£à¸°à¸§à¸±à¸•à¸´à¸à¸²à¸£à¹€à¸›à¸´à¸”à¸”à¸¹à¹€à¸­à¸à¸ªà¸²à¸£à¹€à¸‚à¹‰à¸²à¸•à¸²à¸£à¸²à¸‡ Audit Log à¹€à¸£à¸µà¸¢à¸šà¸£à¹‰à¸­à¸¢
+                🔒 บันทึกประวัติการเปิดดูเอกสารเข้าตาราง Audit Log เรียบร้อย
               </span>
               <button
                 type="button"
                 onClick={() => setPreviewAttachment(null)}
                 className="bg-brand-600 hover:bg-brand-700 text-white font-bold py-2 px-6 rounded-xl text-xs transition shadow-sm"
               >
-                à¹€à¸ªà¸£à¹‡à¸ˆà¸ªà¸´à¹‰à¸™à¸à¸²à¸£à¸•à¸£à¸§à¸ˆà¸”à¸¹
+                เสร็จสิ้นการตรวจดู
               </button>
             </div>
           </div>
@@ -7061,11 +7061,11 @@ export default function App() {
               <div className="w-12 h-12 bg-brand-50 text-brand-600 rounded-full flex items-center justify-center mx-auto border border-brand-200">
                 <Mail className="h-6 w-6" />
               </div>
-              <h4 className="font-bold text-slate-800 text-base">à¸¢à¸·à¸™à¸¢à¸±à¸™à¸•à¸±à¸§à¸•à¸™à¸ªà¹ˆà¸‡à¸„à¸³à¸‚à¸­à¸”à¹‰à¸§à¸¢à¸£à¸«à¸±à¸ª OTP à¸—à¸²à¸‡à¸­à¸µà¹€à¸¡à¸¥</h4>
+              <h4 className="font-bold text-slate-800 text-base">ยืนยันตัวตนส่งคำขอด้วยรหัส OTP ทางอีเมล</h4>
               <p className="text-xs text-slate-500 leading-relaxed">
-                à¸£à¸°à¸šà¸šà¹„à¸”à¹‰à¸ªà¹ˆà¸‡à¸£à¸«à¸±à¸ªà¸¢à¸·à¸™à¸¢à¸±à¸™à¸•à¸±à¸§à¸•à¸™ OTP (6 à¸«à¸¥à¸±à¸) à¹„à¸›à¸¢à¸±à¸‡à¸­à¸µà¹€à¸¡à¸¥à¸‚à¸­à¸‡
+                ระบบได้ส่งรหัสยืนยันตัวตน OTP (6 หลัก) ไปยังอีเมลของ
                 <strong className="text-brand-700 block text-xs mt-0.5">
-                  {reqType === 'self' ? `à¹€à¸ˆà¹‰à¸²à¸‚à¸­à¸‡à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸ªà¹ˆà¸§à¸™à¸šà¸¸à¸„à¸„à¸¥ (${maskEmail(requesterForm.email)})` : `à¸œà¸¹à¹‰à¸£à¸±à¸šà¸¡à¸­à¸šà¸­à¸³à¸™à¸²à¸ˆ (${maskEmail(repForm.email)})`}
+                  {reqType === 'self' ? `เจ้าของข้อมูลส่วนบุคคล (${maskEmail(requesterForm.email)})` : `ผู้รับมอบอำนาจ (${maskEmail(repForm.email)})`}
                 </strong>
               </p>
             </div>
@@ -7075,7 +7075,7 @@ export default function App() {
             <form onSubmit={handleFinalizeSubmissionOtp} className="space-y-4">
               <div className="space-y-1">
                 <label className="text-xs font-bold text-slate-700 block text-center">
-                  à¸à¸£à¸­à¸à¸£à¸«à¸±à¸ª OTP 6 à¸«à¸¥à¸±à¸à¸—à¸µà¹ˆà¹„à¸”à¹‰à¸£à¸±à¸šà¸—à¸²à¸‡à¸­à¸µà¹€à¸¡à¸¥ <span className="text-red-500">*</span>
+                  กรอกรหัส OTP 6 หลักที่ได้รับทางอีเมล <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -7095,14 +7095,14 @@ export default function App() {
                   onClick={() => setShowSubmissionOtpModal(false)}
                   className="w-1/3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2.5 rounded-xl text-xs transition"
                 >
-                  à¸¢à¸à¹€à¸¥à¸´à¸
+                  ยกเลิก
                 </button>
                 <button
                   type="submit"
                   className="w-2/3 bg-brand-600 hover:bg-brand-700 text-white font-bold py-2.5 rounded-xl text-xs transition shadow-md flex items-center justify-center gap-1.5"
                 >
                   <CheckCircle2 className="h-4 w-4" />
-                  <span>à¸¢à¸·à¸™à¸¢à¸±à¸™ OTP à¹à¸¥à¸°à¸ªà¹ˆà¸‡à¸„à¸³à¸‚à¸­</span>
+                  <span>ยืนยัน OTP และส่งคำขอ</span>
                 </button>
               </div>
             </form>
@@ -7119,14 +7119,14 @@ export default function App() {
             </div>
             
             <div className="space-y-2">
-              <h4 className="font-bold text-slate-800 text-xl">à¸šà¸±à¸™à¸—à¸¶à¸à¸„à¸³à¸£à¹‰à¸­à¸‡à¸ªà¸³à¹€à¸£à¹‡à¸ˆ!</h4>
+              <h4 className="font-bold text-slate-800 text-xl">บันทึกคำร้องสำเร็จ!</h4>
               <p className="text-sm text-slate-600">
-                à¸„à¸¸à¸“à¸ªà¸²à¸¡à¸²à¸£à¸–à¸™à¸³à¹€à¸¥à¸‚à¸•à¸´à¸”à¸•à¸²à¸¡à¸™à¸µà¹‰à¹à¸ˆà¹‰à¸‡à¹ƒà¸«à¹‰à¸œà¸¹à¹‰à¸¢à¸·à¹ˆà¸™à¸„à¸³à¸£à¹‰à¸­à¸‡à¸—à¸£à¸²à¸š à¹€à¸žà¸·à¹ˆà¸­à¹ƒà¸Šà¹‰à¸•à¸£à¸§à¸ˆà¸ªà¸­à¸šà¸ªà¸–à¸²à¸™à¸°à¹„à¸”à¹‰à¸—à¸¸à¸à¸Šà¹ˆà¸­à¸‡à¸—à¸²à¸‡
+                คุณสามารถนำเลขติดตามนี้แจ้งให้ผู้ยื่นคำร้องทราบ เพื่อใช้ตรวจสอบสถานะได้ทุกช่องทาง
               </p>
             </div>
 
             <div className="bg-slate-50 border border-slate-200 rounded-xl p-6 shadow-inner">
-              <div className="text-xs text-slate-500 font-bold mb-2">à¹€à¸¥à¸‚à¸•à¸´à¸”à¸•à¸²à¸¡à¸„à¸³à¸‚à¸­ (Tracking Number)</div>
+              <div className="text-xs text-slate-500 font-bold mb-2">เลขติดตามคำขอ (Tracking Number)</div>
               <div className="font-mono text-3xl font-black text-brand-700 tracking-wider">
                 {manualEntrySuccessTrackingNo}
               </div>
@@ -7136,7 +7136,7 @@ export default function App() {
               onClick={() => setManualEntrySuccessTrackingNo(null)}
               className="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-3 rounded-xl text-sm transition shadow-md"
             >
-              à¸›à¸´à¸”à¸«à¸™à¹‰à¸²à¸•à¹ˆà¸²à¸‡ (Close)
+              ปิดหน้าต่าง (Close)
             </button>
           </div>
         </div>
@@ -7149,7 +7149,7 @@ export default function App() {
             <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
               <h3 className="font-bold text-slate-800 flex items-center gap-2">
                 <Clock className="h-5 w-5 text-amber-500" />
-                à¸‚à¸¢à¸²à¸¢à¸£à¸°à¸¢à¸°à¹€à¸§à¸¥à¸²à¸ªà¸·à¸šà¸„à¹‰à¸™à¸‚à¹‰à¸­à¸¡à¸¹à¸¥ (+30 à¸§à¸±à¸™)
+                ขยายระยะเวลาสืบค้นข้อมูล (+30 วัน)
               </h3>
               <button
                 onClick={() => setExtendSlaModal({ open: false, reqId: null, reason: '' })}
@@ -7161,11 +7161,11 @@ export default function App() {
             
             <div className="p-6 space-y-4 flex-1">
               <p className="text-sm text-slate-600">
-                à¸£à¸°à¸šà¸¸à¹€à¸«à¸•à¸¸à¸ˆà¸³à¹€à¸›à¹‡à¸™à¸«à¸£à¸·à¸­à¹€à¸«à¸•à¸¸à¸‚à¸±à¸”à¸‚à¹‰à¸­à¸‡à¹ƒà¸™à¸à¸²à¸£à¸‚à¸¢à¸²à¸¢à¸£à¸°à¸¢à¸°à¹€à¸§à¸¥à¸²à¸ªà¸·à¸šà¸„à¹‰à¸™à¸‚à¹‰à¸­à¸¡à¸¹à¸¥:
+                ระบุเหตุจำเป็นหรือเหตุขัดข้องในการขยายระยะเวลาสืบค้นข้อมูล:
               </p>
               <textarea
                 autoFocus
-                placeholder="à¸­à¸˜à¸´à¸šà¸²à¸¢à¹€à¸«à¸•à¸¸à¸œà¸¥..."
+                placeholder="อธิบายเหตุผล..."
                 value={extendSlaModal.reason}
                 onChange={(e) => setExtendSlaModal({ ...extendSlaModal, reason: e.target.value })}
                 className="w-full text-sm px-3 py-2 rounded-lg border border-slate-300 focus:outline-none focus:border-amber-500 min-h-[100px] resize-none"
@@ -7178,7 +7178,7 @@ export default function App() {
                 onClick={() => setExtendSlaModal({ open: false, reqId: null, reason: '' })}
                 className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-bold rounded-xl transition"
               >
-                à¸¢à¸à¹€à¸¥à¸´à¸
+                ยกเลิก
               </button>
               <button
                 type="button"
@@ -7190,7 +7190,7 @@ export default function App() {
                 className="px-4 py-2 bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 transition shadow-md"
               >
                 <CheckCircle2 className="h-4 w-4" />
-                <span>à¸¢à¸·à¸™à¸¢à¸±à¸™à¸à¸²à¸£à¸‚à¸¢à¸²à¸¢à¹€à¸§à¸¥à¸²</span>
+                <span>ยืนยันการขยายเวลา</span>
               </button>
             </div>
           </div>
@@ -7205,10 +7205,10 @@ export default function App() {
               <div className="w-12 h-12 bg-amber-50 text-amber-600 rounded-full flex items-center justify-center mx-auto border border-amber-200">
                 <AlertCircle className="h-6 w-6" />
               </div>
-              <h4 className="font-bold text-slate-800 text-base">à¸¢à¸·à¸™à¸¢à¸±à¸™à¸à¸²à¸£à¸™à¸³à¸­à¸­à¸à¹€à¸­à¸à¸ªà¸²à¸£à¸„à¸§à¸²à¸¡à¸¥à¸±à¸š?</h4>
+              <h4 className="font-bold text-slate-800 text-base">ยืนยันการนำออกเอกสารความลับ?</h4>
               <p className="text-xs text-slate-500 leading-relaxed">
-                à¸„à¸¸à¸“à¸à¸³à¸¥à¸±à¸‡à¸ˆà¸°à¸”à¸²à¸§à¸™à¹Œà¹‚à¸«à¸¥à¸”à¹„à¸Ÿà¸¥à¹Œ <strong className="text-slate-800">{downloadConfirm.filename}</strong> à¸­à¸­à¸à¸ˆà¸²à¸à¸£à¸°à¸šà¸š<br/>
-                <span className="text-rose-600 font-bold">à¸à¸²à¸£à¸à¸£à¸°à¸—à¸³à¸™à¸µà¹‰à¸ˆà¸°à¸–à¸¹à¸à¸šà¸±à¸™à¸—à¸¶à¸à¹ƒà¸™ Audit Log à¹€à¸žà¸·à¹ˆà¸­à¸à¸²à¸£à¸•à¸£à¸§à¸ˆà¸ªà¸­à¸š</span>
+                คุณกำลังจะดาวน์โหลดไฟล์ <strong className="text-slate-800">{downloadConfirm.filename}</strong> ออกจากระบบ<br/>
+                <span className="text-rose-600 font-bold">การกระทำนี้จะถูกบันทึกใน Audit Log เพื่อการตรวจสอบ</span>
               </p>
             </div>
             <div className="flex gap-3 pt-4 mt-auto">
@@ -7217,7 +7217,7 @@ export default function App() {
                 onClick={() => setDownloadConfirm(null)}
                 className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2.5 rounded-xl text-xs transition"
               >
-                à¸¢à¸à¹€à¸¥à¸´à¸
+                ยกเลิก
               </button>
               <button
                 type="button"
@@ -7225,7 +7225,7 @@ export default function App() {
                 className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-xl text-xs transition shadow-lg shadow-emerald-500/30 flex justify-center items-center gap-2"
               >
                 <Download className="h-4 w-4" />
-                à¸¢à¸·à¸™à¸¢à¸±à¸™à¹à¸¥à¸°à¸”à¸²à¸§à¸™à¹Œà¹‚à¸«à¸¥à¸”
+                ยืนยันและดาวน์โหลด
               </button>
             </div>
           </div>
@@ -7235,8 +7235,8 @@ export default function App() {
       {/* Final Delivery Preview Modal */}
       {showDeliveryPreview && activeRequestObj && (() => {
         const previewResult = activeUser!.role === 'approver' && activeRequestObj.decision ? activeRequestObj.decision.result : decisionType;
-        const previewReasons = activeUser!.role === 'approver' && activeRequestObj.decision ? activeRequestObj.decision.reasons : [config?.rejectionReasons.find(r => r.code === denialBasisCode)?.labelTh || '...à¹€à¸«à¸•à¸¸à¸œà¸¥à¸ˆà¸³à¸¥à¸­à¸‡...'];
-        const previewLegalBasis = activeUser!.role === 'approver' && activeRequestObj.decision ? activeRequestObj.decision.legalBasisText : (config?.rejectionReasons.find(r => r.code === denialBasisCode)?.labelTh || '...à¸¡à¸²à¸•à¸£à¸²à¸à¸Žà¸«à¸¡à¸²à¸¢à¸ˆà¸³à¸¥à¸­à¸‡...');
+        const previewReasons = activeUser!.role === 'approver' && activeRequestObj.decision ? activeRequestObj.decision.reasons : [config?.rejectionReasons.find(r => r.code === denialBasisCode)?.labelTh || '...เหตุผลจำลอง...'];
+        const previewLegalBasis = activeUser!.role === 'approver' && activeRequestObj.decision ? activeRequestObj.decision.legalBasisText : (config?.rejectionReasons.find(r => r.code === denialBasisCode)?.labelTh || '...มาตรากฎหมายจำลอง...');
         const previewDpoName = activeUser!.role === 'approver' && activeRequestObj.decision?.dpoName ? activeRequestObj.decision.dpoName : (activeUser?.fullNameTh || 'DPO Name');
         const previewDpoCheckedAt = activeUser!.role === 'approver' && activeRequestObj.decision?.dpoCheckedAt ? activeRequestObj.decision.dpoCheckedAt : new Date().toISOString();
         const templateId = previewResult === 'denied' || previewResult === 'no_data' ? 'temp_deny' : 'temp_approve';
@@ -7251,10 +7251,10 @@ export default function App() {
                   </div>
                   <div>
                     <h2 className="text-base font-bold text-white">
-                      {['Ready for Delivery', 'Delivered', 'Closed'].includes(activeRequestObj.status) ? 'à¹€à¸­à¸à¸ªà¸²à¸£à¸ªà¹ˆà¸‡à¸¡à¸­à¸š (Delivery Package)' : 'à¸•à¸±à¸§à¸­à¸¢à¹ˆà¸²à¸‡à¹€à¸­à¸à¸ªà¸²à¸£à¸ªà¹ˆà¸‡à¸¡à¸­à¸šà¸‰à¸šà¸±à¸šà¸£à¹ˆà¸²à¸‡ (Delivery Draft Preview)'}
+                      {['Ready for Delivery', 'Delivered', 'Closed'].includes(activeRequestObj.status) ? 'เอกสารส่งมอบ (Delivery Package)' : 'ตัวอย่างเอกสารส่งมอบฉบับร่าง (Delivery Draft Preview)'}
                     </h2>
                     <p className="text-[11px] text-slate-300">
-                      {['Ready for Delivery', 'Delivered', 'Closed'].includes(activeRequestObj.status) ? 'à¹€à¸­à¸à¸ªà¸²à¸£à¸‰à¸šà¸±à¸šà¸ªà¸¡à¸šà¸¹à¸£à¸“à¹Œà¸ªà¸³à¸«à¸£à¸±à¸šà¸ªà¹ˆà¸‡à¸¡à¸­à¸šà¹ƒà¸«à¹‰à¸œà¸¹à¹‰à¸¢à¸·à¹ˆà¸™à¸„à¸³à¸£à¹‰à¸­à¸‡' : 'à¸™à¸µà¹ˆà¸„à¸·à¸­à¹à¸šà¸šà¸ˆà¸³à¸¥à¸­à¸‡à¹€à¸­à¸à¸ªà¸²à¸£à¸—à¸µà¹ˆà¸ˆà¸°à¸–à¸¹à¸à¸ªà¹ˆà¸‡à¸­à¸­à¸à¸ˆà¸£à¸´à¸‡à¸«à¸¥à¸±à¸‡à¹„à¸”à¹‰à¸£à¸±à¸šà¸à¸²à¸£à¸­à¸™à¸¸à¸¡à¸±à¸•à¸´'}
+                      {['Ready for Delivery', 'Delivered', 'Closed'].includes(activeRequestObj.status) ? 'เอกสารฉบับสมบูรณ์สำหรับส่งมอบให้ผู้ยื่นคำร้อง' : 'นี่คือแบบจำลองเอกสารที่จะถูกส่งออกจริงหลังได้รับการอนุมัติ'}
                     </p>
                   </div>
                 </div>
@@ -7271,7 +7271,7 @@ export default function App() {
                 <div className="w-full max-w-3xl flex justify-between items-center mb-[-10px]">
                   <span className="text-xs font-bold text-slate-500 flex items-center gap-2">
                     <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse"></span>
-                    à¸ªà¸–à¸²à¸™à¸°à¸ˆà¸³à¸¥à¸­à¸‡: {previewResult === 'approved' ? 'à¸­à¸™à¸¸à¸¡à¸±à¸•à¸´à¸„à¸³à¸‚à¸­' : previewResult === 'partially_approved' ? 'à¸­à¸™à¸¸à¸¡à¸±à¸•à¸´à¸šà¸²à¸‡à¸ªà¹ˆà¸§à¸™' : previewResult === 'no_data' ? 'à¹„à¸¡à¹ˆà¸žà¸šà¸‚à¹‰à¸­à¸¡à¸¹à¸¥' : 'à¸›à¸à¸´à¹€à¸ªà¸˜à¸„à¸³à¸‚à¸­'}
+                    สถานะจำลอง: {previewResult === 'approved' ? 'อนุมัติคำขอ' : previewResult === 'partially_approved' ? 'อนุมัติบางส่วน' : previewResult === 'no_data' ? 'ไม่พบข้อมูล' : 'ปฏิเสธคำขอ'}
                   </span>
                 </div>
                 
@@ -7279,7 +7279,7 @@ export default function App() {
                   {/* Document header badge */}
                   {!['Ready for Delivery', 'Delivered', 'Closed'].includes(activeRequestObj.status) && (
                     <div className="absolute top-0 right-0 bg-red-500 text-white text-[10px] font-bold px-3 py-1 rounded-bl-lg uppercase tracking-widest shadow-sm z-10">
-                      DRAFT / à¸‰à¸šà¸±à¸šà¸£à¹ˆà¸²à¸‡
+                      DRAFT / ฉบับร่าง
                     </div>
                   )}
                   <div className="scale-[0.95] origin-top">
@@ -7305,7 +7305,7 @@ export default function App() {
                 {(previewResult === 'approved' || previewResult === 'partially_approved') && (
                   <div className="w-full max-w-3xl space-y-3">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-slate-700">à¹„à¸Ÿà¸¥à¹Œà¹€à¸­à¸à¸ªà¸²à¸£à¹à¸™à¸šà¹ƒà¸™à¸Šà¸¸à¸”à¸ªà¹ˆà¸‡à¸¡à¸­à¸š (Attachments in Package):</span>
+                      <span className="text-xs font-bold text-slate-700">ไฟล์เอกสารแนบในชุดส่งมอบ (Attachments in Package):</span>
                       <button
                         type="button"
                         onClick={async () => {
@@ -7325,13 +7325,13 @@ export default function App() {
                             document.body.removeChild(a);
                             window.URL.revokeObjectURL(url);
                           } catch (err) {
-                            alert('à¹„à¸¡à¹ˆà¸ªà¸²à¸¡à¸²à¸£à¸–à¸”à¸²à¸§à¸™à¹Œà¹‚à¸«à¸¥à¸”à¹„à¸Ÿà¸¥à¹Œà¹„à¸”à¹‰');
+                            alert('ไม่สามารถดาวน์โหลดไฟล์ได้');
                           }
                         }}
                         className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold shadow-sm transition"
                       >
                         <Download className="h-3.5 w-3.5" />
-                        à¸”à¸²à¸§à¸™à¹Œà¹‚à¸«à¸¥à¸”à¸Šà¸¸à¸”à¹„à¸Ÿà¸¥à¹Œà¸—à¸±à¹‰à¸‡à¸«à¸¡à¸” (ZIP Package)
+                        ดาวน์โหลดชุดไฟล์ทั้งหมด (ZIP Package)
                       </button>
                     </div>
 
@@ -7342,9 +7342,9 @@ export default function App() {
                           <FileBadge className="h-6 w-6" />
                         </div>
                         <div>
-                          <div className="text-sm font-bold text-slate-800">à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸ªà¹ˆà¸§à¸™à¸šà¸¸à¸„à¸„à¸¥à¸—à¸µà¹ˆà¸œà¹ˆà¸²à¸™à¸à¸²à¸£à¸„à¹‰à¸™à¸«à¸²à¹à¸¥à¸°à¸£à¸§à¸šà¸£à¸§à¸¡à¹à¸¥à¹‰à¸§.pdf</div>
+                          <div className="text-sm font-bold text-slate-800">ข้อมูลส่วนบุคคลที่ผ่านการค้นหาและรวบรวมแล้ว.pdf</div>
                           <div className="text-[11px] text-slate-500">
-                            à¸£à¸²à¸¢à¸‡à¸²à¸™à¸ªà¸£à¸¸à¸›à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸ªà¹ˆà¸§à¸™à¸šà¸¸à¸„à¸„à¸¥ à¸žà¸£à¹‰à¸­à¸¡à¸£à¸²à¸¢à¸à¸²à¸£à¹„à¸Ÿà¸¥à¹Œà¹à¸™à¸šà¸ˆà¸²à¸à¸£à¸°à¸šà¸š {activeRequestObj.dataCollectionTasks?.length || 0} à¸£à¸°à¸šà¸š (à¸¡à¸µà¸¥à¸²à¸¢à¸™à¹‰à¸³à¸à¸³à¸à¸±à¸š DRAFT)
+                            รายงานสรุปข้อมูลส่วนบุคคล พร้อมรายการไฟล์แนบจากระบบ {activeRequestObj.dataCollectionTasks?.length || 0} ระบบ (มีลายน้ำกำกับ DRAFT)
                           </div>
                         </div>
                       </div>
@@ -7364,20 +7364,20 @@ export default function App() {
                               const blob = await response.blob();
                               const fileUrl = window.URL.createObjectURL(blob);
                               setPreviewAttachment({
-                                name: 'à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸ªà¹ˆà¸§à¸™à¸šà¸¸à¸„à¸„à¸¥à¸—à¸µà¹ˆà¸œà¹ˆà¸²à¸™à¸à¸²à¸£à¸„à¹‰à¸™à¸«à¸²à¹à¸¥à¸°à¸£à¸§à¸šà¸£à¸§à¸¡à¹à¸¥à¹‰à¸§.pdf',
+                                name: 'ข้อมูลส่วนบุคคลที่ผ่านการค้นหาและรวบรวมแล้ว.pdf',
                                 fileUrl: fileUrl,
                                 size: blob.size || 24576,
                                 isMasked: true,
                                 watermarkApplied: previewResult !== 'approved'
                               });
                             } catch (err) {
-                              alert('à¹„à¸¡à¹ˆà¸ªà¸²à¸¡à¸²à¸£à¸–à¹€à¸›à¸´à¸”à¹€à¸­à¸à¸ªà¸²à¸£à¹„à¸”à¹‰');
+                              alert('ไม่สามารถเปิดเอกสารได้');
                             }
                           }}
                           className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg text-xs font-bold transition shadow-sm"
                         >
                           <Eye className="h-3.5 w-3.5" />
-                          à¹€à¸›à¸´à¸”à¸”à¸¹à¹€à¸­à¸à¸ªà¸²à¸£ (In-App)
+                          เปิดดูเอกสาร (In-App)
                         </button>
                         <button
                           type="button"
@@ -7392,13 +7392,13 @@ export default function App() {
                               const fileUrl = window.URL.createObjectURL(blob);
                               window.open(fileUrl, '_blank');
                             } catch (err) {
-                              alert('à¹„à¸¡à¹ˆà¸ªà¸²à¸¡à¸²à¸£à¸–à¹€à¸›à¸´à¸”à¹€à¸­à¸à¸ªà¸²à¸£à¹„à¸”à¹‰');
+                              alert('ไม่สามารถเปิดเอกสารได้');
                             }
                           }}
                           className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold transition"
-                          title="à¹€à¸›à¸´à¸”à¹ƒà¸™à¹à¸—à¹‡à¸šà¹ƒà¸«à¸¡à¹ˆ"
+                          title="เปิดในแท็บใหม่"
                         >
-                          â†— à¹à¸—à¹‡à¸šà¹ƒà¸«à¸¡à¹ˆ
+                          ↗ แท็บใหม่
                         </button>
                       </div>
                     </div>
@@ -7407,7 +7407,7 @@ export default function App() {
                     {activeRequestObj.dataCollectionTasks && activeRequestObj.dataCollectionTasks.some((t: any) => t.uploadedFiles && t.uploadedFiles.length > 0) && (
                       <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 space-y-2">
                         <div className="text-[11px] font-bold text-slate-600 uppercase tracking-wide">
-                          à¹„à¸Ÿà¸¥à¹Œà¹€à¸­à¸à¸ªà¸²à¸£à¹à¸™à¸šà¸ˆà¸²à¸à¸«à¸™à¹ˆà¸§à¸¢à¸‡à¸²à¸™ ({activeRequestObj.dataCollectionTasks.reduce((acc: number, t: any) => acc + (t.uploadedFiles?.length || 0), 0)} à¹„à¸Ÿà¸¥à¹Œ):
+                          ไฟล์เอกสารแนบจากหน่วยงาน ({activeRequestObj.dataCollectionTasks.reduce((acc: number, t: any) => acc + (t.uploadedFiles?.length || 0), 0)} ไฟล์):
                         </div>
                         <div className="space-y-1.5">
                           {activeRequestObj.dataCollectionTasks.map((t: any) =>
@@ -7418,8 +7418,8 @@ export default function App() {
                                   <div className="min-w-0">
                                     <div className="text-xs font-bold text-slate-800 truncate" title={f.name}>{f.name}</div>
                                     <div className="text-[10px] text-slate-500">
-                                      à¸£à¸°à¸šà¸š: <span className="font-semibold text-slate-700">{t.systemName}</span>
-                                      {f.isMasked && <span className="ml-2 text-emerald-600 font-bold">â€¢ à¸œà¹ˆà¸²à¸™à¸à¸²à¸£ Masked à¸›à¸´à¸”à¸šà¸±à¸‡à¸‚à¹‰à¸­à¸¡à¸¹à¸¥</span>}
+                                      ระบบ: <span className="font-semibold text-slate-700">{t.systemName}</span>
+                                      {f.isMasked && <span className="ml-2 text-emerald-600 font-bold">• ผ่านการ Masked ปิดบังข้อมูล</span>}
                                     </div>
                                   </div>
                                 </div>
@@ -7430,7 +7430,7 @@ export default function App() {
                                     className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-md text-xs font-bold transition"
                                   >
                                     <Eye className="h-3 w-3" />
-                                    à¹€à¸›à¸´à¸”à¸”à¸¹à¹€à¸­à¸à¸ªà¸²à¸£
+                                    เปิดดูเอกสาร
                                   </button>
                                 </div>
                               </div>
@@ -7449,7 +7449,7 @@ export default function App() {
                   onClick={() => setShowDeliveryPreview(false)}
                   className="bg-slate-800 hover:bg-slate-900 text-white font-bold py-2.5 px-6 rounded-lg text-xs transition shadow-sm"
                 >
-                  à¸›à¸´à¸”à¸«à¸™à¹‰à¸²à¸•à¹ˆà¸²à¸‡ (Close)
+                  ปิดหน้าต่าง (Close)
                 </button>
               </div>
             </div>
@@ -7466,7 +7466,7 @@ export default function App() {
       {/* --- PRIVACY POLICY MODAL --- */}
       {showPrivacyModal && (() => {
         const activeOrg = organizations.find(o => o.id === selectedTargetOrgId) || {
-          nameTh: 'à¸šà¸£à¸´à¸©à¸±à¸— à¸¢à¸¹à¹‚à¸—à¹€à¸›à¸µà¸¢ à¹€à¸­à¹‡à¸™à¹à¸­à¸™à¸”à¹Œà¹€à¸­à¹‡à¸™ à¸ˆà¸³à¸à¸±à¸”',
+          nameTh: 'บริษัท ยูโทเปีย เอ็นแอนด์เอ็น จำกัด',
           email: 'dpo@utopia.in.th',
           phone: '097-9731574'
         };
@@ -7483,8 +7483,8 @@ export default function App() {
                     <ShieldCheck className="h-5 w-5" />
                   </div>
                   <div>
-                    <h2 className="text-lg font-bold text-slate-800">à¸™à¹‚à¸¢à¸šà¸²à¸¢à¸„à¸§à¸²à¸¡à¹€à¸›à¹‡à¸™à¸ªà¹ˆà¸§à¸™à¸•à¸±à¸§ (Privacy Notice)</h2>
-                    <p className="text-xs text-slate-500">à¸ªà¸³à¸«à¸£à¸±à¸šà¸à¸²à¸£à¸ˆà¸±à¸”à¸à¸²à¸£à¸„à¸³à¸£à¹‰à¸­à¸‡à¸‚à¸­à¹ƒà¸Šà¹‰à¸ªà¸´à¸—à¸˜à¸´à¸‚à¸­à¸‡à¹€à¸ˆà¹‰à¸²à¸‚à¸­à¸‡à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸ªà¹ˆà¸§à¸™à¸šà¸¸à¸„à¸„à¸¥</p>
+                    <h2 className="text-lg font-bold text-slate-800">นโยบายความเป็นส่วนตัว (Privacy Notice)</h2>
+                    <p className="text-xs text-slate-500">สำหรับการจัดการคำร้องขอใช้สิทธิของเจ้าของข้อมูลส่วนบุคคล</p>
                   </div>
                 </div>
                 <button
@@ -7496,61 +7496,61 @@ export default function App() {
               </div>
               
               <div className="p-6 overflow-y-auto font-sans text-sm text-slate-700 space-y-6">
-                <p className="font-semibold text-slate-900">{orgName} ("à¸«à¸™à¹ˆà¸§à¸¢à¸‡à¸²à¸™" à¸«à¸£à¸·à¸­ "à¹€à¸£à¸²") à¸•à¸£à¸°à¸«à¸™à¸±à¸à¸–à¸¶à¸‡à¸„à¸§à¸²à¸¡à¸ªà¸³à¸„à¸±à¸à¸‚à¸­à¸‡à¸à¸²à¸£à¸„à¸¸à¹‰à¸¡à¸„à¸£à¸­à¸‡à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸ªà¹ˆà¸§à¸™à¸šà¸¸à¸„à¸„à¸¥à¸‚à¸­à¸‡à¸—à¹ˆà¸²à¸™ à¹€à¸žà¸·à¹ˆà¸­à¹ƒà¸«à¹‰à¹€à¸›à¹‡à¸™à¹„à¸›à¸•à¸²à¸¡à¸žà¸£à¸°à¸£à¸²à¸Šà¸šà¸±à¸à¸à¸±à¸•à¸´à¸„à¸¸à¹‰à¸¡à¸„à¸£à¸­à¸‡à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸ªà¹ˆà¸§à¸™à¸šà¸¸à¸„à¸„à¸¥ à¸ž.à¸¨. 2562 (PDPA) à¸—à¸²à¸‡à¸«à¸™à¹ˆà¸§à¸¢à¸‡à¸²à¸™à¸ˆà¸¶à¸‡à¹„à¸”à¹‰à¸ˆà¸±à¸”à¸—à¸³à¸›à¸£à¸°à¸à¸²à¸¨à¸„à¸§à¸²à¸¡à¹€à¸›à¹‡à¸™à¸ªà¹ˆà¸§à¸™à¸•à¸±à¸§à¸‰à¸šà¸±à¸šà¸™à¸µà¹‰à¸‚à¸¶à¹‰à¸™ à¹€à¸žà¸·à¹ˆà¸­à¹à¸ˆà¹‰à¸‡à¹ƒà¸«à¹‰à¸—à¹ˆà¸²à¸™à¸—à¸£à¸²à¸šà¸–à¸¶à¸‡à¸§à¸´à¸˜à¸µà¸à¸²à¸£à¸—à¸µà¹ˆà¹€à¸£à¸²à¹€à¸à¹‡à¸šà¸£à¸§à¸šà¸£à¸§à¸¡ à¹ƒà¸Šà¹‰ à¹à¸¥à¸°à¹€à¸›à¸´à¸”à¹€à¸œà¸¢à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸ªà¹ˆà¸§à¸™à¸šà¸¸à¸„à¸„à¸¥à¸‚à¸­à¸‡à¸—à¹ˆà¸²à¸™ à¹ƒà¸™à¸à¸£à¸°à¸šà¸§à¸™à¸à¸²à¸£à¸ˆà¸±à¸”à¸à¸²à¸£à¸„à¸³à¸£à¹‰à¸­à¸‡à¸‚à¸­à¹ƒà¸Šà¹‰à¸ªà¸´à¸—à¸˜à¸´à¸‚à¸­à¸‡à¹€à¸ˆà¹‰à¸²à¸‚à¸­à¸‡à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸ªà¹ˆà¸§à¸™à¸šà¸¸à¸„à¸„à¸¥</p>
+                <p className="font-semibold text-slate-900">{orgName} ("หน่วยงาน" หรือ "เรา") ตระหนักถึงความสำคัญของการคุ้มครองข้อมูลส่วนบุคคลของท่าน เพื่อให้เป็นไปตามพระราชบัญญัติคุ้มครองข้อมูลส่วนบุคคล พ.ศ. 2562 (PDPA) ทางหน่วยงานจึงได้จัดทำประกาศความเป็นส่วนตัวฉบับนี้ขึ้น เพื่อแจ้งให้ท่านทราบถึงวิธีการที่เราเก็บรวบรวม ใช้ และเปิดเผยข้อมูลส่วนบุคคลของท่าน ในกระบวนการจัดการคำร้องขอใช้สิทธิของเจ้าของข้อมูลส่วนบุคคล</p>
                 
                 <div className="space-y-2">
-                  <h3 className="font-bold text-slate-900 text-base">1. à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸ªà¹ˆà¸§à¸™à¸šà¸¸à¸„à¸„à¸¥à¸—à¸µà¹ˆà¸­à¸‡à¸„à¹Œà¸à¸£à¹€à¸à¹‡à¸šà¸£à¸§à¸šà¸£à¸§à¸¡</h3>
-                  <p>à¹ƒà¸™à¸à¸²à¸£à¸”à¸³à¹€à¸™à¸´à¸™à¸à¸²à¸£à¸•à¸²à¸¡à¸„à¸³à¸£à¹‰à¸­à¸‡à¸‚à¸­à¹ƒà¸Šà¹‰à¸ªà¸´à¸—à¸˜à¸´à¸‚à¸­à¸‡à¸—à¹ˆà¸²à¸™ à¹€à¸£à¸²à¸¡à¸µà¸„à¸§à¸²à¸¡à¸ˆà¸³à¹€à¸›à¹‡à¸™à¸•à¹‰à¸­à¸‡à¹€à¸à¹‡à¸šà¸£à¸§à¸šà¸£à¸§à¸¡à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸ªà¹ˆà¸§à¸™à¸šà¸¸à¸„à¸„à¸¥à¸‚à¸­à¸‡à¸—à¹ˆà¸²à¸™ à¸”à¸±à¸‡à¸•à¹ˆà¸­à¹„à¸›à¸™à¸µà¹‰:</p>
+                  <h3 className="font-bold text-slate-900 text-base">1. ข้อมูลส่วนบุคคลที่องค์กรเก็บรวบรวม</h3>
+                  <p>ในการดำเนินการตามคำร้องขอใช้สิทธิของท่าน เรามีความจำเป็นต้องเก็บรวบรวมข้อมูลส่วนบุคคลของท่าน ดังต่อไปนี้:</p>
                 <ul className="list-disc pl-5 space-y-1">
-                  <li><strong>à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸£à¸°à¸šà¸¸à¸•à¸±à¸§à¸•à¸™:</strong> à¹€à¸Šà¹ˆà¸™ à¸Šà¸·à¹ˆà¸­-à¸™à¸²à¸¡à¸ªà¸à¸¸à¸¥, à¸ªà¸³à¹€à¸™à¸²à¸šà¸±à¸•à¸£à¸›à¸£à¸°à¸ˆà¸³à¸•à¸±à¸§à¸›à¸£à¸°à¸Šà¸²à¸Šà¸™, à¸£à¸¹à¸›à¸–à¹ˆà¸²à¸¢, à¸¥à¸²à¸¢à¸¡à¸·à¸­à¸Šà¸·à¹ˆà¸­</li>
-                  <li><strong>à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸à¸²à¸£à¸•à¸´à¸”à¸•à¹ˆà¸­:</strong> à¹€à¸Šà¹ˆà¸™ à¸—à¸µà¹ˆà¸­à¸¢à¸¹à¹ˆ, à¸«à¸¡à¸²à¸¢à¹€à¸¥à¸‚à¹‚à¸—à¸£à¸¨à¸±à¸žà¸—à¹Œ, à¸­à¸µà¹€à¸¡à¸¥</li>
-                  <li><strong>à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸£à¸²à¸¢à¸¥à¸°à¹€à¸­à¸µà¸¢à¸”à¸„à¸³à¸£à¹‰à¸­à¸‡:</strong> à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸­à¸·à¹ˆà¸™ à¹† à¸—à¸µà¹ˆà¸—à¹ˆà¸²à¸™à¸£à¸°à¸šà¸¸à¹ƒà¸™à¹à¸šà¸šà¸Ÿà¸­à¸£à¹Œà¸¡à¸„à¸³à¸£à¹‰à¸­à¸‡ à¸«à¸£à¸·à¸­à¸«à¸¥à¸±à¸à¸à¸²à¸™à¹€à¸žà¸´à¹ˆà¸¡à¹€à¸•à¸´à¸¡à¸—à¸µà¹ˆà¸—à¹ˆà¸²à¸™à¸™à¸³à¸ªà¹ˆà¸‡à¹€à¸žà¸·à¹ˆà¸­à¸›à¸£à¸°à¸à¸­à¸šà¸à¸²à¸£à¸žà¸´à¸ˆà¸²à¸£à¸“à¸²à¸•à¸£à¸§à¸ˆà¸ªà¸­à¸šà¸ªà¸´à¸—à¸˜à¸´</li>
-                  <li><strong>à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸£à¸°à¸šà¸š:</strong> à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸à¸²à¸£à¹ƒà¸Šà¹‰à¸‡à¸²à¸™à¸£à¸°à¸šà¸š (Log), IP Address, à¸§à¸±à¸™à¹€à¸§à¸¥à¸²à¸—à¸µà¹ˆà¸—à¸³à¸£à¸²à¸¢à¸à¸²à¸£ à¹€à¸žà¸·à¹ˆà¸­à¸›à¸£à¸°à¹‚à¸¢à¸Šà¸™à¹Œà¸”à¹‰à¸²à¸™à¸„à¸§à¸²à¸¡à¸›à¸¥à¸­à¸”à¸ à¸±à¸¢à¹à¸¥à¸°à¸à¸²à¸£à¸•à¸£à¸§à¸ˆà¸ªà¸­à¸š (Audit)</li>
+                  <li><strong>ข้อมูลระบุตัวตน:</strong> เช่น ชื่อ-นามสกุล, สำเนาบัตรประจำตัวประชาชน, รูปถ่าย, ลายมือชื่อ</li>
+                  <li><strong>ข้อมูลการติดต่อ:</strong> เช่น ที่อยู่, หมายเลขโทรศัพท์, อีเมล</li>
+                  <li><strong>ข้อมูลรายละเอียดคำร้อง:</strong> ข้อมูลอื่น ๆ ที่ท่านระบุในแบบฟอร์มคำร้อง หรือหลักฐานเพิ่มเติมที่ท่านนำส่งเพื่อประกอบการพิจารณาตรวจสอบสิทธิ</li>
+                  <li><strong>ข้อมูลระบบ:</strong> ข้อมูลการใช้งานระบบ (Log), IP Address, วันเวลาที่ทำรายการ เพื่อประโยชน์ด้านความปลอดภัยและการตรวจสอบ (Audit)</li>
                 </ul>
               </div>
 
                 <div className="space-y-2">
-                  <h3 className="font-bold text-slate-900 text-base">2. à¸§à¸±à¸•à¸–à¸¸à¸›à¸£à¸°à¸ªà¸‡à¸„à¹Œà¹à¸¥à¸°à¸à¸²à¸™à¸—à¸²à¸‡à¸à¸Žà¸«à¸¡à¸²à¸¢à¹ƒà¸™à¸à¸²à¸£à¸›à¸£à¸°à¸¡à¸§à¸¥à¸œà¸¥à¸‚à¹‰à¸­à¸¡à¸¹à¸¥</h3>
-                  <p>à¹€à¸£à¸²à¸ˆà¸°à¹€à¸à¹‡à¸šà¸£à¸§à¸šà¸£à¸§à¸¡ à¹ƒà¸Šà¹‰ à¹à¸¥à¸°à¸›à¸£à¸°à¸¡à¸§à¸¥à¸œà¸¥à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸ªà¹ˆà¸§à¸™à¸šà¸¸à¸„à¸„à¸¥à¸‚à¸­à¸‡à¸—à¹ˆà¸²à¸™ à¸ à¸²à¸¢à¹ƒà¸•à¹‰à¸à¸²à¸™à¸—à¸²à¸‡à¸à¸Žà¸«à¸¡à¸²à¸¢à¸”à¸±à¸‡à¸™à¸µà¹‰:</p>
+                  <h3 className="font-bold text-slate-900 text-base">2. วัตถุประสงค์และฐานทางกฎหมายในการประมวลผลข้อมูล</h3>
+                  <p>เราจะเก็บรวบรวม ใช้ และประมวลผลข้อมูลส่วนบุคคลของท่าน ภายใต้ฐานทางกฎหมายดังนี้:</p>
                 <ul className="list-disc pl-5 space-y-1">
-                  <li><strong>à¸à¸²à¸™à¸«à¸™à¹‰à¸²à¸—à¸µà¹ˆà¸•à¸²à¸¡à¸à¸Žà¸«à¸¡à¸²à¸¢ (Legal Obligation):</strong> à¹€à¸žà¸·à¹ˆà¸­à¹ƒà¸Šà¹‰à¹ƒà¸™à¸à¸²à¸£à¸¢à¸·à¸™à¸¢à¸±à¸™à¸•à¸±à¸§à¸•à¸™ à¸žà¸´à¸ªà¸¹à¸ˆà¸™à¹Œà¸ªà¸´à¸—à¸˜à¸´ à¹à¸¥à¸°à¸”à¸³à¹€à¸™à¸´à¸™à¸à¸²à¸£à¸•à¸­à¸šà¸ªà¸™à¸­à¸‡à¸•à¹ˆà¸­à¸„à¸³à¸£à¹‰à¸­à¸‡à¸‚à¸­à¹ƒà¸Šà¹‰à¸ªà¸´à¸—à¸˜à¸´à¸‚à¸­à¸‡à¸—à¹ˆà¸²à¸™à¸•à¸²à¸¡à¸—à¸µà¹ˆà¸à¸Žà¸«à¸¡à¸²à¸¢ PDPA à¸à¸³à¸«à¸™à¸” à¸£à¸§à¸¡à¸–à¸¶à¸‡à¸à¸²à¸£à¹€à¸à¹‡à¸šà¸šà¸±à¸™à¸—à¸¶à¸à¸›à¸£à¸°à¸§à¸±à¸•à¸´à¸à¸²à¸£à¸”à¸³à¹€à¸™à¸´à¸™à¸à¸²à¸£ (Log/Record of Processing Activities)</li>
-                  <li><strong>à¸à¸²à¸™à¸›à¸£à¸°à¹‚à¸¢à¸Šà¸™à¹Œà¹‚à¸”à¸¢à¸Šà¸­à¸šà¸”à¹‰à¸§à¸¢à¸à¸Žà¸«à¸¡à¸²à¸¢ (Legitimate Interest):</strong> à¹€à¸žà¸·à¹ˆà¸­à¸à¸²à¸£à¸£à¸±à¸à¸©à¸²à¸„à¸§à¸²à¸¡à¸›à¸¥à¸­à¸”à¸ à¸±à¸¢à¸‚à¸­à¸‡à¸£à¸°à¸šà¸š à¸›à¹‰à¸­à¸‡à¸à¸±à¸™à¸à¸²à¸£à¹ƒà¸Šà¹‰à¸ªà¸´à¸—à¸˜à¸´à¹‚à¸”à¸¢à¸—à¸¸à¸ˆà¸£à¸´à¸• à¹à¸¥à¸°à¹€à¸žà¸·à¹ˆà¸­à¹ƒà¸Šà¹‰à¹€à¸›à¹‡à¸™à¸žà¸¢à¸²à¸™à¸«à¸¥à¸±à¸à¸à¸²à¸™à¹ƒà¸™à¸à¸£à¸“à¸µà¸—à¸µà¹ˆà¸¡à¸µà¸à¸²à¸£à¹‚à¸•à¹‰à¹à¸¢à¹‰à¸‡à¸«à¸£à¸·à¸­à¸”à¸³à¹€à¸™à¸´à¸™à¸„à¸”à¸µà¸—à¸²à¸‡à¸à¸Žà¸«à¸¡à¸²à¸¢à¸—à¸µà¹ˆà¹€à¸à¸µà¹ˆà¸¢à¸§à¸‚à¹‰à¸­à¸‡à¸à¸±à¸šà¸„à¸³à¸£à¹‰à¸­à¸‡à¸‚à¸­à¸‡à¸—à¹ˆà¸²à¸™</li>
+                  <li><strong>ฐานหน้าที่ตามกฎหมาย (Legal Obligation):</strong> เพื่อใช้ในการยืนยันตัวตน พิสูจน์สิทธิ และดำเนินการตอบสนองต่อคำร้องขอใช้สิทธิของท่านตามที่กฎหมาย PDPA กำหนด รวมถึงการเก็บบันทึกประวัติการดำเนินการ (Log/Record of Processing Activities)</li>
+                  <li><strong>ฐานประโยชน์โดยชอบด้วยกฎหมาย (Legitimate Interest):</strong> เพื่อการรักษาความปลอดภัยของระบบ ป้องกันการใช้สิทธิโดยทุจริต และเพื่อใช้เป็นพยานหลักฐานในกรณีที่มีการโต้แย้งหรือดำเนินคดีทางกฎหมายที่เกี่ยวข้องกับคำร้องของท่าน</li>
                 </ul>
               </div>
 
                 <div className="space-y-2">
-                  <h3 className="font-bold text-slate-900 text-base">3. à¸à¸²à¸£à¹€à¸›à¸´à¸”à¹€à¸œà¸¢à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸ªà¹ˆà¸§à¸™à¸šà¸¸à¸„à¸„à¸¥</h3>
-                  <p>à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸ªà¹ˆà¸§à¸™à¸šà¸¸à¸„à¸„à¸¥à¸‚à¸­à¸‡à¸—à¹ˆà¸²à¸™à¹ƒà¸™à¸ªà¹ˆà¸§à¸™à¸™à¸µà¹‰ à¸ˆà¸°à¸–à¸¹à¸à¹€à¸‚à¹‰à¸²à¸–à¸¶à¸‡à¹à¸¥à¸°à¸›à¸£à¸°à¸¡à¸§à¸¥à¸œà¸¥à¹‚à¸”à¸¢à¸žà¸™à¸±à¸à¸‡à¸²à¸™à¸‚à¸­à¸‡ {orgName} à¸—à¸µà¹ˆà¹„à¸”à¹‰à¸£à¸±à¸šà¸¡à¸­à¸šà¸«à¸¡à¸²à¸¢à¹€à¸—à¹ˆà¸²à¸™à¸±à¹‰à¸™ à¹€à¸Šà¹ˆà¸™ à¹€à¸ˆà¹‰à¸²à¸«à¸™à¹‰à¸²à¸—à¸µà¹ˆà¸£à¸±à¸šà¹€à¸£à¸·à¹ˆà¸­à¸‡ (Intake), à¹€à¸ˆà¹‰à¸²à¸«à¸™à¹‰à¸²à¸—à¸µà¹ˆà¸„à¸¸à¹‰à¸¡à¸„à¸£à¸­à¸‡à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸ªà¹ˆà¸§à¸™à¸šà¸¸à¸„à¸„à¸¥ (DPO), à¸œà¸¹à¹‰à¸šà¸£à¸´à¸«à¸²à¸£ à¸«à¸£à¸·à¸­à¸à¹ˆà¸²à¸¢à¸à¸Žà¸«à¸¡à¸²à¸¢à¸—à¸µà¹ˆà¹€à¸à¸µà¹ˆà¸¢à¸§à¸‚à¹‰à¸­à¸‡ à¹‚à¸”à¸¢à¸­à¸‡à¸„à¹Œà¸à¸£à¸ˆà¸°à¹„à¸¡à¹ˆà¹€à¸›à¸´à¸”à¹€à¸œà¸¢à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸‚à¸­à¸‡à¸—à¹ˆà¸²à¸™à¹à¸à¹ˆà¸šà¸¸à¸„à¸„à¸¥à¸ à¸²à¸¢à¸™à¸­à¸ à¹€à¸§à¹‰à¸™à¹à¸•à¹ˆà¹€à¸›à¹‡à¸™à¹„à¸›à¸•à¸²à¸¡à¸‚à¹‰à¸­à¸à¸³à¸«à¸™à¸”à¸—à¸²à¸‡à¸à¸Žà¸«à¸¡à¸²à¸¢ à¸«à¸£à¸·à¸­à¸¡à¸µà¸„à¸³à¸ªà¸±à¹ˆà¸‡à¸ˆà¸²à¸à¸«à¸™à¹ˆà¸§à¸¢à¸‡à¸²à¸™à¸£à¸²à¸Šà¸à¸²à¸£à¸—à¸µà¹ˆà¸¡à¸µà¸­à¸³à¸™à¸²à¸ˆ</p>
+                  <h3 className="font-bold text-slate-900 text-base">3. การเปิดเผยข้อมูลส่วนบุคคล</h3>
+                  <p>ข้อมูลส่วนบุคคลของท่านในส่วนนี้ จะถูกเข้าถึงและประมวลผลโดยพนักงานของ {orgName} ที่ได้รับมอบหมายเท่านั้น เช่น เจ้าหน้าที่รับเรื่อง (Intake), เจ้าหน้าที่คุ้มครองข้อมูลส่วนบุคคล (DPO), ผู้บริหาร หรือฝ่ายกฎหมายที่เกี่ยวข้อง โดยองค์กรจะไม่เปิดเผยข้อมูลของท่านแก่บุคคลภายนอก เว้นแต่เป็นไปตามข้อกำหนดทางกฎหมาย หรือมีคำสั่งจากหน่วยงานราชการที่มีอำนาจ</p>
                 </div>
 
                 <div className="space-y-2">
-                  <h3 className="font-bold text-slate-900 text-base">4. à¸£à¸°à¸¢à¸°à¹€à¸§à¸¥à¸²à¹ƒà¸™à¸à¸²à¸£à¹€à¸à¹‡à¸šà¸£à¸±à¸à¸©à¸²à¸‚à¹‰à¸­à¸¡à¸¹à¸¥</h3>
-                  <p>à¹€à¸£à¸²à¸ˆà¸°à¹€à¸à¹‡à¸šà¸£à¸±à¸à¸©à¸²à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸ªà¹ˆà¸§à¸™à¸šà¸¸à¸„à¸„à¸¥à¸‚à¸­à¸‡à¸—à¹ˆà¸²à¸™ à¸£à¸§à¸¡à¸—à¸±à¹‰à¸‡à¹€à¸­à¸à¸ªà¸²à¸£à¸«à¸¥à¸±à¸à¸à¸²à¸™à¸—à¸µà¹ˆà¹€à¸à¸µà¹ˆà¸¢à¸§à¸‚à¹‰à¸­à¸‡à¸à¸±à¸šà¸„à¸³à¸£à¹‰à¸­à¸‡à¸‚à¸­à¹ƒà¸Šà¹‰à¸ªà¸´à¸—à¸˜à¸´ à¹€à¸›à¹‡à¸™à¸£à¸°à¸¢à¸°à¹€à¸§à¸¥à¸² <strong>3 à¸›à¸µ</strong> à¸™à¸±à¸šà¸ˆà¸²à¸à¸§à¸±à¸™à¸—à¸µà¹ˆà¸à¸£à¸°à¸šà¸§à¸™à¸à¸²à¸£à¸ˆà¸±à¸”à¸à¸²à¸£à¸„à¸³à¸£à¹‰à¸­à¸‡à¸‚à¸­à¸‡à¸—à¹ˆà¸²à¸™à¹€à¸ªà¸£à¹‡à¸ˆà¸ªà¸´à¹‰à¸™à¸ªà¸¡à¸šà¸¹à¸£à¸“à¹Œ à¹€à¸žà¸·à¹ˆà¸­à¸›à¸£à¸°à¹‚à¸¢à¸Šà¸™à¹Œà¹ƒà¸™à¸à¸²à¸£à¸•à¸£à¸§à¸ˆà¸ªà¸­à¸šà¹à¸¥à¸°à¹€à¸›à¹‡à¸™à¸žà¸¢à¸²à¸™à¸«à¸¥à¸±à¸à¸à¸²à¸™à¸«à¸²à¸à¸¡à¸µà¸‚à¹‰à¸­à¸žà¸´à¸žà¸²à¸—à¸—à¸²à¸‡à¸à¸Žà¸«à¸¡à¸²à¸¢ à¸«à¸¥à¸±à¸‡à¸ˆà¸²à¸à¸žà¹‰à¸™à¸£à¸°à¸¢à¸°à¹€à¸§à¸¥à¸²à¸”à¸±à¸‡à¸à¸¥à¹ˆà¸²à¸§ à¸ˆà¸°à¸¡à¸µà¸à¸²à¸£à¸”à¸³à¹€à¸™à¸´à¸™à¸à¸²à¸£à¸¥à¸š à¸—à¸³à¸¥à¸²à¸¢ à¸«à¸£à¸·à¸­à¸—à¸³à¹ƒà¸«à¹‰à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸‚à¸­à¸‡à¸—à¹ˆà¸²à¸™à¹„à¸¡à¹ˆà¸ªà¸²à¸¡à¸²à¸£à¸–à¸£à¸°à¸šà¸¸à¸•à¸±à¸§à¸•à¸™à¹„à¸”à¹‰</p>
+                  <h3 className="font-bold text-slate-900 text-base">4. ระยะเวลาในการเก็บรักษาข้อมูล</h3>
+                  <p>เราจะเก็บรักษาข้อมูลส่วนบุคคลของท่าน รวมทั้งเอกสารหลักฐานที่เกี่ยวข้องกับคำร้องขอใช้สิทธิ เป็นระยะเวลา <strong>3 ปี</strong> นับจากวันที่กระบวนการจัดการคำร้องของท่านเสร็จสิ้นสมบูรณ์ เพื่อประโยชน์ในการตรวจสอบและเป็นพยานหลักฐานหากมีข้อพิพาททางกฎหมาย หลังจากพ้นระยะเวลาดังกล่าว จะมีการดำเนินการลบ ทำลาย หรือทำให้ข้อมูลของท่านไม่สามารถระบุตัวตนได้</p>
                 </div>
 
                 <div className="space-y-2">
-                  <h3 className="font-bold text-slate-900 text-base">5. à¸à¸²à¸£à¸£à¸±à¸à¸©à¸²à¸„à¸§à¸²à¸¡à¸¡à¸±à¹ˆà¸™à¸„à¸‡à¸›à¸¥à¸­à¸”à¸ à¸±à¸¢</h3>
-                  <p>à¸­à¸‡à¸„à¹Œà¸à¸£à¹„à¸”à¹‰à¸ˆà¸±à¸”à¹ƒà¸«à¹‰à¸¡à¸µà¸¡à¸²à¸•à¸£à¸à¸²à¸£à¸£à¸±à¸à¸©à¸²à¸„à¸§à¸²à¸¡à¸¡à¸±à¹ˆà¸™à¸„à¸‡à¸›à¸¥à¸­à¸”à¸ à¸±à¸¢à¸‚à¸­à¸‡à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸ªà¹ˆà¸§à¸™à¸šà¸¸à¸„à¸„à¸¥à¸­à¸¢à¹ˆà¸²à¸‡à¹€à¸«à¸¡à¸²à¸°à¸ªà¸¡ à¸—à¸±à¹‰à¸‡à¹ƒà¸™à¸”à¹‰à¸²à¸™à¸­à¸‡à¸„à¹Œà¸à¸£à¹à¸¥à¸°à¸”à¹‰à¸²à¸™à¹€à¸—à¸„à¸™à¸´à¸„ (Technical and Organizational Measures) à¹€à¸Šà¹ˆà¸™ à¸à¸²à¸£à¸ˆà¸³à¸à¸±à¸”à¸ªà¸´à¸—à¸˜à¸´à¸à¸²à¸£à¹€à¸‚à¹‰à¸²à¸–à¸¶à¸‡à¸‚à¹‰à¸­à¸¡à¸¹à¸¥ (Role-based Access Control), à¸à¸²à¸£à¹€à¸‚à¹‰à¸²à¸£à¸«à¸±à¸ªà¸‚à¹‰à¸­à¸¡à¸¹à¸¥ (Encryption) à¹à¸¥à¸°à¸à¸²à¸£à¸šà¸±à¸™à¸—à¸¶à¸à¸›à¸£à¸°à¸§à¸±à¸•à¸´à¸à¸²à¸£à¹€à¸‚à¹‰à¸²à¹ƒà¸Šà¹‰à¸‡à¸²à¸™à¸£à¸°à¸šà¸š (Audit Trail) à¹€à¸žà¸·à¹ˆà¸­à¸›à¹‰à¸­à¸‡à¸à¸±à¸™à¸à¸²à¸£à¸ªà¸¹à¸à¸«à¸²à¸¢ à¹€à¸‚à¹‰à¸²à¸–à¸¶à¸‡ à¹ƒà¸Šà¹‰ à¸”à¸±à¸”à¹à¸›à¸¥à¸‡ à¸«à¸£à¸·à¸­à¹€à¸›à¸´à¸”à¹€à¸œà¸¢à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸ªà¹ˆà¸§à¸™à¸šà¸¸à¸„à¸„à¸¥à¹‚à¸”à¸¢à¸¡à¸´à¸Šà¸­à¸š</p>
+                  <h3 className="font-bold text-slate-900 text-base">5. การรักษาความมั่นคงปลอดภัย</h3>
+                  <p>องค์กรได้จัดให้มีมาตรการรักษาความมั่นคงปลอดภัยของข้อมูลส่วนบุคคลอย่างเหมาะสม ทั้งในด้านองค์กรและด้านเทคนิค (Technical and Organizational Measures) เช่น การจำกัดสิทธิการเข้าถึงข้อมูล (Role-based Access Control), การเข้ารหัสข้อมูล (Encryption) และการบันทึกประวัติการเข้าใช้งานระบบ (Audit Trail) เพื่อป้องกันการสูญหาย เข้าถึง ใช้ ดัดแปลง หรือเปิดเผยข้อมูลส่วนบุคคลโดยมิชอบ</p>
                 </div>
 
                 <div className="space-y-2">
-                  <h3 className="font-bold text-slate-900 text-base">6. à¸ªà¸´à¸—à¸˜à¸´à¸‚à¸­à¸‡à¸—à¹ˆà¸²à¸™à¹€à¸à¸µà¹ˆà¸¢à¸§à¸à¸±à¸šà¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸ªà¹ˆà¸§à¸™à¸šà¸¸à¸„à¸„à¸¥</h3>
-                  <p>à¸—à¹ˆà¸²à¸™à¸¢à¸±à¸‡à¸„à¸‡à¸¡à¸µà¸ªà¸´à¸—à¸˜à¸´à¹ƒà¸™à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸ªà¹ˆà¸§à¸™à¸šà¸¸à¸„à¸„à¸¥à¸—à¸µà¹ˆà¸—à¹ˆà¸²à¸™à¹„à¸”à¹‰à¹ƒà¸«à¹‰à¹„à¸§à¹‰à¹ƒà¸™à¸„à¸³à¸£à¹‰à¸­à¸‡à¸™à¸µà¹‰ à¸•à¸²à¸¡à¸—à¸µà¹ˆà¸à¸Žà¸«à¸¡à¸²à¸¢ PDPA à¸à¸³à¸«à¸™à¸” (à¹€à¸Šà¹ˆà¸™ à¸ªà¸´à¸—à¸˜à¸´à¸‚à¸­à¹€à¸‚à¹‰à¸²à¸–à¸¶à¸‡ à¸ªà¸´à¸—à¸˜à¸´à¸‚à¸­à¹à¸à¹‰à¹„à¸‚ à¸ªà¸´à¸—à¸˜à¸´à¸‚à¸­à¹ƒà¸«à¹‰à¸¥à¸š à¸¯à¸¥à¸¯) à¸­à¸¢à¹ˆà¸²à¸‡à¹„à¸£à¸à¹‡à¸•à¸²à¸¡ à¸à¸²à¸£à¹ƒà¸Šà¹‰à¸ªà¸´à¸—à¸˜à¸´à¸šà¸²à¸‡à¸›à¸£à¸°à¸à¸²à¸£à¸­à¸²à¸ˆà¸ªà¹ˆà¸‡à¸œà¸¥à¸à¸£à¸°à¸—à¸šà¸•à¹ˆà¸­à¸„à¸§à¸²à¸¡à¸ªà¸²à¸¡à¸²à¸£à¸–à¹ƒà¸™à¸à¸²à¸£à¸”à¸³à¹€à¸™à¸´à¸™à¸à¸²à¸£à¸•à¸²à¸¡à¸„à¸³à¸£à¹‰à¸­à¸‡à¸‚à¸­à¹ƒà¸Šà¹‰à¸ªà¸´à¸—à¸˜à¸´à¹€à¸”à¸´à¸¡à¸—à¸µà¹ˆà¸—à¹ˆà¸²à¸™à¹„à¸”à¹‰à¸¢à¸·à¹ˆà¸™à¹„à¸§à¹‰</p>
+                  <h3 className="font-bold text-slate-900 text-base">6. สิทธิของท่านเกี่ยวกับข้อมูลส่วนบุคคล</h3>
+                  <p>ท่านยังคงมีสิทธิในข้อมูลส่วนบุคคลที่ท่านได้ให้ไว้ในคำร้องนี้ ตามที่กฎหมาย PDPA กำหนด (เช่น สิทธิขอเข้าถึง สิทธิขอแก้ไข สิทธิขอให้ลบ ฯลฯ) อย่างไรก็ตาม การใช้สิทธิบางประการอาจส่งผลกระทบต่อความสามารถในการดำเนินการตามคำร้องขอใช้สิทธิเดิมที่ท่านได้ยื่นไว้</p>
                 </div>
 
                 <div className="space-y-2">
-                  <h3 className="font-bold text-slate-900 text-base">7. à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸à¸²à¸£à¸•à¸´à¸”à¸•à¹ˆà¸­</h3>
-                  <p>à¸«à¸²à¸à¸—à¹ˆà¸²à¸™à¸¡à¸µà¸‚à¹‰à¸­à¸ªà¸‡à¸ªà¸±à¸¢à¹€à¸à¸µà¹ˆà¸¢à¸§à¸à¸±à¸šà¸›à¸£à¸°à¸à¸²à¸¨à¸„à¸§à¸²à¸¡à¹€à¸›à¹‡à¸™à¸ªà¹ˆà¸§à¸™à¸•à¸±à¸§à¸‰à¸šà¸±à¸šà¸™à¸µà¹‰ à¸«à¸£à¸·à¸­à¸•à¹‰à¸­à¸‡à¸à¸²à¸£à¸ªà¸­à¸šà¸–à¸²à¸¡à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¹€à¸žà¸´à¹ˆà¸¡à¹€à¸•à¸´à¸¡ à¸ªà¸²à¸¡à¸²à¸£à¸–à¸•à¸´à¸”à¸•à¹ˆà¸­à¹„à¸”à¹‰à¸—à¸µà¹ˆ:</p>
+                  <h3 className="font-bold text-slate-900 text-base">7. ข้อมูลการติดต่อ</h3>
+                  <p>หากท่านมีข้อสงสัยเกี่ยวกับประกาศความเป็นส่วนตัวฉบับนี้ หรือต้องการสอบถามข้อมูลเพิ่มเติม สามารถติดต่อได้ที่:</p>
                   <ul className="list-disc pl-5 space-y-1 bg-slate-50 p-4 rounded-xl border border-slate-100">
-                    <li><strong>à¹€à¸ˆà¹‰à¸²à¸«à¸™à¹‰à¸²à¸—à¸µà¹ˆà¸„à¸¸à¹‰à¸¡à¸„à¸£à¸­à¸‡à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸ªà¹ˆà¸§à¸™à¸šà¸¸à¸„à¸„à¸¥ (Data Protection Officer - DPO)</strong></li>
+                    <li><strong>เจ้าหน้าที่คุ้มครองข้อมูลส่วนบุคคล (Data Protection Officer - DPO)</strong></li>
                     <li><strong>{orgName}</strong></li>
-                    <li><strong>à¸­à¸µà¹€à¸¡à¸¥:</strong> {orgEmail}</li>
-                    <li><strong>à¹‚à¸—à¸£à¸¨à¸±à¸žà¸—à¹Œ:</strong> {orgPhone}</li>
+                    <li><strong>อีเมล:</strong> {orgEmail}</li>
+                    <li><strong>โทรศัพท์:</strong> {orgPhone}</li>
                   </ul>
                 </div>
                 
                 <div className="pt-4 border-t border-slate-100 text-xs text-slate-400 text-right">
-                  à¸›à¸£à¸°à¸à¸²à¸¨à¸‰à¸šà¸±à¸šà¸™à¸µà¹‰ à¸›à¸£à¸±à¸šà¸›à¸£à¸¸à¸‡à¸¥à¹ˆà¸²à¸ªà¸¸à¸”à¹€à¸¡à¸·à¹ˆà¸­: 14 à¸ªà¸´à¸‡à¸«à¸²à¸„à¸¡ 2569
+                  ประกาศฉบับนี้ ปรับปรุงล่าสุดเมื่อ: 14 สิงหาคม 2569
                 </div>
               </div>
               
@@ -7559,7 +7559,7 @@ export default function App() {
                   onClick={() => setShowPrivacyModal(false)}
                   className="bg-brand-600 hover:bg-brand-700 text-white font-bold py-2.5 px-6 rounded-xl text-sm transition shadow-sm"
                 >
-                  à¸£à¸±à¸šà¸—à¸£à¸²à¸šà¹à¸¥à¸°à¸›à¸´à¸”à¸«à¸™à¹‰à¸²à¸•à¹ˆà¸²à¸‡
+                  รับทราบและปิดหน้าต่าง
                 </button>
               </div>
             </div>
@@ -7573,7 +7573,7 @@ export default function App() {
         onClose={() => setResetTokenForModal(null)}
         onSuccess={() => {
           setResetTokenForModal(null);
-          showNotify('à¹€à¸›à¸¥à¸µà¹ˆà¸¢à¸™à¸£à¸«à¸±à¸ªà¸œà¹ˆà¸²à¸™à¸ªà¸³à¹€à¸£à¹‡à¸ˆ à¸à¸£à¸¸à¸“à¸²à¹€à¸‚à¹‰à¸²à¸ªà¸¹à¹ˆà¸£à¸°à¸šà¸šà¸”à¹‰à¸§à¸¢à¸£à¸«à¸±à¸ªà¸œà¹ˆà¸²à¸™à¹ƒà¸«à¸¡à¹ˆ');
+          showNotify('เปลี่ยนรหัสผ่านสำเร็จ กรุณาเข้าสู่ระบบด้วยรหัสผ่านใหม่');
           setTimeout(() => setIsLoginModalOpen(true), 500);
         }}
       />
