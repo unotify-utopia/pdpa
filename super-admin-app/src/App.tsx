@@ -66,6 +66,7 @@ export default function App() {
 
   // Custom Professional Notification Dialog Modal State
   const [notifyModal, setNotifyModal] = useState<{ open: boolean; title: string; message: string; type: 'success' | 'warning' | 'error'; onConfirm?: () => void } | null>(null);
+  const [totpSetupModal, setTotpSetupModal] = useState<{ open: boolean; qrCodeUrl: string; secret: string; codeInput: string; loading: boolean }>({ open: false, qrCodeUrl: '', secret: '', codeInput: '', loading: false });
 
   const [resetPasswordModal, setResetPasswordModal] = useState<{ open: boolean; user: User | null; newPassword: string }>({ open: false, user: null, newPassword: '' });
   const [editRoleModal, setEditRoleModal] = useState<{ open: boolean; user: User | null; newRoles: string[] }>({ open: false, user: null, newRoles: [] });
@@ -310,6 +311,49 @@ export default function App() {
       }
     } catch (err) {
       showNotify('เกิดข้อผิดพลาดในการเชื่อมต่อเพื่อเปลี่ยนรหัสผ่าน', 'error', 'การเชื่อมต่อขัดข้อง');
+    }
+  };
+
+  const openTotpSetup = async () => {
+    try {
+      setTotpSetupModal(prev => ({ ...prev, open: true, loading: true }));
+      const res = await fetch('/api/auth/2fa/setup', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (data.success) {
+        setTotpSetupModal({ open: true, qrCodeUrl: data.qrCodeUrl, secret: data.secret, codeInput: '', loading: false });
+      } else {
+        setTotpSetupModal(prev => ({ ...prev, open: false, loading: false }));
+        showNotify(data.message || 'ไม่สามารถสร้าง QR Code ได้', 'error');
+      }
+    } catch (err) {
+      setTotpSetupModal(prev => ({ ...prev, open: false, loading: false }));
+      showNotify('เชื่อมต่อเซิร์ฟเวอร์ไม่ได้', 'error');
+    }
+  };
+
+  const verifyTotpSetup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const res = await fetch('/api/auth/2fa/verify', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ code: totpSetupModal.codeInput })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setTotpSetupModal(prev => ({ ...prev, open: false }));
+        showNotify('ผูกแอป Authenticator สำเร็จแล้ว! ในการเข้าสู่ระบบครั้งต่อไปคุณสามารถใช้รหัส 6 หลักจากแอปได้เลย', 'success', 'เปิดใช้งาน 2FA สำเร็จ');
+      } else {
+        showNotify(data.message || 'รหัสไม่ถูกต้อง กรุณาลองใหม่', 'error');
+      }
+    } catch (err) {
+      showNotify('เกิดข้อผิดพลาดในการยืนยันรหัส', 'error');
     }
   };
 
@@ -1424,6 +1468,14 @@ export default function App() {
             </button>
 
             <button
+              onClick={() => openTotpSetup()}
+              className="bg-indigo-500/10 hover:bg-indigo-600 text-indigo-500 hover:text-white text-xs font-semibold px-4 py-2 rounded-lg transition border border-indigo-500/30 flex items-center gap-1.5"
+            >
+              <ShieldAlert className="h-4 w-4" />
+              <span className="hidden sm:inline">ตั้งค่า 2FA (Authenticator App)</span>
+            </button>
+
+            <button
               onClick={() => setIsChangePasswordOpen(true)}
               className="bg-emerald-500/10 hover:bg-emerald-600 text-emerald-500 hover:text-white text-xs font-semibold px-4 py-2 rounded-lg transition border border-emerald-500/30 flex items-center gap-1.5"
             >
@@ -2236,6 +2288,68 @@ export default function App() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* TOTP Setup Modal */}
+      {totpSetupModal.open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-fade-in">
+          <div className={`w-full max-w-md p-6 rounded-2xl border shadow-2xl space-y-4 ${cardBgClass}`}>
+            <div className="flex items-center justify-between border-b border-slate-800/60 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="p-2 bg-indigo-500/10 border border-indigo-500/20 rounded-xl">
+                  <ShieldAlert className="h-5 w-5 text-indigo-400" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-sm">ตั้งค่า Authenticator App</h3>
+                  <p className="text-[11px] text-slate-400">เพิ่มความปลอดภัยด้วยแอปสร้างรหัส 2FA</p>
+                </div>
+              </div>
+            </div>
+
+            {totpSetupModal.loading ? (
+              <div className="p-8 text-center text-slate-400 text-xs">กำลังสร้าง QR Code...</div>
+            ) : (
+              <div className="space-y-4">
+                <div className="text-center bg-white p-4 rounded-xl mx-auto w-fit">
+                  <img src={totpSetupModal.qrCodeUrl} alt="QR Code for TOTP" className="mx-auto" />
+                </div>
+                <div className="text-center">
+                  <p className="text-[10px] text-slate-400">หรือป้อนรหัสตั้งค่าด้วยตนเอง:</p>
+                  <code className="text-xs text-indigo-400 bg-indigo-500/10 px-2 py-1 rounded">{totpSetupModal.secret}</code>
+                </div>
+                <form onSubmit={verifyTotpSetup} className="space-y-3 pt-3 border-t border-slate-800/60">
+                  <div>
+                    <label className="block text-xs font-bold mb-1 text-center">รหัสยืนยันจากแอป 6 หลัก</label>
+                    <input
+                      type="text"
+                      maxLength={6}
+                      value={totpSetupModal.codeInput}
+                      onChange={(e) => setTotpSetupModal(prev => ({ ...prev, codeInput: e.target.value.replace(/[^0-9]/g, '') }))}
+                      placeholder="• • • • • •"
+                      className={`w-full text-center tracking-[0.5em] font-mono text-xl py-2 border rounded-xl focus:outline-none focus:border-indigo-500 ${inputBgClass}`}
+                      required
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setTotpSetupModal({ open: false, qrCodeUrl: '', secret: '', codeInput: '', loading: false })}
+                      className="w-1/2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold py-2 rounded-xl transition"
+                    >
+                      ยกเลิก
+                    </button>
+                    <button
+                      type="submit"
+                      className="w-1/2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold py-2 rounded-xl transition"
+                    >
+                      ยืนยันและเปิดใช้งาน
+                    </button>
+                  </div>
+                </form>
+              </div>
+            )}
           </div>
         </div>
       )}
