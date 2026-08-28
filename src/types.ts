@@ -242,7 +242,7 @@ export interface Request {
   statusHistory: StatusHistory[];
   identityVerification: IdentityVerification;
   requestDetails: {
-    requestType: 'access' | 'copy' | 'access_and_copy';
+    requestType: 'access' | 'copy' | 'access_and_copy' | 'erasure' | 'rectification' | 'restriction' | 'withdraw' | 'object' | 'portability';
     description: string;
     targetSystems: string[];
     timeframeStart?: string;
