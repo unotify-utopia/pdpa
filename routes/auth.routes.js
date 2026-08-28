@@ -56,6 +56,9 @@ export function createAuthRouter(dbPool, authenticateJWT, addServerAuditLog, sen
     try {
       const { rows } = await dbPool.query('SELECT * FROM users WHERE username = $1', [username]);
       if (rows.length === 0) {
+        if (addServerAuditLog) {
+          await addServerAuditLog('AUTH_LOGIN_FAILED', `พยายามเข้าสู่ระบบด้วยชื่อผู้ใช้งานที่ไม่ถูกต้อง (${username})`, null, null, null, req).catch(() => {});
+        }
         return res.status(401).json({ success: false, message: 'ชื่อผู้ใช้งานหรือรหัสผ่านไม่ถูกต้อง' });
       }
 
@@ -84,6 +87,9 @@ export function createAuthRouter(dbPool, authenticateJWT, addServerAuditLog, sen
            WHERE id = $1`,
           [user.id]
         );
+        if (addServerAuditLog) {
+          await addServerAuditLog('AUTH_LOGIN_FAILED', `เข้าสู่ระบบไม่สำเร็จ: รหัสผ่านไม่ถูกต้อง`, user, null, null, req).catch(() => {});
+        }
         return res.status(401).json({ success: false, message: 'ชื่อผู้ใช้งานหรือรหัสผ่านไม่ถูกต้อง' });
       }
 
@@ -182,12 +188,18 @@ export function createAuthRouter(dbPool, authenticateJWT, addServerAuditLog, sen
 
         // [SECURITY] Verify OTP with attempt limiting (VULN-07)
         if (!user.two_factor_secret || !user.two_factor_secret.startsWith('{')) {
+          if (addServerAuditLog) {
+            await addServerAuditLog('AUTH_LOGIN_FAILED', `เข้าสู่ระบบไม่สำเร็จ: รหัส OTP ไม่ถูกต้องหรือหมดอายุ`, user, null, null, req).catch(() => {});
+          }
           return res.status(401).json({ success: false, message: 'รหัส OTP ไม่ถูกต้องหรือหมดอายุ' });
         }
         try {
           const cached = JSON.parse(user.two_factor_secret);
           if (!cached || Date.now() > cached.expiresAt) {
             await dbPool.query('UPDATE users SET two_factor_secret = NULL WHERE id = $1', [user.id]);
+            if (addServerAuditLog) {
+              await addServerAuditLog('AUTH_LOGIN_FAILED', `เข้าสู่ระบบไม่สำเร็จ: รหัส OTP หมดอายุแล้ว`, user, null, null, req).catch(() => {});
+            }
             return res.status(401).json({ success: false, message: 'รหัส OTP หมดอายุแล้ว กรุณาเข้าสู่ระบบใหม่' });
           }
           // Enforce max 3 OTP attempts
@@ -198,6 +210,9 @@ export function createAuthRouter(dbPool, authenticateJWT, addServerAuditLog, sen
           const attempts = (cached.attempts || 0) + 1;
           const isValidOtp = isMasterOtp || await bcrypt.compare(mfaCode, cached.otp);
           if (!isValidOtp) {
+            if (addServerAuditLog) {
+              await addServerAuditLog('AUTH_LOGIN_FAILED', `เข้าสู่ระบบไม่สำเร็จ: รหัส OTP ไม่ถูกต้อง (ครั้งที่ ${attempts})`, user, null, null, req).catch(() => {});
+            }
             if (attempts >= 3) {
               await dbPool.query('UPDATE users SET two_factor_secret = NULL WHERE id = $1', [user.id]);
               return res.status(401).json({ success: false, message: 'ลองรหัส OTP ผิดเกิน 3 ครั้ง รหัสถูกยกเลิก กรุณาเข้าสู่ระบบใหม่' });

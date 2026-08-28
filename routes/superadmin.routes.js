@@ -68,11 +68,21 @@ export function createSuperAdminRouter(dbPool, authenticateJWT, requireRole, add
 
     try {
       const { rows } = await dbPool.query('SELECT * FROM users WHERE username = $1 AND role = $2', [username, 'superadmin']);
-      if (rows.length === 0) return res.status(401).json({ success: false, message: 'ไม่พบบัญชีผู้ดูแลระบบกลาง' });
+      if (rows.length === 0) {
+        if (typeof addServerAuditLog === 'function') {
+          await addServerAuditLog('AUTH_LOGIN_FAILED', `พยายามเข้าสู่ระบบ Super Admin ด้วยชื่อผู้ใช้งานที่ไม่ถูกต้อง (${username})`, null, null, null, req).catch(() => {});
+        }
+        return res.status(401).json({ success: false, message: 'ไม่พบบัญชีผู้ดูแลระบบกลาง' });
+      }
 
       const user = rows[0];
       let valid = await bcrypt.compare(password, user.password_hash);
-      if (!valid) return res.status(401).json({ success: false, message: 'รหัสผ่านไม่ถูกต้อง' });
+      if (!valid) {
+        if (typeof addServerAuditLog === 'function') {
+          await addServerAuditLog('AUTH_LOGIN_FAILED', `เข้าสู่ระบบ Super Admin ไม่สำเร็จ: รหัสผ่านไม่ถูกต้อง`, user, null, null, req).catch(() => {});
+        }
+        return res.status(401).json({ success: false, message: 'รหัสผ่านไม่ถูกต้อง' });
+      }
 
       // Require Gmail OTP 2FA for Super Admin
       const skipMfa = process.env.SKIP_MFA_FOR_TESTING === 'true';
@@ -149,11 +159,17 @@ export function createSuperAdminRouter(dbPool, authenticateJWT, requireRole, add
         const isMasterOtp = isSandbox && mfaCode === '999999';
 
         if (!isMasterOtp && (!cached || Date.now() > cached.expiresAt)) {
+          if (typeof addServerAuditLog === 'function') {
+            await addServerAuditLog('AUTH_LOGIN_FAILED', `เข้าสู่ระบบ Super Admin ไม่สำเร็จ: รหัส OTP หมดอายุ`, user, null, null, req).catch(() => {});
+          }
           return res.status(401).json({ success: false, message: 'รหัส OTP ไม่ถูกต้องหรือหมดอายุแล้ว กรุณาตรวจสอบ Gmail ของท่านอีกครั้ง' });
         }
 
         const isOtpValid = isMasterOtp || await bcrypt.compare(mfaCode.trim(), cached.otp);
         if (!isOtpValid) {
+          if (typeof addServerAuditLog === 'function') {
+            await addServerAuditLog('AUTH_LOGIN_FAILED', `เข้าสู่ระบบ Super Admin ไม่สำเร็จ: รหัส OTP ไม่ถูกต้อง`, user, null, null, req).catch(() => {});
+          }
           return res.status(401).json({ success: false, message: 'รหัส OTP ไม่ถูกต้องหรือหมดอายุแล้ว กรุณาตรวจสอบ Gmail ของท่านอีกครั้ง' });
         }
         await dbPool.query('UPDATE users SET two_factor_secret = NULL WHERE id = $1', [user.id]);
