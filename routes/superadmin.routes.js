@@ -531,7 +531,7 @@ export function createSuperAdminRouter(dbPool, authenticateJWT, requireRole, add
       let query = 'SELECT * FROM audit_logs';
       let params = [];
       if (req.query.search) {
-        query += ' WHERE details ILIKE $1 OR action ILIKE $1 OR user_id ILIKE $1';
+        query += ' WHERE details ILIKE $1 OR action ILIKE $1 OR actor_id ILIKE $1';
         params.push(`%${req.query.search}%`);
       }
       query += ' ORDER BY timestamp DESC LIMIT $' + (params.length + 1) + ' OFFSET $' + (params.length + 2);
@@ -540,7 +540,7 @@ export function createSuperAdminRouter(dbPool, authenticateJWT, requireRole, add
       let countQuery = 'SELECT COUNT(*) FROM audit_logs';
       let countParams = [];
       if (req.query.search) {
-        countQuery += ' WHERE details ILIKE $1 OR action ILIKE $1 OR user_id ILIKE $1';
+        countQuery += ' WHERE details ILIKE $1 OR action ILIKE $1 OR actor_id ILIKE $1';
         countParams.push(`%${req.query.search}%`);
       }
       const countResult = await dbPool.query(countQuery, countParams);

@@ -108,9 +108,9 @@ export default function AuditLogsPanel({ token }: AuditLogsPanelProps) {
                     </td>
                     <td className="px-6 py-3 text-slate-700 min-w-[300px]">{log.details}</td>
                     <td className="px-6 py-3">
-                      {log.user_id ? (
+                      {log.actor_id ? (
                         <span className="font-mono text-xs px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded">
-                          {log.user_id}
+                          {log.actor_id}
                         </span>
                       ) : (
                         <span className="text-slate-400 text-xs italic">System / Anonymous</span>
