@@ -123,7 +123,7 @@ export default function SystemDashboard({ token, isDark = false }: SystemDashboa
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-        <div className={`lg:col-span-2 rounded-xl border overflow-hidden ${cardBgClass}`}>
+        <div className={`lg:col-span-2 rounded-xl border overflow-hidden h-fit self-start ${cardBgClass}`}>
           <div className={`px-6 py-4 border-b ${tableHeaderBg}`}>
             <h3 className={`font-bold flex items-center gap-2 ${textTitleClass}`}>
               <ShieldAlert size={18} className={isDark ? 'text-rose-400' : 'text-red-500'} /> Security Alerts ล่าสุด

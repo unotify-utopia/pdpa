@@ -3,6 +3,7 @@ import { ShieldCheck, Building2, UserCheck, Key, Lock, LogOut, Plus, Sun, Moon, 
 import WorkflowAdminPanel from './WorkflowAdminPanel';
 import SystemDashboard from './SystemDashboard';
 import CookieLogsPanel from './CookieLogsPanel';
+import AuditLogsPanel from './AuditLogsPanel';
 
 interface Tenant {
   id: string;
@@ -46,7 +47,7 @@ export default function App() {
   const [password, setPassword] = useState('');
   const [mfaCode, setMfaCode] = useState('');
 
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'tenants' | 'users' | 'export' | 'workflow' | 'cookie_logs'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'tenants' | 'users' | 'export' | 'workflow' | 'cookie_logs' | 'audit_logs'>('dashboard');
   const [selectedTenantForUsers, setSelectedTenantForUsers] = useState<string>('');
   const [exportTenantModal, setExportTenantModal] = useState<Tenant | null>(null);
   const [exportFormat, setExportFormat] = useState<'json' | 'csv'>('json');
@@ -1492,6 +1493,15 @@ export default function App() {
               <Shield className="h-4 w-4" />
               <span>ประวัติความยินยอม (Cookie Logs)</span>
             </button>
+            <button
+              onClick={() => setActiveTab('audit_logs')}
+              className={`px-4 py-2 rounded-lg text-xs font-bold transition flex items-center gap-2 ${
+                activeTab === 'audit_logs' ? 'bg-indigo-600 text-white shadow-md' : inactiveTabClass
+              }`}
+            >
+              <Activity className="h-4 w-4" />
+              <span>ประวัติระบบ (Audit Logs)</span>
+            </button>
           </div>
 
           {activeTab === 'tenants' ? (
@@ -1784,6 +1794,7 @@ export default function App() {
         {activeTab === 'dashboard' && token && <SystemDashboard token={token} isDark={isDark} />}
         
         {activeTab === 'cookie_logs' && token && <CookieLogsPanel token={token} />}
+        {activeTab === 'audit_logs' && token && <AuditLogsPanel token={token} />}
 
       </main>
 
