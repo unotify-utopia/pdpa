@@ -5022,8 +5022,7 @@ export default function App() {
                                           <button
                                             type="button"
                                             onClick={() => handleMarkTaskNotFound(activeRequestObj.id, t.id)}
-                                            disabled={activeRequestObj.status === 'Closed' || activeRequestObj.status === 'closed'}
-                                            className="bg-rose-100 hover:bg-rose-200 disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed text-rose-700 text-[10px] font-bold py-1 px-3 rounded shadow-sm transition cursor-pointer"
+                                            className="bg-rose-100 hover:bg-rose-200 text-rose-700 text-[10px] font-bold py-1 px-3 rounded shadow-sm transition cursor-pointer"
                                           >
                                             แจ้งไม่พบข้อมูล
                                           </button>
@@ -5031,8 +5030,7 @@ export default function App() {
                                         <button
                                           type="button"
                                           onClick={() => document.getElementById(`upload-task-${t.id}`)?.click()}
-                                          disabled={activeRequestObj.status === 'Closed' || activeRequestObj.status === 'closed'}
-                                          className="bg-slate-700 hover:bg-slate-800 disabled:bg-slate-300 disabled:cursor-not-allowed text-white text-[10px] font-bold py-1 px-3 rounded shadow-sm transition cursor-pointer"
+                                          className="bg-slate-700 hover:bg-slate-800 text-white text-[10px] font-bold py-1 px-3 rounded shadow-sm transition cursor-pointer"
                                         >
                                           อัปโหลดเอกสาร
                                         </button>

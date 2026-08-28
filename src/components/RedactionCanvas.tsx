@@ -122,7 +122,7 @@ export const RedactionCanvas: React.FC<RedactionCanvasProps> = ({
     return `${str.substring(0, 1)}***`;
   };
 
-  const isClosed = request?.status === 'Closed' || request?.status === 'closed';
+  const isClosed = request?.status === 'Closed';
 
   const handleFieldClick = (field: DocumentField) => {
     if (isClosed) return;
