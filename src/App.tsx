@@ -4862,16 +4862,14 @@ export default function App() {
                           <input
                             type="text"
                             required
-                            disabled={activeRequestObj.status === 'Closed' || activeRequestObj.status === 'closed'}
-                            placeholder={(activeRequestObj.status === 'Closed' || activeRequestObj.status === 'closed') ? "🔒 คำร้องนี้ถูกปิดแล้ว ไม่สามารถส่งข้อความได้" : "พิมพ์ข้อความสื่อสารตอบกลับส่งถึงประชาชนผู้ยื่นคำขอที่นี่..."}
+                            placeholder="พิมพ์ข้อความสื่อสารตอบกลับส่งถึงประชาชนผู้ยื่นคำขอที่นี่..."
                             value={chatMessage}
                             onChange={(e) => setChatMessage(e.target.value)}
-                            className="flex-1 text-xs border border-slate-300 rounded-xl px-3.5 py-2.5 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500 disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed"
+                            className="flex-1 text-xs border border-slate-300 rounded-xl px-3.5 py-2.5 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500"
                           />
                           <button
                             type="submit"
-                            disabled={activeRequestObj.status === 'Closed' || activeRequestObj.status === 'closed'}
-                            className="bg-brand-600 hover:bg-brand-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-bold px-4 py-2.5 rounded-xl transition flex items-center gap-1.5 text-xs shadow-sm"
+                            className="bg-brand-600 hover:bg-brand-700 text-white font-bold px-4 py-2.5 rounded-xl transition flex items-center gap-1.5 text-xs shadow-sm"
                           >
                             <Send className="h-4 w-4" />
                             <span>ส่งข้อความ</span>
