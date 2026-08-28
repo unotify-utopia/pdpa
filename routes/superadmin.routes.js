@@ -527,7 +527,8 @@ export function createSuperAdminRouter(dbPool, authenticateJWT, requireRole, add
         archives: { count: archivesCount, sizeBytes: archivesSize },
         recentAlerts: alertsRes.rows,
         systemInfo: systemInfo,
-        diskInfo: diskInfo
+        diskInfo: diskInfo,
+        isSingleNode: process.env.SYSTEM_MODE === 'SINGLE_NODE'
       });
     } catch (err) {
       console.error('Error fetching dashboard stats:', err);

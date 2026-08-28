@@ -209,10 +209,12 @@ export default function SystemDashboard({ token, isDark = false }: SystemDashboa
                 <div className={textSubClass}>จำนวนคำร้องทั้งหมด</div>
                 <div className={`font-bold text-lg ${textValueClass}`}>{metrics?.total_requests || 0}</div>
               </div>
-              <div className={`flex justify-between items-center pb-4 border-b ${borderLightClass}`}>
-                <div className={textSubClass}>จำนวนหน่วยงาน (Tenants)</div>
-                <div className={`font-bold text-lg ${textValueClass}`}>{metrics?.total_tenants || 0}</div>
-              </div>
+              {!stats.isSingleNode && (
+                <div className={`flex justify-between items-center pb-4 border-b ${borderLightClass}`}>
+                  <div className={textSubClass}>จำนวนหน่วยงาน (Tenants)</div>
+                  <div className={`font-bold text-lg ${textValueClass}`}>{metrics?.total_tenants || 0}</div>
+                </div>
+              )}
               <div className={`flex justify-between items-center pb-4 border-b ${borderLightClass}`}>
                 <div className={textSubClass}>บัญชีผู้ใช้งานระบบ (Staff)</div>
                 <div className={`font-bold text-lg ${textValueClass}`}>{metrics?.total_users || 0}</div>
