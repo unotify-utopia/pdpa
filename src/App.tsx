@@ -6668,7 +6668,7 @@ export default function App() {
             พัฒนาสอดคล้องตามมาตรฐานพระราชบัญญัติคุ้มครองข้อมูลส่วนบุคคล พ.ศ. 2562 (การรองรับการใช้สิทธิของเจ้าของข้อมูลส่วนบุคคล)
           </p>
           {typeof __APP_VERSION__ !== 'undefined' && (
-            <span className="md:absolute md:right-0 text-[9px] text-slate-400/60 hover:text-slate-300 transition-colors font-mono mt-2 md:mt-0">
+            <span className="md:absolute md:right-0 text-[10px] text-slate-400 hover:text-white transition-colors font-mono mt-2 md:mt-0">
               v1.0.0-beta • rev: {__APP_VERSION__} ({__BUILD_DATE__})
             </span>
           )}
