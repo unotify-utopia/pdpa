@@ -14,7 +14,7 @@ export default function AuditLogsPanel({ token }: AuditLogsPanelProps) {
   const fetchLogs = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/super-admin/audit-logs?search=${encodeURIComponent(search)}`, {
+      const res = await fetch(`/api/audit-logs?search=${encodeURIComponent(search)}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const data = await res.json();
