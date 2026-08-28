@@ -5306,7 +5306,7 @@ export default function App() {
                         </span>
 
                         {/* DPO input form */}
-                        {(activeUser.role === 'dpo' || activeUser.role === 'admin') && !(activeRequestObj.decision?.approvedAt || ['Approval Pending', 'Ready for Delivery', 'Fee Notification', 'Delivered', 'Closed'].includes(activeRequestObj.status)) ? (
+                        {(activeUser.role === 'dpo' || activeUser.role === 'admin') && !['Approval Pending', 'Ready for Delivery', 'Fee Notification', 'Delivered', 'Closed'].includes(activeRequestObj.status) ? (
                           <div className="space-y-3 text-xs">
                             <div className="space-y-1">
                               <label className="font-semibold text-slate-700">ผลวินิจฉัยข้อเสนอสิทธิ์:</label>
