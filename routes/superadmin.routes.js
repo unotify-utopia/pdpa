@@ -523,7 +523,7 @@ export function createSuperAdminRouter(dbPool, authenticateJWT, requireRole, add
     }
   });
 
-  router.get('/audit-logs', authenticateJWT, requireRole(['superadmin']), async (req, res) => {
+  router.get('/super-admin/audit-logs', authenticateJWT, requireRole(['superadmin']), async (req, res) => {
     try {
       const page = parseInt(req.query.page) || 1;
       const limit = parseInt(req.query.limit) || 100;
