@@ -1898,7 +1898,7 @@ export default function App() {
   // DPO and Approver Decisions (Section 3.7)
   const [decisionType, setDecisionType] = useState<'approved' | 'partially_approved' | 'denied' | 'no_data'>('approved');
   const [denialBasisCode, setDenialBasisCode] = useState('');
-  const [legalBasisInput, setLegalBasisInput] = useState('มาตรา 30 วรรคหนึ่ง แห่งพระราชบัญญัติคุ้มครองข้อมูลส่วนบุคคล พ.ศ. 2562');
+  const [legalBasisInput, setLegalBasisInput] = useState('ตามสิทธิของเจ้าของข้อมูลส่วนบุคคล แห่งพระราชบัญญัติคุ้มครองข้อมูลส่วนบุคคล พ.ศ. 2562');
   const [decisionNotes, setDecisionNotes] = useState('');
 
   const handleSubmitDecisionProposal = async (reqId: string) => {
@@ -2297,6 +2297,21 @@ export default function App() {
 
   // Clean UI lookup helper for active requests details
   const activeRequestObj = selectedRequestId ? filteredRequests.find(r => r.id === selectedRequestId) : null;
+
+  useEffect(() => {
+    if (activeRequestObj?.requestDetails?.requestType) {
+      const rt = activeRequestObj.requestDetails.requestType;
+      let section = 'มาตรา 30'; // access & copy
+      if (rt === 'erasure') section = 'มาตรา 33';
+      else if (rt === 'rectification') section = 'มาตรา 35 และมาตรา 36';
+      else if (rt === 'restriction') section = 'มาตรา 34';
+      else if (rt === 'withdraw') section = 'มาตรา 19';
+      else if (rt === 'object') section = 'มาตรา 32';
+      else if (rt === 'portability') section = 'มาตรา 31';
+      
+      setLegalBasisInput(`${section} แห่งพระราชบัญญัติคุ้มครองข้อมูลส่วนบุคคล พ.ศ. 2562`);
+    }
+  }, [activeRequestObj?.id, activeRequestObj?.requestDetails?.requestType]);
 
   return (
     <div className="min-h-screen print:min-h-0 print:h-auto print:block flex flex-col font-sans">
@@ -3064,7 +3079,7 @@ export default function App() {
                 <div className="bg-gradient-to-r from-brand-900 to-slate-900 text-white rounded-2xl p-8 shadow-md relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-6">
                   <div className="space-y-3 max-w-xl">
                     <span className="inline-block bg-brand-500/20 text-brand-300 border border-brand-500/40 text-[11px] px-3.5 py-1.5 rounded-full font-bold mb-1 shadow-sm tracking-wide">
-                      พ.ร.บ. คุ้มครองข้อมูลส่วนบุคคล พ.ศ. 2562 (มาตรา 30)
+                      พ.ร.บ. คุ้มครองข้อมูลส่วนบุคคล พ.ศ. 2562 (การใช้สิทธิของเจ้าของข้อมูล)
                     </span>
                     <h2 className="text-2xl md:text-3xl font-bold leading-snug pt-1">
                       มีสิทธิขอเข้าถึงและรับสำเนาข้อมูลส่วนบุคคลของท่านที่อยู่ในความดูแลขององค์กร
@@ -4373,7 +4388,7 @@ export default function App() {
                 </div>
                 <div>
                   <span className="block font-bold text-white text-xs">หน่วยงานควบคุมข้อมูล</span>
-                  <span className="block text-[9px] text-slate-500">ระบบบริหารสิทธิมาตรา 30</span>
+                  <span className="block text-[9px] text-slate-500">ระบบบริหารจัดการสิทธิ (DSR)</span>
                 </div>
               </div>
 
@@ -5324,7 +5339,7 @@ export default function App() {
 
                             {decisionType === 'denied' && (
                               <div className="space-y-1">
-                                <label className="font-semibold text-slate-700 text-red-700">ข้อยกเว้นปฏิเสธมาตรา 30:</label>
+                                <label className="font-semibold text-slate-700 text-red-700">เหตุผลข้อยกเว้นในการปฏิเสธคำขอ:</label>
                                 <select
                                   value={denialBasisCode}
                                   onChange={(e) => setDenialBasisCode(e.target.value)}
@@ -5545,7 +5560,7 @@ export default function App() {
                     <div className="flex justify-between items-center border-b border-slate-200 pb-4">
                       <div>
                         <h2 className="text-xl font-bold text-slate-800">แผงควบคุมระบบตรวจสอบสิทธิ์ข้อมูลส่วนบุคคล</h2>
-                        <p className="text-xs text-slate-500 mt-0.5">ภาพรวมรายการยื่นคำขอตามมาตรา 30 และสถานะ SLA ดำเนินงานขององค์กร</p>
+                        <p className="text-xs text-slate-500 mt-0.5">ภาพรวมรายการยื่นคำขอใช้สิทธิฯ และสถานะ SLA ดำเนินงานขององค์กร</p>
                       </div>
                       <span className="bg-brand-50 text-brand-600 text-xs px-2.5 py-1 rounded font-bold">
                         ปีงบประมาณ พ.ศ. {new Date().getFullYear() + 543}
@@ -6650,7 +6665,7 @@ export default function App() {
         </p>
         <div className="relative flex flex-col md:flex-row justify-center items-center w-full">
           <p className="text-[10px] text-slate-500">
-            พัฒนาสอดคล้องตามมาตรฐานพระราชบัญญัติคุ้มครองข้อมูลส่วนบุคคล พ.ศ. 2562 (สิทธิ์ในการเข้าถึงและรับสำเนาตามมาตรา 30)
+            พัฒนาสอดคล้องตามมาตรฐานพระราชบัญญัติคุ้มครองข้อมูลส่วนบุคคล พ.ศ. 2562 (การรองรับการใช้สิทธิของเจ้าของข้อมูลส่วนบุคคล)
           </p>
           {typeof __APP_VERSION__ !== 'undefined' && (
             <span className="md:absolute md:right-0 text-[9px] text-slate-400/60 hover:text-slate-300 transition-colors font-mono mt-2 md:mt-0">

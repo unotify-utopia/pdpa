@@ -1,11 +1,9 @@
 const { Client } = require('ssh2');
 const conn = new Client();
-
 conn.on('ready', () => {
-  conn.exec('sudo -u postgres psql -d pdpa_single_db -c "SELECT action, details, timestamp FROM audit_logs ORDER BY timestamp DESC LIMIT 3;"', (err, stream) => {
-    if (err) throw err;
+  conn.exec("grep -E 'process.env.DB|pool' /var/www/pdpa/services/database.init.js", (err, stream) => {
     stream.on('close', () => conn.end())
-          .on('data', (data) => console.log(data.toString()))
-          .stderr.on('data', (data) => console.error(data.toString()));
+      .on('data', d => console.log(d.toString()))
+      .stderr.on('data', d => console.error(d.toString()));
   });
-}).connect({ host: '119.59.102.26', port: 22, username: 'root', password: 'G)6cUxio73M5F' });
+}).connect({ host: '119.59.124.169', port: 22, username: 'root', password: 'B7!cN1^yHj6*' });
