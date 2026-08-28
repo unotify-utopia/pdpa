@@ -552,5 +552,3 @@ export function createSuperAdminRouter(dbPool, authenticateJWT, requireRole, add
 
   return router;
 }
-
-module.exports = { createSuperAdminRouter };
