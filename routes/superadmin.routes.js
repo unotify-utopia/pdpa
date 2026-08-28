@@ -8,6 +8,7 @@ import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
+import { authenticator } from 'otplib';
 import { fileURLToPath } from 'url';
 import os from 'os';
 import { execSync } from 'child_process';
@@ -156,7 +157,6 @@ export function createSuperAdminRouter(dbPool, authenticateJWT, requireRole, add
 
         let cached = null;
         if (mfaType === 'totp' && user.totp_enabled) {
-          const { authenticator } = require('otplib'); // ensure otplib is required here
           const isValidTotp = authenticator.check(mfaCode, user.totp_secret);
           if (!isValidTotp) {
             if (typeof addServerAuditLog === 'function') {
