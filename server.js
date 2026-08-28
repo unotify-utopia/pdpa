@@ -89,11 +89,9 @@ app.use(cors(corsOptions));
 // Covers: X-Frame-Options, X-Content-Type-Options, Content-Security-Policy, HSTS, etc.
 app.use(helmet({
   contentSecurityPolicy: {
-    directives: {
+      directives: {
       defaultSrc: ["'self'"],
-      // [SECURITY] C5: Removed 'unsafe-eval' (no eval() in codebase) and cdn.tailwindcss.com (only used in super-admin-app dev, not main app)
-      // Note: 'unsafe-inline' kept because Vite injects inline module preload scripts in index.html
-      scriptSrc: ["'self'", "'unsafe-inline'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://cdn.tailwindcss.com"],
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
       imgSrc: ["'self'", "data:", "https://api.qrserver.com", "blob:"],
