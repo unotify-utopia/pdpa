@@ -122,7 +122,10 @@ export const RedactionCanvas: React.FC<RedactionCanvasProps> = ({
     return `${str.substring(0, 1)}***`;
   };
 
+  const isClosed = request?.status === 'Closed' || request?.status === 'closed';
+
   const handleFieldClick = (field: DocumentField) => {
+    if (isClosed) return;
     if (field.isRedacted) return;
     setSelectedFieldId(field.id);
   };
@@ -175,7 +178,8 @@ export const RedactionCanvas: React.FC<RedactionCanvasProps> = ({
         <button
           type="button"
           onClick={handleReset}
-          className="text-xs text-slate-500 hover:text-slate-700 flex items-center gap-1 transition"
+          disabled={isClosed}
+          className={`text-xs flex items-center gap-1 transition ${isClosed ? 'text-slate-300 cursor-not-allowed' : 'text-slate-500 hover:text-slate-700'}`}
         >
           <RefreshCw className="h-3 w-3" />
           <span>รีเซ็ต (Reset)</span>
@@ -322,7 +326,7 @@ export const RedactionCanvas: React.FC<RedactionCanvasProps> = ({
             <button
               type="button"
               onClick={onSaveAll}
-              disabled={savedCount === 0}
+              disabled={savedCount === 0 || isClosed}
               className={`w-full font-semibold py-2 px-4 rounded-lg text-xs flex items-center justify-center gap-1.5 transition ${
                 savedCount > 0
                   ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm'
