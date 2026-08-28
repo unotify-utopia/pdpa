@@ -4,7 +4,7 @@ import crypto from 'crypto';
 import QRCode from 'qrcode';
 import { applyFieldPermissions, applyFieldPermissionsToList } from '../middleware/fieldPermissions.js';
 import { calculateOrgSLAReport } from '../services/sla.service.js';
-import { sendMailWithFallback } from '../services/email.service.js';
+import { sendMailWithFallback, sendWorkflowNotification } from '../services/email.service.js';
 import { applyWatermark } from '../services/watermark.service.js';
 
 export function createRequestsRouter(dbPool, authenticateJWT, requireRole, addServerAuditLog) {
@@ -89,12 +89,52 @@ export function createRequestsRouter(dbPool, authenticateJWT, requireRole, addSe
       const requestData = req.body;
       const status = requestData.status || 'Received';
       
+      let oldStatus = null;
+      let existingData = null;
+      try {
+        const existRes = await dbPool.query('SELECT status, data FROM requests WHERE id = $1', [id]);
+        if (existRes.rows.length > 0) {
+          oldStatus = existRes.rows[0].status;
+          existingData = typeof existRes.rows[0].data === 'string' ? JSON.parse(existRes.rows[0].data) : (existRes.rows[0].data || {});
+        }
+      } catch (err) { console.warn('Could not fetch existing request for diff:', err); }
+
       await dbPool.query(
         'UPDATE requests SET status = $1, data = $2 WHERE id = $3',
         [status, JSON.stringify(requestData), id]
       );
       
-      res.json({ success: true, message: 'บันทึกข้อมูลสำเร็จ', request: requestData });
+      try {
+        if (existingData) {
+          if (oldStatus && oldStatus !== status) {
+            await sendWorkflowNotification(requestData, oldStatus, status, 'STATUS_CHANGE', dbPool);
+          }
+          
+          let isNewStaffMessage = false;
+          let isNewCitizenMessage = false;
+          
+          if (requestData.messageThread && Array.isArray(requestData.messageThread)) {
+             const existingCount = Array.isArray(existingData.messageThread) ? existingData.messageThread.length : 0;
+             if (requestData.messageThread.length > existingCount) {
+               const newMessages = requestData.messageThread.slice(existingCount);
+               const latestMsg = newMessages[newMessages.length - 1];
+               if (latestMsg && latestMsg.sender === 'user') isNewCitizenMessage = true;
+               else if (latestMsg && latestMsg.sender === 'staff') isNewStaffMessage = true;
+             }
+          }
+          
+          if (isNewStaffMessage) {
+            await sendWorkflowNotification(requestData, oldStatus, status, 'STAFF_REPLY', dbPool);
+          }
+          if (isNewCitizenMessage) {
+            await sendWorkflowNotification(requestData, oldStatus, status, 'NEW_MESSAGE', dbPool);
+          }
+        }
+      } catch (notifyErr) { 
+        console.error('Workflow notification error in staff update:', notifyErr); 
+      }
+      
+      res.json({ success: true, message: 'บันทึกสำเร็จ', request: requestData });
     } catch (error) {
       console.error('Update Request Error:', error);
       res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดภายในระบบ' });
