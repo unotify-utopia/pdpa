@@ -62,6 +62,7 @@ export default function App() {
   // Token and OTP email state
   const [token, setToken] = useState<string | null>(null);
   const [otpEmail, setOtpEmail] = useState<string>('');
+  const [mfaMethod, setMfaMethod] = useState<'email' | 'totp'>('email');
 
   // Custom Professional Notification Dialog Modal State
   const [notifyModal, setNotifyModal] = useState<{ open: boolean; title: string; message: string; type: 'success' | 'warning' | 'error'; onConfirm?: () => void } | null>(null);
@@ -209,18 +210,19 @@ export default function App() {
   }, []);
 
   // Step 1: Check Credentials
-  const handleStep1Submit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleStep1Submit = async (e?: React.FormEvent, forceMfaType?: 'email') => {
+    if (e) e.preventDefault();
     try {
       const res = await fetch('/api/super-admin/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password })
+        body: JSON.stringify({ username, password, mfaType: forceMfaType })
       });
       const data = await res.json();
       if (data.success) {
         if (data.requires2FA || data.requires2FASetup) {
           setOtpEmail(data.email || 'apichat.utopia@gmail.com');
+          setMfaMethod(data.mfaMethod || 'email');
           setMfaCode('');
           setLoginStep('mfa');
         } else if (data.token) {
@@ -237,11 +239,11 @@ export default function App() {
     }
   };
 
-  // Step 2: Verify Gmail OTP Code (REAL SYSTEM)
+  // Step 2: Verify OTP/TOTP Code (REAL SYSTEM)
   const handleMfaSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!mfaCode.trim() || mfaCode.trim().length !== 6) {
-      showNotify('กรุณากรอกรหัส OTP 6 หลักที่ได้รับทางอีเมล Gmail', 'warning', 'ข้อมูลไม่ครบถ้วน');
+      showNotify(mfaMethod === 'totp' ? 'กรุณากรอกรหัส Authenticator 6 หลัก' : 'กรุณากรอกรหัส OTP 6 หลักที่ได้รับทางอีเมล Gmail', 'warning', 'ข้อมูลไม่ครบถ้วน');
       return;
     }
     const submittedCode = mfaCode.trim();
@@ -250,7 +252,7 @@ export default function App() {
       const res = await fetch('/api/super-admin/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password, mfaCode: submittedCode })
+        body: JSON.stringify({ username, password, mfaCode: submittedCode, mfaType: mfaMethod })
       });
       const data = await res.json();
       if (data.success && data.token) {
@@ -259,10 +261,10 @@ export default function App() {
         setLoginStep('authenticated');
         fetchData(data.token);
       } else {
-        showNotify(data.message || 'รหัส OTP ไม่ถูกต้อง กรุณาตรวจสอบอีเมล Gmail ของท่านอีกครั้ง', 'error', 'ตรวจสอบ OTP ไม่ผ่าน');
+        showNotify(data.message || 'รหัสไม่ถูกต้อง กรุณาตรวจสอบอีกครั้ง', 'error', 'ตรวจสอบรหัสไม่ผ่าน');
       }
     } catch (err) {
-      showNotify('ไม่สามารถเชื่อมต่อระบบหลังบ้านเพื่อตรวจสอบรหัส OTP ได้', 'error', 'การเชื่อมต่อขัดข้อง');
+      showNotify('ไม่สามารถเชื่อมต่อระบบหลังบ้านเพื่อตรวจสอบรหัสได้', 'error', 'การเชื่อมต่อขัดข้อง');
     }
   };
 
@@ -1266,24 +1268,28 @@ export default function App() {
                 <form onSubmit={handleMfaSubmit} className="space-y-5 animate-fade-in">
                   <div className="p-3.5 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl text-xs sm:text-sm text-emerald-400 flex items-center gap-2 font-medium">
                     <CheckCircle2 className="h-5 w-5 shrink-0" />
-                    <span>ยืนยันตัวตนขั้นแรกสำเร็จ กรุณากรอกรหัส OTP 6 หลักที่ส่งไปยังอีเมล</span>
+                    <span>ยืนยันตัวตนขั้นแรกสำเร็จ กรุณากรอกรหัส {mfaMethod === 'totp' ? 'Authenticator' : 'OTP 6 หลัก'}</span>
                   </div>
 
                   <div className="text-center py-3 space-y-2">
                     <div className="inline-block p-4 bg-slate-900 border border-slate-800 rounded-2xl shadow-inner">
-                      <Mail className="h-12 w-12 text-emerald-400 mx-auto" />
+                      {mfaMethod === 'totp' ? <ShieldAlert className="h-12 w-12 text-emerald-400 mx-auto" /> : <Mail className="h-12 w-12 text-emerald-400 mx-auto" />}
                     </div>
                     <p className="text-sm font-bold">
-                      ตรวจสอบรหัส OTP ที่อีเมล: <span className="text-emerald-400">{otpEmail || 'apichat.utopia@gmail.com'}</span>
+                      {mfaMethod === 'totp' ? (
+                        <span>ตรวจสอบรหัสบนแอป Authenticator</span>
+                      ) : (
+                        <span>ตรวจสอบรหัส OTP ที่อีเมล: <span className="text-emerald-400">{otpEmail || 'apichat.utopia@gmail.com'}</span></span>
+                      )}
                     </p>
                     <p className="text-xs text-slate-400">
-                      นำรหัสตัวเลข 6 หลักที่ได้รับในกล่องจดหมายมากรอกเพื่อยืนยันเข้าสู่ระบบ
+                      {mfaMethod === 'totp' ? 'เปิดแอป Authenticator ในโทรศัพท์ของคุณแล้วนำรหัส 6 หลักมากรอก' : 'นำรหัสตัวเลข 6 หลักที่ได้รับในกล่องจดหมายมากรอกเพื่อยืนยันเข้าสู่ระบบ'}
                     </p>
                   </div>
 
                   <div>
                     <label className="block text-sm font-bold text-center mb-2.5 text-slate-200">
-                      รหัสผ่าน OTP 6 หลัก จาก Gmail
+                      {mfaMethod === 'totp' ? 'รหัส Authenticator 6 หลัก' : 'รหัสผ่าน OTP 6 หลัก จาก Gmail'}
                     </label>
                     <div className="relative max-w-[280px] mx-auto">
                       <input
@@ -1299,8 +1305,19 @@ export default function App() {
                       />
                     </div>
                     <span className="block text-xs text-emerald-400/90 text-center mt-2.5 font-medium">
-                      ✓ กรุณากรอกรหัสตัวเลข 6 หลักที่ได้รับทางอีเมล (อายุ 5 นาที)
+                      ✓ กรุณากรอกรหัสตัวเลข 6 หลัก (อายุ 5 นาที)
                     </span>
+                    {mfaMethod === 'totp' && (
+                      <div className="text-center mt-4">
+                        <button
+                          type="button"
+                          onClick={() => handleStep1Submit(undefined, 'email')}
+                          className="text-xs text-amber-400 hover:text-amber-300 underline font-semibold transition"
+                        >
+                          ไม่สามารถใช้แอปได้? ขอรหัสผ่านทางอีเมล (Fallback to Email)
+                        </button>
+                      </div>
+                    )}
                   </div>
 
                   <div className="flex gap-3 pt-2">

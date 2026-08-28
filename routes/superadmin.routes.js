@@ -88,10 +88,19 @@ export function createSuperAdminRouter(dbPool, authenticateJWT, requireRole, add
       const skipMfa = process.env.SKIP_MFA_FOR_TESTING === 'true';
       
       if ((user.mfa_enabled || user.role === 'superadmin') && !skipMfa) {
-        const { mfaCode } = req.body;
+        const { mfaCode, mfaType } = req.body;
         const targetEmail = user.email || user.username || 'apichat.utopia@gmail.com';
 
         if (!mfaCode) {
+          if (user.totp_enabled && mfaType !== 'email') {
+            return res.json({
+              success: true,
+              requires2FA: true,
+              mfaMethod: 'totp',
+              message: `กรุณากรอกรหัส 6 หลักจากแอป Authenticator`
+            });
+          }
+
           const otp = crypto.randomInt(100000, 1000000).toString();
           // [SECURITY] Hash OTP before storing (consistent with staff login)
           const hashedOtp = await bcrypt.hash(otp, 10);
@@ -145,35 +154,48 @@ export function createSuperAdminRouter(dbPool, authenticateJWT, requireRole, add
           });
         }
 
-        // Verify OTP
         let cached = null;
-        try {
-          if (user.two_factor_secret && user.two_factor_secret.startsWith('{')) {
-            cached = JSON.parse(user.two_factor_secret);
+        if (mfaType === 'totp' && user.totp_enabled) {
+          const { authenticator } = require('otplib'); // ensure otplib is required here
+          const isValidTotp = authenticator.check(mfaCode, user.totp_secret);
+          if (!isValidTotp) {
+            if (typeof addServerAuditLog === 'function') {
+              await addServerAuditLog('AUTH_LOGIN_FAILED', `เข้าสู่ระบบ Super Admin ไม่สำเร็จ: รหัส Authenticator ไม่ถูกต้อง`, user, null, null, req).catch(() => {});
+            }
+            return res.status(401).json({ success: false, message: 'รหัส Authenticator ไม่ถูกต้อง' });
           }
-        } catch (e) {}
-        if (!cached) cached = otpCache.get(`superadmin_login_${user.username}`);
-
-        // [SANDBOX BYPASS] Master OTP for testing purposes
-        const isSandbox = process.env.SYSTEM_MODE === 'SINGLE_NODE';
-        const isMasterOtp = isSandbox && mfaCode === '999999';
-
-        if (!isMasterOtp && (!cached || Date.now() > cached.expiresAt)) {
-          if (typeof addServerAuditLog === 'function') {
-            await addServerAuditLog('AUTH_LOGIN_FAILED', `เข้าสู่ระบบ Super Admin ไม่สำเร็จ: รหัส OTP หมดอายุ`, user, null, null, req).catch(() => {});
-          }
-          return res.status(401).json({ success: false, message: 'รหัส OTP ไม่ถูกต้องหรือหมดอายุแล้ว กรุณาตรวจสอบ Gmail ของท่านอีกครั้ง' });
+        } else {
+          // Verify OTP
+          try {
+            if (user.two_factor_secret && user.two_factor_secret.startsWith('{')) {
+              cached = JSON.parse(user.two_factor_secret);
+            }
+          } catch (e) {}
+          if (!cached) cached = otpCache.get(`superadmin_login_${user.username}`);
         }
 
-        const isOtpValid = isMasterOtp || await bcrypt.compare(mfaCode.trim(), cached.otp);
-        if (!isOtpValid) {
-          if (typeof addServerAuditLog === 'function') {
-            await addServerAuditLog('AUTH_LOGIN_FAILED', `เข้าสู่ระบบ Super Admin ไม่สำเร็จ: รหัส OTP ไม่ถูกต้อง`, user, null, null, req).catch(() => {});
+        if (!(mfaType === 'totp' && user.totp_enabled)) {
+          // [SANDBOX BYPASS] Master OTP for testing purposes
+          const isSandbox = process.env.SYSTEM_MODE === 'SINGLE_NODE';
+          const isMasterOtp = isSandbox && mfaCode === '999999';
+
+          if (!isMasterOtp && (!cached || Date.now() > cached.expiresAt)) {
+            if (typeof addServerAuditLog === 'function') {
+              await addServerAuditLog('AUTH_LOGIN_FAILED', `เข้าสู่ระบบ Super Admin ไม่สำเร็จ: รหัส OTP หมดอายุ`, user, null, null, req).catch(() => {});
+            }
+            return res.status(401).json({ success: false, message: 'รหัส OTP ไม่ถูกต้องหรือหมดอายุแล้ว กรุณาตรวจสอบ Gmail ของท่านอีกครั้ง' });
           }
-          return res.status(401).json({ success: false, message: 'รหัส OTP ไม่ถูกต้องหรือหมดอายุแล้ว กรุณาตรวจสอบ Gmail ของท่านอีกครั้ง' });
+
+          const isOtpValid = isMasterOtp || await bcrypt.compare(mfaCode.trim(), cached.otp);
+          if (!isOtpValid) {
+            if (typeof addServerAuditLog === 'function') {
+              await addServerAuditLog('AUTH_LOGIN_FAILED', `เข้าสู่ระบบ Super Admin ไม่สำเร็จ: รหัส OTP ไม่ถูกต้อง`, user, null, null, req).catch(() => {});
+            }
+            return res.status(401).json({ success: false, message: 'รหัส OTP ไม่ถูกต้องหรือหมดอายุแล้ว กรุณาตรวจสอบ Gmail ของท่านอีกครั้ง' });
+          }
+          await dbPool.query('UPDATE users SET two_factor_secret = NULL WHERE id = $1', [user.id]);
+          otpCache.delete(`superadmin_login_${user.username}`);
         }
-        await dbPool.query('UPDATE users SET two_factor_secret = NULL WHERE id = $1', [user.id]);
-        otpCache.delete(`superadmin_login_${user.username}`);
       }
 
       const token = jwt.sign({ id: user.id, role: user.role, username: user.username }, JWT_SECRET, { expiresIn: '1h' });
