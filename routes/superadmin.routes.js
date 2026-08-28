@@ -161,6 +161,19 @@ export function createSuperAdminRouter(dbPool, authenticateJWT, requireRole, add
       }
 
       const token = jwt.sign({ id: user.id, role: user.role, username: user.username }, JWT_SECRET, { expiresIn: '1h' });
+      
+      // Log the successful super admin login
+      if (typeof addServerAuditLog === 'function') {
+        await addServerAuditLog(
+          'AUTH_LOGIN_SUCCESS',
+          `เข้าสู่ระบบสำเร็จในบทบาท SUPERADMIN`,
+          { id: user.id, username: user.username, role: user.role, isSuperAdmin: true },
+          null,
+          null,
+          req
+        ).catch(console.error);
+      }
+
       return res.json({ success: true, token, user: { id: user.id, username: user.username, role: user.role } });
     } catch (err) {
       return res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดจากระบบ กรุณาลองใหม่อีกครั้ง' });
