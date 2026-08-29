@@ -1409,7 +1409,7 @@ export default function App() {
       
     } catch (e) {
       console.error('Download error:', e);
-      alert('ไม่สามารถดาวน์โหลดไฟล์ได้: ' + (e instanceof Error ? e.message : 'รหัส OTP ไม่ถูกต้องหรือเกิดข้อผิดพลาดภายในระบบ'));
+      showNotify('ไม่สามารถดาวน์โหลดไฟล์ได้: ' + (e instanceof Error ? e.message : 'รหัส OTP ไม่ถูกต้องหรือเกิดข้อผิดพลาดภายในระบบ', "error"));
     }
   };
 
@@ -1646,14 +1646,14 @@ export default function App() {
     const file = files[0];
     
     if (file.size > 3 * 1024 * 1024) {
-      alert('ขนาดไฟล์เกิน 3MB (จำกัดที่ 3MB เนื่องจากข้อจำกัดของ Cloud Server)');
+      showNotify('ขนาดไฟล์เกิน 3MB (จำกัดที่ 3MB เนื่องจากข้อจำกัดของ Cloud Server, "error")');
       return;
     }
     
     const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
     const isImage = file.type.startsWith('image/') || file.name.toLowerCase().match(/\.(jpg|jpeg|png)$/);
     if (!isPdf && !isImage) {
-      alert('กรุณาอัปโหลดไฟล์ PDF หรือรูปภาพ (JPG/PNG) เท่านั้น');
+      showNotify('กรุณาอัปโหลดไฟล์ PDF หรือรูปภาพ (JPG/PNG, "error") เท่านั้น');
       return;
     }
 
@@ -1698,7 +1698,7 @@ export default function App() {
               reloadData();
             }
           } else {
-            alert('อัปโหลดไม่สำเร็จ: ' + data.message);
+            showNotify('อัปโหลดไม่สำเร็จ: ' + data.message, "error");
           }
         } else {
           let errText = 'Upload failed';
@@ -1708,10 +1708,10 @@ export default function App() {
           } catch(err) {
             errText = res.statusText;
           }
-          alert(`อัปโหลดไม่สำเร็จ (HTTP ${res.status}): ${errText}`);
+          showNotify(`อัปโหลดไม่สำเร็จ (HTTP ${res.status}, "error"): ${errText}`);
         }
       } catch (err: any) {
-        alert('เกิดข้อผิดพลาดในการอัปโหลด: ' + err.message);
+        showNotify('เกิดข้อผิดพลาดในการอัปโหลด: ' + err.message, "error");
       }
     };
     reader.readAsDataURL(file);
@@ -1723,20 +1723,21 @@ export default function App() {
     if (!req) return;
     const t = req.dataCollectionTasks.find((t: any) => t.id === taskId);
     if (t) {
-      if (!confirm(`คุณแน่ใจหรือไม่ที่จะแจ้งว่า "ไม่พบข้อมูล" สำหรับระบบ ${t.systemName}?`)) return;
-      t.status = 'not_found';
-      t.completedAt = new Date().toISOString();
-      t.completedBy = activeUser.fullNameTh;
-      t.dataLineage = `ระบบ ${t.systemName} -> กวาดค้นหาด้วย SQL / Index -> ไม่พบข้อมูล`;
-      updateRequest(req, activeUser, 'MARK_NOT_FOUND', `เจ้าหน้าที่แจ้งว่าไม่พบข้อมูลในระบบ ${t.systemName}`);
-      reloadData();
+      showNotify(`คุณแน่ใจหรือไม่ที่จะแจ้งว่า "ไม่พบข้อมูล" สำหรับระบบ ${t.systemName}?`, 'confirm', 'ยืนยันการดำเนินการ', () => {
+        t.status = 'not_found';
+        t.completedAt = new Date().toISOString();
+        t.completedBy = activeUser.fullNameTh;
+        t.dataLineage = `ระบบ ${t.systemName} -> กวาดค้นหาด้วย SQL / Index -> ไม่พบข้อมูล`;
+        updateRequest(req, activeUser, 'MARK_NOT_FOUND', `เจ้าหน้าที่แจ้งว่าไม่พบข้อมูลในระบบ ${t.systemName}`);
+        reloadData();
+      });
     }
   };
 
   const handleTaskFileDelete = async (reqId: string, taskId: string, fileId: string) => {
     if (!activeUser) return;
-    if (!confirm('ยืนยันการลบไฟล์นี้? (ไฟล์จะถูกลบออกจากหน้าจอผู้ใช้ แต่ยังคงเก็บประวัติไว้ในระบบ)')) return;
-    try {
+    showNotify('ยืนยันการลบไฟล์นี้? (ไฟล์จะถูกลบออกจากหน้าจอผู้ใช้ แต่ยังคงเก็บประวัติไว้ในระบบ)', 'confirm', 'ยืนยันการดำเนินการ', async () => {
+      try {
       const res = await fetch(`/api/requests/${reqId}/tasks/${taskId}/files/${fileId}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${sessionStorage.getItem('pdpa_jwt_token')}` }
@@ -1753,39 +1754,41 @@ export default function App() {
           reloadData();
         }
       } else {
-        alert('ลบไม่สำเร็จ');
+        showNotify('ลบไม่สำเร็จ', "error");
       }
     } catch (e) {
-      alert('เกิดข้อผิดพลาดในการลบไฟล์');
-    }
+        showNotify('เกิดข้อผิดพลาดในการลบไฟล์', "error");
+      }
+    });
   };
 
   const handleOwnerEscalateFlow = (reqId: string) => {
     if (!activeUser) return;
-    if (!confirm('คุณแน่ใจหรือไม่ที่จะแจ้งว่าไม่พบข้อมูล และส่งเรื่องนี้ข้ามไปยังผู้บริหารโดยตรง?')) return;
-    const req = getRequestClone(reqId);
-    if (!req) return;
+    showNotify('คุณแน่ใจหรือไม่ที่จะแจ้งว่าไม่พบข้อมูล และส่งเรื่องนี้ข้ามไปยังผู้บริหารโดยตรง?', 'confirm', 'ยืนยันการดำเนินการ', () => {
+      const req = getRequestClone(reqId);
+      if (!req) return;
 
-    req.dataCollectionTasks.forEach((t: DataCollectionTask) => {
-      if (t.status === 'pending') {
-        t.status = 'not_found';
-        t.completedAt = new Date().toISOString();
-        t.completedBy = activeUser.fullNameTh;
-        t.dataLineage = `ระบบ ${t.systemName} -> กวาดค้นหาด้วย SQL / Index -> ไม่พบข้อมูล -> ส่งผู้บริหารตัดสินใจ`;
-      }
+      req.dataCollectionTasks.forEach((t: DataCollectionTask) => {
+        if (t.status === 'pending') {
+          t.status = 'not_found';
+          t.completedAt = new Date().toISOString();
+          t.completedBy = activeUser.fullNameTh;
+          t.dataLineage = `ระบบ ${t.systemName} -> กวาดค้นหาด้วย SQL / Index -> ไม่พบข้อมูล -> ส่งผู้บริหารตัดสินใจ`;
+        }
+      });
+
+      // Escalate the entire request to Executive Approval
+      req.status = 'Executive Approval';
+      req.statusHistory.push({
+        status: 'Executive Approval',
+        changedAt: new Date().toISOString(),
+        changedBy: activeUser.fullNameTh,
+        comment: `ส่งเรื่องให้ผู้บริหารตัดสินใจ เนื่องจากไม่พบข้อมูลในระบบ`
+      });
+
+      updateRequest(req, activeUser, 'ESCALATE_DATA_TASK', `ส่งเรื่องให้ผู้บริหารตัดสินใจ เนื่องจากไม่พบข้อมูล`);
+      reloadData();
     });
-
-    // Escalate the entire request to Executive Approval
-    req.status = 'Executive Approval';
-    req.statusHistory.push({
-      status: 'Executive Approval',
-      changedAt: new Date().toISOString(),
-      changedBy: activeUser.fullNameTh,
-      comment: `ส่งเรื่องให้ผู้บริหารตัดสินใจ เนื่องจากไม่พบข้อมูลในระบบ`
-    });
-
-    updateRequest(req, activeUser, 'ESCALATE_DATA_TASK', `ส่งเรื่องให้ผู้บริหารตัดสินใจ เนื่องจากไม่พบข้อมูล`);
-    reloadData();
   };
 
   const executeFileDownload = async () => {
@@ -1810,25 +1813,26 @@ export default function App() {
           watermarkApplied: file.watermarkApplied
         });
       } else {
-        alert('ดึงไฟล์ไม่สำเร็จ: ' + data.message);
+        showNotify('ดึงไฟล์ไม่สำเร็จ: ' + data.message, "error");
       }
     } catch (err) {
-      alert('เกิดข้อผิดพลาดในการดึงไฟล์');
+      showNotify('เกิดข้อผิดพลาดในการดึงไฟล์', "error");
     }
   };
 
   const handleUnassignTask = (reqId: string, taskId: string) => {
     if (!activeUser) return;
-    if (!confirm('ยืนยันการยกเลิกการมอบหมายงานสืบค้นนี้? (ข้อมูลภารกิจนี้จะถูกลบออกจากรายการ)')) return;
-    const req = getRequestClone(reqId);
-    if (!req) return;
-    const taskIndex = req.dataCollectionTasks.findIndex((t: any) => t.id === taskId);
-    if (taskIndex !== -1) {
-      const sysName = req.dataCollectionTasks[taskIndex].systemName;
-      req.dataCollectionTasks.splice(taskIndex, 1);
-      updateRequest(req, activeUser, 'UNASSIGN_TASK', `ยกเลิกการมอบหมายและลบภารกิจค้นหาระบบ ${sysName}`);
-      reloadData();
-    }
+    showNotify('ยืนยันการยกเลิกการมอบหมายงานสืบค้นนี้? (ข้อมูลภารกิจนี้จะถูกลบออกจากรายการ)', 'confirm', 'ยืนยันการดำเนินการ', () => {
+      const req = getRequestClone(reqId);
+      if (!req) return;
+      const taskIndex = req.dataCollectionTasks.findIndex((t: any) => t.id === taskId);
+      if (taskIndex !== -1) {
+        const sysName = req.dataCollectionTasks[taskIndex].systemName;
+        req.dataCollectionTasks.splice(taskIndex, 1);
+        updateRequest(req, activeUser, 'UNASSIGN_TASK', `ยกเลิกการมอบหมายและลบภารกิจค้นหาระบบ ${sysName}`);
+        reloadData();
+      }
+    });
   };
 
   // Redaction applied callback (Section 3.6)
@@ -7496,7 +7500,7 @@ export default function App() {
                             document.body.removeChild(a);
                             window.URL.revokeObjectURL(url);
                           } catch (err) {
-                            alert('ไม่สามารถดาวน์โหลดไฟล์ได้');
+                            showNotify('ไม่สามารถดาวน์โหลดไฟล์ได้', "error");
                           }
                         }}
                         className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold shadow-sm transition"
@@ -7542,7 +7546,7 @@ export default function App() {
                                 watermarkApplied: previewResult !== 'approved'
                               });
                             } catch (err) {
-                              alert('ไม่สามารถเปิดเอกสารได้');
+                              showNotify('ไม่สามารถเปิดเอกสารได้', "error");
                             }
                           }}
                           className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg text-xs font-bold transition shadow-sm"
@@ -7563,7 +7567,7 @@ export default function App() {
                               const fileUrl = window.URL.createObjectURL(blob);
                               window.open(fileUrl, '_blank');
                             } catch (err) {
-                              alert('ไม่สามารถเปิดเอกสารได้');
+                              showNotify('ไม่สามารถเปิดเอกสารได้', "error");
                             }
                           }}
                           className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold transition"
