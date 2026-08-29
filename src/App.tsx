@@ -359,7 +359,7 @@ export default function App() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ token: totpSetupModal.codeInput })
+        body: JSON.stringify({ code: totpSetupModal.codeInput })
       });
       const data = await res.json();
       if (data.success) {
