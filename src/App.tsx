@@ -4629,19 +4629,39 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* Global Notice if sent back by DPO */}
-                {activeRequestObj.status === 'Data Collection' && activeRequestObj.statusHistory.some((h: any) => h.comment && h.comment.includes('ตีกลับ')) && (
-                  <div className="bg-amber-100 border-2 border-amber-400 rounded-xl p-4 flex gap-3 text-amber-900 text-xs shadow-md">
-                    <AlertTriangle className="h-6 w-6 text-amber-600 shrink-0" />
-                    <div className="w-full">
-                      <span className="font-bold block text-sm mb-1 text-amber-900">แจ้งเตือน: คำร้องนี้ถูกตีกลับให้แก้ไขข้อมูลใหม่</span>
-                      <div className="bg-white/60 p-2 rounded border border-amber-200 mt-1">
-                        <strong>เหตุผลการตีกลับ:</strong> {activeRequestObj.statusHistory.filter((h: any) => h.comment && h.comment.includes('ตีกลับ')).pop()?.comment?.replace('DPO ตีกลับให้รวบรวมข้อมูลใหม่: ', '') || ''}
+                {/* Global Notice for Data Collection */}
+                {activeRequestObj.status === 'Data Collection' && (() => {
+                  const sentBackHistory = activeRequestObj.statusHistory.filter((h: any) => h.status === 'Data Collection' && h.comment && (h.comment.includes('ตีกลับ') || h.comment.includes('ให้รวบรวมข้อมูลใหม่')));
+                  const isSentBack = sentBackHistory.length > 0;
+                  const reason = isSentBack ? sentBackHistory[sentBackHistory.length - 1].comment?.replace('DPO ตีกลับให้รวบรวมข้อมูลใหม่:', '').trim() : '';
+                  
+                  if (isSentBack) {
+                    return (
+                      <div className="bg-amber-100 border-2 border-amber-400 rounded-xl p-4 flex gap-3 text-amber-900 text-xs shadow-md">
+                        <AlertTriangle className="h-6 w-6 text-amber-600 shrink-0" />
+                        <div className="w-full">
+                          <span className="font-bold block text-sm mb-1 text-amber-900">แจ้งเตือน: คำร้องนี้ถูกตีกลับให้แก้ไขข้อมูลใหม่</span>
+                          <div className="bg-white/60 p-2 rounded border border-amber-200 mt-1">
+                            <strong>เหตุผลการตีกลับ:</strong> {reason || '-'}
+                          </div>
+                          <span className="block text-[10px] text-amber-700 mt-2 font-medium">คำแนะนำ: เจ้าของระบบ (Data Owner) โปรดดำเนินการแก้ไขและรวบรวมข้อมูลใหม่ให้ครบถ้วน จากนั้นเลื่อนลงไปด้านล่างสุดเพื่อกดปุ่ม "ส่งเรื่องไปยัง Flow ต่อไป" ส่งงานกลับให้ DPO</span>
+                        </div>
                       </div>
-                      <span className="block text-[10px] text-amber-700 mt-2 font-medium">คำแนะนำ: เจ้าของระบบ (Data Owner) โปรดดำเนินการแก้ไขและรวบรวมข้อมูลใหม่ให้ครบถ้วน จากนั้นเลื่อนลงไปด้านล่างสุดเพื่อกดปุ่ม "ส่งเรื่องไปยัง Flow ต่อไป" ส่งงานกลับให้ DPO</span>
+                    );
+                  }
+                  
+                  return (
+                    <div className="bg-sky-50 border-2 border-sky-300 rounded-xl p-4 flex gap-3 text-sky-900 text-xs shadow-sm">
+                      <Search className="h-5 w-5 text-sky-600 shrink-0" />
+                      <div className="w-full">
+                        <span className="font-bold block text-sm mb-1 text-sky-900">ขั้นตอนปัจจุบัน: การค้นหาและรวบรวมข้อมูล (Data Collection)</span>
+                        <span className="block text-[11px] text-sky-800">
+                          คำแนะนำ: เจ้าของระบบ (Data Owner) โปรดค้นหาและอัปโหลดข้อมูลให้ครบถ้วน จากนั้นเลื่อนลงไปกดปุ่ม "ส่งเรื่องไปยัง Flow ต่อไป" ที่ด้านล่างสุด
+                        </span>
+                      </div>
                     </div>
-                  </div>
-                )}
+                  );
+                })()}
 
                 {/* Main Action Modules for Request Details */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
