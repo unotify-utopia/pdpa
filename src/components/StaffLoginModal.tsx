@@ -23,6 +23,7 @@ export const StaffLoginModal: React.FC<StaffLoginModalProps> = ({
   const [isForgotOpen, setIsForgotOpen] = useState(false);
   const [mfaMethod, setMfaMethod] = useState<'email' | 'totp'>('email');
   const [otpEmail, setOtpEmail] = useState<string>('');
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -47,6 +48,8 @@ export const StaffLoginModal: React.FC<StaffLoginModalProps> = ({
       return;
     }
 
+    setLoading(true);
+
     try {
       const res = await fetch('/api/auth/login', {
         method: 'POST',
@@ -61,11 +64,13 @@ export const StaffLoginModal: React.FC<StaffLoginModalProps> = ({
         setMfaMethod(data.mfaMethod || 'email');
         setOtpEmail(data.email || '');
         setMfaStep(true);
+        setLoading(false);
         return;
       }
 
       if (!data.success) {
         setErrorMsg(data.message || 'ชื่อผู้ใช้งานหรือรหัสผ่านไม่ถูกต้อง');
+        setLoading(false);
         return;
       }
 
@@ -85,25 +90,30 @@ export const StaffLoginModal: React.FC<StaffLoginModalProps> = ({
         roles: data.user.roles || [data.user.role],
         isSuperAdmin: data.user.isSuperAdmin,
         department: data.user.department,
-        mfaEnabled: true
+        mfaEnabled: true,
+        signature_image: data.signature_image || null
       };
+      
       const requiresChange = data.requiresPasswordChange || false;
       onLoginSuccess(user, requiresChange);
       onClose();
     } catch (err) {
       setErrorMsg('ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้');
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleMfaVerify = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!otpCode || otpCode.length < 6) {
-      setErrorMsg('รหัส OTP ไม่ถูกต้อง กรุณากรอกรหัส 6 หลัก');
+      setErrorMsg('รหัส OTP ไม่ถูกต้อง กรุณาตรวจสอบรหัส 6 หลัก');
       return;
     }
     
     const submittedOtp = otpCode;
     setOtpCode('');
+    setLoading(true);
 
     try {
       const res = await fetch('/api/auth/login', {
@@ -120,6 +130,7 @@ export const StaffLoginModal: React.FC<StaffLoginModalProps> = ({
       
       if (!data.success) {
         setErrorMsg(data.message || 'รหัส 2FA ไม่ถูกต้อง');
+        setLoading(false);
         return;
       }
 
@@ -148,6 +159,8 @@ export const StaffLoginModal: React.FC<StaffLoginModalProps> = ({
       onClose();
     } catch (err) {
       setErrorMsg('ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้');
+    } finally {
+      setLoading(false);
     }
   };
 
