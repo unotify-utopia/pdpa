@@ -526,7 +526,12 @@ export function createAuthRouter(dbPool, authenticateJWT, addServerAuditLog, sen
       const secret = rows[0].totp_secret;
       if (!secret) return res.status(400).json({ success: false, message: 'ยังไม่ได้ขอรับ QR Code' });
 
+      // Allow slightly larger time drift (window: 1 means current, previous, and next 30-second windows)
+      authenticator.options = { window: 1 };
       const isValid = authenticator.check(code, secret);
+      
+      console.log(`[2FA Verify Attempt] User: ${req.user.id}, Code length: ${code ? code.length : 'undefined'}, Code: ${code}, IsValid: ${isValid}`);
+      
       if (!isValid) return res.status(400).json({ success: false, message: 'รหัสไม่ถูกต้อง กรุณาลองใหม่' });
 
       await dbPool.query('UPDATE users SET totp_enabled = true WHERE id = $1', [req.user.id]);
