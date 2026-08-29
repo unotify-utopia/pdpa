@@ -5421,7 +5421,7 @@ export default function App() {
                         </span>
 
                         {/* DPO input form */}
-                        {(activeUser.role === 'dpo' || activeUser.role === 'admin') && !['Approval Pending', 'Ready for Delivery', 'Fee Notification', 'Delivered', 'Closed'].includes(activeRequestObj.status) ? (
+                        {(activeUser.role === 'dpo' || activeUser.role === 'admin') && !['Data Collection', 'Approval Pending', 'Ready for Delivery', 'Fee Notification', 'Delivered', 'Closed'].includes(activeRequestObj.status) ? (
                           <div className="space-y-3 text-xs">
                             <div className="space-y-1">
                               <label className="font-semibold text-slate-700">ผลวินิจฉัยข้อเสนอสิทธิ์:</label>
@@ -5543,6 +5543,14 @@ export default function App() {
                                 รอยื่นวินิจฉัยทางกฎหมายและข้อเสนอของ DPO / สำนักกฎหมาย ก่อนลงนามอนุมัติสิทธิ์
                               </p>
                             )}
+                          </div>
+                        ) : null}
+
+                        {/* Notice for DPO during Data Collection */}
+                        {(activeUser.role === 'dpo' || activeUser.role === 'admin') && activeRequestObj.status === 'Data Collection' ? (
+                          <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-500 text-center italic">
+                            กำลังอยู่ระหว่างขั้นตอนการค้นหาและรวบรวมข้อมูลโดย Data Owner<br/>
+                            <span className="text-slate-400 font-medium">(กรุณารอ Data Owner ส่งข้อมูลกลับมาก่อน จึงจะสามารถใช้เครื่องมือวินิจฉัยและอนุมัติสิทธิ์ได้)</span>
                           </div>
                         ) : null}
                       </div>
