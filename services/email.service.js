@@ -386,6 +386,18 @@ export const sendWorkflowNotification = async (request, oldStatus, newStatus, ev
       addRecipients(intakeEmails, 'เจ้าหน้าที่ Intake', 'จัดเก็บสถิติและปิดคำร้อง');
       addRecipients(dpoEmails, 'เจ้าหน้าที่ DPO', 'บันทึกประวัติข้อกฎหมาย');
       nextActionTh = `คำขอเสร็จสมบูรณ์และยุติกระบวนการตามกฎหมายคุ้มครองข้อมูลส่วนบุคคล พ.ศ. 2562 เรียบร้อยแล้ว`;
+    } else if (eventType === 'RETURN_TO_OWNER') {
+      const hist = request.statusHistory || [];
+      const lastHist = hist[hist.length - 1];
+      const reason = (lastHist && lastHist.comment) ? lastHist.comment.replace('DPO ตีกลับให้รวบรวมข้อมูลใหม่:', '').trim() : '';
+      
+      subject = `[PDPA Portal] ⚠️ แจ้งเตือน: คำร้องเลขที่ ${trackingNo} ถูกตีกลับให้รวบรวมข้อมูลใหม่`;
+      flowMessageTh = `คำขอใช้สิทธิ์ PDPA เลขที่ ${trackingNo} <strong>ถูกตีกลับให้รวบรวมข้อมูลใหม่</strong> เนื่องจากความไม่สมบูรณ์ของข้อมูลที่รวบรวมในขั้นตอนก่อนหน้า 
+<br/><br/><div style="background-color: #fffbeb; padding: 12px 16px; border-left: 4px solid #f59e0b; border-radius: 4px; color: #b45309;"><strong>เหตุผลการตีกลับ:</strong><br/>"${reason || 'ไม่ระบุ'}"</div>`;
+      
+      addRecipients(ownerEmails, 'เจ้าหน้าที่รวบรวมข้อมูล (Data Owner)', 'เร่งรัดแก้ไขและรวบรวมข้อมูลใหม่');
+      addRecipients(dpoEmails, 'เจ้าหน้าที่ DPO', 'รับทราบระบบแจ้งเตือนกลับไปยัง Data Owner');
+      nextActionTh = `เจ้าของระบบ (Data Owner) โปรดดำเนินการเข้าสู่ระบบเพื่อแก้ไข รวบรวมข้อมูล และอัปโหลดไฟล์ให้ครบถ้วนถูกต้องตามที่ระบุในเหตุผลการตีกลับ จากนั้นกดปุ่มส่งเรื่องไปยัง Flow ถัดไป เพื่อให้ DPO หรือฝ่ายกฎหมายพิจารณาอีกครั้ง`;
     } else {
       if (citizenEmail) addRecipients([citizenEmail], 'ผู้ยื่นคำขอ', 'รับทราบสถานะการดำเนินการของคำขอ');
       addRecipients(intakeEmails, 'เจ้าหน้าที่ Intake', 'ตรวจสอบความคืบหน้า');

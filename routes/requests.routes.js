@@ -107,7 +107,15 @@ export function createRequestsRouter(dbPool, authenticateJWT, requireRole, addSe
       try {
         if (existingData) {
           if (oldStatus && oldStatus !== status) {
-            await sendWorkflowNotification(requestData, oldStatus, status, 'STATUS_CHANGE', dbPool);
+            let eventType = 'STATUS_CHANGE';
+            if (status === 'Data Collection') {
+              const hist = requestData.statusHistory || [];
+              const lastHist = hist[hist.length - 1];
+              if (lastHist && lastHist.comment && (lastHist.comment.includes('ตีกลับ') || lastHist.comment.includes('ให้รวบรวมข้อมูลใหม่'))) {
+                eventType = 'RETURN_TO_OWNER';
+              }
+            }
+            await sendWorkflowNotification(requestData, oldStatus, status, eventType, dbPool);
           }
           
           let isNewStaffMessage = false;
