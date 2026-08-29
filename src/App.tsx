@@ -2007,13 +2007,21 @@ export default function App() {
     reloadData();
   };
 
-  const handleSendBackToDataCollection = async (reqId: string) => {
-    if (!activeUser) return;
-    
-    const reason = window.prompt("กรุณาระบุเหตุผลที่ต้องการให้รวบรวมข้อมูลใหม่ (เช่น ข้อมูลไม่ครบถ้วน, ข้อมูลผิดพลาด):");
-    if (!reason) return; // User cancelled or left it blank
+  // Custom Modal State for Send Back to Data Collection
+  const [isSendBackModalOpen, setIsSendBackModalOpen] = useState(false);
+  const [sendBackReason, setSendBackReason] = useState('');
+  const [sendBackRequestId, setSendBackRequestId] = useState<string | null>(null);
 
-    const req = getRequestClone(reqId);
+  const handleOpenSendBackModal = (reqId: string) => {
+    setSendBackRequestId(reqId);
+    setSendBackReason('');
+    setIsSendBackModalOpen(true);
+  };
+
+  const confirmSendBackToDataCollection = async () => {
+    if (!activeUser || !sendBackRequestId || !sendBackReason.trim()) return;
+    
+    const req = getRequestClone(sendBackRequestId);
     if (!req) return;
 
     req.status = 'Data Collection';
@@ -2021,10 +2029,12 @@ export default function App() {
       status: 'Data Collection',
       changedAt: new Date().toISOString(),
       changedBy: activeUser.fullNameTh,
-      comment: `DPO ตีกลับให้รวบรวมข้อมูลใหม่: ${reason}`
+      comment: `DPO ตีกลับให้รวบรวมข้อมูลใหม่: ${sendBackReason}`
     });
 
     await safeUpdateRequest(req, activeUser, 'SEND_BACK_TO_OWNER', `ตีกลับงานค้นหาให้ Data Owner แก้ไขข้อมูล`);
+    setIsSendBackModalOpen(false);
+    setSendBackRequestId(null);
     reloadData();
   };
 
@@ -5522,7 +5532,7 @@ export default function App() {
                             <div className="flex gap-2">
                               <button
                                 type="button"
-                                onClick={() => handleSendBackToDataCollection(activeRequestObj.id)}
+                                onClick={() => handleOpenSendBackModal(activeRequestObj.id)}
                                 className="w-1/3 bg-amber-500 hover:bg-amber-600 text-white font-bold py-2 rounded-lg text-xs transition"
                               >
                                 ตีกลับให้แก้ไขข้อมูลใหม่
@@ -7727,6 +7737,60 @@ export default function App() {
           </div>
         );
       })()}
+
+      {/* --- MOCK SEND BACK TO DATA COLLECTION MODAL --- */}
+      {isSendBackModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn">
+          <div className="bg-white rounded-2xl border border-slate-200 p-6 max-w-md w-full space-y-4 shadow-2xl">
+            <div className="text-center space-y-1">
+              <AlertTriangle className="h-10 w-10 text-amber-500 mx-auto" />
+              <h4 className="font-bold text-slate-800 text-sm">ตีกลับคำร้องให้รวบรวมข้อมูลใหม่</h4>
+              <p className="text-xs text-slate-500">
+                ส่งกลับไปยังเจ้าของระบบ (Data Owner) เพื่อค้นหาและรวบรวมข้อมูลใหม่
+              </p>
+            </div>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                confirmSendBackToDataCollection();
+              }}
+              className="space-y-4"
+            >
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-700 block">
+                  กรุณาระบุเหตุผลที่ต้องการให้รวบรวมข้อมูลใหม่ <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  required
+                  rows={3}
+                  placeholder="เช่น ข้อมูลไม่ครบถ้วน, ข้อมูลผิดพลาด..."
+                  value={sendBackReason}
+                  onChange={(e) => setSendBackReason(e.target.value)}
+                  className="w-full text-xs border border-slate-300 rounded-lg p-2.5 focus:ring-1 focus:ring-amber-500"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => { setIsSendBackModalOpen(false); setSendBackRequestId(null); }}
+                  className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold py-2.5 rounded-lg transition"
+                >
+                  ยกเลิก
+                </button>
+                <button
+                  type="submit"
+                  disabled={!sendBackReason.trim()}
+                  className="w-full bg-amber-500 hover:bg-amber-600 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-bold py-2.5 rounded-lg transition"
+                >
+                  ยืนยันการตีกลับ
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       <ResetPasswordModal
         isOpen={!!resetTokenForModal}
