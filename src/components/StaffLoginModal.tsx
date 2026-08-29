@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Lock, User, KeyRound, ShieldCheck, AlertCircle } from 'lucide-react';
+import { Lock, User, KeyRound, ShieldCheck, AlertCircle, Smartphone, Mail } from 'lucide-react';
 import { ForgotPasswordModal } from './ForgotPasswordModal';
 import type { User as UserType } from '../types';
 
@@ -246,37 +246,57 @@ export const StaffLoginModal: React.FC<StaffLoginModalProps> = ({
             </form>
           ) : (
             /* MFA Step */
-            <form onSubmit={handleMfaVerify} className="space-y-4">
-              <div className="p-3 bg-brand-50 border border-brand-200 rounded-xl text-xs text-brand-900 leading-relaxed text-center">
-                <span className="font-bold block mb-1 text-sm">
-                  {mfaMethod === 'totp' ? 'ยืนยันรหัส Authenticator' : 'ยืนยันตัวตน 2 ปัจจัย (MFA Required)'}
-                </span>
-                <span>
+            <form onSubmit={handleMfaVerify} className="space-y-6 mt-2">
+              <div className="flex flex-col items-center justify-center space-y-4">
+                <div className="w-16 h-16 bg-brand-50 rounded-2xl flex items-center justify-center border border-brand-100 shadow-sm">
                   {mfaMethod === 'totp' ? (
-                    'กรุณาเปิดแอป Authenticator (เช่น Google Authenticator) บนมือถือของท่านและนำรหัส 6 หลักมากรอกที่นี่'
+                    <Smartphone className="w-8 h-8 text-brand-600" strokeWidth={1.5} />
                   ) : (
-                    <>ระบบได้ส่งรหัส OTP ไปยัง <span className="font-bold">{otpEmail || 'อีเมลของท่าน'}</span> แล้ว กรุณาตรวจสอบอีเมลและนำรหัส 6 หลักมากรอกที่นี่</>
+                    <Mail className="w-8 h-8 text-brand-600" strokeWidth={1.5} />
                   )}
-                </span>
+                </div>
+                <div className="text-center space-y-1.5 px-2">
+                  <h3 className="text-lg font-bold text-slate-800">
+                    {mfaMethod === 'totp' ? 'ยืนยันรหัสจากแอป Authenticator' : 'ยืนยันรหัสผ่านชั่วคราว (OTP)'}
+                  </h3>
+                  <p className="text-xs text-slate-500 leading-relaxed max-w-[280px] mx-auto">
+                    {mfaMethod === 'totp' ? (
+                      'เปิดแอป Google Authenticator บนมือถือของคุณ แล้วนำรหัส 6 หลักมากรอกที่นี่เพื่อเข้าสู่ระบบ'
+                    ) : (
+                      <>ระบบส่งรหัส OTP ไปยัง <span className="font-semibold text-slate-700">{otpEmail || 'อีเมลของท่าน'}</span> แล้ว กรุณานำรหัสมากรอกที่นี่</>
+                    )}
+                  </p>
+                </div>
               </div>
 
-              <div className="space-y-1">
-                <label className="text-xs font-semibold text-slate-700 text-center block">
-                  {mfaMethod === 'totp' ? 'รหัส Authenticator (6 หลัก)' : 'ระบุรหัส OTP (6 หลัก)'}
-                </label>
+              <div className="space-y-2 max-w-[240px] mx-auto">
                 <input
                   type="text"
                   maxLength={6}
                   required
                   autoComplete="off"
                   value={otpCode}
-                  onChange={(e) => setOtpCode(e.target.value)}
-                  className="w-full font-mono text-center text-lg font-bold border border-slate-300 rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-brand-500 text-slate-900 tracking-widest"
+                  onChange={(e) => setOtpCode(e.target.value.replace(/[^0-9]/g, ''))}
+                  placeholder="รหัส 6 หลัก"
+                  className="w-full font-mono text-center text-3xl font-bold border-2 border-slate-200 rounded-xl py-3 outline-none focus:ring-0 focus:border-brand-500 text-brand-700 tracking-[0.4em] transition bg-slate-50 focus:bg-white placeholder:text-slate-300 placeholder:text-xl placeholder:font-sans placeholder:tracking-normal placeholder:font-medium"
                 />
               </div>
 
-              <div className="flex flex-col gap-2 pt-2">
-                <div className="flex gap-2">
+              <div className="flex flex-col gap-3 pt-2">
+                <button
+                  type="submit"
+                  disabled={loading || otpCode.length !== 6}
+                  className="w-full bg-brand-600 hover:bg-brand-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white text-sm font-bold py-3.5 rounded-xl transition shadow-md shadow-brand-500/20 flex items-center justify-center gap-2"
+                >
+                  {loading ? (
+                    <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                  ) : (
+                    <ShieldCheck className="w-4 h-4" />
+                  )}
+                  {mfaMethod === 'totp' ? 'ยืนยันรหัสและเข้าสู่ระบบ' : 'ยืนยันรหัส OTP'}
+                </button>
+
+                <div className="flex justify-between items-center px-1 mt-1">
                   <button
                     type="button"
                     onClick={() => {
@@ -284,28 +304,21 @@ export const StaffLoginModal: React.FC<StaffLoginModalProps> = ({
                       setOtpCode('');
                       setErrorMsg('');
                     }}
-                    className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold py-2.5 rounded-lg transition"
+                    className="text-xs text-slate-500 hover:text-slate-800 font-medium transition"
                   >
-                    ย้อนกลับ
+                    ← กลับไปหน้าล็อกอิน
                   </button>
-                  <button
-                    type="submit"
-                    disabled={otpCode.length !== 6}
-                    className="flex-[2] bg-brand-600 hover:bg-brand-700 disabled:bg-slate-300 text-white text-xs font-bold py-2.5 rounded-lg transition shadow-md"
-                  >
-                    {mfaMethod === 'totp' ? 'เข้าสู่ระบบหลังบ้าน' : 'ยืนยันรหัส OTP'}
-                  </button>
-                </div>
 
-                {mfaMethod === 'totp' && (
-                  <button
-                    type="button"
-                    onClick={() => handleLoginSubmit(undefined, 'email')}
-                    className="text-xs text-brand-600 font-semibold hover:underline mt-2 text-center w-full"
-                  >
-                    ไม่สะดวกใช้งานแอปพลิเคชันใช่หรือไม่? ขอรหัส OTP ผ่านอีเมลแทน
-                  </button>
-                )}
+                  {mfaMethod === 'totp' && (
+                    <button
+                      type="button"
+                      onClick={() => handleLoginSubmit(undefined, 'email')}
+                      className="text-xs text-brand-600 hover:text-brand-800 font-bold transition flex items-center gap-1.5"
+                    >
+                      ส่ง OTP เข้าอีเมลแทน <Mail className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
               </div>
             </form>
           )}
