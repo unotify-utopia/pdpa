@@ -364,7 +364,11 @@ export default function App() {
       if (data.success) {
         showNotify('ตั้งค่า Authenticator App เรียบร้อยแล้ว!', 'success');
         setTotpSetupModal({ open: false, qrCodeUrl: '', secret: '', codeInput: '', loading: false });
-        if (currentUser) setCurrentUser({ ...currentUser, totp_enabled: true });
+        if (activeUser) {
+          const updatedUser = { ...activeUser, totp_enabled: true };
+          setActiveUser(updatedUser);
+          setCurrentUser(updatedUser);
+        }
       } else {
         showNotify(data.message || 'รหัสไม่ถูกต้อง', 'error');
       }
