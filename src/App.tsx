@@ -2007,6 +2007,28 @@ export default function App() {
     reloadData();
   };
 
+  const handleSendBackToDataCollection = async (reqId: string) => {
+    if (!activeUser) return;
+    
+    const reason = window.prompt("กรุณาระบุเหตุผลที่ต้องการให้รวบรวมข้อมูลใหม่ (เช่น ข้อมูลไม่ครบถ้วน, ข้อมูลผิดพลาด):");
+    if (!reason) return; // User cancelled or left it blank
+
+    const req = getRequestClone(reqId);
+    if (!req) return;
+
+    req.status = 'Data Collection';
+    req.statusHistory.push({
+      status: 'Data Collection',
+      changedAt: new Date().toISOString(),
+      changedBy: activeUser.fullNameTh,
+      comment: `DPO ตีกลับให้รวบรวมข้อมูลใหม่: ${reason}`
+    });
+
+    await safeUpdateRequest(req, activeUser, 'SEND_BACK_TO_OWNER', `ตีกลับงานค้นหาให้ Data Owner แก้ไขข้อมูล`);
+    reloadData();
+  };
+
+
   const handleApproverSign = async (reqId: string, resultStatus: 'Approved' | 'Partially Approved' | 'Denied' | 'No Data Found') => {
     if (!activeUser) return;
     
@@ -5453,13 +5475,22 @@ export default function App() {
                               />
                             </div>
 
-                            <button
-                              type="button"
-                              onClick={() => handleSubmitDecisionProposal(activeRequestObj.id)}
-                              className="w-full bg-brand-600 hover:bg-brand-700 text-white font-bold py-2 rounded-lg text-xs transition"
-                            >
-                              ส่งขออนุมัติข้อวินิจฉัย (Submit Proposal)
-                            </button>
+                            <div className="flex gap-2">
+                              <button
+                                type="button"
+                                onClick={() => handleSendBackToDataCollection(activeRequestObj.id)}
+                                className="w-1/3 bg-amber-500 hover:bg-amber-600 text-white font-bold py-2 rounded-lg text-xs transition"
+                              >
+                                ตีกลับให้แก้ไขข้อมูลใหม่
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleSubmitDecisionProposal(activeRequestObj.id)}
+                                className="w-2/3 bg-brand-600 hover:bg-brand-700 text-white font-bold py-2 rounded-lg text-xs transition"
+                              >
+                                ส่งขออนุมัติข้อวินิจฉัย (Submit Proposal)
+                              </button>
+                            </div>
                           </div>
                         ) : null}
 
