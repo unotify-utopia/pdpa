@@ -21,6 +21,8 @@ export const StaffLoginModal: React.FC<StaffLoginModalProps> = ({
   const [otpCode, setOtpCode] = useState('');
   const [pendingUser, setPendingUser] = useState<any | null>(null);
   const [isForgotOpen, setIsForgotOpen] = useState(false);
+  const [mfaMethod, setMfaMethod] = useState<'email' | 'totp'>('email');
+  const [otpEmail, setOtpEmail] = useState<string>('');
 
   useEffect(() => {
     if (isOpen) {
@@ -36,8 +38,8 @@ export const StaffLoginModal: React.FC<StaffLoginModalProps> = ({
 
   if (!isOpen) return null;
 
-  const handleLoginSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleLoginSubmit = async (e?: React.FormEvent, forceMfaType?: 'email') => {
+    if (e) e.preventDefault();
     setErrorMsg('');
 
     if (password.trim() === '') {
@@ -49,13 +51,15 @@ export const StaffLoginModal: React.FC<StaffLoginModalProps> = ({
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password })
+        body: JSON.stringify({ username, password, mfaType: forceMfaType })
       });
       const data = await res.json();
       
 
       if (data.requires2FA) {
         setPendingUser({ username, password });
+        setMfaMethod(data.mfaMethod || 'email');
+        setOtpEmail(data.email || '');
         setMfaStep(true);
         return;
       }
@@ -108,7 +112,8 @@ export const StaffLoginModal: React.FC<StaffLoginModalProps> = ({
         body: JSON.stringify({ 
           username: pendingUser.username, 
           password: pendingUser.password,
-          mfaCode: submittedOtp 
+          mfaCode: submittedOtp,
+          mfaType: mfaMethod
         })
       });
       const data = await res.json();
@@ -243,12 +248,22 @@ export const StaffLoginModal: React.FC<StaffLoginModalProps> = ({
             /* MFA Step */
             <form onSubmit={handleMfaVerify} className="space-y-4">
               <div className="p-3 bg-brand-50 border border-brand-200 rounded-xl text-xs text-brand-900 leading-relaxed text-center">
-                <span className="font-bold block mb-1 text-sm">ยืนยันตัวตน 2 ปัจจัย (MFA Required)</span>
-                <span>ระบบได้ส่งรหัส OTP ไปยัง <span className="font-bold">อีเมลของท่าน</span> แล้ว กรุณาตรวจสอบอีเมลและนำรหัส 6 หลักมากรอกที่นี่</span>
+                <span className="font-bold block mb-1 text-sm">
+                  {mfaMethod === 'totp' ? 'ยืนยันรหัส Authenticator' : 'ยืนยันตัวตน 2 ปัจจัย (MFA Required)'}
+                </span>
+                <span>
+                  {mfaMethod === 'totp' ? (
+                    'กรุณาเปิดแอป Authenticator (เช่น Google Authenticator) บนมือถือของท่านและนำรหัส 6 หลักมากรอกที่นี่'
+                  ) : (
+                    <>ระบบได้ส่งรหัส OTP ไปยัง <span className="font-bold">{otpEmail || 'อีเมลของท่าน'}</span> แล้ว กรุณาตรวจสอบอีเมลและนำรหัส 6 หลักมากรอกที่นี่</>
+                  )}
+                </span>
               </div>
 
               <div className="space-y-1">
-                <label className="text-xs font-semibold text-slate-700 text-center block">ระบุรหัส OTP (6 หลัก)</label>
+                <label className="text-xs font-semibold text-slate-700 text-center block">
+                  {mfaMethod === 'totp' ? 'รหัส Authenticator (6 หลัก)' : 'ระบุรหัส OTP (6 หลัก)'}
+                </label>
                 <input
                   type="text"
                   maxLength={6}
@@ -260,25 +275,37 @@ export const StaffLoginModal: React.FC<StaffLoginModalProps> = ({
                 />
               </div>
 
-              <div className="flex gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setMfaStep(false);
-                    setOtpCode('');
-                    setErrorMsg('');
-                  }}
-                  className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold py-2.5 rounded-lg transition"
-                >
-                  ย้อนกลับ
-                </button>
-                <button
-                  type="submit"
-                  disabled={otpCode.length !== 6}
-                  className="flex-1 bg-brand-600 hover:bg-brand-700 disabled:bg-slate-300 text-white text-xs font-bold py-2.5 rounded-lg transition shadow-md"
-                >
-                  ยืนยันรหัส OTP
-                </button>
+              <div className="flex flex-col gap-2 pt-2">
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMfaStep(false);
+                      setOtpCode('');
+                      setErrorMsg('');
+                    }}
+                    className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold py-2.5 rounded-lg transition"
+                  >
+                    ย้อนกลับ
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={otpCode.length !== 6}
+                    className="flex-[2] bg-brand-600 hover:bg-brand-700 disabled:bg-slate-300 text-white text-xs font-bold py-2.5 rounded-lg transition shadow-md"
+                  >
+                    {mfaMethod === 'totp' ? 'เข้าสู่ระบบหลังบ้าน' : 'ยืนยันรหัส OTP'}
+                  </button>
+                </div>
+
+                {mfaMethod === 'totp' && (
+                  <button
+                    type="button"
+                    onClick={() => handleLoginSubmit(undefined, 'email')}
+                    className="text-xs text-brand-600 font-semibold hover:underline mt-2 text-center w-full"
+                  >
+                    ไม่สะดวกใช้งานแอปพลิเคชันใช่หรือไม่? ขอรหัส OTP ผ่านอีเมลแทน
+                  </button>
+                )}
               </div>
             </form>
           )}

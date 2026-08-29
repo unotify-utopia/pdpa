@@ -84,6 +84,7 @@ import RopaManager from './components/RopaManager';
 import { CookieBanner } from './components/CookieBanner';
 import { CookieSettingsModal } from './components/CookieSettingsModal';
 import { CookiePolicy } from './components/CookiePolicy';
+import { TotpSetupModal } from './components/TotpSetupModal';
 
 // Helper: Thai Citizen ID Modulus 11 Checksum Validator
 export const validateThaiCitizenId = (id: string): boolean => {
@@ -208,6 +209,15 @@ export default function App() {
   const [isForcePasswordChange, setIsForcePasswordChange] = useState(false);
   const [resetTokenForModal, setResetTokenForModal] = useState<string | null>(null);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+
+  // TOTP Setup State
+  const [totpSetupModal, setTotpSetupModal] = useState({
+    open: false,
+    qrCodeUrl: '',
+    secret: '',
+    codeInput: '',
+    loading: false
+  });
   const [manualChannel, setManualChannel] = useState<'office' | 'post' | 'email' | 'e-service'>('office');
   const [manualRefNo, setManualRefNo] = useState('');
   const [manualEntrySuccessTrackingNo, setManualEntrySuccessTrackingNo] = useState<string | null>(null);
@@ -313,6 +323,53 @@ export default function App() {
     setPublicTab('landing');
     if (reason) {
       showNotify(reason);
+    }
+  };
+
+  const openTotpSetup = async () => {
+    setTotpSetupModal({ open: true, qrCodeUrl: '', secret: '', codeInput: '', loading: true });
+    setIsProfileModalOpen(false); // Close profile modal when opening setup
+    try {
+      const token = sessionStorage.getItem('pdpa_token');
+      const res = await fetch('/api/auth/2fa/setup', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (data.success) {
+        setTotpSetupModal(prev => ({ ...prev, qrCodeUrl: data.qrCodeUrl, secret: data.secret, loading: false }));
+      } else {
+        showNotify(data.message || 'ไม่สามารถสร้างการตั้งค่า 2FA ได้', 'error');
+        setTotpSetupModal(prev => ({ ...prev, open: false }));
+      }
+    } catch (err) {
+      showNotify('การเชื่อมต่อขัดข้อง', 'error');
+      setTotpSetupModal(prev => ({ ...prev, open: false }));
+    }
+  };
+
+  const verifyTotpSetup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (totpSetupModal.codeInput.length !== 6) return;
+    try {
+      const token = sessionStorage.getItem('pdpa_token');
+      const res = await fetch('/api/auth/2fa/verify', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ token: totpSetupModal.codeInput })
+      });
+      const data = await res.json();
+      if (data.success) {
+        showNotify('ตั้งค่า Authenticator App เรียบร้อยแล้ว!', 'success');
+        setTotpSetupModal({ open: false, qrCodeUrl: '', secret: '', codeInput: '', loading: false });
+        if (currentUser) setCurrentUser({ ...currentUser, totp_enabled: true });
+      } else {
+        showNotify(data.message || 'รหัสไม่ถูกต้อง', 'error');
+      }
+    } catch (err) {
+      showNotify('การเชื่อมต่อขัดข้อง', 'error');
     }
   };
 
@@ -2521,6 +2578,19 @@ export default function App() {
           setCurrentUser(updatedUser);
         }}
         showNotify={showNotify}
+        onOpenTotpSetup={openTotpSetup}
+      />
+
+      {/* TOTP Setup Modal */}
+      <TotpSetupModal
+        isOpen={totpSetupModal.open}
+        onClose={() => setTotpSetupModal({ open: false, qrCodeUrl: '', secret: '', codeInput: '', loading: false })}
+        qrCodeUrl={totpSetupModal.qrCodeUrl}
+        secret={totpSetupModal.secret}
+        loading={totpSetupModal.loading}
+        codeInput={totpSetupModal.codeInput}
+        setCodeInput={(code) => setTotpSetupModal(prev => ({ ...prev, codeInput: code }))}
+        onVerify={verifyTotpSetup}
       />
 
       {/* Document Template Edit Modal */}
