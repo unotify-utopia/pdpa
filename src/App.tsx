@@ -4695,7 +4695,7 @@ export default function App() {
                         <div className="space-y-1">
                           <span className="text-slate-400 block font-semibold">เป้าหมายระบบงานสืบค้น:</span>
                           <span className="font-bold text-slate-800">
-                            {activeRequestObj.requestDetails.targetSystems.join(', ') || 'สืบค้นทุกระบบที่บันทึกข้อมูลบุคคล'}
+                            {activeRequestObj.requestDetails.targetSystems.map(sys => sys.startsWith('อื่น ๆ') ? 'อื่น ๆ (Others)' : sys).join(', ') || 'สืบค้นทุกระบบที่บันทึกข้อมูลบุคคล'}
                           </span>
                         </div>
                         <div className="space-y-1">
@@ -5014,9 +5014,10 @@ export default function App() {
                                 >
                                   <option value="">-- โปรดเลือกระบบ --</option>
                                   {activeRequestObj.requestDetails.targetSystems && activeRequestObj.requestDetails.targetSystems.length > 0 ? (
-                                    activeRequestObj.requestDetails.targetSystems.map((sys, idx) => (
-                                      <option key={idx} value={sys}>{sys}</option>
-                                    ))
+                                    activeRequestObj.requestDetails.targetSystems.map((sys, idx) => {
+                                      const displayName = sys.startsWith('อื่น ๆ') ? 'อื่น ๆ (Others)' : sys;
+                                      return <option key={idx} value={sys}>{displayName}</option>;
+                                    })
                                   ) : (
                                     <option value="สืบค้นทุกระบบที่บันทึกข้อมูลบุคคล">สืบค้นทุกระบบที่บันทึกข้อมูลบุคคล</option>
                                   )}
