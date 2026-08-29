@@ -4629,6 +4629,20 @@ export default function App() {
                   </div>
                 </div>
 
+                {/* Global Notice if sent back by DPO */}
+                {activeRequestObj.status === 'Data Collection' && activeRequestObj.statusHistory.some((h: any) => h.comment && h.comment.includes('ตีกลับ')) && (
+                  <div className="bg-amber-100 border-2 border-amber-400 rounded-xl p-4 flex gap-3 text-amber-900 text-xs shadow-md">
+                    <AlertTriangle className="h-6 w-6 text-amber-600 shrink-0" />
+                    <div className="w-full">
+                      <span className="font-bold block text-sm mb-1 text-amber-900">แจ้งเตือน: คำร้องนี้ถูกตีกลับให้แก้ไขข้อมูลใหม่</span>
+                      <div className="bg-white/60 p-2 rounded border border-amber-200 mt-1">
+                        <strong>เหตุผลการตีกลับ:</strong> {activeRequestObj.statusHistory.filter((h: any) => h.comment && h.comment.includes('ตีกลับ')).pop()?.comment?.replace('DPO ตีกลับให้รวบรวมข้อมูลใหม่: ', '') || ''}
+                      </div>
+                      <span className="block text-[10px] text-amber-700 mt-2 font-medium">คำแนะนำ: เจ้าของระบบ (Data Owner) โปรดดำเนินการแก้ไขและรวบรวมข้อมูลใหม่ให้ครบถ้วน จากนั้นเลื่อนลงไปด้านล่างสุดเพื่อกดปุ่ม "ส่งเรื่องไปยัง Flow ต่อไป" ส่งงานกลับให้ DPO</span>
+                    </div>
+                  </div>
+                )}
+
                 {/* Main Action Modules for Request Details */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                   
