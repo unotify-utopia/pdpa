@@ -1443,8 +1443,8 @@ export default function App() {
       <header className={`p-4 border-b sticky top-0 z-50 ${headerBgClass}`}>
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-emerald-500/20 border border-emerald-500/30 rounded-xl text-emerald-500">
-              <ShieldCheck className="h-6 w-6" />
+            <div className="h-10 w-10 bg-white border border-emerald-500/30 rounded-xl overflow-hidden shrink-0 flex items-center justify-center">
+              <img src="/pdpa-logo.jpg" alt="PDPA Logo" className="h-full w-full object-cover" />
             </div>
             <div>
               <h1 className="font-bold text-base flex items-center gap-2">

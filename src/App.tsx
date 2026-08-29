@@ -2413,7 +2413,9 @@ export default function App() {
       {/* Header Navigation Bar */}
       <div className="no-print bg-slate-900 text-slate-200 px-4 py-2 flex flex-wrap items-center justify-between text-xs gap-2 select-none border-b border-slate-800 z-10">
         <div className="flex items-center gap-2 font-bold">
-          <Shield className="h-4 w-4 text-brand-500" />
+          <div className="h-6 w-6 bg-white rounded flex items-center justify-center overflow-hidden shrink-0">
+            <img src="/pdpa-logo.jpg" alt="PDPA Logo" className="h-full w-full object-cover" />
+          </div>
           <span>ระบบบริหารจัดการการปฏิบัติตามกฎหมายคุ้มครองข้อมูลส่วนบุคคล (PDPA Compliance Management)</span>
         </div>
         
@@ -3106,8 +3108,8 @@ export default function App() {
           <header className="bg-white border-b border-slate-200 px-6 py-4 shadow-sm">
             <div className="max-w-6xl mx-auto flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <div className="h-9 w-9 rounded-lg bg-brand-600 flex items-center justify-center text-white font-bold">
-                  <Shield className="h-5 w-5" />
+                <div className="h-11 w-11 rounded-lg bg-white flex items-center justify-center overflow-hidden shrink-0 border border-slate-200 shadow-sm">
+                  <img src="/pdpa-logo.jpg" alt="PDPA Logo" className="h-full w-full object-cover" />
                 </div>
                 <div>
                   <h1 className="font-bold text-slate-900 text-base leading-tight">ระบบยื่นคำขอเข้าถึงข้อมูลส่วนบุคคล (PDPA Access Portal)</h1>

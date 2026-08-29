@@ -157,8 +157,8 @@ export const StaffLoginModal: React.FC<StaffLoginModalProps> = ({
         {/* Header */}
         <div className="bg-slate-900 text-white p-6 relative">
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-xl bg-brand-500 flex items-center justify-center text-white font-bold">
-              <ShieldCheck className="h-6 w-6" />
+            <div className="h-12 w-12 rounded-xl bg-white flex items-center justify-center overflow-hidden shrink-0 shadow-sm border border-slate-700">
+              <img src="/pdpa-logo.jpg" alt="PDPA Logo" className="h-full w-full object-cover" />
             </div>
             <div>
               <h3 className="font-bold text-base text-white">เข้าสู่ระบบสำหรับเจ้าหน้าที่</h3>
