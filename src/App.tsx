@@ -5246,7 +5246,7 @@ export default function App() {
                                 ))}
                               
                               {/* System Owner action buttons - Moved to bottom */}
-                              {['Submitted', 'Assigned', 'Documents Verified', 'Data Collection'].includes(activeRequestObj.status) && activeRequestObj.dataCollectionTasks.length > 0 && activeRequestObj.dataCollectionTasks.every((t: any) => t.status !== 'pending') && ['owner', 'admin', 'dpo'].includes(activeUser.role) && (
+                              {['Submitted', 'Assigned', 'Documents Verified', 'Data Collection'].includes(activeRequestObj.status) && activeRequestObj.dataCollectionTasks.length > 0 && activeRequestObj.dataCollectionTasks.every((t: any) => t.status !== 'pending') && ['owner', 'admin'].includes(activeUser.role) && (
                                 <div className="flex flex-col gap-2 mt-6">
                                   {!activeRequestObj.dataCollectionTasks.some((t: any) => t.status === 'not_found') ? (
                                     <button
