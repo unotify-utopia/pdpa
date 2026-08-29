@@ -119,7 +119,10 @@ export function createSuperAdminRouter(dbPool, authenticateJWT, requireRole, add
               subject: 'รหัส OTP สำหรับเข้าสู่ระบบ Super Admin (PDPA System)',
               html: `
                 <div style="font-family: sans-serif; max-width: 500px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
-                  <div style="background-color: #059669; padding: 20px; text-align: center;">
+                  <div style="background-color: #059669; padding: 24px 20px; text-align: center;">
+                    <div style="background-color: #ffffff; width: 56px; height: 56px; margin: 0 auto 12px; border-radius: 12px; overflow: hidden; padding: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                      <img src="https://utopia.pdpa.click/pdpa-logo.jpg" alt="PDPA Logo" style="width: 100%; height: 100%; object-fit: cover; display: block;" />
+                    </div>
                     <h2 style="color: #ffffff; margin: 0;">รหัส OTP เข้าสู่ระบบ Super Admin</h2>
                   </div>
                   <div style="padding: 30px 20px; text-align: center;">

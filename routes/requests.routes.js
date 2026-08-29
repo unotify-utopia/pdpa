@@ -209,7 +209,10 @@ export function createRequestsRouter(dbPool, authenticateJWT, requireRole, addSe
 
       const emailHtml = `
         <div style="font-family: sans-serif; color: #333; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #0f172a;">แจ้งผลการดำเนินการและส่งมอบข้อมูลส่วนบุคคล</h2>
+          <div style="text-align: center; margin-bottom: 24px;">
+            <img src="https://utopia.pdpa.click/pdpa-logo.jpg" alt="PDPA Logo" style="width: 80px; height: 80px; object-fit: cover; border-radius: 16px; border: 1px solid #e2e8f0; padding: 4px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);" />
+          </div>
+          <h2 style="color: #0f172a; text-align: center; border-bottom: 2px solid #e2e8f0; padding-bottom: 16px;">แจ้งผลการดำเนินการและส่งมอบข้อมูลส่วนบุคคล</h2>
           <p>เรียน คุณ ${requesterName || 'ผู้ร้องขอ'},</p>
           <p>องค์กรได้พิจารณาอนุมัติการเข้าถึงข้อมูลตามสิทธิของท่านเรียบร้อยแล้ว รายละเอียดข้อมูลของท่านได้รับการตรวจสอบและจัดเตรียมไว้เป็นที่เรียบร้อย</p>
           <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; padding: 16px; border-radius: 8px; margin: 24px 0; text-align: center;">
