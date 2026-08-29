@@ -332,6 +332,7 @@ export default function App() {
     try {
       const token = sessionStorage.getItem('pdpa_token');
       const res = await fetch('/api/auth/2fa/setup', {
+        method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const data = await res.json();
