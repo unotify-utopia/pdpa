@@ -5022,6 +5022,16 @@ export default function App() {
                           <span>งานค้นหาและสืบค้นข้อมูลระบบภายใน (Data Discovery & Gathering)</span>
                         </span>
 
+                        {/* Notice if sent back by DPO */}
+                        {activeRequestObj.status === 'Data Collection' && activeRequestObj.statusHistory.some((h: any) => h.comment && h.comment.startsWith('DPO ตีกลับให้รวบรวมข้อมูลใหม่:')) && (
+                          <div className="p-3 bg-amber-50 border-l-4 border-amber-500 rounded-r-lg text-amber-900 text-xs shadow-sm my-2">
+                            <span className="font-bold flex items-center gap-1"><AlertTriangle className="h-4 w-4"/> DPO ตีกลับคำร้องเพื่อให้แก้ไข/รวบรวมข้อมูลใหม่</span>
+                            <div className="mt-1 ml-5 text-[11px]">
+                              <strong>เหตุผล:</strong> {activeRequestObj.statusHistory.filter((h: any) => h.comment && h.comment.startsWith('DPO ตีกลับให้รวบรวมข้อมูลใหม่:')).pop()?.comment?.replace('DPO ตีกลับให้รวบรวมข้อมูลใหม่: ', '') || ''}
+                            </div>
+                          </div>
+                        )}
+
                         {/* Task assigner form for admin/DPO/owner */}
                         {['admin', 'intake', 'dpo', 'owner'].includes(activeUser.role) && ['Documents Verified', 'Assigned', 'Data Collection'].includes(activeRequestObj.status) && (
                           <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 space-y-3">
@@ -5202,7 +5212,7 @@ export default function App() {
                                 ))}
                               
                               {/* System Owner action buttons - Moved to bottom */}
-                              {['Submitted', 'Assigned', 'Documents Verified', 'Data Collection'].includes(activeRequestObj.status) && activeRequestObj.dataCollectionTasks.length > 0 && activeRequestObj.dataCollectionTasks.every((t: any) => t.status !== 'pending') && (activeUser.role === 'owner' || activeUser.role === 'admin') && (
+                              {['Submitted', 'Assigned', 'Documents Verified', 'Data Collection'].includes(activeRequestObj.status) && activeRequestObj.dataCollectionTasks.length > 0 && activeRequestObj.dataCollectionTasks.every((t: any) => t.status !== 'pending') && ['owner', 'admin', 'dpo'].includes(activeUser.role) && (
                                 <div className="flex flex-col gap-2 mt-6">
                                   {!activeRequestObj.dataCollectionTasks.some((t: any) => t.status === 'not_found') ? (
                                     <button
