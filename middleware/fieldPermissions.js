@@ -154,3 +154,43 @@ export function isReadOnly(role) {
   const rules = FIELD_PERMISSION_RULES[role];
   return rules?.readOnly === true;
 }
+
+/**
+ * Restores masked fields from existing DB data before saving.
+ * Used to prevent mass assignment data loss when restricted users update a request.
+ */
+export function restoreMaskedFields(incomingData, existingData, role) {
+  if (!incomingData || !existingData) return incomingData;
+  const rules = FIELD_PERMISSION_RULES[role];
+  if (!rules || rules.allowAll) return incomingData;
+
+  const restored = JSON.parse(JSON.stringify(incomingData));
+
+  // Restore deny rules
+  if (Array.isArray(rules.deny)) {
+    for (const fieldPath of rules.deny) {
+      const incomingValue = getNestedValue(restored, fieldPath);
+      if (incomingValue === '****') {
+        const originalValue = getNestedValue(existingData, fieldPath);
+        if (originalValue !== undefined) {
+          setNestedValue(restored, fieldPath, originalValue);
+        }
+      }
+    }
+  }
+
+  // Restore phone mask
+  if (Array.isArray(rules.maskPhone)) {
+    for (const fieldPath of rules.maskPhone) {
+      const incomingValue = getNestedValue(restored, fieldPath);
+      if (typeof incomingValue === 'string' && incomingValue.includes('****')) {
+        const originalValue = getNestedValue(existingData, fieldPath);
+        if (originalValue !== undefined) {
+          setNestedValue(restored, fieldPath, originalValue);
+        }
+      }
+    }
+  }
+
+  return restored;
+}
