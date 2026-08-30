@@ -1593,6 +1593,12 @@ export default function App() {
     const req = getRequestClone(reqId);
     if (!req) return;
 
+    const isDuplicate = req.dataCollectionTasks.some((t: any) => t.systemName === selectedTaskSystem && t.assignee === taskAssignee);
+    if (isDuplicate) {
+      showNotify(`มีการมอบหมายระบบ ${selectedTaskSystem} ให้กับ ${taskAssignee} ไปแล้ว`, 'warning');
+      return;
+    }
+
     const newTask: DataCollectionTask = {
       id: `task_${Date.now()}`,
       systemName: selectedTaskSystem,
