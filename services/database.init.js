@@ -416,6 +416,15 @@ export const initDatabase = async (dbPool) => {
       console.error('❌ Error adding account lockout columns:', e.message);
     }
 
+    // [SECURITY] Migration 003: MFA / TOTP columns
+    try {
+      await dbPool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS totp_secret TEXT');
+      await dbPool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS totp_enabled BOOLEAN DEFAULT false');
+      console.log('✅ MFA / TOTP columns ready (totp_secret, totp_enabled)');
+    } catch (e) {
+      console.error('❌ Error adding MFA columns:', e.message);
+    }
+
     // Run migration: Update old 'Complete' status to 'Documents Verified' in both column and JSON data
     try {
       const { rows } = await dbPool.query("SELECT id, data FROM requests WHERE status = 'Complete' OR data->>'status' = 'Complete'");
