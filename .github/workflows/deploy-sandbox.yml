@@ -1,0 +1,48 @@
+name: 🚀 Auto Deploy to Sandbox
+
+on:
+  push:
+    branches:
+      - sandbox
+
+jobs:
+  deploy:
+    name: Deploy to Sandbox (119.59.102.26)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 🔐 SSH Deploy to Sandbox
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SANDBOX_SSH_HOST }}
+          username: ${{ secrets.SANDBOX_SSH_USERNAME }}
+          password: ${{ secrets.SANDBOX_SSH_PASSWORD }}
+          port: 22
+          script: |
+            set -e
+            echo "📥 Pulling latest code for Sandbox..."
+            # Ensure the directory exists
+            mkdir -p /var/www/pdpa-sandbox
+            cd /var/www/pdpa-sandbox
+            
+            # If not a git repo, clone it
+            if [ ! -d ".git" ]; then
+              echo "Git repository not found. Cloning..."
+              git clone -b sandbox https://github.com/unotify-utopia/pdpa.git .
+            else
+              echo "Fetching updates..."
+              git fetch origin sandbox
+              git reset --hard FETCH_HEAD
+            fi
+            
+            echo "📦 Installing dependencies..."
+            npm install --legacy-peer-deps
+            
+            echo "🏗️ Building frontend..."
+            npm run build
+            
+            echo "🔄 Restarting Sandbox server..."
+            # Assuming pm2 is running the sandbox app under a specific name, e.g., pdpa-sandbox
+            pm2 reload pdpa-sandbox --update-env || pm2 start server.js --name pdpa-sandbox --update-env
+            
+            echo "✅ Sandbox Deploy complete!"
