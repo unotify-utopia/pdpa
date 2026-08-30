@@ -277,9 +277,6 @@ export default function App() {
     ? requests.filter(r => r.orgId === impersonatedOrgId)
     : requests;
 
-  // We let everyone see the requests in the table, but enforce FLOW on who can "manage" them
-  const filteredRequests = baseRequests.filter(r => r && r.requester && r.requestDetails);
-
   const canManageRequestFlow = (req: Request, user: UserType): boolean => {
     if (user.isSuperAdmin || user.role === 'superadmin' || user.role === 'admin' || user.role === 'auditor') return true;
     
@@ -290,7 +287,12 @@ export default function App() {
           return true; // Intake can manage at any stage
         case 'owner':
           const ownerHidden = ['Draft', 'Submitted', 'Received', 'Identity Verification', 'Awaiting Identity Evidence', 'Completeness Review', 'Awaiting Additional Information'];
-          return !ownerHidden.includes(req.status);
+          if (ownerHidden.includes(req.status)) return false;
+          // In multi-department setup, Owner can only manage if explicitly assigned a task by Intake
+          if (req.dataCollectionTasks && req.dataCollectionTasks.length > 0) {
+            return req.dataCollectionTasks.some(t => t.assignee === user.fullNameTh || t.assignee === user.username);
+          }
+          return false;
         case 'dpo':
           const dpoVisible = [
             'DPO or Legal Review', 'Redaction Required', 'Approval Pending', 
@@ -311,6 +313,18 @@ export default function App() {
       }
     });
   };
+
+  // We let everyone see the requests in the table, except Owners who only see what they can manage (assigned to them)
+  const filteredRequests = baseRequests.filter(r => {
+    if (!r || !r.requester || !r.requestDetails) return false;
+    
+    if (activeUser && activeUser.role === 'owner' && !(activeUser.roles && activeUser.roles.some(role => role !== 'owner'))) {
+      // Pure 'owner' role sees ONLY requests they can manage (which now means explicitly assigned to them)
+      return canManageRequestFlow(r, activeUser);
+    }
+    
+    return true;
+  });
 
   // Idle Timeout System for Main App (10 minutes)
   // Unified Force Logout Helper for Staff Portal
