@@ -1,5 +1,5 @@
 import type { Request, ComplianceConfig, DocumentTemplate, AuditLog, User, RequestStatus, SLAEvent } from './types';
-import { initialComplianceConfig, initialDocumentTemplates, mockAuditLogs } from './mockData';
+import { initialComplianceConfig, initialDocumentTemplates, initialAuditLogs } from './mockData';
 
 
 // Storage keys
@@ -167,8 +167,8 @@ export const fetchAuditLogs = async (): Promise<AuditLog[]> => {
   }
   
   // Initialize with mock data if completely empty
-  localStorage.setItem(KEYS.AUDIT_LOGS, JSON.stringify(mockAuditLogs));
-  return mockAuditLogs;
+  localStorage.setItem(KEYS.AUDIT_LOGS, JSON.stringify(initialAuditLogs));
+  return initialAuditLogs;
 };
 
 
@@ -243,7 +243,7 @@ export const addAuditLog = async (
     if (localLogsStr) {
       localLogs = JSON.parse(localLogsStr);
     } else {
-      localLogs = [...mockAuditLogs];
+      localLogs = [...initialAuditLogs];
     }
     localLogs.unshift(newLog); // Add to beginning
     localStorage.setItem(KEYS.AUDIT_LOGS, JSON.stringify(localLogs));
