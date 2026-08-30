@@ -2,7 +2,7 @@
 import express from 'express';
 import crypto from 'crypto';
 import QRCode from 'qrcode';
-import { applyFieldPermissions, applyFieldPermissionsToList } from '../middleware/fieldPermissions.js';
+import { applyFieldPermissions, applyFieldPermissionsToList, restoreMaskedFields } from '../middleware/fieldPermissions.js';
 import { calculateOrgSLAReport } from '../services/sla.service.js';
 import { sendMailWithFallback, sendWorkflowNotification } from '../services/email.service.js';
 import { applyWatermark } from '../services/watermark.service.js';
@@ -86,7 +86,7 @@ export function createRequestsRouter(dbPool, authenticateJWT, requireRole, addSe
       const { id } = req.params;
       if (!(await checkOrgAccess(req, res, id))) return;
       
-      const requestData = req.body;
+      let requestData = req.body;
       const status = requestData.status || 'Received';
       
       let oldStatus = null;
@@ -98,6 +98,10 @@ export function createRequestsRouter(dbPool, authenticateJWT, requireRole, addSe
           existingData = typeof existRes.rows[0].data === 'string' ? JSON.parse(existRes.rows[0].data) : (existRes.rows[0].data || {});
         }
       } catch (err) { console.warn('Could not fetch existing request for diff:', err); }
+
+      if (existingData) {
+        requestData = restoreMaskedFields(requestData, existingData, req.user.role);
+      }
 
       await dbPool.query(
         'UPDATE requests SET status = $1, data = $2 WHERE id = $3',
@@ -320,7 +324,7 @@ export function createRequestsRouter(dbPool, authenticateJWT, requireRole, addSe
       let query = 'SELECT data FROM requests ORDER BY created_at DESC';
       let params = [];
       
-      if (!req.user.isSuperAdmin) {
+      if (req.user.role !== 'superadmin') {
         let targetOrgId = req.user.orgId;
         if (process.env.SYSTEM_MODE === 'SINGLE_NODE') {
           targetOrgId = 'default-tenant';
@@ -347,7 +351,7 @@ export function createRequestsRouter(dbPool, authenticateJWT, requireRole, addSe
     try {
       let query = 'SELECT data FROM requests';
       let params = [];
-      if (!req.user.isSuperAdmin) {
+      if (!(req.user.role === 'superadmin')) {
         let targetOrgId = req.user.orgId;
         if (process.env.SYSTEM_MODE === 'SINGLE_NODE') targetOrgId = 'default-tenant';
         query = 'SELECT data FROM requests WHERE org_id = $1';
@@ -370,10 +374,10 @@ export function createRequestsRouter(dbPool, authenticateJWT, requireRole, addSe
   router.get('/requests/:id/header', authenticateJWT, async (req, res) => {
     try {
       const { id } = req.params;
-      const queryStr = req.user.isSuperAdmin
+      const queryStr = (req.user.role === 'superadmin')
         ? 'SELECT data FROM requests WHERE id = $1'
         : 'SELECT data FROM requests WHERE id = $1 AND org_id = $2';
-      const params = req.user.isSuperAdmin ? [id] : [id, req.user.orgId];
+      const params = (req.user.role === 'superadmin') ? [id] : [id, req.user.orgId];
       const { rows } = await dbPool.query(queryStr, params);
       if (!rows.length) return res.status(404).json({ success: false, message: 'Not found' });
 
@@ -403,10 +407,10 @@ export function createRequestsRouter(dbPool, authenticateJWT, requireRole, addSe
   router.get('/requests/:id/tasks', authenticateJWT, async (req, res) => {
     try {
       const { id } = req.params;
-      const queryStr = req.user.isSuperAdmin
+      const queryStr = (req.user.role === 'superadmin')
         ? "SELECT data->'dataCollectionTasks' as tasks FROM requests WHERE id = $1"
         : "SELECT data->'dataCollectionTasks' as tasks FROM requests WHERE id = $1 AND org_id = $2";
-      const params = req.user.isSuperAdmin ? [id] : [id, req.user.orgId];
+      const params = (req.user.role === 'superadmin') ? [id] : [id, req.user.orgId];
       const { rows } = await dbPool.query(queryStr, params);
       if (!rows.length) return res.status(404).json({ success: false, message: 'Not found' });
       res.json({ success: true, tasks: rows[0].tasks || [] });
@@ -419,10 +423,10 @@ export function createRequestsRouter(dbPool, authenticateJWT, requireRole, addSe
   router.get('/requests/:id/timeline', authenticateJWT, async (req, res) => {
     try {
       const { id } = req.params;
-      const queryStr = req.user.isSuperAdmin
+      const queryStr = (req.user.role === 'superadmin')
         ? "SELECT data->'statusHistory' as history, data->'slaEvents' as sla_events FROM requests WHERE id = $1"
         : "SELECT data->'statusHistory' as history, data->'slaEvents' as sla_events FROM requests WHERE id = $1 AND org_id = $2";
-      const params = req.user.isSuperAdmin ? [id] : [id, req.user.orgId];
+      const params = (req.user.role === 'superadmin') ? [id] : [id, req.user.orgId];
       const { rows } = await dbPool.query(queryStr, params);
       if (!rows.length) return res.status(404).json({ success: false, message: 'Not found' });
       res.json({ success: true, statusHistory: rows[0].history || [], slaEvents: rows[0].sla_events || [] });
@@ -435,10 +439,10 @@ export function createRequestsRouter(dbPool, authenticateJWT, requireRole, addSe
   router.get('/requests/:id/decision', authenticateJWT, requireRole(['admin', 'dpo', 'approver', 'superadmin']), async (req, res) => {
     try {
       const { id } = req.params;
-      const queryStr = req.user.isSuperAdmin
+      const queryStr = (req.user.role === 'superadmin')
         ? "SELECT data->'decision' as decision, data->'redactionRecords' as redactions FROM requests WHERE id = $1"
         : "SELECT data->'decision' as decision, data->'redactionRecords' as redactions FROM requests WHERE id = $1 AND org_id = $2";
-      const params = req.user.isSuperAdmin ? [id] : [id, req.user.orgId];
+      const params = (req.user.role === 'superadmin') ? [id] : [id, req.user.orgId];
       const { rows } = await dbPool.query(queryStr, params);
       if (!rows.length) return res.status(404).json({ success: false, message: 'Not found' });
       res.json({ success: true, decision: rows[0].decision || null, redactionRecords: rows[0].redactions || [] });
@@ -454,7 +458,7 @@ export function createRequestsRouter(dbPool, authenticateJWT, requireRole, addSe
       let params = [];
       
       // Non-superadmins only see logs for their org
-      if (!req.user.isSuperAdmin) {
+      if (!(req.user.role === 'superadmin')) {
         query = 'SELECT * FROM audit_logs WHERE org_id = $1 ORDER BY timestamp DESC LIMIT 500';
         params = [req.user.orgId];
       }

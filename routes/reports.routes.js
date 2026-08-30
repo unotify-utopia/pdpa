@@ -13,7 +13,7 @@ export function createReportsRouter(dbPool, authenticateJWT, requireRole) {
   // ─────────────────────────────────────────────
   const getScope = (req) => {
     // If superadmin, allow viewing all or a specific requested org
-    if (req.user.isSuperAdmin) {
+    if ((req.user.role === 'superadmin')) {
       return req.query.orgId || null;
     }
     // DPO/Admin/Intake is restricted to their own org
