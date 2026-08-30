@@ -3,6 +3,7 @@ import { ShieldCheck, Building2, UserCheck, Key, Lock, LogOut, Plus, Sun, Moon, 
 import WorkflowAdminPanel from './WorkflowAdminPanel';
 import SystemDashboard from './SystemDashboard';
 import CookieLogsPanel from './CookieLogsPanel';
+import AuditLogsPanel from './AuditLogsPanel';
 
 interface Tenant {
   id: string;
@@ -46,7 +47,7 @@ export default function App() {
   const [password, setPassword] = useState('');
   const [mfaCode, setMfaCode] = useState('');
 
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'tenants' | 'users' | 'export' | 'workflow' | 'cookie_logs'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'tenants' | 'users' | 'export' | 'workflow' | 'cookie_logs' | 'audit_logs'>('dashboard');
   const [selectedTenantForUsers, setSelectedTenantForUsers] = useState<string>('');
   const [exportTenantModal, setExportTenantModal] = useState<Tenant | null>(null);
   const [exportFormat, setExportFormat] = useState<'json' | 'csv'>('json');
@@ -61,9 +62,11 @@ export default function App() {
   // Token and OTP email state
   const [token, setToken] = useState<string | null>(null);
   const [otpEmail, setOtpEmail] = useState<string>('');
+  const [mfaMethod, setMfaMethod] = useState<'email' | 'totp'>('email');
 
   // Custom Professional Notification Dialog Modal State
   const [notifyModal, setNotifyModal] = useState<{ open: boolean; title: string; message: string; type: 'success' | 'warning' | 'error'; onConfirm?: () => void } | null>(null);
+  const [totpSetupModal, setTotpSetupModal] = useState<{ open: boolean; qrCodeUrl: string; secret: string; codeInput: string; loading: boolean }>({ open: false, qrCodeUrl: '', secret: '', codeInput: '', loading: false });
 
   const [resetPasswordModal, setResetPasswordModal] = useState<{ open: boolean; user: User | null; newPassword: string }>({ open: false, user: null, newPassword: '' });
   const [editRoleModal, setEditRoleModal] = useState<{ open: boolean; user: User | null; newRoles: string[] }>({ open: false, user: null, newRoles: [] });
@@ -208,18 +211,19 @@ export default function App() {
   }, []);
 
   // Step 1: Check Credentials
-  const handleStep1Submit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleStep1Submit = async (e?: React.FormEvent, forceMfaType?: 'email') => {
+    if (e) e.preventDefault();
     try {
       const res = await fetch('/api/super-admin/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password })
+        body: JSON.stringify({ username, password, mfaType: forceMfaType })
       });
       const data = await res.json();
       if (data.success) {
         if (data.requires2FA || data.requires2FASetup) {
           setOtpEmail(data.email || 'apichat.utopia@gmail.com');
+          setMfaMethod(data.mfaMethod || 'email');
           setMfaCode('');
           setLoginStep('mfa');
         } else if (data.token) {
@@ -236,11 +240,11 @@ export default function App() {
     }
   };
 
-  // Step 2: Verify Gmail OTP Code (REAL SYSTEM)
+  // Step 2: Verify OTP/TOTP Code (REAL SYSTEM)
   const handleMfaSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!mfaCode.trim() || mfaCode.trim().length !== 6) {
-      showNotify('กรุณากรอกรหัส OTP 6 หลักที่ได้รับทางอีเมล Gmail', 'warning', 'ข้อมูลไม่ครบถ้วน');
+      showNotify(mfaMethod === 'totp' ? 'กรุณากรอกรหัส Authenticator 6 หลัก' : 'กรุณากรอกรหัส OTP 6 หลักที่ได้รับทางอีเมล Gmail', 'warning', 'ข้อมูลไม่ครบถ้วน');
       return;
     }
     const submittedCode = mfaCode.trim();
@@ -249,7 +253,7 @@ export default function App() {
       const res = await fetch('/api/super-admin/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password, mfaCode: submittedCode })
+        body: JSON.stringify({ username, password, mfaCode: submittedCode, mfaType: mfaMethod })
       });
       const data = await res.json();
       if (data.success && data.token) {
@@ -258,10 +262,10 @@ export default function App() {
         setLoginStep('authenticated');
         fetchData(data.token);
       } else {
-        showNotify(data.message || 'รหัส OTP ไม่ถูกต้อง กรุณาตรวจสอบอีเมล Gmail ของท่านอีกครั้ง', 'error', 'ตรวจสอบ OTP ไม่ผ่าน');
+        showNotify(data.message || 'รหัสไม่ถูกต้อง กรุณาตรวจสอบอีกครั้ง', 'error', 'ตรวจสอบรหัสไม่ผ่าน');
       }
     } catch (err) {
-      showNotify('ไม่สามารถเชื่อมต่อระบบหลังบ้านเพื่อตรวจสอบรหัส OTP ได้', 'error', 'การเชื่อมต่อขัดข้อง');
+      showNotify('ไม่สามารถเชื่อมต่อระบบหลังบ้านเพื่อตรวจสอบรหัสได้', 'error', 'การเชื่อมต่อขัดข้อง');
     }
   };
 
@@ -307,6 +311,49 @@ export default function App() {
       }
     } catch (err) {
       showNotify('เกิดข้อผิดพลาดในการเชื่อมต่อเพื่อเปลี่ยนรหัสผ่าน', 'error', 'การเชื่อมต่อขัดข้อง');
+    }
+  };
+
+  const openTotpSetup = async () => {
+    try {
+      setTotpSetupModal(prev => ({ ...prev, open: true, loading: true }));
+      const res = await fetch('/api/auth/2fa/setup', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (data.success) {
+        setTotpSetupModal({ open: true, qrCodeUrl: data.qrCodeUrl, secret: data.secret, codeInput: '', loading: false });
+      } else {
+        setTotpSetupModal(prev => ({ ...prev, open: false, loading: false }));
+        showNotify(data.message || 'ไม่สามารถสร้าง QR Code ได้', 'error');
+      }
+    } catch (err) {
+      setTotpSetupModal(prev => ({ ...prev, open: false, loading: false }));
+      showNotify('เชื่อมต่อเซิร์ฟเวอร์ไม่ได้', 'error');
+    }
+  };
+
+  const verifyTotpSetup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const res = await fetch('/api/auth/2fa/verify', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ code: totpSetupModal.codeInput })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setTotpSetupModal(prev => ({ ...prev, open: false }));
+        showNotify('ผูกแอป Authenticator สำเร็จแล้ว! ในการเข้าสู่ระบบครั้งต่อไปคุณสามารถใช้รหัส 6 หลักจากแอปได้เลย', 'success', 'เปิดใช้งาน 2FA สำเร็จ');
+      } else {
+        showNotify(data.message || 'รหัสไม่ถูกต้อง กรุณาลองใหม่', 'error');
+      }
+    } catch (err) {
+      showNotify('เกิดข้อผิดพลาดในการยืนยันรหัส', 'error');
     }
   };
 
@@ -1265,24 +1312,28 @@ export default function App() {
                 <form onSubmit={handleMfaSubmit} className="space-y-5 animate-fade-in">
                   <div className="p-3.5 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl text-xs sm:text-sm text-emerald-400 flex items-center gap-2 font-medium">
                     <CheckCircle2 className="h-5 w-5 shrink-0" />
-                    <span>ยืนยันตัวตนขั้นแรกสำเร็จ กรุณากรอกรหัส OTP 6 หลักที่ส่งไปยังอีเมล</span>
+                    <span>ยืนยันตัวตนขั้นแรกสำเร็จ กรุณากรอกรหัส {mfaMethod === 'totp' ? 'Authenticator' : 'OTP 6 หลัก'}</span>
                   </div>
 
                   <div className="text-center py-3 space-y-2">
                     <div className="inline-block p-4 bg-slate-900 border border-slate-800 rounded-2xl shadow-inner">
-                      <Mail className="h-12 w-12 text-emerald-400 mx-auto" />
+                      {mfaMethod === 'totp' ? <ShieldAlert className="h-12 w-12 text-emerald-400 mx-auto" /> : <Mail className="h-12 w-12 text-emerald-400 mx-auto" />}
                     </div>
                     <p className="text-sm font-bold">
-                      ตรวจสอบรหัส OTP ที่อีเมล: <span className="text-emerald-400">{otpEmail || 'apichat.utopia@gmail.com'}</span>
+                      {mfaMethod === 'totp' ? (
+                        <span>ตรวจสอบรหัสบนแอป Authenticator</span>
+                      ) : (
+                        <span>ตรวจสอบรหัส OTP ที่อีเมล: <span className="text-emerald-400">{otpEmail || 'apichat.utopia@gmail.com'}</span></span>
+                      )}
                     </p>
                     <p className="text-xs text-slate-400">
-                      นำรหัสตัวเลข 6 หลักที่ได้รับในกล่องจดหมายมากรอกเพื่อยืนยันเข้าสู่ระบบ
+                      {mfaMethod === 'totp' ? 'เปิดแอป Authenticator ในโทรศัพท์ของคุณแล้วนำรหัส 6 หลักมากรอก' : 'นำรหัสตัวเลข 6 หลักที่ได้รับในกล่องจดหมายมากรอกเพื่อยืนยันเข้าสู่ระบบ'}
                     </p>
                   </div>
 
                   <div>
                     <label className="block text-sm font-bold text-center mb-2.5 text-slate-200">
-                      รหัสผ่าน OTP 6 หลัก จาก Gmail
+                      {mfaMethod === 'totp' ? 'รหัส Authenticator 6 หลัก' : 'รหัสผ่าน OTP 6 หลัก จาก Gmail'}
                     </label>
                     <div className="relative max-w-[280px] mx-auto">
                       <input
@@ -1298,8 +1349,19 @@ export default function App() {
                       />
                     </div>
                     <span className="block text-xs text-emerald-400/90 text-center mt-2.5 font-medium">
-                      ✓ กรุณากรอกรหัสตัวเลข 6 หลักที่ได้รับทางอีเมล (อายุ 5 นาที)
+                      ✓ กรุณากรอกรหัสตัวเลข 6 หลัก (อายุ 5 นาที)
                     </span>
+                    {mfaMethod === 'totp' && (
+                      <div className="text-center mt-4">
+                        <button
+                          type="button"
+                          onClick={() => handleStep1Submit(undefined, 'email')}
+                          className="text-xs text-amber-400 hover:text-amber-300 underline font-semibold transition"
+                        >
+                          ไม่สามารถใช้แอปได้? ขอรหัสผ่านทางอีเมล (Fallback to Email)
+                        </button>
+                      </div>
+                    )}
                   </div>
 
                   <div className="flex gap-3 pt-2">
@@ -1381,8 +1443,8 @@ export default function App() {
       <header className={`p-4 border-b sticky top-0 z-50 ${headerBgClass}`}>
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-emerald-500/20 border border-emerald-500/30 rounded-xl text-emerald-500">
-              <ShieldCheck className="h-6 w-6" />
+            <div className="h-10 w-10 bg-white border border-emerald-500/30 rounded-xl overflow-hidden shrink-0 flex items-center justify-center">
+              <img src="/pdpa-logo.jpg" alt="PDPA Logo" className="h-full w-full object-cover" />
             </div>
             <div>
               <h1 className="font-bold text-base flex items-center gap-2">
@@ -1403,6 +1465,14 @@ export default function App() {
             >
               {isDark ? <Sun className="h-4 w-4 text-amber-400" /> : <Moon className="h-4 w-4 text-indigo-600" />}
               <span className="hidden md:inline">{isDark ? 'ธีมสว่าง' : 'ธีมมืด'}</span>
+            </button>
+
+            <button
+              onClick={() => openTotpSetup()}
+              className="bg-indigo-500/10 hover:bg-indigo-600 text-indigo-500 hover:text-white text-xs font-semibold px-4 py-2 rounded-lg transition border border-indigo-500/30 flex items-center gap-1.5"
+            >
+              <ShieldAlert className="h-4 w-4" />
+              <span className="hidden sm:inline">ตั้งค่า 2FA (Authenticator App)</span>
             </button>
 
             <button
@@ -1491,6 +1561,15 @@ export default function App() {
             >
               <Shield className="h-4 w-4" />
               <span>ประวัติความยินยอม (Cookie Logs)</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('audit_logs')}
+              className={`px-4 py-2 rounded-lg text-xs font-bold transition flex items-center gap-2 ${
+                activeTab === 'audit_logs' ? 'bg-indigo-600 text-white shadow-md' : inactiveTabClass
+              }`}
+            >
+              <Activity className="h-4 w-4" />
+              <span>ประวัติระบบ (Audit Logs)</span>
             </button>
           </div>
 
@@ -1784,6 +1863,7 @@ export default function App() {
         {activeTab === 'dashboard' && token && <SystemDashboard token={token} isDark={isDark} />}
         
         {activeTab === 'cookie_logs' && token && <CookieLogsPanel token={token} />}
+        {activeTab === 'audit_logs' && token && <AuditLogsPanel token={token} />}
 
       </main>
 
@@ -2208,6 +2288,68 @@ export default function App() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* TOTP Setup Modal */}
+      {totpSetupModal.open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-fade-in">
+          <div className={`w-full max-w-md p-6 rounded-2xl border shadow-2xl space-y-4 ${cardBgClass}`}>
+            <div className="flex items-center justify-between border-b border-slate-800/60 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="p-2 bg-indigo-500/10 border border-indigo-500/20 rounded-xl">
+                  <ShieldAlert className="h-5 w-5 text-indigo-400" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-sm">ตั้งค่า Authenticator App</h3>
+                  <p className="text-[11px] text-slate-400">เพิ่มความปลอดภัยด้วยแอปสร้างรหัส 2FA</p>
+                </div>
+              </div>
+            </div>
+
+            {totpSetupModal.loading ? (
+              <div className="p-8 text-center text-slate-400 text-xs">กำลังสร้าง QR Code...</div>
+            ) : (
+              <div className="space-y-4">
+                <div className="text-center bg-white p-4 rounded-xl mx-auto w-fit">
+                  <img src={totpSetupModal.qrCodeUrl} alt="QR Code for TOTP" className="mx-auto" />
+                </div>
+                <div className="text-center">
+                  <p className="text-[10px] text-slate-400">หรือป้อนรหัสตั้งค่าด้วยตนเอง:</p>
+                  <code className="text-xs text-indigo-400 bg-indigo-500/10 px-2 py-1 rounded">{totpSetupModal.secret}</code>
+                </div>
+                <form onSubmit={verifyTotpSetup} className="space-y-3 pt-3 border-t border-slate-800/60">
+                  <div>
+                    <label className="block text-xs font-bold mb-1 text-center">รหัสยืนยันจากแอป 6 หลัก</label>
+                    <input
+                      type="text"
+                      maxLength={6}
+                      value={totpSetupModal.codeInput}
+                      onChange={(e) => setTotpSetupModal(prev => ({ ...prev, codeInput: e.target.value.replace(/[^0-9]/g, '') }))}
+                      placeholder="• • • • • •"
+                      className={`w-full text-center tracking-[0.5em] font-mono text-xl py-2 border rounded-xl focus:outline-none focus:border-indigo-500 ${inputBgClass}`}
+                      required
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setTotpSetupModal({ open: false, qrCodeUrl: '', secret: '', codeInput: '', loading: false })}
+                      className="w-1/2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold py-2 rounded-xl transition"
+                    >
+                      ยกเลิก
+                    </button>
+                    <button
+                      type="submit"
+                      className="w-1/2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold py-2 rounded-xl transition"
+                    >
+                      ยืนยันและเปิดใช้งาน
+                    </button>
+                  </div>
+                </form>
+              </div>
+            )}
           </div>
         </div>
       )}

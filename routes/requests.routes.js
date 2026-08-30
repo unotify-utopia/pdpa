@@ -2,7 +2,7 @@
 import express from 'express';
 import crypto from 'crypto';
 import QRCode from 'qrcode';
-import { applyFieldPermissions, applyFieldPermissionsToList } from '../middleware/fieldPermissions.js';
+import { applyFieldPermissions, applyFieldPermissionsToList, restoreMaskedFields } from '../middleware/fieldPermissions.js';
 import { calculateOrgSLAReport } from '../services/sla.service.js';
 import { sendMailWithFallback, sendWorkflowNotification } from '../services/email.service.js';
 import { applyWatermark } from '../services/watermark.service.js';
@@ -81,12 +81,12 @@ export function createRequestsRouter(dbPool, authenticateJWT, requireRole, addSe
   }
 
   // PUT /api/requests/:id (Staff update request)
-  router.put('/requests/:id', authenticateJWT, async (req, res) => {
+  router.put('/requests/:id', authenticateJWT, requireRole(['admin', 'intake', 'dpo', 'owner', 'approver']), async (req, res) => {
     try {
       const { id } = req.params;
       if (!(await checkOrgAccess(req, res, id))) return;
       
-      const requestData = req.body;
+      let requestData = req.body;
       const status = requestData.status || 'Received';
       
       let oldStatus = null;
@@ -99,6 +99,10 @@ export function createRequestsRouter(dbPool, authenticateJWT, requireRole, addSe
         }
       } catch (err) { console.warn('Could not fetch existing request for diff:', err); }
 
+      if (existingData) {
+        requestData = restoreMaskedFields(requestData, existingData, req.user.role);
+      }
+
       await dbPool.query(
         'UPDATE requests SET status = $1, data = $2 WHERE id = $3',
         [status, JSON.stringify(requestData), id]
@@ -107,7 +111,15 @@ export function createRequestsRouter(dbPool, authenticateJWT, requireRole, addSe
       try {
         if (existingData) {
           if (oldStatus && oldStatus !== status) {
-            await sendWorkflowNotification(requestData, oldStatus, status, 'STATUS_CHANGE', dbPool);
+            let eventType = 'STATUS_CHANGE';
+            if (status === 'Data Collection') {
+              const hist = requestData.statusHistory || [];
+              const lastHist = hist[hist.length - 1];
+              if (lastHist && lastHist.comment && (lastHist.comment.includes('ตีกลับ') || lastHist.comment.includes('ให้รวบรวมข้อมูลใหม่'))) {
+                eventType = 'RETURN_TO_OWNER';
+              }
+            }
+            await sendWorkflowNotification(requestData, oldStatus, status, eventType, dbPool);
           }
           
           let isNewStaffMessage = false;
@@ -204,12 +216,15 @@ export function createRequestsRouter(dbPool, authenticateJWT, requireRole, addSe
       }
 
       // Generate QR Code URL using a public API so it renders in email clients (which often block base64 images)
-      const directDownloadUrl = `https://portal.pdpa.click/dl/${trackingNo}`;
+      const directDownloadUrl = `https://utopia.pdpa.click/dl/${trackingNo}`;
       const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(directDownloadUrl)}`;
 
       const emailHtml = `
         <div style="font-family: sans-serif; color: #333; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #0f172a;">แจ้งผลการดำเนินการและส่งมอบข้อมูลส่วนบุคคล</h2>
+          <div style="text-align: center; margin-bottom: 24px;">
+            <img src="https://utopia.pdpa.click/pdpa-logo.jpg" alt="PDPA Logo" style="width: 80px; height: 80px; object-fit: cover; border-radius: 16px; border: 1px solid #e2e8f0; padding: 4px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);" />
+          </div>
+          <h2 style="color: #0f172a; text-align: center; border-bottom: 2px solid #e2e8f0; padding-bottom: 16px;">แจ้งผลการดำเนินการและส่งมอบข้อมูลส่วนบุคคล</h2>
           <p>เรียน คุณ ${requesterName || 'ผู้ร้องขอ'},</p>
           <p>องค์กรได้พิจารณาอนุมัติการเข้าถึงข้อมูลตามสิทธิของท่านเรียบร้อยแล้ว รายละเอียดข้อมูลของท่านได้รับการตรวจสอบและจัดเตรียมไว้เป็นที่เรียบร้อย</p>
           <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; padding: 16px; border-radius: 8px; margin: 24px 0; text-align: center;">
@@ -219,7 +234,7 @@ export function createRequestsRouter(dbPool, authenticateJWT, requireRole, addSe
               <img src="${qrImageUrl}" alt="QR Code for Download" width="150" height="150" style="border-radius: 8px; border: 1px solid #cbd5e1; padding: 8px; background: white;" />
             </div>
             <p style="font-size: 14px; margin-bottom: 8px;">หรือสแกน QR Code เพื่อดาวน์โหลดเอกสาร</p>
-            <p style="margin: 4px 0;">เข้าสู่เว็บไซต์: <a href="https://portal.pdpa.click/dl" style="color: #2563eb;">portal.pdpa.click/dl</a></p>
+            <p style="margin: 4px 0;">เข้าสู่เว็บไซต์: <a href="https://utopia.pdpa.click/dl" style="color: #2563eb;">utopia.pdpa.click/dl</a></p>
             <p style="margin: 4px 0;">และระบุรหัสอ้างอิง: <strong>${trackingNo}</strong></p>
           </div>
           <p style="font-size: 12px; color: #64748b;">
@@ -309,9 +324,13 @@ export function createRequestsRouter(dbPool, authenticateJWT, requireRole, addSe
       let query = 'SELECT data FROM requests ORDER BY created_at DESC';
       let params = [];
       
-      if (!req.user.isSuperAdmin) {
+      if (req.user.role !== 'superadmin') {
+        let targetOrgId = req.user.orgId;
+        if (process.env.SYSTEM_MODE === 'SINGLE_NODE') {
+          targetOrgId = 'default-tenant';
+        }
         query = 'SELECT data FROM requests WHERE org_id = $1 ORDER BY created_at DESC';
-        params = [req.user.orgId];
+        params = [targetOrgId];
       }
       
       const { rows } = await dbPool.query(query, params);
@@ -332,9 +351,11 @@ export function createRequestsRouter(dbPool, authenticateJWT, requireRole, addSe
     try {
       let query = 'SELECT data FROM requests';
       let params = [];
-      if (!req.user.isSuperAdmin) {
+      if (!(req.user.role === 'superadmin')) {
+        let targetOrgId = req.user.orgId;
+        if (process.env.SYSTEM_MODE === 'SINGLE_NODE') targetOrgId = 'default-tenant';
         query = 'SELECT data FROM requests WHERE org_id = $1';
-        params = [req.user.orgId];
+        params = [targetOrgId];
       }
       const { rows } = await dbPool.query(query, params);
       const requests = rows.map(r => r.data || {});
@@ -353,10 +374,10 @@ export function createRequestsRouter(dbPool, authenticateJWT, requireRole, addSe
   router.get('/requests/:id/header', authenticateJWT, async (req, res) => {
     try {
       const { id } = req.params;
-      const queryStr = req.user.isSuperAdmin
+      const queryStr = (req.user.role === 'superadmin')
         ? 'SELECT data FROM requests WHERE id = $1'
         : 'SELECT data FROM requests WHERE id = $1 AND org_id = $2';
-      const params = req.user.isSuperAdmin ? [id] : [id, req.user.orgId];
+      const params = (req.user.role === 'superadmin') ? [id] : [id, req.user.orgId];
       const { rows } = await dbPool.query(queryStr, params);
       if (!rows.length) return res.status(404).json({ success: false, message: 'Not found' });
 
@@ -386,10 +407,10 @@ export function createRequestsRouter(dbPool, authenticateJWT, requireRole, addSe
   router.get('/requests/:id/tasks', authenticateJWT, async (req, res) => {
     try {
       const { id } = req.params;
-      const queryStr = req.user.isSuperAdmin
+      const queryStr = (req.user.role === 'superadmin')
         ? "SELECT data->'dataCollectionTasks' as tasks FROM requests WHERE id = $1"
         : "SELECT data->'dataCollectionTasks' as tasks FROM requests WHERE id = $1 AND org_id = $2";
-      const params = req.user.isSuperAdmin ? [id] : [id, req.user.orgId];
+      const params = (req.user.role === 'superadmin') ? [id] : [id, req.user.orgId];
       const { rows } = await dbPool.query(queryStr, params);
       if (!rows.length) return res.status(404).json({ success: false, message: 'Not found' });
       res.json({ success: true, tasks: rows[0].tasks || [] });
@@ -402,10 +423,10 @@ export function createRequestsRouter(dbPool, authenticateJWT, requireRole, addSe
   router.get('/requests/:id/timeline', authenticateJWT, async (req, res) => {
     try {
       const { id } = req.params;
-      const queryStr = req.user.isSuperAdmin
+      const queryStr = (req.user.role === 'superadmin')
         ? "SELECT data->'statusHistory' as history, data->'slaEvents' as sla_events FROM requests WHERE id = $1"
         : "SELECT data->'statusHistory' as history, data->'slaEvents' as sla_events FROM requests WHERE id = $1 AND org_id = $2";
-      const params = req.user.isSuperAdmin ? [id] : [id, req.user.orgId];
+      const params = (req.user.role === 'superadmin') ? [id] : [id, req.user.orgId];
       const { rows } = await dbPool.query(queryStr, params);
       if (!rows.length) return res.status(404).json({ success: false, message: 'Not found' });
       res.json({ success: true, statusHistory: rows[0].history || [], slaEvents: rows[0].sla_events || [] });
@@ -418,10 +439,10 @@ export function createRequestsRouter(dbPool, authenticateJWT, requireRole, addSe
   router.get('/requests/:id/decision', authenticateJWT, requireRole(['admin', 'dpo', 'approver', 'superadmin']), async (req, res) => {
     try {
       const { id } = req.params;
-      const queryStr = req.user.isSuperAdmin
+      const queryStr = (req.user.role === 'superadmin')
         ? "SELECT data->'decision' as decision, data->'redactionRecords' as redactions FROM requests WHERE id = $1"
         : "SELECT data->'decision' as decision, data->'redactionRecords' as redactions FROM requests WHERE id = $1 AND org_id = $2";
-      const params = req.user.isSuperAdmin ? [id] : [id, req.user.orgId];
+      const params = (req.user.role === 'superadmin') ? [id] : [id, req.user.orgId];
       const { rows } = await dbPool.query(queryStr, params);
       if (!rows.length) return res.status(404).json({ success: false, message: 'Not found' });
       res.json({ success: true, decision: rows[0].decision || null, redactionRecords: rows[0].redactions || [] });
@@ -437,7 +458,7 @@ export function createRequestsRouter(dbPool, authenticateJWT, requireRole, addSe
       let params = [];
       
       // Non-superadmins only see logs for their org
-      if (!req.user.isSuperAdmin) {
+      if (!(req.user.role === 'superadmin')) {
         query = 'SELECT * FROM audit_logs WHERE org_id = $1 ORDER BY timestamp DESC LIMIT 500';
         params = [req.user.orgId];
       }
@@ -510,7 +531,7 @@ export function createRequestsRouter(dbPool, authenticateJWT, requireRole, addSe
       } catch (e) {}
 
       // Build the public download URL
-      const baseUrl = process.env.APP_BASE_URL || `https://portal.pdpa.click`;
+      const baseUrl = process.env.APP_BASE_URL || `https://utopia.pdpa.click`;
       const downloadUrl = `${baseUrl}/dl/${token}`;
 
       // Generate QR code as data URL

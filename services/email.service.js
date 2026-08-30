@@ -80,7 +80,9 @@ export async function getTaximailSessionId() {
   }
 }
 
-export async function sendMailWithFallback(mailOptions) {
+import { enqueueEmail } from './email.queue.js';
+
+export async function executeEmailSend(mailOptions) {
   // PRIMARY: Use Resend REST API if API key is configured
   if (process.env.RESEND_API_KEY) {
     try {
@@ -202,6 +204,13 @@ export async function sendMailWithFallback(mailOptions) {
   throw new Error(`All ${transporters.length} SMTP accounts failed. Last error: ${lastError.message}`);
 }
 
+export async function sendMailWithFallback(mailOptions, priority = 10) {
+  // Automatically assign highest priority (1) to OTP emails
+  if (mailOptions.subject && mailOptions.subject.includes('OTP')) {
+    priority = 1;
+  }
+  return enqueueEmail(mailOptions, priority);
+}
 // --- WORKFLOW EMAIL LOGGING & HELPERS ---
 export const workflowEmailLogs = [];
 
@@ -342,6 +351,18 @@ export const sendWorkflowNotification = async (request, oldStatus, newStatus, ev
     flowMessageTh = `เจ้าหน้าที่ได้ตอบกลับข้อความหรือชี้แจงข้อมูลเพิ่มเติมผ่านระบบ Message Board สำหรับคำขอใช้สิทธิ์ PDPA เลขที่ ${trackingNo} เรียบร้อยแล้ว<br/><br/><div style="background-color: #f8fafc; padding: 12px 16px; border-left: 4px solid #0ea5e9; border-radius: 4px;"><strong>ข้อความจากเจ้าหน้าที่:</strong><br/>"${latestMessage}"</div>`;
     nextActionTh = `ท่านสามารถเข้าสู่ระบบเพื่อตรวจสอบข้อความตอบกลับและสนทนากับเจ้าหน้าที่ได้โดยตรง`;
     if (citizenEmail) addRecipients([citizenEmail], 'ผู้ยื่นคำขอ', 'ตรวจสอบข้อความตอบกลับจากเจ้าหน้าที่');
+  } else if (eventType === 'RETURN_TO_OWNER') {
+    const hist = request.statusHistory || [];
+    const lastHist = hist[hist.length - 1];
+    const reason = (lastHist && lastHist.comment) ? lastHist.comment.replace('DPO ตีกลับให้รวบรวมข้อมูลใหม่:', '').trim() : '';
+    
+    subject = `[PDPA Portal] ⚠️ แจ้งเตือน: คำร้องเลขที่ ${trackingNo} ถูกตีกลับให้รวบรวมข้อมูลใหม่`;
+    flowMessageTh = `คำขอใช้สิทธิ์ PDPA เลขที่ ${trackingNo} <strong>ถูกตีกลับให้รวบรวมข้อมูลใหม่</strong> เนื่องจากความไม่สมบูรณ์ของข้อมูลที่รวบรวมในขั้นตอนก่อนหน้า 
+<br/><br/><div style="background-color: #fffbeb; padding: 12px 16px; border-left: 4px solid #f59e0b; border-radius: 4px; color: #b45309;"><strong>เหตุผลการตีกลับ:</strong><br/>"${reason || 'ไม่ระบุ'}"</div>`;
+    
+    addRecipients(ownerEmails, 'เจ้าหน้าที่ข้อมูล (Data Owner)', 'เร่งรัดแก้ไขและรวบรวมข้อมูลใหม่');
+    addRecipients(dpoEmails, 'เจ้าหน้าที่ DPO', 'รับทราบระบบแจ้งเตือนกลับไปยัง Data Owner');
+    nextActionTh = `เจ้าหน้าที่ผู้ครอบครองข้อมูล (Data Owner) โปรดดำเนินการเข้าสู่ระบบเพื่อแก้ไข รวบรวมข้อมูล และอัปโหลดไฟล์ให้ครบถ้วนถูกต้องตามที่ระบุในเหตุผลการตีกลับ จากนั้นกดปุ่มส่งเรื่องไปยัง Flow ถัดไป เพื่อให้ DPO หรือฝ่ายกฎหมายพิจารณาอีกครั้ง`;
   } else {
     subject = `[PDPA Portal] แจ้งอัปเดตสถานะคำขอ ${trackingNo} -> ${statusNameTh}`;
     flowMessageTh = `คำขอใช้สิทธิ์ PDPA เลขที่ ${trackingNo} มีการเปลี่ยนสถานะจาก "${oldStatus ? getStatusNameTh(oldStatus) : 'ไม่ระบุ'}" เป็น "${statusNameTh}"`;
@@ -387,7 +408,10 @@ export const sendWorkflowNotification = async (request, oldStatus, newStatus, ev
   // Generate Email HTML Content
   const htmlContent = `
     <div style="font-family: 'Sarabun', sans-serif, Tahoma; max-width: 640px; margin: 0 auto; border: 1px solid #cbd5e1; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 16px rgba(0,0,0,0.06);">
-      <div style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); padding: 24px; text-align: center;">
+      <div style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); padding: 32px 24px; text-align: center;">
+        <div style="background-color: #ffffff; width: 64px; height: 64px; margin: 0 auto 16px; border-radius: 12px; overflow: hidden; padding: 4px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+          <img src="https://utopia.pdpa.click/pdpa-logo.jpg" alt="PDPA Logo" style="width: 100%; height: 100%; object-fit: cover; display: block;" />
+        </div>
         <h2 style="color: #ffffff; margin: 0; font-size: 20px;">ระบบบริหารจัดการสิทธิ์ PDPA (PDPA Access Portal)</h2>
         <p style="color: #e0f2fe; margin: 6px 0 0; font-size: 14px;">การแจ้งเตือนความคืบหน้าคำขอตาม Flow เอกสาร</p>
       </div>
@@ -418,7 +442,7 @@ export const sendWorkflowNotification = async (request, oldStatus, newStatus, ev
           <p style="margin: 0; color: #15803d; font-size: 14px;">${nextActionTh}</p>
         </div>
         <div style="text-align: center; margin-top: 28px;">
-          <a href="${process.env.FRONTEND_URL || 'https://portal.pdpa.click'}" style="background-color: #0284c7; color: #ffffff; text-decoration: none; padding: 12px 28px; border-radius: 8px; font-weight: bold; font-size: 14px; display: inline-block;">
+          <a href="${process.env.FRONTEND_URL || 'https://utopia.pdpa.click'}" style="background-color: #0284c7; color: #ffffff; text-decoration: none; padding: 12px 28px; border-radius: 8px; font-weight: bold; font-size: 14px; display: inline-block;">
             เข้าสู่ระบบเพื่อตรวจสอบคำขอ (PDPA Portal)
           </a>
         </div>
@@ -494,3 +518,6 @@ export const maskIpAddress = (ipStr) => {
   }
   return '***.***.***.***';
 };
+
+
+

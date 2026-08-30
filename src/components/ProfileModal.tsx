@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Upload, Save, User, CheckCircle, Trash2 } from 'lucide-react';
+import { X, Upload, Save, User, CheckCircle, Trash2, ShieldAlert } from 'lucide-react';
 
 interface ProfileModalProps {
   isOpen: boolean;
@@ -7,9 +7,10 @@ interface ProfileModalProps {
   currentUser: any;
   onProfileUpdate: (updatedUser: any) => void;
   showNotify: (message: string, type?: any, title?: string, onConfirm?: () => void, onCancel?: () => void) => void;
+  onOpenTotpSetup: () => void;
 }
 
-export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, currentUser, onProfileUpdate, showNotify }) => {
+export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, currentUser, onProfileUpdate, showNotify, onOpenTotpSetup }) => {
   const [signatureImage, setSignatureImage] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
 
@@ -97,6 +98,22 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, cur
               <div className="font-bold text-slate-800">{currentUser?.fullNameTh || currentUser?.username}</div>
               <div className="text-sm text-slate-500">{currentUser?.email} ({currentUser?.role})</div>
             </div>
+          </div>
+
+          <div className="bg-indigo-50/50 p-4 rounded-lg border border-indigo-100 flex items-center justify-between">
+            <div>
+              <div className="font-bold text-slate-800 text-sm flex items-center gap-1.5">
+                <ShieldAlert className="h-4 w-4 text-indigo-600" />
+                ความปลอดภัยสองชั้น (2FA)
+              </div>
+              <div className="text-xs text-slate-500 mt-1">ผูกแอปพลิเคชัน Authenticator เพื่อรับรหัสเข้าสู่ระบบแบบไม่ต้องรออีเมล</div>
+            </div>
+            <button 
+              onClick={onOpenTotpSetup}
+              className="shrink-0 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold py-2 px-4 rounded-lg transition shadow-sm"
+            >
+              ตั้งค่าแอป Authenticator
+            </button>
           </div>
 
           <div>

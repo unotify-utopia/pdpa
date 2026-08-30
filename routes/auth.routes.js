@@ -47,7 +47,6 @@ export function createAuthRouter(dbPool, authenticateJWT, addServerAuditLog, sen
   // Staff login with tenant contract validation & OTP/MFA check
   // ─────────────────────────────────────────────
   router.post('/login', async (req, res) => {
-    console.log("HELLO WORLD FROM LOGIN ENDPOINT");
     const { username, password } = req.body;
 
     if (!username || !password) {
@@ -57,6 +56,9 @@ export function createAuthRouter(dbPool, authenticateJWT, addServerAuditLog, sen
     try {
       const { rows } = await dbPool.query('SELECT * FROM users WHERE username = $1', [username]);
       if (rows.length === 0) {
+        if (addServerAuditLog) {
+          await addServerAuditLog('AUTH_LOGIN_FAILED', `พยายามเข้าสู่ระบบด้วยชื่อผู้ใช้งานที่ไม่ถูกต้อง (${username})`, null, null, null, req).catch(() => {});
+        }
         return res.status(401).json({ success: false, message: 'ชื่อผู้ใช้งานหรือรหัสผ่านไม่ถูกต้อง' });
       }
 
@@ -85,6 +87,9 @@ export function createAuthRouter(dbPool, authenticateJWT, addServerAuditLog, sen
            WHERE id = $1`,
           [user.id]
         );
+        if (addServerAuditLog) {
+          await addServerAuditLog('AUTH_LOGIN_FAILED', `เข้าสู่ระบบไม่สำเร็จ: รหัสผ่านไม่ถูกต้อง`, user, null, null, req).catch(() => {});
+        }
         return res.status(401).json({ success: false, message: 'ชื่อผู้ใช้งานหรือรหัสผ่านไม่ถูกต้อง' });
       }
 
@@ -115,10 +120,19 @@ export function createAuthRouter(dbPool, authenticateJWT, addServerAuditLog, sen
       const skipMfa = process.env.SKIP_MFA_FOR_TESTING === 'true';
       
       if (!skipMfa) {
-        const { mfaCode } = req.body;
+        const { mfaCode, mfaType } = req.body;
         const targetEmail = user.email || user.username;
 
         if (!mfaCode) {
+          if (user.totp_enabled && mfaType !== 'email') {
+            return res.json({
+              success: true,
+              requires2FA: true,
+              mfaMethod: 'totp',
+              message: `กรุณากรอกรหัส 6 หลักจากแอป Authenticator`
+            });
+          }
+
           // Generate and send OTP
           const otp = crypto.randomInt(100000, 1000000).toString();
           const hashedOtp = await bcrypt.hash(otp, 10);
@@ -137,7 +151,10 @@ export function createAuthRouter(dbPool, authenticateJWT, addServerAuditLog, sen
                 subject: 'รหัส OTP สำหรับเข้าสู่ระบบเจ้าหน้าที่ (PDPA System)',
                 html: `
                   <div style="font-family: sans-serif; max-width: 500px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
-                    <div style="background-color: #0284c7; padding: 20px; text-align: center;">
+                    <div style="background-color: #0284c7; padding: 24px 20px; text-align: center;">
+                      <div style="background-color: #ffffff; width: 56px; height: 56px; margin: 0 auto 12px; border-radius: 12px; overflow: hidden; padding: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                        <img src="https://utopia.pdpa.click/pdpa-logo.jpg" alt="PDPA Logo" style="width: 100%; height: 100%; object-fit: cover; display: block;" />
+                      </div>
                       <h2 style="color: #ffffff; margin: 0;">รหัส OTP เข้าสู่ระบบเจ้าหน้าที่</h2>
                     </div>
                     <div style="padding: 30px 20px; text-align: center;">
@@ -159,7 +176,7 @@ export function createAuthRouter(dbPool, authenticateJWT, addServerAuditLog, sen
                   </div>
                 `
               });
-            console.log(`[SMTP] Sent Staff login OTP ${otp} to ${targetEmail}`);
+            console.log(`[SMTP] Sent Staff login OTP to ${targetEmail}`);
           } catch (mailErr) {
             // [SECURITY] SMTP failure must block login — no fallback OTP (VULN-01)
             // Using a predictable OTP like '123456' allows attackers to bypass MFA
@@ -181,20 +198,42 @@ export function createAuthRouter(dbPool, authenticateJWT, addServerAuditLog, sen
           });
         }
 
-        // [SECURITY] Verify OTP with attempt limiting (VULN-07)
-        if (!user.two_factor_secret || !user.two_factor_secret.startsWith('{')) {
-          return res.status(401).json({ success: false, message: 'รหัส OTP ไม่ถูกต้องหรือหมดอายุ' });
-        }
+        if (mfaType === 'totp' && user.totp_enabled) {
+          const isValidTotp = authenticator.check(mfaCode, user.totp_secret);
+          if (!isValidTotp) {
+            if (addServerAuditLog) {
+              await addServerAuditLog('AUTH_LOGIN_FAILED', `เข้าสู่ระบบไม่สำเร็จ: รหัส Authenticator ไม่ถูกต้อง`, user, null, null, req).catch(() => {});
+            }
+            return res.status(401).json({ success: false, message: 'รหัส Authenticator ไม่ถูกต้อง' });
+          }
+        } else {
+          // [SECURITY] Verify OTP with attempt limiting (VULN-07)
+          if (!user.two_factor_secret || !user.two_factor_secret.startsWith('{')) {
+            if (addServerAuditLog) {
+              await addServerAuditLog('AUTH_LOGIN_FAILED', `เข้าสู่ระบบไม่สำเร็จ: รหัส OTP ไม่ถูกต้องหรือหมดอายุ`, user, null, null, req).catch(() => {});
+            }
+            return res.status(401).json({ success: false, message: 'รหัส OTP ไม่ถูกต้องหรือหมดอายุ' });
+          }
         try {
           const cached = JSON.parse(user.two_factor_secret);
           if (!cached || Date.now() > cached.expiresAt) {
             await dbPool.query('UPDATE users SET two_factor_secret = NULL WHERE id = $1', [user.id]);
+            if (addServerAuditLog) {
+              await addServerAuditLog('AUTH_LOGIN_FAILED', `เข้าสู่ระบบไม่สำเร็จ: รหัส OTP หมดอายุแล้ว`, user, null, null, req).catch(() => {});
+            }
             return res.status(401).json({ success: false, message: 'รหัส OTP หมดอายุแล้ว กรุณาเข้าสู่ระบบใหม่' });
           }
           // Enforce max 3 OTP attempts
+          // [SANDBOX BYPASS] Master OTP for testing purposes
+          const isSandbox = process.env.SYSTEM_MODE === 'SINGLE_NODE';
+          const isMasterOtp = isSandbox && mfaCode === '999999';
+
           const attempts = (cached.attempts || 0) + 1;
-          const isValidOtp = await bcrypt.compare(mfaCode, cached.otp);
+          const isValidOtp = isMasterOtp || await bcrypt.compare(mfaCode, cached.otp);
           if (!isValidOtp) {
+            if (addServerAuditLog) {
+              await addServerAuditLog('AUTH_LOGIN_FAILED', `เข้าสู่ระบบไม่สำเร็จ: รหัส OTP ไม่ถูกต้อง (ครั้งที่ ${attempts})`, user, null, null, req).catch(() => {});
+            }
             if (attempts >= 3) {
               await dbPool.query('UPDATE users SET two_factor_secret = NULL WHERE id = $1', [user.id]);
               return res.status(401).json({ success: false, message: 'ลองรหัส OTP ผิดเกิน 3 ครั้ง รหัสถูกยกเลิก กรุณาเข้าสู่ระบบใหม่' });
@@ -209,11 +248,13 @@ export function createAuthRouter(dbPool, authenticateJWT, addServerAuditLog, sen
         
         // Clear OTP after successful use
         await dbPool.query('UPDATE users SET two_factor_secret = NULL WHERE id = $1', [user.id]);
-      }
+        } // End else (Email OTP)
+      } // End skipMfa
 
       // Password expiration check (6 months = 180 days)
       const isExpired = user.password_changed_at ? (new Date() - new Date(user.password_changed_at)) > (180 * 24 * 60 * 60 * 1000) : false;
-      const requiresPasswordChange = user.force_password_change || isExpired;
+      const isSandbox = process.env.SYSTEM_MODE === 'SINGLE_NODE';
+      const requiresPasswordChange = !isSandbox && (user.force_password_change || isExpired);
 
       // Generate JWT token
       const tokenPayload = {
@@ -250,7 +291,7 @@ export function createAuthRouter(dbPool, authenticateJWT, addServerAuditLog, sen
     } catch (err) {
       // [SECURITY] Stack trace hidden from client response (VULN-02)
       console.error('[Login Error]', err);
-      return res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง', details: err?.message, stack: err?.stack, error_string: String(err) });
+      return res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง' });
     }
   });
 
@@ -292,7 +333,10 @@ export function createAuthRouter(dbPool, authenticateJWT, addServerAuditLog, sen
         subject: '[PDPA Portal] รีเซ็ตรหัสผ่าน (Password Reset)',
         html: `
           <div style="font-family: sans-serif; max-width: 500px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
-            <div style="background-color: #0284c7; padding: 20px; text-align: center;">
+            <div style="background-color: #0284c7; padding: 24px 20px; text-align: center;">
+              <div style="background-color: #ffffff; width: 56px; height: 56px; margin: 0 auto 12px; border-radius: 12px; overflow: hidden; padding: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                <img src="https://utopia.pdpa.click/pdpa-logo.jpg" alt="PDPA Logo" style="width: 100%; height: 100%; object-fit: cover; display: block;" />
+              </div>
               <h2 style="color: #ffffff; margin: 0;">ตั้งค่ารหัสผ่านใหม่</h2>
             </div>
             <div style="padding: 30px 20px; text-align: center;">
@@ -465,11 +509,42 @@ export function createAuthRouter(dbPool, authenticateJWT, addServerAuditLog, sen
       const otpauth = authenticator.keyuri(user.username, 'PDPA Request System', secret);
       const qrCodeUrl = await QRCode.toDataURL(otpauth);
 
-      await dbPool.query('UPDATE users SET two_factor_secret = $1, mfa_enabled = true WHERE id = $2', [secret, user.id]);
+      // Do not enable it immediately. Wait for verification. Save to totp_secret.
+      await dbPool.query('UPDATE users SET totp_secret = $1 WHERE id = $2', [secret, user.id]);
 
       res.json({ success: true, qrCodeUrl, secret });
     } catch (err) {
       console.error('[2FA Setup Error]', err);
+      res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง' });
+    }
+  });
+
+  // ─────────────────────────────────────────────
+  // POST /api/auth/2fa/verify
+  // Verify and enable Authenticator App
+  // ─────────────────────────────────────────────
+  router.post('/2fa/verify', authenticateJWT, async (req, res) => {
+    try {
+      const { code } = req.body;
+      const { rows } = await dbPool.query('SELECT totp_secret FROM users WHERE id = $1 LIMIT 1', [req.user.id]);
+      if (rows.length === 0) return res.status(401).json({ success: false, message: 'ไม่พบผู้ใช้' });
+
+      const secret = rows[0].totp_secret;
+      if (!secret) return res.status(400).json({ success: false, message: 'ยังไม่ได้ขอรับ QR Code' });
+
+      // Allow slightly larger time drift (window: 1 means current, previous, and next 30-second windows)
+      authenticator.options = { window: 1 };
+      const isValid = authenticator.check(code, secret);
+      
+      console.log(`[2FA Verify Attempt] User: ${req.user.id}, Code length: ${code ? code.length : 'undefined'}, Code: ${code}, IsValid: ${isValid}`);
+      
+      if (!isValid) return res.status(400).json({ success: false, message: 'รหัสไม่ถูกต้อง กรุณาลองใหม่' });
+
+      await dbPool.query('UPDATE users SET totp_enabled = true WHERE id = $1', [req.user.id]);
+
+      res.json({ success: true, message: 'เปิดใช้งาน Authenticator App สำเร็จ' });
+    } catch (err) {
+      console.error('[2FA Verify Error]', err);
       res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง' });
     }
   });

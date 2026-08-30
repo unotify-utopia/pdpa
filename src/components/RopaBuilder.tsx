@@ -122,13 +122,13 @@ export default function RopaBuilder({ activeUser, masterData, activityId, onBack
           await uploadFiles(actId);
         }
         
-        alert('บันทึกแบบร่างสำเร็จ');
+        if (showNotify) showNotify('บันทึกแบบร่างสำเร็จ', 'success'); else alert('บันทึกแบบร่างสำเร็จ');
       } else {
-        alert('เกิดข้อผิดพลาด: ' + data.message);
+        if (showNotify) showNotify('เกิดข้อผิดพลาด: ' + data.message, 'error'); else alert('เกิดข้อผิดพลาด: ' + data.message);
       }
     } catch (err) {
       console.error(err);
-      alert('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์');
+      if (showNotify) showNotify('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์', 'error'); else alert('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์');
     } finally {
       setSubmitting(false);
     }
@@ -166,7 +166,7 @@ export default function RopaBuilder({ activeUser, masterData, activityId, onBack
 
   const handleSubmitReview = async () => {
     if (!formData.id) {
-      alert('กรุณาบันทึกข้อมูลก่อนส่งตรวจสอบ');
+      if (showNotify) showNotify('กรุณาบันทึกข้อมูลก่อนส่งตรวจสอบ', 'warning'); else alert('กรุณาบันทึกข้อมูลก่อนส่งตรวจสอบ');
       return;
     }
     if (!confirm('ยืนยันส่งข้อมูลให้ DPO ตรวจสอบ? (เอกสารจะถูกเปลี่ยนเป็นสถานะรอตรวจสอบ)')) return;
@@ -181,10 +181,10 @@ export default function RopaBuilder({ activeUser, masterData, activityId, onBack
       
       const data = await res.json();
       if (data.success) {
-        alert('ส่งตรวจสอบสำเร็จ');
+        if (showNotify) showNotify('ส่งตรวจสอบสำเร็จ', 'success'); else alert('ส่งตรวจสอบสำเร็จ');
         onBack();
       } else {
-        alert('เกิดข้อผิดพลาด: ' + data.message);
+        if (showNotify) showNotify('เกิดข้อผิดพลาด: ' + data.message, 'error'); else alert('เกิดข้อผิดพลาด: ' + data.message);
       }
     } catch (err) {
       console.error(err);

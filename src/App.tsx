@@ -84,6 +84,7 @@ import RopaManager from './components/RopaManager';
 import { CookieBanner } from './components/CookieBanner';
 import { CookieSettingsModal } from './components/CookieSettingsModal';
 import { CookiePolicy } from './components/CookiePolicy';
+import { TotpSetupModal } from './components/TotpSetupModal';
 
 // Helper: Thai Citizen ID Modulus 11 Checksum Validator
 export const validateThaiCitizenId = (id: string): boolean => {
@@ -208,6 +209,15 @@ export default function App() {
   const [isForcePasswordChange, setIsForcePasswordChange] = useState(false);
   const [resetTokenForModal, setResetTokenForModal] = useState<string | null>(null);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+
+  // TOTP Setup State
+  const [totpSetupModal, setTotpSetupModal] = useState({
+    open: false,
+    qrCodeUrl: '',
+    secret: '',
+    codeInput: '',
+    loading: false
+  });
   const [manualChannel, setManualChannel] = useState<'office' | 'post' | 'email' | 'e-service'>('office');
   const [manualRefNo, setManualRefNo] = useState('');
   const [manualEntrySuccessTrackingNo, setManualEntrySuccessTrackingNo] = useState<string | null>(null);
@@ -313,6 +323,58 @@ export default function App() {
     setPublicTab('landing');
     if (reason) {
       showNotify(reason);
+    }
+  };
+
+  const openTotpSetup = async () => {
+    setTotpSetupModal({ open: true, qrCodeUrl: '', secret: '', codeInput: '', loading: true });
+    setIsProfileModalOpen(false); // Close profile modal when opening setup
+    try {
+      const token = sessionStorage.getItem('pdpa_token');
+      const res = await fetch('/api/auth/2fa/setup', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (data.success) {
+        setTotpSetupModal(prev => ({ ...prev, qrCodeUrl: data.qrCodeUrl, secret: data.secret, loading: false }));
+      } else {
+        showNotify(data.message || 'ไม่สามารถสร้างการตั้งค่า 2FA ได้', 'error');
+        setTotpSetupModal(prev => ({ ...prev, open: false }));
+      }
+    } catch (err) {
+      showNotify('การเชื่อมต่อขัดข้อง', 'error');
+      setTotpSetupModal(prev => ({ ...prev, open: false }));
+    }
+  };
+
+  const verifyTotpSetup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (totpSetupModal.codeInput.length !== 6) return;
+    try {
+      const token = sessionStorage.getItem('pdpa_token');
+      const res = await fetch('/api/auth/2fa/verify', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ code: totpSetupModal.codeInput })
+      });
+      const data = await res.json();
+      if (data.success) {
+        showNotify('ตั้งค่า Authenticator App เรียบร้อยแล้ว!', 'success');
+        setTotpSetupModal({ open: false, qrCodeUrl: '', secret: '', codeInput: '', loading: false });
+        if (activeUser) {
+          const updatedUser = { ...activeUser, totp_enabled: true };
+          setActiveUser(updatedUser);
+          setCurrentUser(updatedUser);
+        }
+      } else {
+        showNotify(data.message || 'รหัสไม่ถูกต้อง', 'error');
+      }
+    } catch (err) {
+      showNotify('การเชื่อมต่อขัดข้อง', 'error');
     }
   };
 
@@ -1347,7 +1409,7 @@ export default function App() {
       
     } catch (e) {
       console.error('Download error:', e);
-      alert('ไม่สามารถดาวน์โหลดไฟล์ได้: ' + (e instanceof Error ? e.message : 'รหัส OTP ไม่ถูกต้องหรือเกิดข้อผิดพลาดภายในระบบ'));
+      showNotify('ไม่สามารถดาวน์โหลดไฟล์ได้: ' + (e instanceof Error ? e.message : 'รหัส OTP ไม่ถูกต้องหรือเกิดข้อผิดพลาดภายในระบบ', "error"));
     }
   };
 
@@ -1584,14 +1646,14 @@ export default function App() {
     const file = files[0];
     
     if (file.size > 3 * 1024 * 1024) {
-      alert('ขนาดไฟล์เกิน 3MB (จำกัดที่ 3MB เนื่องจากข้อจำกัดของ Cloud Server)');
+      showNotify('ขนาดไฟล์เกิน 3MB (จำกัดที่ 3MB เนื่องจากข้อจำกัดของ Cloud Server, "error")');
       return;
     }
     
     const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
     const isImage = file.type.startsWith('image/') || file.name.toLowerCase().match(/\.(jpg|jpeg|png)$/);
     if (!isPdf && !isImage) {
-      alert('กรุณาอัปโหลดไฟล์ PDF หรือรูปภาพ (JPG/PNG) เท่านั้น');
+      showNotify('กรุณาอัปโหลดไฟล์ PDF หรือรูปภาพ (JPG/PNG, "error") เท่านั้น');
       return;
     }
 
@@ -1636,7 +1698,7 @@ export default function App() {
               reloadData();
             }
           } else {
-            alert('อัปโหลดไม่สำเร็จ: ' + data.message);
+            showNotify('อัปโหลดไม่สำเร็จ: ' + data.message, "error");
           }
         } else {
           let errText = 'Upload failed';
@@ -1646,10 +1708,10 @@ export default function App() {
           } catch(err) {
             errText = res.statusText;
           }
-          alert(`อัปโหลดไม่สำเร็จ (HTTP ${res.status}): ${errText}`);
+          showNotify(`อัปโหลดไม่สำเร็จ (HTTP ${res.status}, "error"): ${errText}`);
         }
       } catch (err: any) {
-        alert('เกิดข้อผิดพลาดในการอัปโหลด: ' + err.message);
+        showNotify('เกิดข้อผิดพลาดในการอัปโหลด: ' + err.message, "error");
       }
     };
     reader.readAsDataURL(file);
@@ -1661,20 +1723,21 @@ export default function App() {
     if (!req) return;
     const t = req.dataCollectionTasks.find((t: any) => t.id === taskId);
     if (t) {
-      if (!confirm(`คุณแน่ใจหรือไม่ที่จะแจ้งว่า "ไม่พบข้อมูล" สำหรับระบบ ${t.systemName}?`)) return;
-      t.status = 'not_found';
-      t.completedAt = new Date().toISOString();
-      t.completedBy = activeUser.fullNameTh;
-      t.dataLineage = `ระบบ ${t.systemName} -> กวาดค้นหาด้วย SQL / Index -> ไม่พบข้อมูล`;
-      updateRequest(req, activeUser, 'MARK_NOT_FOUND', `เจ้าหน้าที่แจ้งว่าไม่พบข้อมูลในระบบ ${t.systemName}`);
-      reloadData();
+      showNotify(`คุณแน่ใจหรือไม่ที่จะแจ้งว่า "ไม่พบข้อมูล" สำหรับระบบ ${t.systemName}?`, 'confirm', 'ยืนยันการดำเนินการ', () => {
+        t.status = 'not_found';
+        t.completedAt = new Date().toISOString();
+        t.completedBy = activeUser.fullNameTh;
+        t.dataLineage = `ระบบ ${t.systemName} -> กวาดค้นหาด้วย SQL / Index -> ไม่พบข้อมูล`;
+        updateRequest(req, activeUser, 'MARK_NOT_FOUND', `เจ้าหน้าที่แจ้งว่าไม่พบข้อมูลในระบบ ${t.systemName}`);
+        reloadData();
+      });
     }
   };
 
   const handleTaskFileDelete = async (reqId: string, taskId: string, fileId: string) => {
     if (!activeUser) return;
-    if (!confirm('ยืนยันการลบไฟล์นี้? (ไฟล์จะถูกลบออกจากหน้าจอผู้ใช้ แต่ยังคงเก็บประวัติไว้ในระบบ)')) return;
-    try {
+    showNotify('ยืนยันการลบไฟล์นี้? (ไฟล์จะถูกลบออกจากหน้าจอผู้ใช้ แต่ยังคงเก็บประวัติไว้ในระบบ)', 'confirm', 'ยืนยันการดำเนินการ', async () => {
+      try {
       const res = await fetch(`/api/requests/${reqId}/tasks/${taskId}/files/${fileId}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${sessionStorage.getItem('pdpa_jwt_token')}` }
@@ -1691,39 +1754,41 @@ export default function App() {
           reloadData();
         }
       } else {
-        alert('ลบไม่สำเร็จ');
+        showNotify('ลบไม่สำเร็จ', "error");
       }
     } catch (e) {
-      alert('เกิดข้อผิดพลาดในการลบไฟล์');
-    }
+        showNotify('เกิดข้อผิดพลาดในการลบไฟล์', "error");
+      }
+    });
   };
 
   const handleOwnerEscalateFlow = (reqId: string) => {
     if (!activeUser) return;
-    if (!confirm('คุณแน่ใจหรือไม่ที่จะแจ้งว่าไม่พบข้อมูล และส่งเรื่องนี้ข้ามไปยังผู้บริหารโดยตรง?')) return;
-    const req = getRequestClone(reqId);
-    if (!req) return;
+    showNotify('คุณแน่ใจหรือไม่ที่จะแจ้งว่าไม่พบข้อมูล และส่งเรื่องนี้ข้ามไปยังผู้บริหารโดยตรง?', 'confirm', 'ยืนยันการดำเนินการ', () => {
+      const req = getRequestClone(reqId);
+      if (!req) return;
 
-    req.dataCollectionTasks.forEach((t: DataCollectionTask) => {
-      if (t.status === 'pending') {
-        t.status = 'not_found';
-        t.completedAt = new Date().toISOString();
-        t.completedBy = activeUser.fullNameTh;
-        t.dataLineage = `ระบบ ${t.systemName} -> กวาดค้นหาด้วย SQL / Index -> ไม่พบข้อมูล -> ส่งผู้บริหารตัดสินใจ`;
-      }
+      req.dataCollectionTasks.forEach((t: DataCollectionTask) => {
+        if (t.status === 'pending') {
+          t.status = 'not_found';
+          t.completedAt = new Date().toISOString();
+          t.completedBy = activeUser.fullNameTh;
+          t.dataLineage = `ระบบ ${t.systemName} -> กวาดค้นหาด้วย SQL / Index -> ไม่พบข้อมูล -> ส่งผู้บริหารตัดสินใจ`;
+        }
+      });
+
+      // Escalate the entire request to Executive Approval
+      req.status = 'Executive Approval';
+      req.statusHistory.push({
+        status: 'Executive Approval',
+        changedAt: new Date().toISOString(),
+        changedBy: activeUser.fullNameTh,
+        comment: `ส่งเรื่องให้ผู้บริหารตัดสินใจ เนื่องจากไม่พบข้อมูลในระบบ`
+      });
+
+      updateRequest(req, activeUser, 'ESCALATE_DATA_TASK', `ส่งเรื่องให้ผู้บริหารตัดสินใจ เนื่องจากไม่พบข้อมูล`);
+      reloadData();
     });
-
-    // Escalate the entire request to Executive Approval
-    req.status = 'Executive Approval';
-    req.statusHistory.push({
-      status: 'Executive Approval',
-      changedAt: new Date().toISOString(),
-      changedBy: activeUser.fullNameTh,
-      comment: `ส่งเรื่องให้ผู้บริหารตัดสินใจ เนื่องจากไม่พบข้อมูลในระบบ`
-    });
-
-    updateRequest(req, activeUser, 'ESCALATE_DATA_TASK', `ส่งเรื่องให้ผู้บริหารตัดสินใจ เนื่องจากไม่พบข้อมูล`);
-    reloadData();
   };
 
   const executeFileDownload = async () => {
@@ -1748,25 +1813,26 @@ export default function App() {
           watermarkApplied: file.watermarkApplied
         });
       } else {
-        alert('ดึงไฟล์ไม่สำเร็จ: ' + data.message);
+        showNotify('ดึงไฟล์ไม่สำเร็จ: ' + data.message, "error");
       }
     } catch (err) {
-      alert('เกิดข้อผิดพลาดในการดึงไฟล์');
+      showNotify('เกิดข้อผิดพลาดในการดึงไฟล์', "error");
     }
   };
 
   const handleUnassignTask = (reqId: string, taskId: string) => {
     if (!activeUser) return;
-    if (!confirm('ยืนยันการยกเลิกการมอบหมายงานสืบค้นนี้? (ข้อมูลภารกิจนี้จะถูกลบออกจากรายการ)')) return;
-    const req = getRequestClone(reqId);
-    if (!req) return;
-    const taskIndex = req.dataCollectionTasks.findIndex((t: any) => t.id === taskId);
-    if (taskIndex !== -1) {
-      const sysName = req.dataCollectionTasks[taskIndex].systemName;
-      req.dataCollectionTasks.splice(taskIndex, 1);
-      updateRequest(req, activeUser, 'UNASSIGN_TASK', `ยกเลิกการมอบหมายและลบภารกิจค้นหาระบบ ${sysName}`);
-      reloadData();
-    }
+    showNotify('ยืนยันการยกเลิกการมอบหมายงานสืบค้นนี้? (ข้อมูลภารกิจนี้จะถูกลบออกจากรายการ)', 'confirm', 'ยืนยันการดำเนินการ', () => {
+      const req = getRequestClone(reqId);
+      if (!req) return;
+      const taskIndex = req.dataCollectionTasks.findIndex((t: any) => t.id === taskId);
+      if (taskIndex !== -1) {
+        const sysName = req.dataCollectionTasks[taskIndex].systemName;
+        req.dataCollectionTasks.splice(taskIndex, 1);
+        updateRequest(req, activeUser, 'UNASSIGN_TASK', `ยกเลิกการมอบหมายและลบภารกิจค้นหาระบบ ${sysName}`);
+        reloadData();
+      }
+    });
   };
 
   // Redaction applied callback (Section 3.6)
@@ -1944,6 +2010,38 @@ export default function App() {
     await safeUpdateRequest(req, activeUser, 'SUBMIT_DPO_DECISION', `บันทึกคำพิจารณาผลและขออนุมัติอย่างเป็นทางการ`);
     reloadData();
   };
+
+  // Custom Modal State for Send Back to Data Collection
+  const [isSendBackModalOpen, setIsSendBackModalOpen] = useState(false);
+  const [sendBackReason, setSendBackReason] = useState('');
+  const [sendBackRequestId, setSendBackRequestId] = useState<string | null>(null);
+
+  const handleOpenSendBackModal = (reqId: string) => {
+    setSendBackRequestId(reqId);
+    setSendBackReason('');
+    setIsSendBackModalOpen(true);
+  };
+
+  const confirmSendBackToDataCollection = async () => {
+    if (!activeUser || !sendBackRequestId || !sendBackReason.trim()) return;
+    
+    const req = getRequestClone(sendBackRequestId);
+    if (!req) return;
+
+    req.status = 'Data Collection';
+    req.statusHistory.push({
+      status: 'Data Collection',
+      changedAt: new Date().toISOString(),
+      changedBy: activeUser.fullNameTh,
+      comment: `DPO ตีกลับให้รวบรวมข้อมูลใหม่: ${sendBackReason}`
+    });
+
+    await safeUpdateRequest(req, activeUser, 'SEND_BACK_TO_OWNER', `ตีกลับงานค้นหาให้ Data Owner แก้ไขข้อมูล`);
+    setIsSendBackModalOpen(false);
+    setSendBackRequestId(null);
+    reloadData();
+  };
+
 
   const handleApproverSign = async (reqId: string, resultStatus: 'Approved' | 'Partially Approved' | 'Denied' | 'No Data Found') => {
     if (!activeUser) return;
@@ -2351,7 +2449,9 @@ export default function App() {
       {/* Header Navigation Bar */}
       <div className="no-print bg-slate-900 text-slate-200 px-4 py-2 flex flex-wrap items-center justify-between text-xs gap-2 select-none border-b border-slate-800 z-10">
         <div className="flex items-center gap-2 font-bold">
-          <Shield className="h-4 w-4 text-brand-500" />
+          <div className="h-6 w-6 bg-white rounded flex items-center justify-center overflow-hidden shrink-0">
+            <img src="/pdpa-logo.jpg" alt="PDPA Logo" className="h-full w-full object-cover" />
+          </div>
           <span>ระบบบริหารจัดการการปฏิบัติตามกฎหมายคุ้มครองข้อมูลส่วนบุคคล (PDPA Compliance Management)</span>
         </div>
         
@@ -2521,6 +2621,19 @@ export default function App() {
           setCurrentUser(updatedUser);
         }}
         showNotify={showNotify}
+        onOpenTotpSetup={openTotpSetup}
+      />
+
+      {/* TOTP Setup Modal */}
+      <TotpSetupModal
+        isOpen={totpSetupModal.open}
+        onClose={() => setTotpSetupModal({ open: false, qrCodeUrl: '', secret: '', codeInput: '', loading: false })}
+        qrCodeUrl={totpSetupModal.qrCodeUrl}
+        secret={totpSetupModal.secret}
+        loading={totpSetupModal.loading}
+        codeInput={totpSetupModal.codeInput}
+        setCodeInput={(code) => setTotpSetupModal(prev => ({ ...prev, codeInput: code }))}
+        onVerify={verifyTotpSetup}
       />
 
       {/* Document Template Edit Modal */}
@@ -3031,8 +3144,8 @@ export default function App() {
           <header className="bg-white border-b border-slate-200 px-6 py-4 shadow-sm">
             <div className="max-w-6xl mx-auto flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <div className="h-9 w-9 rounded-lg bg-brand-600 flex items-center justify-center text-white font-bold">
-                  <Shield className="h-5 w-5" />
+                <div className="h-11 w-11 rounded-lg bg-white flex items-center justify-center overflow-hidden shrink-0 border border-slate-200 shadow-sm">
+                  <img src="/pdpa-logo.jpg" alt="PDPA Logo" className="h-full w-full object-cover" />
                 </div>
                 <div>
                   <h1 className="font-bold text-slate-900 text-base leading-tight">ระบบยื่นคำขอเข้าถึงข้อมูลส่วนบุคคล (PDPA Access Portal)</h1>
@@ -4530,6 +4643,40 @@ export default function App() {
                   </div>
                 </div>
 
+                {/* Global Notice for Data Collection */}
+                {activeRequestObj.status === 'Data Collection' && (() => {
+                  const sentBackHistory = activeRequestObj.statusHistory.filter((h: any) => h.status === 'Data Collection' && h.comment && (h.comment.includes('ตีกลับ') || h.comment.includes('ให้รวบรวมข้อมูลใหม่')));
+                  const isSentBack = sentBackHistory.length > 0;
+                  const reason = isSentBack ? sentBackHistory[sentBackHistory.length - 1].comment?.replace('DPO ตีกลับให้รวบรวมข้อมูลใหม่:', '').trim() : '';
+                  
+                  if (isSentBack) {
+                    return (
+                      <div className="bg-amber-100 border-2 border-amber-400 rounded-xl p-4 flex gap-3 text-amber-900 text-xs shadow-md">
+                        <AlertTriangle className="h-6 w-6 text-amber-600 shrink-0" />
+                        <div className="w-full">
+                          <span className="font-bold block text-sm mb-1 text-amber-900">แจ้งเตือน: คำร้องนี้ถูกตีกลับให้แก้ไขข้อมูลใหม่</span>
+                          <div className="bg-white/60 p-2 rounded border border-amber-200 mt-1">
+                            <strong>เหตุผลการตีกลับ:</strong> {reason || '-'}
+                          </div>
+                          <span className="block text-[10px] text-amber-700 mt-2 font-medium">คำแนะนำ: เจ้าของระบบ (Data Owner) โปรดดำเนินการแก้ไขและรวบรวมข้อมูลใหม่ให้ครบถ้วน จากนั้นเลื่อนลงไปด้านล่างสุดเพื่อกดปุ่ม "ส่งเรื่องไปยัง Flow ต่อไป" ส่งงานกลับให้ DPO</span>
+                        </div>
+                      </div>
+                    );
+                  }
+                  
+                  return (
+                    <div className="bg-sky-50 border-2 border-sky-300 rounded-xl p-4 flex gap-3 text-sky-900 text-xs shadow-sm">
+                      <Search className="h-5 w-5 text-sky-600 shrink-0" />
+                      <div className="w-full">
+                        <span className="font-bold block text-sm mb-1 text-sky-900">ขั้นตอนปัจจุบัน: การค้นหาและรวบรวมข้อมูล (Data Collection)</span>
+                        <span className="block text-[11px] text-sky-800">
+                          คำแนะนำ: เจ้าของระบบ (Data Owner) โปรดค้นหาและอัปโหลดข้อมูลให้ครบถ้วน จากนั้นเลื่อนลงไปกดปุ่ม "ส่งเรื่องไปยัง Flow ต่อไป" ที่ด้านล่างสุด
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })()}
+
                 {/* Main Action Modules for Request Details */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                   
@@ -4618,7 +4765,7 @@ export default function App() {
                         <div className="space-y-1">
                           <span className="text-slate-400 block font-semibold">เป้าหมายระบบงานสืบค้น:</span>
                           <span className="font-bold text-slate-800">
-                            {activeRequestObj.requestDetails.targetSystems.join(', ') || 'สืบค้นทุกระบบที่บันทึกข้อมูลบุคคล'}
+                            {activeRequestObj.requestDetails.targetSystems.map(sys => sys.startsWith('อื่น ๆ') ? 'อื่น ๆ (Others)' : sys).join(', ') || 'สืบค้นทุกระบบที่บันทึกข้อมูลบุคคล'}
                           </span>
                         </div>
                         <div className="space-y-1">
@@ -4923,6 +5070,16 @@ export default function App() {
                           <span>งานค้นหาและสืบค้นข้อมูลระบบภายใน (Data Discovery & Gathering)</span>
                         </span>
 
+                        {/* Notice if sent back by DPO */}
+                        {activeRequestObj.status === 'Data Collection' && activeRequestObj.statusHistory.some((h: any) => h.comment && h.comment.startsWith('DPO ตีกลับให้รวบรวมข้อมูลใหม่:')) && (
+                          <div className="p-3 bg-amber-50 border-l-4 border-amber-500 rounded-r-lg text-amber-900 text-xs shadow-sm my-2">
+                            <span className="font-bold flex items-center gap-1"><AlertTriangle className="h-4 w-4"/> DPO ตีกลับคำร้องเพื่อให้แก้ไข/รวบรวมข้อมูลใหม่</span>
+                            <div className="mt-1 ml-5 text-[11px]">
+                              <strong>เหตุผล:</strong> {activeRequestObj.statusHistory.filter((h: any) => h.comment && h.comment.startsWith('DPO ตีกลับให้รวบรวมข้อมูลใหม่:')).pop()?.comment?.replace('DPO ตีกลับให้รวบรวมข้อมูลใหม่: ', '') || ''}
+                            </div>
+                          </div>
+                        )}
+
                         {/* Task assigner form for admin/DPO/owner */}
                         {['admin', 'intake', 'dpo', 'owner'].includes(activeUser.role) && ['Documents Verified', 'Assigned', 'Data Collection'].includes(activeRequestObj.status) && (
                           <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 space-y-3">
@@ -4937,9 +5094,10 @@ export default function App() {
                                 >
                                   <option value="">-- โปรดเลือกระบบ --</option>
                                   {activeRequestObj.requestDetails.targetSystems && activeRequestObj.requestDetails.targetSystems.length > 0 ? (
-                                    activeRequestObj.requestDetails.targetSystems.map((sys, idx) => (
-                                      <option key={idx} value={sys}>{sys}</option>
-                                    ))
+                                    activeRequestObj.requestDetails.targetSystems.map((sys, idx) => {
+                                      const displayName = sys.startsWith('อื่น ๆ') ? 'อื่น ๆ (Others)' : sys;
+                                      return <option key={idx} value={sys}>{displayName}</option>;
+                                    })
                                   ) : (
                                     <option value="สืบค้นทุกระบบที่บันทึกข้อมูลบุคคล">สืบค้นทุกระบบที่บันทึกข้อมูลบุคคล</option>
                                   )}
@@ -5102,7 +5260,7 @@ export default function App() {
                                 ))}
                               
                               {/* System Owner action buttons - Moved to bottom */}
-                              {['Submitted', 'Assigned', 'Documents Verified', 'Data Collection'].includes(activeRequestObj.status) && activeRequestObj.dataCollectionTasks.length > 0 && activeRequestObj.dataCollectionTasks.every((t: any) => t.status !== 'pending') && (activeUser.role === 'owner' || activeUser.role === 'admin') && (
+                              {['Submitted', 'Assigned', 'Documents Verified', 'Data Collection'].includes(activeRequestObj.status) && activeRequestObj.dataCollectionTasks.length > 0 && activeRequestObj.dataCollectionTasks.every((t: any) => t.status !== 'pending') && ['owner', 'admin'].includes(activeUser.role) && (
                                 <div className="flex flex-col gap-2 mt-6">
                                   {!activeRequestObj.dataCollectionTasks.some((t: any) => t.status === 'not_found') ? (
                                     <button
@@ -5321,7 +5479,7 @@ export default function App() {
                         </span>
 
                         {/* DPO input form */}
-                        {(activeUser.role === 'dpo' || activeUser.role === 'admin') && !['Approval Pending', 'Ready for Delivery', 'Fee Notification', 'Delivered', 'Closed'].includes(activeRequestObj.status) ? (
+                        {(activeUser.role === 'dpo' || activeUser.role === 'admin') && !['Data Collection', 'Approval Pending', 'Ready for Delivery', 'Fee Notification', 'Delivered', 'Closed'].includes(activeRequestObj.status) ? (
                           <div className="space-y-3 text-xs">
                             <div className="space-y-1">
                               <label className="font-semibold text-slate-700">ผลวินิจฉัยข้อเสนอสิทธิ์:</label>
@@ -5375,13 +5533,22 @@ export default function App() {
                               />
                             </div>
 
-                            <button
-                              type="button"
-                              onClick={() => handleSubmitDecisionProposal(activeRequestObj.id)}
-                              className="w-full bg-brand-600 hover:bg-brand-700 text-white font-bold py-2 rounded-lg text-xs transition"
-                            >
-                              ส่งขออนุมัติข้อวินิจฉัย (Submit Proposal)
-                            </button>
+                            <div className="flex gap-2">
+                              <button
+                                type="button"
+                                onClick={() => handleOpenSendBackModal(activeRequestObj.id)}
+                                className="w-1/3 bg-amber-500 hover:bg-amber-600 text-white font-bold py-2 rounded-lg text-xs transition"
+                              >
+                                ตีกลับให้แก้ไขข้อมูลใหม่
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleSubmitDecisionProposal(activeRequestObj.id)}
+                                className="w-2/3 bg-brand-600 hover:bg-brand-700 text-white font-bold py-2 rounded-lg text-xs transition"
+                              >
+                                ส่งขออนุมัติข้อวินิจฉัย (Submit Proposal)
+                              </button>
+                            </div>
                           </div>
                         ) : null}
 
@@ -5434,6 +5601,14 @@ export default function App() {
                                 รอยื่นวินิจฉัยทางกฎหมายและข้อเสนอของ DPO / สำนักกฎหมาย ก่อนลงนามอนุมัติสิทธิ์
                               </p>
                             )}
+                          </div>
+                        ) : null}
+
+                        {/* Notice for DPO during Data Collection */}
+                        {(activeUser.role === 'dpo' || activeUser.role === 'admin') && activeRequestObj.status === 'Data Collection' ? (
+                          <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-500 text-center italic">
+                            กำลังอยู่ระหว่างขั้นตอนการค้นหาและรวบรวมข้อมูลโดย Data Owner<br/>
+                            <span className="text-slate-400 font-medium">(กรุณารอ Data Owner ส่งข้อมูลกลับมาก่อน จึงจะสามารถใช้เครื่องมือวินิจฉัยและอนุมัติสิทธิ์ได้)</span>
                           </div>
                         ) : null}
                       </div>
@@ -7325,7 +7500,7 @@ export default function App() {
                             document.body.removeChild(a);
                             window.URL.revokeObjectURL(url);
                           } catch (err) {
-                            alert('ไม่สามารถดาวน์โหลดไฟล์ได้');
+                            showNotify('ไม่สามารถดาวน์โหลดไฟล์ได้', "error");
                           }
                         }}
                         className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold shadow-sm transition"
@@ -7371,7 +7546,7 @@ export default function App() {
                                 watermarkApplied: previewResult !== 'approved'
                               });
                             } catch (err) {
-                              alert('ไม่สามารถเปิดเอกสารได้');
+                              showNotify('ไม่สามารถเปิดเอกสารได้', "error");
                             }
                           }}
                           className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg text-xs font-bold transition shadow-sm"
@@ -7392,7 +7567,7 @@ export default function App() {
                               const fileUrl = window.URL.createObjectURL(blob);
                               window.open(fileUrl, '_blank');
                             } catch (err) {
-                              alert('ไม่สามารถเปิดเอกสารได้');
+                              showNotify('ไม่สามารถเปิดเอกสารได้', "error");
                             }
                           }}
                           className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold transition"
@@ -7566,6 +7741,60 @@ export default function App() {
           </div>
         );
       })()}
+
+      {/* --- MOCK SEND BACK TO DATA COLLECTION MODAL --- */}
+      {isSendBackModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn">
+          <div className="bg-white rounded-2xl border border-slate-200 p-6 max-w-md w-full space-y-4 shadow-2xl">
+            <div className="text-center space-y-1">
+              <AlertTriangle className="h-10 w-10 text-amber-500 mx-auto" />
+              <h4 className="font-bold text-slate-800 text-sm">ตีกลับคำร้องให้รวบรวมข้อมูลใหม่</h4>
+              <p className="text-xs text-slate-500">
+                ส่งกลับไปยังเจ้าของระบบ (Data Owner) เพื่อค้นหาและรวบรวมข้อมูลใหม่
+              </p>
+            </div>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                confirmSendBackToDataCollection();
+              }}
+              className="space-y-4"
+            >
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-700 block">
+                  กรุณาระบุเหตุผลที่ต้องการให้รวบรวมข้อมูลใหม่ <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  required
+                  rows={3}
+                  placeholder="เช่น ข้อมูลไม่ครบถ้วน, ข้อมูลผิดพลาด..."
+                  value={sendBackReason}
+                  onChange={(e) => setSendBackReason(e.target.value)}
+                  className="w-full text-xs border border-slate-300 rounded-lg p-2.5 focus:ring-1 focus:ring-amber-500"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => { setIsSendBackModalOpen(false); setSendBackRequestId(null); }}
+                  className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold py-2.5 rounded-lg transition"
+                >
+                  ยกเลิก
+                </button>
+                <button
+                  type="submit"
+                  disabled={!sendBackReason.trim()}
+                  className="w-full bg-amber-500 hover:bg-amber-600 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-bold py-2.5 rounded-lg transition"
+                >
+                  ยืนยันการตีกลับ
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       <ResetPasswordModal
         isOpen={!!resetTokenForModal}

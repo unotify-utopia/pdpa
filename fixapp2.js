@@ -1,0 +1,5 @@
+import fs from 'fs';
+let app = fs.readFileSync('src/App.tsx', 'utf8');
+app = app.replace(/alert\((.+?)\)/g, 'showNotify($1, "error")');
+fs.writeFileSync('src/App.tsx', app);
+console.log('Done App.tsx');

@@ -1,0 +1,1 @@
+const fs = require('fs'); let code = fs.readFileSync('routes/reports.routes.js', 'utf8'); code = code.replace(/req\.user\.isSuperAdmin/g, "(req.user.role === 'superadmin')"); fs.writeFileSync('routes/reports.routes.js', code); console.log('done');

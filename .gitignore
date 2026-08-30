@@ -12,6 +12,8 @@ dist
 dist-ssr
 *.local
 .env
+.env.*
+.env.secure-template
 server_requests_db.json
 
 # Editor directories and files

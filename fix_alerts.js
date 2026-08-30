@@ -1,0 +1,10 @@
+const fs = require('fs');
+let app = fs.readFileSync('src/App.tsx', 'utf8');
+app = app.replace(/alert\((['"`].+?['b'])\)/g, 'showNotify($1, "error")');
+app = app.replace(/alert\((.+?)\)/g, 'showNotify($1, "error")');
+fs.writeFileSync('src/App.tsx', app);
+let ropa = fs.readFileSync('src/components/RopaBuilder.tsx', 'utf8');
+ropa = ropa.replace(/alert\('.+?samrej'\)/g, 'showNotify("Țันทึกแบบร่างสำเร็ฃ", "success")');
+ropa = ropa.replace(/alert\((.+?)\)/g, 'showNotify($1, "error")');
+fs.writeFileSync('src/components/RopaBuilder.tsx', ropa);
+console.log('DONE$');

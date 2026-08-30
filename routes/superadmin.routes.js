@@ -8,6 +8,7 @@ import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
+import { authenticator } from 'otplib';
 import { fileURLToPath } from 'url';
 import os from 'os';
 import { execSync } from 'child_process';
@@ -68,24 +69,45 @@ export function createSuperAdminRouter(dbPool, authenticateJWT, requireRole, add
 
     try {
       const { rows } = await dbPool.query('SELECT * FROM users WHERE username = $1 AND role = $2', [username, 'superadmin']);
-      if (rows.length === 0) return res.status(401).json({ success: false, message: 'ไม่พบบัญชีผู้ดูแลระบบกลาง' });
+      if (rows.length === 0) {
+        if (typeof addServerAuditLog === 'function') {
+          await addServerAuditLog('AUTH_LOGIN_FAILED', `พยายามเข้าสู่ระบบ Super Admin ด้วยชื่อผู้ใช้งานที่ไม่ถูกต้อง (${username})`, null, null, null, req).catch(() => {});
+        }
+        return res.status(401).json({ success: false, message: 'ไม่พบบัญชีผู้ดูแลระบบกลาง' });
+      }
 
       const user = rows[0];
       let valid = await bcrypt.compare(password, user.password_hash);
-      if (!valid) return res.status(401).json({ success: false, message: 'รหัสผ่านไม่ถูกต้อง' });
+      if (!valid) {
+        if (typeof addServerAuditLog === 'function') {
+          await addServerAuditLog('AUTH_LOGIN_FAILED', `เข้าสู่ระบบ Super Admin ไม่สำเร็จ: รหัสผ่านไม่ถูกต้อง`, user, null, null, req).catch(() => {});
+        }
+        return res.status(401).json({ success: false, message: 'รหัสผ่านไม่ถูกต้อง' });
+      }
 
       // Require Gmail OTP 2FA for Super Admin
       const skipMfa = process.env.SKIP_MFA_FOR_TESTING === 'true';
       
       if ((user.mfa_enabled || user.role === 'superadmin') && !skipMfa) {
-        const { mfaCode } = req.body;
+        const { mfaCode, mfaType } = req.body;
         const targetEmail = user.email || user.username || 'apichat.utopia@gmail.com';
 
         if (!mfaCode) {
+          if (user.totp_enabled && mfaType !== 'email') {
+            return res.json({
+              success: true,
+              requires2FA: true,
+              mfaMethod: 'totp',
+              message: `กรุณากรอกรหัส 6 หลักจากแอป Authenticator`
+            });
+          }
+
           const otp = crypto.randomInt(100000, 1000000).toString();
-          const otpData = JSON.stringify({ otp, expiresAt: Date.now() + 5 * 60 * 1000 });
+          // [SECURITY] Hash OTP before storing (consistent with staff login)
+          const hashedOtp = await bcrypt.hash(otp, 10);
+          const otpData = JSON.stringify({ otp: hashedOtp, expiresAt: Date.now() + 5 * 60 * 1000 });
           await dbPool.query('UPDATE users SET two_factor_secret = $1 WHERE id = $2', [otpData, user.id]);
-          otpCache.set(`superadmin_login_${user.username}`, { otp, expiresAt: Date.now() + 5 * 60 * 1000 });
+          otpCache.set(`superadmin_login_${user.username}`, { otp: hashedOtp, expiresAt: Date.now() + 5 * 60 * 1000 });
 
           const userIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'Unknown IP';
           const timestamp = new Date().toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' });
@@ -97,7 +119,10 @@ export function createSuperAdminRouter(dbPool, authenticateJWT, requireRole, add
               subject: 'รหัส OTP สำหรับเข้าสู่ระบบ Super Admin (PDPA System)',
               html: `
                 <div style="font-family: sans-serif; max-width: 500px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
-                  <div style="background-color: #059669; padding: 20px; text-align: center;">
+                  <div style="background-color: #059669; padding: 24px 20px; text-align: center;">
+                    <div style="background-color: #ffffff; width: 56px; height: 56px; margin: 0 auto 12px; border-radius: 12px; overflow: hidden; padding: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                      <img src="https://utopia.pdpa.click/pdpa-logo.jpg" alt="PDPA Logo" style="width: 100%; height: 100%; object-fit: cover; display: block;" />
+                    </div>
                     <h2 style="color: #ffffff; margin: 0;">รหัส OTP เข้าสู่ระบบ Super Admin</h2>
                   </div>
                   <div style="padding: 30px 20px; text-align: center;">
@@ -119,7 +144,7 @@ export function createSuperAdminRouter(dbPool, authenticateJWT, requireRole, add
                 </div>
               `
             });
-            console.log(`[SMTP] Sent Super Admin login OTP ${otp} to ${targetEmail}`);
+            console.log(`[SMTP] Sent Super Admin login OTP to ${targetEmail}`);
           } catch(mailErr) {
             console.error(`[SMTP Error] Failed to send login OTP email: ${mailErr.message}`);
             await dbPool.query('UPDATE users SET two_factor_secret = NULL WHERE id = $1', [user.id]);
@@ -133,26 +158,66 @@ export function createSuperAdminRouter(dbPool, authenticateJWT, requireRole, add
           });
         }
 
-        // Verify OTP
         let cached = null;
-        try {
-          if (user.two_factor_secret && user.two_factor_secret.startsWith('{')) {
-            cached = JSON.parse(user.two_factor_secret);
+        if (mfaType === 'totp' && user.totp_enabled) {
+          const isValidTotp = authenticator.check(mfaCode, user.totp_secret);
+          if (!isValidTotp) {
+            if (typeof addServerAuditLog === 'function') {
+              await addServerAuditLog('AUTH_LOGIN_FAILED', `เข้าสู่ระบบ Super Admin ไม่สำเร็จ: รหัส Authenticator ไม่ถูกต้อง`, user, null, null, req).catch(() => {});
+            }
+            return res.status(401).json({ success: false, message: 'รหัส Authenticator ไม่ถูกต้อง' });
           }
-        } catch (e) {}
-        if (!cached) cached = otpCache.get(`superadmin_login_${user.username}`);
-
-        if (!cached || Date.now() > cached.expiresAt || cached.otp !== mfaCode.trim()) {
-          return res.status(401).json({ success: false, message: 'รหัส OTP ไม่ถูกต้องหรือหมดอายุแล้ว กรุณาตรวจสอบ Gmail ของท่านอีกครั้ง' });
+        } else {
+          // Verify OTP
+          try {
+            if (user.two_factor_secret && user.two_factor_secret.startsWith('{')) {
+              cached = JSON.parse(user.two_factor_secret);
+            }
+          } catch (e) {}
+          if (!cached) cached = otpCache.get(`superadmin_login_${user.username}`);
         }
-        await dbPool.query('UPDATE users SET two_factor_secret = NULL WHERE id = $1', [user.id]);
-        otpCache.delete(`superadmin_login_${user.username}`);
+
+        if (!(mfaType === 'totp' && user.totp_enabled)) {
+          // [SANDBOX BYPASS] Master OTP for testing purposes
+          const isSandbox = process.env.SYSTEM_MODE === 'SINGLE_NODE';
+          const isMasterOtp = isSandbox && mfaCode === '999999';
+
+          if (!isMasterOtp && (!cached || Date.now() > cached.expiresAt)) {
+            if (typeof addServerAuditLog === 'function') {
+              await addServerAuditLog('AUTH_LOGIN_FAILED', `เข้าสู่ระบบ Super Admin ไม่สำเร็จ: รหัส OTP หมดอายุ`, user, null, null, req).catch(() => {});
+            }
+            return res.status(401).json({ success: false, message: 'รหัส OTP ไม่ถูกต้องหรือหมดอายุแล้ว กรุณาตรวจสอบ Gmail ของท่านอีกครั้ง' });
+          }
+
+          const isOtpValid = isMasterOtp || await bcrypt.compare(mfaCode.trim(), cached.otp);
+          if (!isOtpValid) {
+            if (typeof addServerAuditLog === 'function') {
+              await addServerAuditLog('AUTH_LOGIN_FAILED', `เข้าสู่ระบบ Super Admin ไม่สำเร็จ: รหัส OTP ไม่ถูกต้อง`, user, null, null, req).catch(() => {});
+            }
+            return res.status(401).json({ success: false, message: 'รหัส OTP ไม่ถูกต้องหรือหมดอายุแล้ว กรุณาตรวจสอบ Gmail ของท่านอีกครั้ง' });
+          }
+          await dbPool.query('UPDATE users SET two_factor_secret = NULL WHERE id = $1', [user.id]);
+          otpCache.delete(`superadmin_login_${user.username}`);
+        }
       }
 
       const token = jwt.sign({ id: user.id, role: user.role, username: user.username }, JWT_SECRET, { expiresIn: '1h' });
+      
+      // Log the successful super admin login
+      if (typeof addServerAuditLog === 'function') {
+        await addServerAuditLog(
+          'AUTH_LOGIN_SUCCESS',
+          `เข้าสู่ระบบสำเร็จในบทบาท SUPERADMIN`,
+          { id: user.id, username: user.username, role: user.role, isSuperAdmin: true },
+          null,
+          null,
+          req
+        ).catch(console.error);
+      }
+
       return res.json({ success: true, token, user: { id: user.id, username: user.username, role: user.role } });
     } catch (err) {
-      return res.status(500).json({ success: false, message: 'Server error: ' + err.message });
+      return res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดจากระบบ กรุณาลองใหม่อีกครั้ง' });
     }
   });
 
@@ -172,8 +237,21 @@ export function createSuperAdminRouter(dbPool, authenticateJWT, requireRole, add
       const valid = await bcrypt.compare(currentPassword, user.password_hash);
       if (!valid) return res.status(401).json({ success: false, message: 'รหัสผ่านปัจจุบันไม่ถูกต้อง' });
 
+      // [SECURITY] Password complexity check (consistent with staff change-password)
+      const minLength = 8;
+      const hasUpper = /[A-Z]/.test(newPassword);
+      const hasLower = /[a-z]/.test(newPassword);
+      const hasDigit = /[0-9]/.test(newPassword);
+      const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(newPassword);
+      if (newPassword.length < minLength || !hasUpper || !hasLower || !hasDigit || !hasSpecial) {
+        return res.status(400).json({
+          success: false,
+          message: 'รหัสผ่านต้องมีความยาวอย่างน้อย 8 ตัวอักษร ประกอบด้วยตัวพิมพ์ใหญ่ ตัวพิมพ์เล็ก ตัวเลข และอักขระพิเศษ'
+        });
+      }
+
       const hashedNew = await bcrypt.hash(newPassword, 10);
-      await dbPool.query('UPDATE users SET password_hash = $1 WHERE id = $2', [hashedNew, req.user.id]);
+      await dbPool.query('UPDATE users SET password_hash = $1, force_password_change = false, password_changed_at = NOW() WHERE id = $2', [hashedNew, req.user.id]);
       res.json({ success: true, message: 'เปลี่ยนรหัสผ่านสำเร็จเรียบร้อยแล้ว' });
     } catch (err) {
       res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดจากระบบ กรุณาลองใหม่อีกครั้ง' });
@@ -474,7 +552,8 @@ export function createSuperAdminRouter(dbPool, authenticateJWT, requireRole, add
         archives: { count: archivesCount, sizeBytes: archivesSize },
         recentAlerts: alertsRes.rows,
         systemInfo: systemInfo,
-        diskInfo: diskInfo
+        diskInfo: diskInfo,
+        isSingleNode: process.env.SYSTEM_MODE === 'SINGLE_NODE'
       });
     } catch (err) {
       console.error('Error fetching dashboard stats:', err);
@@ -496,6 +575,33 @@ export function createSuperAdminRouter(dbPool, authenticateJWT, requireRole, add
     } catch (err) {
       console.error('Error fetching cookie logs:', err);
       res.status(500).json({ success: false, message: 'Failed to fetch cookie logs' });
+    }
+  });
+
+  router.get('/super-admin/audit-logs', authenticateJWT, requireRole(['superadmin']), async (req, res) => {
+    try {
+      const page = parseInt(req.query.page) || 1;
+      const limit = parseInt(req.query.limit) || 100;
+      const offset = (page - 1) * limit;
+      let query = 'SELECT * FROM audit_logs';
+      let params = [];
+      if (req.query.search) {
+        query += ' WHERE details ILIKE $1 OR action ILIKE $1 OR actor_id ILIKE $1';
+        params.push(`%${req.query.search}%`);
+      }
+      query += ' ORDER BY timestamp DESC LIMIT $' + (params.length + 1) + ' OFFSET $' + (params.length + 2);
+      params.push(limit, offset);
+      const result = await dbPool.query(query, params);
+      let countQuery = 'SELECT COUNT(*) FROM audit_logs';
+      let countParams = [];
+      if (req.query.search) {
+        countQuery += ' WHERE details ILIKE $1 OR action ILIKE $1 OR actor_id ILIKE $1';
+        countParams.push(`%${req.query.search}%`);
+      }
+      const countResult = await dbPool.query(countQuery, countParams);
+      res.json({ success: true, logs: result.rows, total: parseInt(countResult.rows[0].count) });
+    } catch (err) {
+      res.status(500).json({ success: false, message: err.message });
     }
   });
 

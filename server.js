@@ -80,7 +80,7 @@ const JWT_SECRET = process.env.JWT_SECRET || crypto.randomBytes(64).toString('he
 
 // Restrict CORS to specific origins
 const corsOptions = {
-  origin: process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',') : (process.env.NODE_ENV === 'production' ? ['https://portal.pdpa.click'] : ['https://portal.pdpa.click', 'http://localhost:3000']),
+  origin: process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',') : (process.env.NODE_ENV === 'production' ? ['https://utopia.pdpa.click'] : ['https://utopia.pdpa.click', 'http://localhost:3000']),
   optionsSuccessStatus: 200
 };
 app.use(cors(corsOptions));
@@ -89,7 +89,7 @@ app.use(cors(corsOptions));
 // Covers: X-Frame-Options, X-Content-Type-Options, Content-Security-Policy, HSTS, etc.
 app.use(helmet({
   contentSecurityPolicy: {
-    directives: {
+      directives: {
       defaultSrc: ["'self'"],
       scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://cdn.tailwindcss.com"],
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
@@ -166,7 +166,7 @@ app.use('/api/reports', createReportsRouter(dbPool, authenticateJWT, requireRole
 app.use('/api', createRequestsRouter(dbPool, authenticateJWT, requireRole, addServerAuditLog));
 app.use('/api', createSuperAdminRouter(dbPool, authenticateJWT, requireRole, addServerAuditLog, sendMailWithFallback, otpCache, JWT_SECRET));
 app.use('/api', createPublicRouter(dbPool, addServerAuditLog, authenticateJWT, requireRole));
-app.use('/api', createDownloadRouter(dbPool, authenticateJWT, requireRole, addServerAuditLog, sendMailWithFallback, otpCache));
+app.use('/api', createDownloadRouter(dbPool, authenticateJWT, requireRole, addServerAuditLog, sendMailWithFallback, otpCache, JWT_SECRET));
 app.get('/api/system/config', (req, res) => {
   res.json({
     success: true,
@@ -199,6 +199,28 @@ app.use('/super-admin', (req, res) => {
 // ── Workflow Engine Routes (ERPNext-inspired) ──────────────────────────────────────────────
 // ── Workflow Engine Routes (ERPNext-inspired) ─────────────────────────────
 app.use('/api/workflow', createWorkflowRouter(dbPool, authenticateJWT, requireRole));
+
+// --- WEBHOOKS ---
+app.post('/api/webhooks/resend', async (req, res) => {
+  try {
+    const payload = req.body;
+    
+    // Resend sends { type: "email.bounced", data: { to: ["..."] } }
+    if (payload && payload.type === 'email.bounced') {
+      const bouncedEmail = payload.data?.to?.[0];
+      console.warn(`[Webhook] Resend Alert: Email bounced to ${bouncedEmail}`);
+      
+      // Log to database if needed
+      await addServerAuditLog('EMAIL_BOUNCED', `Delivery failed for ${bouncedEmail}`, null).catch(() => {});
+    }
+    
+    // Always return 200 OK so Resend knows we received it
+    res.status(200).json({ success: true });
+  } catch (err) {
+    console.error('[Webhook] Error processing Resend webhook:', err);
+    res.status(500).json({ success: false });
+  }
+});
 
 // --- MAIN STATIC FRONTEND SERVING (PRODUCTION) ---
 app.use(express.static(path.join(__dirname, 'dist'), { index: false }));
