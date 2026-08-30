@@ -134,10 +134,10 @@ export function createPublicRouter(dbPool, addServerAuditLog, authenticateJWT, r
           actorId,
           actorName,
           actorRole,
-          log.action, log.requestId, log.requestTrackingNo,
+          log.action || 'UNKNOWN_ACTION', log.requestId || null, log.requestTrackingNo || null,
           String(req.headers['x-forwarded-for'] || req.socket.remoteAddress || '127.0.0.1').substring(0, 50),
           req.headers['user-agent'] || 'Frontend API',
-          log.details, log.checksum || ''
+          log.details || '', log.checksum || ''
         ]
       );
       res.status(201).json({ success: true, message: 'Audit log created' });
