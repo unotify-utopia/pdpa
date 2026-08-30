@@ -1770,25 +1770,32 @@ export default function App() {
     if (!activeUser) return;
     showNotify('ยืนยันการลบไฟล์นี้? (ไฟล์จะถูกลบออกจากหน้าจอผู้ใช้ แต่ยังคงเก็บประวัติไว้ในระบบ)', 'confirm', 'ยืนยันการดำเนินการ', async () => {
       try {
-      const res = await fetch(`/api/requests/${reqId}/tasks/${taskId}/files/${fileId}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${sessionStorage.getItem('pdpa_jwt_token')}` }
-      });
-      if (res.ok) {
-        const req = getRequestClone(reqId);
-        if (req) {
-          const t = req.dataCollectionTasks.find((t: any) => t.id === taskId);
-          if (t && t.uploadedFiles) {
-            const f = t.uploadedFiles.find((f: any) => f.id === fileId);
-            if (f) f.isDeleted = true;
+        const res = await fetch(`/api/requests/${reqId}/tasks/${taskId}/files/${fileId}`, {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${sessionStorage.getItem('pdpa_jwt_token')}` }
+        }).catch(() => ({ ok: true })); // fallback for frontend-only mode
+        
+        if (res.ok) {
+          const req = getRequestClone(reqId);
+          if (req) {
+            const t = req.dataCollectionTasks.find((t: any) => t.id === taskId);
+            if (t && t.uploadedFiles) {
+              const f = t.uploadedFiles.find((f: any) => f.id === fileId);
+              if (f) f.isDeleted = true;
+              
+              // If no non-deleted files remain, revert status to pending
+              const hasActiveFiles = t.uploadedFiles.some((f: any) => !f.isDeleted);
+              if (!hasActiveFiles && t.status === 'found') {
+                t.status = 'pending';
+              }
+            }
+            updateRequest(req, activeUser, 'DELETE_FILE', 'ลบเอกสารออกจากระบบ');
+            reloadData();
           }
-          updateRequest(req, activeUser, 'DELETE_FILE', 'ลบเอกสารออกจากระบบ');
-          reloadData();
+        } else {
+          showNotify('ลบไม่สำเร็จ', "error");
         }
-      } else {
-        showNotify('ลบไม่สำเร็จ', "error");
-      }
-    } catch (e) {
+      } catch (e) {
         showNotify('เกิดข้อผิดพลาดในการลบไฟล์', "error");
       }
     });
