@@ -286,7 +286,7 @@ export default function App() {
         case 'intake':
           return true; // Intake can manage at any stage
         case 'owner':
-          const ownerHidden = ['Draft', 'Submitted', 'Received', 'Identity Verification', 'Awaiting Identity Evidence', 'Completeness Review', 'Awaiting Additional Information'];
+          const ownerHidden = ['Draft', 'Submitted', 'Received', 'Identity Verification', 'Awaiting Identity Evidence', 'Completeness Review', 'Awaiting Additional Information', 'Documents Verified', 'Assigned'];
           if (ownerHidden.includes(req.status)) return false;
           // In multi-department setup, Owner can only manage if explicitly assigned a task by Intake
           if (req.dataCollectionTasks && req.dataCollectionTasks.length > 0) {
