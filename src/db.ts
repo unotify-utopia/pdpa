@@ -200,6 +200,17 @@ export const addAuditLog = async (
   requestId?: string,
   trackingNo?: string
 ): Promise<AuditLog> => {
+  let realIp = '192.168.1.105';
+  try {
+    const ipRes = await fetch('https://api.ipify.org?format=json').catch(() => null);
+    if (ipRes && ipRes.ok) {
+      const ipData = await ipRes.json();
+      realIp = ipData.ip;
+    }
+  } catch (e) {
+    console.warn('Could not fetch real IP, using default');
+  }
+
   const newLog: AuditLog = {
     id: `log_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
     orgId: user.orgId || 'org_dopa',
@@ -210,7 +221,7 @@ export const addAuditLog = async (
     action,
     requestId,
     requestTrackingNo: trackingNo,
-    ipAddress: '192.168.1.105', // Static mock IP
+    ipAddress: realIp,
     userAgent: navigator.userAgent || 'Mozilla/5.0 Client',
     details,
     checksum: '',
