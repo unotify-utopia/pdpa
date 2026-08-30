@@ -1,5 +1,5 @@
 import type { Request, ComplianceConfig, DocumentTemplate, AuditLog, User, RequestStatus, SLAEvent } from './types';
-import { initialComplianceConfig, initialDocumentTemplates } from './mockData';
+import { initialComplianceConfig, initialDocumentTemplates, mockAuditLogs } from './mockData';
 
 
 // Storage keys
@@ -135,7 +135,7 @@ export const fetchAuditLogs = async (): Promise<AuditLog[]> => {
       headers: { ...(token ? { 'Authorization': `Bearer ${token}` } : {}) }
     });
     const data = await res.json();
-    if (data.success && data.auditLogs) {
+    if (data.success && data.auditLogs && data.auditLogs.length > 0) {
       return data.auditLogs.map((l: any) => ({
         id: l.id,
         timestamp: l.timestamp,
@@ -153,9 +153,22 @@ export const fetchAuditLogs = async (): Promise<AuditLog[]> => {
       }));
     }
   } catch (err) {
-    console.error('Failed to fetch audit logs', err);
+    console.error('Failed to fetch audit logs from API, falling back to local storage', err);
   }
-  return [];
+  
+  // Fallback to local storage
+  const localLogsStr = localStorage.getItem(KEYS.AUDIT_LOGS);
+  if (localLogsStr) {
+    try {
+      return JSON.parse(localLogsStr);
+    } catch (e) {
+      console.error('Error parsing local audit logs', e);
+    }
+  }
+  
+  // Initialize with mock data if completely empty
+  localStorage.setItem(KEYS.AUDIT_LOGS, JSON.stringify(mockAuditLogs));
+  return mockAuditLogs;
 };
 
 
@@ -217,10 +230,25 @@ export const addAuditLog = async (
         ...(token ? { 'Authorization': `Bearer ${token}` } : {})
       },
       body: JSON.stringify(newLog)
-    });
+    }).catch(() => ({})); // Ignore network errors in frontend
   } catch (err) {
     console.error('Failed to sync audit log to PostgresDB:', err);
     // Don't throw for audit logs to not block main operations
+  }
+  
+  // Always save to localStorage as a reliable fallback for Sandbox
+  try {
+    const localLogsStr = localStorage.getItem(KEYS.AUDIT_LOGS);
+    let localLogs = [];
+    if (localLogsStr) {
+      localLogs = JSON.parse(localLogsStr);
+    } else {
+      localLogs = [...mockAuditLogs];
+    }
+    localLogs.unshift(newLog); // Add to beginning
+    localStorage.setItem(KEYS.AUDIT_LOGS, JSON.stringify(localLogs));
+  } catch (e) {
+    console.error('Failed to save audit log locally:', e);
   }
   
   return newLog;
