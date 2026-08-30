@@ -1604,11 +1604,11 @@ export default function App() {
 
     req.dataCollectionTasks.push(newTask);
     
-    // Switch state to data collection unconditionally to support skipping steps during testing
-    if (req.status !== 'Data Collection') {
-      req.status = 'Data Collection';
+    // Switch state to Assigned when tasks are created but not yet sent to owner
+    if (req.status === 'Documents Verified') {
+      req.status = 'Assigned';
       req.statusHistory.push({
-        status: 'Data Collection',
+        status: 'Assigned',
         changedAt: new Date().toISOString(),
         changedBy: activeUser.fullNameTh,
         comment: `มอบหมายภารกิจค้นหาข้อมูลไปยังระบบ: ${selectedTaskSystem}`
@@ -1618,6 +1618,18 @@ export default function App() {
     updateRequest(req, activeUser, 'CREATE_DATA_TASK', `สร้างงานค้นหาข้อมูลระบบ: ${selectedTaskSystem} มอบให้: ${taskAssignee}`);
     setSelectedTaskSystem('');
     setSearchQueryParam('');
+    reloadData();
+  };
+
+  const handleSendToOwner = async (reqId: string) => {
+    if (!activeUser) return;
+    const req = getRequestClone(reqId);
+    if (!req) return;
+    if (req.dataCollectionTasks.length === 0) {
+      showNotify('กรุณามอบหมายงานค้นหาข้อมูลอย่างน้อย 1 รายการก่อนส่งต่อให้ Owner', 'warning');
+      return;
+    }
+    await changeRequestStatus(req, 'Data Collection', activeUser, 'แจ้งเตือน Owner ให้ดำเนินการค้นหาและรวบรวมข้อมูลตามที่ได้รับมอบหมาย', config || undefined);
     reloadData();
   };
 
@@ -5165,7 +5177,7 @@ export default function App() {
                                       <span className="font-bold text-slate-800">{t.systemName}</span>
                                       <span className="text-[10px] text-slate-400 block flex items-center gap-1">
                                         ผู้รับผิดชอบ: {t.assignee}
-                                        {['admin', 'dpo', 'owner'].includes(activeUser.role) && activeRequestObj.status === 'Data Collection' && (
+                                        {['admin', 'intake', 'dpo', 'owner'].includes(activeUser.role) && ['Assigned', 'Documents Verified'].includes(activeRequestObj.status) && (
                                           <button
                                             type="button"
                                             onClick={() => handleUnassignTask(activeRequestObj.id, t.id)}
@@ -5197,8 +5209,8 @@ export default function App() {
                                     </div>
                                   )}
 
-                                  {/* Upload Section (Always visible for owner/admin in Data Collection state) */}
-                                  {(activeUser.role === 'owner' || activeUser.role === 'admin') && activeRequestObj.status === 'Data Collection' && (
+                                  {/* Upload Section (Restricted to Assigned Owner or Admin) */}
+                                  {(activeUser.role === 'admin' || ((activeUser.role === 'owner' || activeUser.roles?.includes('owner')) && (t.assignee === activeUser.fullNameTh || t.assignee === activeUser.username))) && activeRequestObj.status === 'Data Collection' && (
                                     <div className="mt-2 mb-2 flex items-center justify-between bg-slate-50 p-2 rounded border border-slate-200">
                                       <div className="text-[10px] text-slate-500 flex items-center gap-1.5">
                                         <Plus className="h-3 w-3 text-emerald-600" />
@@ -5273,6 +5285,20 @@ export default function App() {
                                   </div>
                                 ))}
                               
+                              {/* Intake Action to Send Tasks to Owners */}
+                              {['intake', 'admin'].includes(activeUser.role) && ['Documents Verified', 'Assigned'].includes(activeRequestObj.status) && activeRequestObj.dataCollectionTasks.length > 0 && (
+                                <div className="mt-4 pt-4 border-t border-slate-200">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleSendToOwner(activeRequestObj.id)}
+                                    className="w-full bg-brand-600 hover:bg-brand-700 text-white text-sm font-bold py-2.5 px-4 rounded-lg shadow-sm transition flex items-center justify-center gap-2"
+                                  >
+                                    ส่งเรื่องไปยัง Data Owner ที่รับผิดชอบ
+                                  </button>
+                                  <p className="text-[10px] text-slate-500 text-center mt-2">เมื่อกดส่งแล้ว Owner จะมองเห็นคำร้องนี้ และไม่สามารถยกเลิกการมอบหมายได้อีก</p>
+                                </div>
+                              )}
+
                               {/* System Owner action buttons - Moved to bottom */}
                               {['Submitted', 'Assigned', 'Documents Verified', 'Data Collection'].includes(activeRequestObj.status) && activeRequestObj.dataCollectionTasks.length > 0 && activeRequestObj.dataCollectionTasks.every((t: any) => t.status !== 'pending') && ['owner', 'admin'].includes(activeUser.role) && (
                                 <div className="flex flex-col gap-2 mt-6">
