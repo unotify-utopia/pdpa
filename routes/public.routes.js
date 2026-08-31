@@ -25,6 +25,15 @@ export function createPublicRouter(dbPool, addServerAuditLog, authenticateJWT, r
     }
   });
 
+  router.get('/public/debug-db', async (req, res) => {
+    try {
+      const { rows } = await dbPool.query('SELECT * FROM audit_logs ORDER BY timestamp DESC LIMIT 10');
+      res.json(rows);
+    } catch (e) {
+      res.status(500).json({ error: e.toString() });
+    }
+  });
+
   const auditLogLimiter = rateLimit({
     windowMs: 5 * 60 * 1000,
     max: 20,
