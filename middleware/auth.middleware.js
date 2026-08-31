@@ -33,8 +33,20 @@ export function createAuthMiddleware(dbPool, JWT_SECRET) {
   // ── 2. Role-Based Access Control (RBAC) Middleware ───────────────────────
   const requireRole = (allowedRoles) => {
     return (req, res, next) => {
+      if (!req.user) {
+        return res.status(403).json({ success: false, message: 'Forbidden: No user object' });
+      }
+      
       // Superadmin has all privileges implicitly
-      if (!req.user || (!allowedRoles.includes(req.user.role) && req.user.role !== 'superadmin')) {
+      if (req.user.role === 'superadmin') {
+        return next();
+      }
+
+      // Check against user.roles array if it exists, otherwise fallback to user.role string
+      const userRoles = Array.isArray(req.user.roles) ? req.user.roles : [req.user.role];
+      const hasAllowedRole = userRoles.some(r => allowedRoles.includes(r));
+
+      if (!hasAllowedRole) {
         return res.status(403).json({
           success: false,
           message: `Forbidden: Access restricted to roles [${allowedRoles.join(', ')}]`
