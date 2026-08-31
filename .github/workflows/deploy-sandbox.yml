@@ -42,8 +42,8 @@ jobs:
             npm run build
             
             echo "🔄 Restarting Sandbox server and clearing old processes..."
-            pm2 delete pdpa-req-system pdpa-sandbox server || true
-            fuser -k 3001/tcp || true
+            pm2 delete all || true
+            kill -9 $(lsof -t -i:3001) || true
             pm2 start server.js --name pdpa-sandbox --update-env
             
             echo "✅ Sandbox Deploy complete!"

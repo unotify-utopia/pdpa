@@ -140,11 +140,11 @@ export async function seedWorkflowData(dbPool) {
     for (const t of WORKFLOW_TRANSITIONS) {
       await dbPool.query(
         `INSERT INTO workflow_transitions (from_state, to_state, allowed_roles, requires_comment, auto_notify)
-         SELECT $1, $2, $3, $4, $5
+         SELECT $1::VARCHAR(50), $2::VARCHAR(50), $3::JSONB, $4::BOOLEAN, $5::BOOLEAN
          WHERE NOT EXISTS (
            SELECT 1 FROM workflow_transitions WHERE from_state = $1 AND to_state = $2
          )`,
-        [t.from, t.to, t.roles, t.comment, t.notify]
+        [t.from, t.to, JSON.stringify(t.roles), t.comment, t.notify]
       );
     }
 
