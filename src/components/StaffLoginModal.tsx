@@ -25,6 +25,15 @@ export const StaffLoginModal: React.FC<StaffLoginModalProps> = ({
   const [otpEmail, setOtpEmail] = useState<string>('');
   const [loading, setLoading] = useState(false);
 
+  const maskEmail = (email: string | undefined | null) => {
+    if (!email || !email.includes('@')) return email || '';
+    const [name, domain] = email.split('@');
+    if (name.length <= 3) {
+      return `${name.charAt(0)}***@${domain}`;
+    }
+    return `${name.substring(0, 3)}***@${domain}`;
+  };
+
   useEffect(() => {
     if (isOpen) {
       setOtpCode('');
@@ -276,7 +285,7 @@ export const StaffLoginModal: React.FC<StaffLoginModalProps> = ({
                     {mfaMethod === 'totp' ? (
                       'เปิดแอป Google Authenticator บนมือถือของคุณ แล้วนำรหัส 6 หลักมากรอกที่นี่เพื่อเข้าสู่ระบบ'
                     ) : (
-                      <>ระบบส่งรหัส OTP ไปยัง <span className="font-semibold text-slate-700">{otpEmail || 'อีเมลของท่าน'}</span> แล้ว กรุณานำรหัสมากรอกที่นี่</>
+                      <>ระบบส่งรหัส OTP ไปยัง <span className="font-semibold text-slate-700">{otpEmail ? maskEmail(otpEmail) : 'อีเมลของท่าน'}</span> แล้ว กรุณานำรหัสมากรอกที่นี่</>
                     )}
                   </p>
                 </div>

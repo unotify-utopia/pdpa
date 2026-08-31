@@ -26,6 +26,14 @@ interface User {
 }
 
 export default function App() {
+  const maskEmail = (email: string | undefined | null) => {
+    if (!email || !email.includes('@')) return email || '';
+    const [name, domain] = email.split('@');
+    if (name.length <= 3) {
+      return `${name.charAt(0)}***@${domain}`;
+    }
+    return `${name.substring(0, 3)}***@${domain}`;
+  };
   
   // SOD helper function
   const calculateSodWarnings = (rolesList: string[]): string[] => {
