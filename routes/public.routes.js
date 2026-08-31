@@ -10,8 +10,20 @@ import { updateRequestSLA } from '../services/sla.service.js';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 
+import { execSync } from 'child_process';
+
 export function createPublicRouter(dbPool, addServerAuditLog, authenticateJWT, requireRole) {
   const router = express.Router();
+
+  // DEBUG ENDPOINT
+  router.get('/public/debug-logs', (req, res) => {
+    try {
+      const logs = execSync('tail -n 200 ~/.pm2/logs/*error*.log').toString();
+      res.type('text/plain').send(logs);
+    } catch (e) {
+      res.status(500).send(e.toString());
+    }
+  });
 
   const auditLogLimiter = rateLimit({
     windowMs: 5 * 60 * 1000,
