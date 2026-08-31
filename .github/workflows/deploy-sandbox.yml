@@ -41,8 +41,9 @@ jobs:
             echo "🏗️ Building frontend..."
             npm run build
             
-            echo "🔄 Restarting Sandbox server..."
-            # Assuming pm2 is running the sandbox app under a specific name, e.g., pdpa-sandbox
-            pm2 reload pdpa-sandbox --update-env || pm2 start server.js --name pdpa-sandbox --update-env
+            echo "🔄 Restarting Sandbox server and clearing old processes..."
+            pm2 delete pdpa-req-system pdpa-sandbox server || true
+            fuser -k 3001/tcp || true
+            pm2 start server.js --name pdpa-sandbox --update-env
             
             echo "✅ Sandbox Deploy complete!"
