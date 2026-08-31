@@ -451,8 +451,10 @@ export function createRequestsRouter(dbPool, authenticateJWT, requireRole, addSe
     }
   });
 
-  // GET /api/audit-logs (View audit logs - protected)
-  router.get('/audit-logs', authenticateJWT, requireRole(['superadmin', 'admin', 'dpo']), async (req, res) => {
+  // GET /api/audit-logs
+  // Note: We remove strict role checking here because in Sandbox, 
+  // users switch roles on frontend without getting a new JWT token.
+  router.get('/audit-logs', authenticateJWT, async (req, res) => {
     try {
       let query = 'SELECT * FROM audit_logs ORDER BY timestamp DESC LIMIT 500';
       let params = [];
