@@ -110,6 +110,29 @@ const authLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: { success: false, message: 'พยายาม login มากเกินไป กรุณารอ 15 นาทีแล้วลองใหม่' },
+  handler: async (req, res, next, options) => {
+    try {
+      const crypto = await import('crypto');
+      const ipAddress = String(req.headers['x-forwarded-for'] || req.socket.remoteAddress || '127.0.0.1').substring(0, 50);
+      const userAgent = String(req.headers['user-agent'] || 'Express Backend API').substring(0, 255);
+      const logId = `log_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
+      const timestamp = new Date().toISOString();
+      const action = 'BRUTE_FORCE_DETECTED';
+      const actorId = 'system';
+      const actorName = 'Security System';
+      const actorRole = 'system';
+      const details = `ตรวจพบการโจมตี Brute Force (พยายามล็อกอินผิดพลาดเกิน 10 ครั้งใน 15 นาที)`;
+      const checksum = crypto.createHmac('sha256', process.env.JWT_SECRET || 'fallback')
+          .update(`${logId}|${actorId}|${action}|${timestamp}`).digest('hex');
+
+      await dbPool.query(
+          `INSERT INTO audit_logs (id, org_id, timestamp, actor_id, actor_name, actor_role, action, ip_address, user_agent, details, checksum) 
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+          [logId, 'system', timestamp, actorId, actorName, actorRole, action, ipAddress, userAgent, details, checksum]
+      ).catch(() => {});
+    } catch (err) {}
+    res.status(options.statusCode).send(options.message);
+  }
 });
 const forgotPasswordLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
