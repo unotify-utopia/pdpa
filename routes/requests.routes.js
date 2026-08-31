@@ -452,7 +452,7 @@ export function createRequestsRouter(dbPool, authenticateJWT, requireRole, addSe
   });
 
   // GET /api/audit-logs (View audit logs - protected)
-  router.get('/audit-logs', authenticateJWT, requireRole(['superadmin', 'admin', 'dpo']), async (req, res) => {
+  router.get('/audit-logs', authenticateJWT, requireRole(['superadmin', 'admin', 'dpo', 'auditor']), async (req, res) => {
     try {
       let query = 'SELECT * FROM audit_logs ORDER BY timestamp DESC LIMIT 500';
       let params = [];
