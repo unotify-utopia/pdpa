@@ -6764,9 +6764,6 @@ export default function App() {
                                       </tr>
                                     );
                                   })
-                                      </tr>
-                                    );
-                                  })
                                 )}
                                 
                                 {totalPages > 1 && (
