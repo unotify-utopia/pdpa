@@ -28,8 +28,8 @@ jobs:
             npm install --legacy-peer-deps
             echo "🔨 Building frontend..."
             npm run build
-            echo "♻️ Restarting server..."
-            pm2 reload pdpa-req-system --update-env
+            echo "🚀 Restarting server and clearing old processes..."
+            pm2 delete pdpa-req-system || true
+            kill -9 $(lsof -t -i:3001) || true
+            pm2 start server.js --name pdpa-req-system --update-env
             echo "✅ Deploy complete!"
-
-
