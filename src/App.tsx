@@ -6707,11 +6707,11 @@ export default function App() {
                       <table className="w-full text-left text-[11px] border-collapse">
                         <thead>
                           <tr className="bg-slate-100/50 border-b border-slate-200 text-slate-500 font-bold">
-                            <th className="p-3">วันและเวลา (Timestamp)</th>
-                            <th className="p-3">ผู้ปฏิบัติงาน (User)</th>
-                            <th className="p-3">ชื่อเจ้าของข้อมูล (Data Subject Name)</th>
-                            <th className="p-3">บทบาท</th>
-                            <th className="p-3 text-center">รายละเอียด</th>
+                            <th className="p-3 whitespace-nowrap">วัน/เวลา (Timestamp)</th>
+                            <th className="p-3">การกระทำ (Action)</th>
+                            <th className="p-3">รายละเอียด (Details)</th>
+                            <th className="p-3">ผู้ใช้งาน (User)</th>
+                            <th className="p-3">IP Address</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 text-slate-700 font-mono">
@@ -6736,25 +6736,20 @@ export default function App() {
                                   </tr>
                                 ) : (
                                   paginated.map((log) => {
-                                    // Lookup Request to find the Data Subject Name
-                                    const matchedReq = requests.find(r => r.id === log.requestId || (log.requestTrackingNo && r.trackingNo === log.requestTrackingNo));
-                                    const dataSubjectName = matchedReq ? `${matchedReq.requester.firstName} ${matchedReq.requester.lastName}` : '-';
-
                                     return (
                                       <tr key={log.id} className="hover:bg-slate-50 transition">
                                         <td className="p-3 whitespace-nowrap text-slate-500">{new Date(log.timestamp).toLocaleString('th-TH')}</td>
-                                        <td className="p-3 font-sans font-bold text-slate-800">{log.actorName}</td>
-                                        <td className="p-3 font-sans text-slate-700">{dataSubjectName}</td>
-                                        <td className="p-3 font-sans uppercase font-bold text-[9px] text-slate-400">{log.actorRole}</td>
-                                        <td className="p-3 text-center">
-                                          <button
-                                            onClick={() => setSelectedAuditLog(log)}
-                                            className="text-brand-600 hover:text-brand-700 underline text-[11px] font-sans font-semibold"
-                                          >
-                                            ดูรายละเอียด
-                                          </button>
+                                        <td className="p-3 font-sans">
+                                          <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold tracking-wider bg-brand-50 text-brand-700 uppercase">
+                                            {log.action}
+                                          </span>
                                         </td>
-
+                                        <td className="p-3 font-sans text-slate-700 break-words max-w-sm">{log.details}</td>
+                                        <td className="p-3 font-sans">
+                                          <div className="font-bold text-slate-800">{log.actorName}</div>
+                                          <div className="uppercase font-bold text-[9px] text-slate-400">Role: {log.actorRole}</div>
+                                        </td>
+                                        <td className="p-3 text-slate-500">{log.ipAddress}</td>
                                       </tr>
                                     );
                                   })
