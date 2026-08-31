@@ -457,10 +457,29 @@ export function createRequestsRouter(dbPool, authenticateJWT, requireRole, addSe
       let query = 'SELECT * FROM audit_logs ORDER BY timestamp DESC LIMIT 500';
       let params = [];
       
-      // Non-superadmins only see logs for their org
-      if (!(req.user.role === 'superadmin')) {
-        query = 'SELECT * FROM audit_logs WHERE org_id = $1 ORDER BY timestamp DESC LIMIT 500';
-        params = [req.user.orgId];
+      const userRoles = Array.isArray(req.user.roles) ? req.user.roles : [req.user.role];
+      const isAdmin = userRoles.includes('admin');
+      const isAuditor = userRoles.includes('auditor');
+      const isDpoOnly = !isAdmin && !isAuditor && userRoles.includes('dpo');
+
+      if (req.user.role !== 'superadmin') {
+        const targetOrgId = req.user.orgId || req.user.org_id;
+        if (!targetOrgId) {
+          return res.status(403).json({ success: false, message: 'Forbidden: No organization context' });
+        }
+        
+        if (isDpoOnly) {
+          // DPO only sees request-related logs, not system security/login attacks
+          query = `SELECT * FROM audit_logs 
+                   WHERE org_id = $1 
+                     AND action NOT LIKE 'AUTH_LOGIN%' 
+                     AND action NOT LIKE 'BRUTE_FORCE%' 
+                   ORDER BY timestamp DESC LIMIT 500`;
+        } else {
+          // Admin and Auditor see everything for their tenant
+          query = 'SELECT * FROM audit_logs WHERE org_id = $1 ORDER BY timestamp DESC LIMIT 500';
+        }
+        params = [targetOrgId];
       }
       
       const { rows } = await dbPool.query(query, params);
