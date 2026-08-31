@@ -5258,7 +5258,7 @@ export default function App() {
                                   )}
 
                                   {/* Uploaded Files List */}
-                                  {(t.uploadedFiles && t.uploadedFiles.length > 0) && (
+                                  {(t.uploadedFiles && t.uploadedFiles.some((f: any) => !f.isDeleted || activeUser?.role === 'superadmin')) && (
                                     <div className="flex flex-col gap-1.5 mt-1">
                                       {t.uploadedFiles
                                         .filter((f: any) => !f.isDeleted || activeUser.role === 'superadmin')
@@ -7638,14 +7638,14 @@ export default function App() {
                     </div>
 
                     {/* List of uploaded files from Data Collection Tasks */}
-                    {activeRequestObj.dataCollectionTasks && activeRequestObj.dataCollectionTasks.some((t: any) => t.uploadedFiles && t.uploadedFiles.length > 0) && (
+                    {activeRequestObj.dataCollectionTasks && activeRequestObj.dataCollectionTasks.some((t: any) => t.uploadedFiles && t.uploadedFiles.filter((f: any) => !f.isDeleted).length > 0) && (
                       <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 space-y-2">
                         <div className="text-[11px] font-bold text-slate-600 uppercase tracking-wide">
-                          ไฟล์เอกสารแนบจากหน่วยงาน ({activeRequestObj.dataCollectionTasks.reduce((acc: number, t: any) => acc + (t.uploadedFiles?.length || 0), 0)} ไฟล์):
+                          ไฟล์เอกสารแนบจากหน่วยงาน ({activeRequestObj.dataCollectionTasks.reduce((acc: number, t: any) => acc + (t.uploadedFiles?.filter((f: any) => !f.isDeleted).length || 0), 0)} ไฟล์):
                         </div>
                         <div className="space-y-1.5">
                           {activeRequestObj.dataCollectionTasks.map((t: any) =>
-                            t.uploadedFiles?.map((f: any, idx: number) => (
+                            t.uploadedFiles?.filter((f: any) => !f.isDeleted).map((f: any, idx: number) => (
                               <div key={`${t.id}-${idx}`} className="bg-white border border-slate-200 rounded-md p-2.5 flex items-center justify-between gap-3 shadow-xs">
                                 <div className="flex items-center gap-2.5 min-w-0">
                                   <FileBadge className="h-5 w-5 text-emerald-600 shrink-0" />
