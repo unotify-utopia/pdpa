@@ -228,7 +228,7 @@ export function createRequestsRouter(dbPool, authenticateJWT, requireRole, addSe
           <p>เรียน คุณ ${requesterName || 'ผู้ร้องขอ'},</p>
           <p>องค์กรได้พิจารณาอนุมัติการเข้าถึงข้อมูลตามสิทธิของท่านเรียบร้อยแล้ว รายละเอียดข้อมูลของท่านได้รับการตรวจสอบและจัดเตรียมไว้เป็นที่เรียบร้อย</p>
           <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; padding: 16px; border-radius: 8px; margin: 24px 0; text-align: center;">
-            <h3 style="margin-top: 0; color: #334155; font-size: 14px;">ช่องทางดาวน์โหลดและตรวจสอบความถูกต้องเอกสาร (ใช้งานได้ 7 วัน):</h3>
+            <h3 style="margin-top: 0; color: #334155; font-size: 14px;">ช่องทางดาวน์โหลดและตรวจสอบความถูกต้องเอกสาร (ใช้งานได้ 30 วัน):</h3>
             
             <div style="margin: 16px 0;">
               <img src="${qrImageUrl}" alt="QR Code for Download" width="150" height="150" style="border-radius: 8px; border: 1px solid #cbd5e1; padding: 8px; background: white;" />
