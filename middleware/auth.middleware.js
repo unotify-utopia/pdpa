@@ -64,8 +64,9 @@ export function createAuthMiddleware(dbPool, JWT_SECRET) {
     const logId = `log_${Date.now()}_${crypto.randomBytes(2).toString('hex')}`;
     const timestamp = new Date().toISOString();
     const actorId = actor?.id || 'system';
-    const actorName = actor?.fullNameTh || 'System Server';
+    const actorName = actor?.fullNameTh || actor?.username || 'System Server';
     const actorRole = actor?.role || 'system';
+    const orgId = actor?.org_id || actor?.orgId || 'system';
 
     let requestId = null;
     let trackingNo = null;
@@ -88,14 +89,16 @@ export function createAuthMiddleware(dbPool, JWT_SECRET) {
       .update(`${logId}|${actorId}|${action}|${timestamp}`)
       .digest('hex');
 
-    try {
-      await dbPool.query(
-        `INSERT INTO audit_logs (id, org_id, timestamp, actor_id, actor_name, actor_role, action, request_id, request_tracking_no, ip_address, user_agent, details, checksum) 
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
-        [logId, actor?.orgId || 'system', timestamp, actorId, actorName, actorRole, action, requestId, trackingNo, ipAddress, userAgent, details, checksum]
-      );
-    } catch (err) {
-      console.error('Failed to insert audit log to DB:', err);
+    if (dbPool) {
+      try {
+        await dbPool.query(
+          `INSERT INTO audit_logs (id, org_id, timestamp, actor_id, actor_name, actor_role, action, request_id, request_tracking_no, ip_address, user_agent, details, checksum) 
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
+          [logId, orgId, timestamp, actorId, actorName, actorRole, action, requestId, trackingNo, ipAddress, userAgent, details, checksum]
+        );
+      } catch (err) {
+        console.error('Failed to insert audit log to DB:', err);
+      }
     }
   };
 
