@@ -281,9 +281,50 @@ export function createPublicRouter(dbPool, addServerAuditLog, authenticateJWT, r
         [reqId, orgId, trackingNo, requesterType, status, JSON.stringify(updatedRequest)]
       );
 
+      // --- Add Audit Log for Public Submission ---
+      if (isNewRequest) {
+        const ipAddress = String(req.headers['x-forwarded-for'] || req.socket.remoteAddress || '127.0.0.1').substring(0, 50);
+        const userAgent = String(req.headers['user-agent'] || 'Frontend API').substring(0, 255);
+        const logId = `log_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
+        const timestamp = new Date().toISOString();
+        const action = 'PUBLIC_SUBMIT_REQUEST';
+        const actorId = 'public_user';
+        const actorName = updatedRequest.requester?.name || 'ผู้ยื่นคำร้อง (Public)';
+        const actorRole = 'public';
+        const details = `ประชาชนยื่นคำร้องใหม่รหัส: ${trackingNo}`;
+        const checksum = crypto.createHmac('sha256', process.env.JWT_SECRET || 'fallback_secret')
+          .update(`${logId}|${actorId}|${action}|${timestamp}`).digest('hex');
+
+        await dbPool.query(
+          `INSERT INTO audit_logs (id, org_id, timestamp, actor_id, actor_name, actor_role, action, request_id, request_tracking_no, ip_address, user_agent, details, checksum) 
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
+          [logId, orgId, timestamp, actorId, actorName, actorRole, action, reqId, trackingNo, ipAddress, userAgent, details, checksum]
+        ).catch(err => console.error('Failed to write public submit audit log', err));
+      }
+
       try {
         if (isNewRequest) {
           await sendWorkflowNotification(updatedRequest, null, status, 'CREATE', dbPool);
+        } else if (isNewCitizenMessage) {
+          await sendWorkflowNotification(updatedRequest, null, status, 'UPDATE_BY_CITIZEN', dbPool);
+          // Add Audit Log for Citizen Reply
+          const ipAddress = String(req.headers['x-forwarded-for'] || req.socket.remoteAddress || '127.0.0.1').substring(0, 50);
+          const userAgent = String(req.headers['user-agent'] || 'Frontend API').substring(0, 255);
+          const logId = `log_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
+          const timestamp = new Date().toISOString();
+          const action = 'PUBLIC_ADD_MESSAGE';
+          const actorId = 'public_user';
+          const actorName = updatedRequest.requester?.name || 'ผู้ยื่นคำร้อง (Public)';
+          const actorRole = 'public';
+          const details = `ประชาชนส่งข้อความ/แนบไฟล์เพิ่มเติมสำหรับรหัส: ${trackingNo}`;
+          const checksum = crypto.createHmac('sha256', process.env.JWT_SECRET || 'fallback_secret')
+            .update(`${logId}|${actorId}|${action}|${timestamp}`).digest('hex');
+
+          await dbPool.query(
+            `INSERT INTO audit_logs (id, org_id, timestamp, actor_id, actor_name, actor_role, action, request_id, request_tracking_no, ip_address, user_agent, details, checksum) 
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
+            [logId, orgId, timestamp, actorId, actorName, actorRole, action, reqId, trackingNo, ipAddress, userAgent, details, checksum]
+          ).catch(err => console.error('Failed to write public reply audit log', err));
         } else {
           if (oldStatus && oldStatus !== status) {
             await sendWorkflowNotification(updatedRequest, oldStatus, status, 'STATUS_CHANGE', dbPool);
