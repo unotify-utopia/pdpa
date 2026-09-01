@@ -410,7 +410,7 @@ export const sendWorkflowNotification = async (request, oldStatus, newStatus, ev
     <div style="font-family: 'Sarabun', sans-serif, Tahoma; max-width: 640px; margin: 0 auto; border: 1px solid #cbd5e1; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 16px rgba(0,0,0,0.06);">
       <div style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); padding: 32px 24px; text-align: center;">
         <div style="background-color: #ffffff; width: 64px; height: 64px; margin: 0 auto 16px; border-radius: 12px; overflow: hidden; padding: 4px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-          <img src="https://utopia.pdpa.click/pdpa-logo.jpg" alt="PDPA Logo" style="width: 100%; height: 100%; object-fit: cover; display: block;" />
+          <img src="${process.env.APP_BASE_URL || "https://utopia.pdpa.click"}/pdpa-logo.jpg" alt="PDPA Logo" style="width: 100%; height: 100%; object-fit: cover; display: block;" />
         </div>
         <h2 style="color: #ffffff; margin: 0; font-size: 20px;">ระบบบริหารจัดการสิทธิ์ PDPA (PDPA Access Portal)</h2>
         <p style="color: #e0f2fe; margin: 6px 0 0; font-size: 14px;">การแจ้งเตือนความคืบหน้าคำขอตาม Flow เอกสาร</p>

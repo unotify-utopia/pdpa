@@ -411,7 +411,7 @@ export function createDownloadRouter(dbPool, authenticateJWT, requireRole, addSe
           <div style="font-family:'Sarabun',Arial,sans-serif;max-width:520px;margin:auto;background:#f8fafc;border-radius:12px;overflow:hidden;border:1px solid #e2e8f0">
             <div style="background:linear-gradient(135deg,#0284c7,#0369a1);padding:32px 24px;text-align:center">
               <div style="background-color: #ffffff; width: 64px; height: 64px; margin: 0 auto 16px; border-radius: 12px; overflow: hidden; padding: 4px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-                <img src="https://utopia.pdpa.click/pdpa-logo.jpg" alt="PDPA Logo" style="width: 100%; height: 100%; object-fit: cover; display: block;" />
+                <img src="${process.env.APP_BASE_URL || "https://utopia.pdpa.click"}/pdpa-logo.jpg" alt="PDPA Logo" style="width: 100%; height: 100%; object-fit: cover; display: block;" />
               </div>
               <h1 style="color:#fff;margin:0;font-size:22px">รหัส OTP ดาวน์โหลดเอกสาร</h1>
               <p style="color:#bae6fd;margin:8px 0 0;font-size:14px">Secure Document Download OTP</p>
