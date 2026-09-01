@@ -216,13 +216,14 @@ export function createRequestsRouter(dbPool, authenticateJWT, requireRole, addSe
       }
 
       // Generate QR Code URL using a public API so it renders in email clients (which often block base64 images)
-      const directDownloadUrl = `https://utopia.pdpa.click/dl/${trackingNo}`;
+      const baseUrl = process.env.APP_BASE_URL || 'https://utopia.pdpa.click';
+      const directDownloadUrl = `${baseUrl}/dl/${trackingNo}`;
       const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(directDownloadUrl)}`;
 
       const emailHtml = `
         <div style="font-family: sans-serif; color: #333; max-width: 600px; margin: 0 auto;">
           <div style="text-align: center; margin-bottom: 24px;">
-            <img src="https://utopia.pdpa.click/pdpa-logo.jpg" alt="PDPA Logo" style="width: 80px; height: 80px; object-fit: cover; border-radius: 16px; border: 1px solid #e2e8f0; padding: 4px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);" />
+            <img src="${baseUrl}/pdpa-logo.jpg" alt="PDPA Logo" style="width: 80px; height: 80px; object-fit: cover; border-radius: 16px; border: 1px solid #e2e8f0; padding: 4px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);" />
           </div>
           <h2 style="color: #0f172a; text-align: center; border-bottom: 2px solid #e2e8f0; padding-bottom: 16px;">แจ้งผลการดำเนินการและส่งมอบข้อมูลส่วนบุคคล</h2>
           <p>เรียน คุณ ${requesterName || 'ผู้ร้องขอ'},</p>
@@ -234,7 +235,7 @@ export function createRequestsRouter(dbPool, authenticateJWT, requireRole, addSe
               <img src="${qrImageUrl}" alt="QR Code for Download" width="150" height="150" style="border-radius: 8px; border: 1px solid #cbd5e1; padding: 8px; background: white;" />
             </div>
             <p style="font-size: 14px; margin-bottom: 8px;">หรือสแกน QR Code เพื่อดาวน์โหลดเอกสาร</p>
-            <p style="margin: 4px 0;">เข้าสู่เว็บไซต์: <a href="https://utopia.pdpa.click/dl" style="color: #2563eb;">utopia.pdpa.click/dl</a></p>
+            <p style="margin: 4px 0;">เข้าสู่เว็บไซต์: <a href="${baseUrl}/dl" style="color: #2563eb;">${baseUrl.replace(/^https?:\/\//, '')}/dl</a></p>
             <p style="margin: 4px 0;">และระบุรหัสอ้างอิง: <strong>${trackingNo}</strong></p>
           </div>
           <p style="font-size: 12px; color: #64748b;">
