@@ -112,12 +112,17 @@ export default function AuditLogsPanel({ token, systemMode = 'MULTI_TENANT' }: A
                     {systemMode === 'MULTI_TENANT' && (
                       <td className="px-6 py-3">
                         {log.tenant_name ? (
-                          <div className="flex flex-col">
-                            <span className="font-semibold text-slate-700 text-sm">{log.tenant_name}</span>
-                            <span className="text-[10px] text-slate-400 font-mono">{log.org_id}</span>
+                          <div className="group relative inline-block">
+                            <span className="font-mono text-xs text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-md border border-indigo-100 cursor-help font-semibold">
+                              {log.org_id}
+                            </span>
+                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-10 w-max max-w-[250px] bg-slate-800 text-white text-xs rounded-lg px-3 py-2 shadow-xl pointer-events-none whitespace-normal text-center leading-relaxed">
+                              {log.tenant_name}
+                              <svg className="absolute top-full left-1/2 -translate-x-1/2 w-3 h-3 text-slate-800" viewBox="0 0 10 10"><path d="M0,0 L10,0 L5,5 Z" fill="currentColor"/></svg>
+                            </div>
                           </div>
                         ) : log.org_id ? (
-                          <span className="font-mono text-xs text-slate-500">{log.org_id}</span>
+                          <span className="font-mono text-xs px-2.5 py-1 bg-slate-100 text-slate-600 rounded-md border border-slate-200">{log.org_id}</span>
                         ) : (
                           <span className="text-slate-400 text-xs italic">System Wide</span>
                         )}
