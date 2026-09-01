@@ -36,7 +36,7 @@ export function createDownloadRouter(dbPool, authenticateJWT, requireRole, addSe
     }
   
     const { rows: reqRows } = await dbPool.query(
-      `SELECT id, tracking_no, data, org_id FROM requests
+      `SELECT id, tracking_no, data, org_id, status FROM requests
        WHERE tracking_no = $1 OR id = $1 LIMIT 1`,
       [param]
     );
@@ -48,7 +48,7 @@ export function createDownloadRouter(dbPool, authenticateJWT, requireRole, addSe
     
     // [SECURITY] Only allow download token for approved/delivered requests
     const reqData = typeof reqRow.data === 'string' ? JSON.parse(reqRow.data) : (reqRow.data || {});
-    const reqStatus = reqData.status || '';
+    const reqStatus = reqRow.status || reqData.status || '';
     const allowedStatuses = ['Approved', 'Ready for Delivery', 'Delivered', 'Receipt Confirmed', 'Closed'];
     if (!allowedStatuses.includes(reqStatus)) {
       return null;
