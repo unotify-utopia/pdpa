@@ -62,7 +62,7 @@ export default function AuditLogsPanel({ token, systemMode = 'MULTI_TENANT' }: A
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && fetchLogs()}
-              className="w-full pl-10 pr-4 py-2 rounded-lg border border-slate-300 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none transition"
+              className="w-full pl-10 pr-4 py-2 rounded-lg border border-slate-300 text-sm text-slate-900 bg-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none transition"
             />
           </div>
           <span className="text-sm text-slate-500 font-medium">ทั้งหมด {total} รายการ</span>
