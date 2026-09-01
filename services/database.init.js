@@ -76,6 +76,17 @@ export const initDatabase = async (dbPool) => {
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
 
+      CREATE TABLE IF NOT EXISTS cookie_consent_logs (
+        id SERIAL PRIMARY KEY,
+        session_id VARCHAR(255) NOT NULL,
+        ip_address VARCHAR(45) NOT NULL,
+        user_agent TEXT,
+        action VARCHAR(50) NOT NULL,
+        preferences JSONB,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+      CREATE INDEX IF NOT EXISTS idx_cookie_session_id ON cookie_consent_logs(session_id);
+
       CREATE TABLE IF NOT EXISTS task_files (
         id VARCHAR(100) PRIMARY KEY,
         request_id VARCHAR(100),
