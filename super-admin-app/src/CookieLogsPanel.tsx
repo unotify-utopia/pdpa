@@ -23,7 +23,7 @@ export default function CookieLogsPanel({ token }: Props) {
   const fetchLogs = async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/superadmin/cookie-logs', {
+      const res = await fetch('/api/super-admin/cookie-logs', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const data = await res.json();

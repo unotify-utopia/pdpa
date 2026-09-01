@@ -563,7 +563,7 @@ export function createSuperAdminRouter(dbPool, authenticateJWT, requireRole, add
   // ==========================================
   // GET: Fetch Cookie Consent Logs (Super Admin Only)
   // ==========================================
-  router.get('/cookie-logs', authenticateJWT, requireRole('superadmin'), async (req, res) => {
+  router.get('/super-admin/cookie-logs', authenticateJWT, requireRole('superadmin'), async (req, res) => {
     try {
       const result = await dbPool.query(`
         SELECT id, session_id, ip_address, user_agent, action, preferences, created_at 
