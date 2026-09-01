@@ -3,9 +3,10 @@ import { Search, RefreshCw, Activity, Calendar } from 'lucide-react';
 
 interface AuditLogsPanelProps {
   token: string;
+  systemMode?: string;
 }
 
-export default function AuditLogsPanel({ token }: AuditLogsPanelProps) {
+export default function AuditLogsPanel({ token, systemMode = 'MULTI_TENANT' }: AuditLogsPanelProps) {
   const [logs, setLogs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -74,7 +75,7 @@ export default function AuditLogsPanel({ token }: AuditLogsPanelProps) {
                 <th className="px-6 py-3 font-semibold">วัน/เวลา</th>
                 <th className="px-6 py-3 font-semibold">การกระทำ (Action)</th>
                 <th className="px-6 py-3 font-semibold">รายละเอียด</th>
-                <th className="px-6 py-3 font-semibold">หน่วยงาน (Tenant)</th>
+                {systemMode === 'MULTI_TENANT' && <th className="px-6 py-3 font-semibold">หน่วยงาน (Tenant)</th>}
                 <th className="px-6 py-3 font-semibold">ผู้ใช้งาน</th>
                 <th className="px-6 py-3 font-semibold">IP Address</th>
               </tr>
@@ -82,14 +83,14 @@ export default function AuditLogsPanel({ token }: AuditLogsPanelProps) {
             <tbody className="divide-y divide-slate-100">
               {loading ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center text-slate-400">
+                  <td colSpan={systemMode === 'MULTI_TENANT' ? 6 : 5} className="px-6 py-12 text-center text-slate-400">
                     <RefreshCw className="h-6 w-6 animate-spin mx-auto mb-2 text-indigo-300" />
                     กำลังโหลดข้อมูล...
                   </td>
                 </tr>
               ) : logs.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center text-slate-400 font-medium">
+                  <td colSpan={systemMode === 'MULTI_TENANT' ? 6 : 5} className="px-6 py-12 text-center text-slate-400 font-medium">
                     ไม่พบข้อมูลประวัติการทำงาน
                   </td>
                 </tr>
@@ -108,18 +109,20 @@ export default function AuditLogsPanel({ token }: AuditLogsPanelProps) {
                       </span>
                     </td>
                     <td className="px-6 py-3 text-slate-700 min-w-[300px]">{log.details}</td>
-                    <td className="px-6 py-3">
-                      {log.tenant_name ? (
-                        <div className="flex flex-col">
-                          <span className="font-semibold text-slate-700 text-sm">{log.tenant_name}</span>
-                          <span className="text-[10px] text-slate-400 font-mono">{log.org_id}</span>
-                        </div>
-                      ) : log.org_id ? (
-                        <span className="font-mono text-xs text-slate-500">{log.org_id}</span>
-                      ) : (
-                        <span className="text-slate-400 text-xs italic">System Wide</span>
-                      )}
-                    </td>
+                    {systemMode === 'MULTI_TENANT' && (
+                      <td className="px-6 py-3">
+                        {log.tenant_name ? (
+                          <div className="flex flex-col">
+                            <span className="font-semibold text-slate-700 text-sm">{log.tenant_name}</span>
+                            <span className="text-[10px] text-slate-400 font-mono">{log.org_id}</span>
+                          </div>
+                        ) : log.org_id ? (
+                          <span className="font-mono text-xs text-slate-500">{log.org_id}</span>
+                        ) : (
+                          <span className="text-slate-400 text-xs italic">System Wide</span>
+                        )}
+                      </td>
+                    )}
                     <td className="px-6 py-3">
                       {log.actor_name ? (
                         <div className="flex flex-col">

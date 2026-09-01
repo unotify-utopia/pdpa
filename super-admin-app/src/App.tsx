@@ -1871,7 +1871,7 @@ export default function App() {
         {activeTab === 'dashboard' && token && <SystemDashboard token={token} isDark={isDark} />}
         
         {activeTab === 'cookie_logs' && token && <CookieLogsPanel token={token} />}
-        {activeTab === 'audit_logs' && token && <AuditLogsPanel token={token} />}
+        {activeTab === 'audit_logs' && token && <AuditLogsPanel token={token} systemMode={systemMode} />}
 
       </main>
 
