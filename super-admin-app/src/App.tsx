@@ -1331,7 +1331,7 @@ export default function App() {
                       {mfaMethod === 'totp' ? (
                         <span>ตรวจสอบรหัสบนแอป Authenticator</span>
                       ) : (
-                        <span>ตรวจสอบรหัส OTP ที่อีเมล: <span className="text-emerald-400">{otpEmail || 'apichat.utopia@gmail.com'}</span></span>
+                        <span>ตรวจสอบรหัส OTP ที่อีเมล: <span className="text-emerald-400">{otpEmail ? maskEmail(otpEmail) : maskEmail('apichat.utopia@gmail.com')}</span></span>
                       )}
                     </p>
                     <p className="text-xs text-slate-400">
