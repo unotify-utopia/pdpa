@@ -216,7 +216,7 @@ export function createRequestsRouter(dbPool, authenticateJWT, requireRole, addSe
       }
 
       // Generate QR Code URL using a public API so it renders in email clients (which often block base64 images)
-      const baseUrl = process.env.APP_BASE_URL || 'https://utopia.pdpa.click';
+      const baseUrl = req.get('origin') || process.env.APP_BASE_URL || 'https://utopia.pdpa.click';
       const directDownloadUrl = `${baseUrl}/dl/${trackingNo}`;
       const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(directDownloadUrl)}`;
 
@@ -551,7 +551,7 @@ export function createRequestsRouter(dbPool, authenticateJWT, requireRole, addSe
       } catch (e) {}
 
       // Build the public download URL
-      const baseUrl = process.env.APP_BASE_URL || `https://utopia.pdpa.click`;
+      const baseUrl = req.get('origin') || process.env.APP_BASE_URL || 'https://utopia.pdpa.click';
       const downloadUrl = `${baseUrl}/dl/${token}`;
 
       // Generate QR code as data URL
