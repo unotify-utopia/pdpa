@@ -4796,7 +4796,18 @@ export default function App() {
                     <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-4 order-2">
                       <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider">ขอบเขตข้อมูลที่ร้องขอ (Request Scope)</span>
                       
+                      <div className="mb-2">
+                        <span className="text-slate-500 font-semibold text-[11px] block mb-1">ประเภทสิทธิที่ร้องขอ (REQUESTED RIGHT):</span>
+                        <span className="inline-flex px-2.5 py-1 bg-brand-50 text-brand-700 border border-brand-200 rounded text-[11px] font-bold">
+                          {activeRequestObj.requestDetails.requestType === 'access_and_copy' ? 'ขอเข้าถึงพร้อมขอรับสำเนาข้อมูล (Access & Copy) - มาตรา 30' :
+                           activeRequestObj.requestDetails.requestType === 'access' ? 'ขอเข้าถึงข้อมูลส่วนบุคคล (Right to Access) - มาตรา 30' :
+                           activeRequestObj.requestDetails.requestType === 'copy' ? 'ขอรับสำเนาข้อมูลส่วนบุคคล (Right to obtain a copy) - มาตรา 30' : 
+                           activeRequestObj.requestDetails.requestType}
+                        </span>
+                      </div>
+
                       <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg text-xs leading-relaxed text-slate-800">
+                        <span className="text-slate-500 font-semibold text-[11px] block mb-1">รายละเอียดคำร้อง (DESCRIPTION):</span>
                         {activeRequestObj.requestDetails.description}
                       </div>
 
