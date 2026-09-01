@@ -74,6 +74,7 @@ export default function AuditLogsPanel({ token }: AuditLogsPanelProps) {
                 <th className="px-6 py-3 font-semibold">วัน/เวลา</th>
                 <th className="px-6 py-3 font-semibold">การกระทำ (Action)</th>
                 <th className="px-6 py-3 font-semibold">รายละเอียด</th>
+                <th className="px-6 py-3 font-semibold">หน่วยงาน (Tenant)</th>
                 <th className="px-6 py-3 font-semibold">ผู้ใช้งาน</th>
                 <th className="px-6 py-3 font-semibold">IP Address</th>
               </tr>
@@ -107,6 +108,18 @@ export default function AuditLogsPanel({ token }: AuditLogsPanelProps) {
                       </span>
                     </td>
                     <td className="px-6 py-3 text-slate-700 min-w-[300px]">{log.details}</td>
+                    <td className="px-6 py-3">
+                      {log.tenant_name ? (
+                        <div className="flex flex-col">
+                          <span className="font-semibold text-slate-700 text-sm">{log.tenant_name}</span>
+                          <span className="text-[10px] text-slate-400 font-mono">{log.org_id}</span>
+                        </div>
+                      ) : log.org_id ? (
+                        <span className="font-mono text-xs text-slate-500">{log.org_id}</span>
+                      ) : (
+                        <span className="text-slate-400 text-xs italic">System Wide</span>
+                      )}
+                    </td>
                     <td className="px-6 py-3">
                       {log.actor_name ? (
                         <div className="flex flex-col">

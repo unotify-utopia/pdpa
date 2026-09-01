@@ -583,19 +583,20 @@ export function createSuperAdminRouter(dbPool, authenticateJWT, requireRole, add
       const page = parseInt(req.query.page) || 1;
       const limit = parseInt(req.query.limit) || 100;
       const offset = (page - 1) * limit;
-      let query = 'SELECT * FROM audit_logs';
+      let query = 'SELECT a.*, t.name as tenant_name FROM audit_logs a LEFT JOIN tenants t ON a.org_id = t.org_id';
       let params = [];
       if (req.query.search) {
-        query += ' WHERE details ILIKE $1 OR action ILIKE $1 OR actor_id ILIKE $1';
+        query += ' WHERE a.details ILIKE $1 OR a.action ILIKE $1 OR a.actor_id ILIKE $1 OR t.name ILIKE $1';
         params.push(`%${req.query.search}%`);
       }
-      query += ' ORDER BY timestamp DESC LIMIT $' + (params.length + 1) + ' OFFSET $' + (params.length + 2);
+      query += ' ORDER BY a.timestamp DESC LIMIT $' + (params.length + 1) + ' OFFSET $' + (params.length + 2);
       params.push(limit, offset);
       const result = await dbPool.query(query, params);
-      let countQuery = 'SELECT COUNT(*) FROM audit_logs';
+      
+      let countQuery = 'SELECT COUNT(*) FROM audit_logs a LEFT JOIN tenants t ON a.org_id = t.org_id';
       let countParams = [];
       if (req.query.search) {
-        countQuery += ' WHERE details ILIKE $1 OR action ILIKE $1 OR actor_id ILIKE $1';
+        countQuery += ' WHERE a.details ILIKE $1 OR a.action ILIKE $1 OR a.actor_id ILIKE $1 OR t.name ILIKE $1';
         countParams.push(`%${req.query.search}%`);
       }
       const countResult = await dbPool.query(countQuery, countParams);
