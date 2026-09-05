@@ -15,24 +15,9 @@ import { execSync } from 'child_process';
 export function createPublicRouter(dbPool, addServerAuditLog, authenticateJWT, requireRole) {
   const router = express.Router();
 
-  // DEBUG ENDPOINT
-  router.get('/public/debug-logs', (req, res) => {
-    try {
-      const logs = execSync('tail -n 200 ~/.pm2/logs/*error*.log').toString();
-      res.type('text/plain').send(logs);
-    } catch (e) {
-      res.status(500).send(e.toString());
-    }
-  });
-
-  router.get('/public/debug-db', async (req, res) => {
-    try {
-      const { rows } = await dbPool.query('SELECT * FROM audit_logs ORDER BY timestamp DESC LIMIT 10');
-      res.json(rows);
-    } catch (e) {
-      res.status(500).json({ error: e.toString() });
-    }
-  });
+  // [SECURITY] Debug endpoints removed (VULN-C1)
+  // Previously exposed server logs and audit data without authentication.
+  // If debug access is needed, use SSH or PM2 directly on the server.
 
   const auditLogLimiter = rateLimit({
     windowMs: 5 * 60 * 1000,
@@ -442,14 +427,14 @@ export function createPublicRouter(dbPool, addServerAuditLog, authenticateJWT, r
     try {
       const result = await dbPool.query('SELECT * FROM public_otps WHERE key = $1', [key]);
       if (result.rows.length === 0) {
-        addServerAuditLog('OTP_VERIFICATION_FAILED', `No OTP found or expired for key: ${key}`, null).catch(console.error);
+        addServerAuditLog('OTP_VERIFICATION_FAILED', `No OTP found or expired for key: ${key}`, null, req).catch(console.error);
         return res.status(400).json({ success: false, message: 'ไม่พบรหัส OTP หรือรหัสอาจหมดอายุแล้ว กรุณาขอใหม่' });
       }
 
       const record = result.rows[0];
       if (Date.now() > Number(record.expires_at)) {
         await dbPool.query('DELETE FROM public_otps WHERE key = $1', [key]);
-        addServerAuditLog('OTP_VERIFICATION_FAILED', `OTP expired for key: ${key}`, null).catch(console.error);
+        addServerAuditLog('OTP_VERIFICATION_FAILED', `OTP expired for key: ${key}`, null, req).catch(console.error);
         return res.status(400).json({ success: false, message: 'รหัส OTP หมดอายุแล้ว กรุณาขอใหม่' });
       }
       const isValidOtp = await bcrypt.compare(otp, record.otp);
@@ -457,7 +442,7 @@ export function createPublicRouter(dbPool, addServerAuditLog, authenticateJWT, r
         await dbPool.query('DELETE FROM public_otps WHERE key = $1', [key]);
         return res.json({ success: true, message: 'ยืนยันรหัส OTP สำเร็จ' });
       } else {
-        addServerAuditLog('OTP_VERIFICATION_FAILED', `Incorrect OTP attempt for key: ${key}`, null).catch(console.error);
+        addServerAuditLog('OTP_VERIFICATION_FAILED', `Incorrect OTP attempt for key: ${key}`, null, req).catch(console.error);
         return res.status(400).json({ success: false, message: 'รหัส OTP ไม่ถูกต้อง' });
       }
     } catch (error) {
