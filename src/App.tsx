@@ -47,6 +47,7 @@ import type {
   DataCollectionTask,
   RedactionRecord
 } from './types';
+import { STATUS_LABELS_TH } from './types';
 
 import {
   fetchComplianceConfig,
@@ -4307,7 +4308,7 @@ export default function App() {
                 
                 <div>
                   <span className="inline-block bg-brand-50 text-brand-700 border border-brand-100 rounded-full px-3 py-1 text-xs font-bold">
-                    {trackedRequest.status}
+                    {STATUS_LABELS_TH[trackedRequest.status] || trackedRequest.status}
                   </span>
                 </div>
 
@@ -4412,7 +4413,7 @@ export default function App() {
                       <span className="absolute -left-[30px] top-0.5 h-4.5 w-4.5 rounded-full border-2 border-white bg-brand-500 flex items-center justify-center text-[10px] text-white">
                         ✓
                       </span>
-                      <div className="text-xs font-bold text-slate-800">{h.status}</div>
+                      <div className="text-xs font-bold text-slate-800">{STATUS_LABELS_TH[h.status] || h.status}</div>
                       <div className="text-[11px] text-slate-500 font-medium">
                         {convertToThaiDate(h.changedAt, true)} โดย <span className="font-semibold text-slate-700">{h.changedBy}</span>
                       </div>
@@ -4713,7 +4714,7 @@ export default function App() {
                       <div className="flex items-center gap-2 flex-wrap">
                         <h3 className="font-bold text-slate-900 text-base">{activeRequestObj.trackingNo}</h3>
                         <span className="bg-brand-50 text-brand-700 text-xs px-2.5 py-0.5 rounded-full font-bold border border-brand-200">
-                          {activeRequestObj.status}
+                          {STATUS_LABELS_TH[activeRequestObj.status] || activeRequestObj.status}
                         </span>
                         {activeRequestObj.slaPaused && (
                           <span className="bg-amber-100 text-amber-800 text-[10px] px-2 py-0.5 rounded-full font-bold">
@@ -5935,7 +5936,7 @@ export default function App() {
                             </div>
                             <div className="text-right">
                               <span className="inline-block bg-amber-50 text-amber-700 px-2 py-0.5 rounded text-[10px] font-bold">
-                                {req.status}
+                                {STATUS_LABELS_TH[req.status] || req.status}
                               </span>
                               <span className="block text-[10px] text-slate-400 mt-1 font-bold">
                                 เหลือเวลา SLA: {req.slaRemainingDays} วัน
@@ -6440,7 +6441,7 @@ export default function App() {
                                   ['Denied', 'Withdrawn'].includes(req.status) ? 'bg-rose-100 text-rose-800' :
                                   'bg-brand-50 text-brand-700 border border-brand-100'
                                 }`}>
-                                  {req.status}
+                                  {STATUS_LABELS_TH[req.status] || req.status}
                                 </span>
                               </td>
                               <td className="p-3 font-bold">
@@ -6515,7 +6516,7 @@ export default function App() {
                                   <span className="block text-[10px] text-slate-400 truncate">{req.requestDetails.description}</span>
                                   <div className="flex justify-between items-center pt-1 border-t border-slate-100">
                                     <span className="text-[9px] font-semibold text-brand-600 uppercase">{req.requestDetails.requestType}</span>
-                                    <span className="text-[9px] bg-slate-100 text-slate-600 font-bold px-1 py-0.5 rounded">{req.status.substring(0, 15)}</span>
+                                    <span className="text-[9px] bg-slate-100 text-slate-600 font-bold px-1 py-0.5 rounded">{(STATUS_LABELS_TH[req.status] || req.status).substring(0, 15)}</span>
                                   </div>
                                 </div>
                               ))}
@@ -7229,7 +7230,7 @@ export default function App() {
                       <div className="flex justify-between items-center">
                         <span className="font-bold text-slate-800 text-sm">{req.trackingNo}</span>
                         <span className="text-[10px] bg-slate-200 text-slate-700 px-2 py-0.5 rounded-full font-bold">
-                          {req.status}
+                          {STATUS_LABELS_TH[req.status] || req.status}
                         </span>
                       </div>
                       <div className="text-xs text-slate-500 flex justify-between mt-1">

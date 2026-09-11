@@ -61,6 +61,39 @@ export type RequestStatus =
   | 'Archived'
   | 'Destroyed';
 
+export const STATUS_LABELS_TH: Record<RequestStatus, string> = {
+  'Draft': 'ร่างคำร้อง',
+  'Submitted': 'ยื่นคำร้องแล้ว / รอรับเรื่อง',
+  'Received': 'รับเรื่องแล้ว',
+  'Identity Verification': 'ตรวจสอบตัวตน',
+  'Awaiting Identity Evidence': 'รอเอกสารยืนยันตัวตนเพิ่มเติม',
+  'Completeness Review': 'ตรวจสอบความครบถ้วน',
+  'Awaiting Additional Information': 'รอข้อมูลเพิ่มเติม',
+  'Documents Verified': 'เอกสารครบถ้วน',
+  'Assigned': 'มอบหมายงานแล้ว',
+  'Data Collection': 'กำลังรวบรวมข้อมูล',
+  'Data Owner Review': 'รอเจ้าของข้อมูลตรวจสอบ',
+  'DPO or Legal Review': 'รอฝ่ายกฎหมาย/DPO พิจารณา',
+  'Redaction Required': 'รอการปกปิดข้อมูล (ถมดำ)',
+  'Executive Approval': 'รอผู้บริหารระดับสูงอนุมัติ',
+  'Approval Pending': 'รออนุมัติ',
+  'Fee Notification': 'แจ้งค่าธรรมเนียม',
+  'Awaiting Payment': 'รอชำระค่าธรรมเนียม',
+  'Approved': 'อนุมัติคำร้อง',
+  'Partially Approved': 'อนุมัติบางส่วน',
+  'Denied': 'ปฏิเสธคำร้อง',
+  'No Data Found': 'ไม่พบข้อมูลที่ร้องขอ',
+  'Ready for Delivery': 'เตรียมจัดส่งข้อมูล',
+  'Delivered': 'จัดส่งข้อมูลแล้ว',
+  'Receipt Confirmed': 'ผู้ยื่นยืนยันการรับข้อมูล',
+  'Withdrawn': 'ยกเลิกคำร้อง',
+  'Disposed for Incomplete Information': 'จำหน่ายเรื่อง',
+  'Closed': 'ปิดคำร้อง (เสร็จสิ้น)',
+  'Legal Hold': 'ระงับการดำเนินการทางกฎหมาย',
+  'Archived': 'จัดเก็บถาวร',
+  'Destroyed': 'ทำลายข้อมูล'
+};
+
 export type RequesterType = 'self' | 'representative';
 export type DeliveryMethod = 'pickup' | 'registered_mail' | 'secure_download' | 'sftp';
 export type AssuranceLevel = 'low' | 'medium' | 'high';
