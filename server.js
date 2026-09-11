@@ -71,6 +71,7 @@ import { initDatabase } from './services/database.init.js';
 initDatabase(dbPool);
 
 const app = express();
+app.set('trust proxy', 1); // [FIX] Trust Nginx proxy for real IP in rate limiters
 const PORT = process.env.PORT || 3001;
 
 if (!process.env.JWT_SECRET) {
@@ -107,6 +108,7 @@ app.use(helmet({
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 10,                   // max 10 attempts per IP per window
+  skipSuccessfulRequests: true, // [FIX] Only count failed attempts (401, 400, etc)
   standardHeaders: true,
   legacyHeaders: false,
   message: { success: false, message: 'พยายาม login มากเกินไป กรุณารอ 15 นาทีแล้วลองใหม่' },
