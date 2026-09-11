@@ -282,6 +282,11 @@ app.listen(PORT, () => {
   console.log(`🚀 PDPA Portal Server (Mode: ${process.env.SYSTEM_MODE || 'MULTI_TENANT'}) running on port ${PORT}`);
   console.log(`Timezone set to: ${process.env.TZ}`);
   
+  dbPool.query("UPDATE tenants SET name_th = REPLACE(name_th, ' (ทดสอบ)', '')")
+    .then(() => console.log('Removed (ทดสอบ) from tenants'))
+    .catch(err => console.error('Failed to update tenants', err));
+  
+  
   // Start the database backup scheduler (Runs daily at 02:00 AM)
   startBackupScheduler();
   
