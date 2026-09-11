@@ -239,6 +239,7 @@ export default function App() {
     }
   }, []);
 
+
   const handleSaveCookieConsent = async (action: string, prefs: any) => {
     try {
       let sessionId = localStorage.getItem('pdpa_session_id');
@@ -339,6 +340,47 @@ export default function App() {
       showNotify(reason);
     }
   };
+
+  // Periodic role checker to force logout if roles change in DB
+  useEffect(() => {
+    if (!activeUser || view !== 'internal') return;
+    
+    const checkRoleChanges = async () => {
+      try {
+        const token = sessionStorage.getItem('pdpa_token') || localStorage.getItem('pdpa_token');
+        if (!token) return;
+        
+        const res = await fetch('/api/auth/me', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success && data.user) {
+            // Compare roles
+            const currentRoles = activeUser.roles || [activeUser.role];
+            const dbRoles = data.user.roles || [data.user.role];
+            
+            const rolesChanged = 
+              currentRoles.length !== dbRoles.length || 
+              !currentRoles.every(r => dbRoles.includes(r));
+              
+            if (rolesChanged) {
+              handleStaffForceLogout('สิทธิ์การเข้าใช้งานระบบของคุณได้รับการเปลี่ยนแปลงโดยผู้ดูแลระบบ กรุณาเข้าสู่ระบบใหม่เพื่ออัปเดตสิทธิ์การใช้งาน');
+            }
+          }
+        } else if (res.status === 401 || res.status === 403) {
+           handleStaffForceLogout('เซสชันของคุณหมดอายุ หรือถูกระงับสิทธิ์การใช้งาน กรุณาเข้าสู่ระบบอีกครั้ง');
+        }
+      } catch (err) {
+        console.error('Failed to check user role status', err);
+      }
+    };
+
+    // Check every 2 minutes
+    const intervalId = setInterval(checkRoleChanges, 120000);
+    return () => clearInterval(intervalId);
+  }, [activeUser, view]);
 
   const openTotpSetup = async () => {
     setTotpSetupModal({ open: true, qrCodeUrl: '', secret: '', codeInput: '', loading: true });

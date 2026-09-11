@@ -555,9 +555,13 @@ export function createAuthRouter(dbPool, authenticateJWT, addServerAuditLog, sen
   // ─────────────────────────────────────────────
   router.get('/me', authenticateJWT, async (req, res) => {
     try {
-      const { rows } = await dbPool.query('SELECT id, username, full_name_th, full_name_en, email, role, department, org_id, signature_image FROM users WHERE id = $1', [req.user.id]);
+      const { rows } = await dbPool.query('SELECT id, username, full_name_th, full_name_en, email, role, roles, department, org_id, signature_image FROM users WHERE id = $1', [req.user.id]);
       if (rows.length === 0) return res.status(404).json({ success: false, message: 'ไม่พบผู้ใช้' });
       const user = rows[0];
+      
+      const userRoles = Array.isArray(user.roles) && user.roles.length > 0 ? user.roles : [user.role];
+      const isSuperAdmin = user.role === 'superadmin' || userRoles.includes('superadmin');
+      
       // Map properties to match what frontend expects from token
       res.json({ 
         success: true, 
@@ -567,9 +571,9 @@ export function createAuthRouter(dbPool, authenticateJWT, addServerAuditLog, sen
           fullNameTh: user.full_name_th,
           fullNameEn: user.full_name_en,
           email: user.email,
-          role: user.role === 'superadmin' ? 'admin' : user.role,
-          roles: user.role === 'superadmin' ? ['admin'] : [user.role],
-          isSuperAdmin: user.role === 'superadmin',
+          role: isSuperAdmin ? 'admin' : user.role,
+          roles: isSuperAdmin ? ['admin'] : userRoles,
+          isSuperAdmin: isSuperAdmin,
           department: user.department,
           orgId: user.org_id,
           signature_image: user.signature_image
