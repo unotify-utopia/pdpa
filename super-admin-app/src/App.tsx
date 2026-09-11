@@ -645,7 +645,7 @@ export default function App() {
       const data = await res.json();
       if (res.ok && data.success) {
         showNotify('ปลดล็อคบัญชีเรียบร้อยแล้ว', 'success', 'สำเร็จ');
-        fetchUsers();
+        fetchData(token);
       } else {
         showNotify(data.message || 'เกิดข้อผิดพลาดในการปลดล็อค', 'error', 'ผิดพลาด');
       }
