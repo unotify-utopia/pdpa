@@ -23,6 +23,7 @@ interface User {
   role: string;
   roles?: string[];
   department: string;
+  locked_until?: string;
 }
 
 export default function App() {
@@ -632,6 +633,27 @@ export default function App() {
       showNotify('เกิดข้อผิดพลาดในการเชื่อมต่อ', 'error', 'ผิดพลาด');
     }
   };
+
+  const handleUnlockUser = async (userId: string) => {
+    if (!window.confirm('คุณต้องการปลดล็อคบัญชีนี้ใช่หรือไม่?')) return;
+    const token = sessionStorage.getItem('pdpa_super_token');
+    try {
+      const res = await fetch(`/api/users/${userId}/unlock`, {
+        method: 'PUT',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        showNotify('ปลดล็อคบัญชีเรียบร้อยแล้ว', 'success', 'สำเร็จ');
+        fetchUsers();
+      } else {
+        showNotify(data.message || 'เกิดข้อผิดพลาดในการปลดล็อค', 'error', 'ผิดพลาด');
+      }
+    } catch (err) {
+      showNotify('เกิดข้อผิดพลาดจากระบบ', 'error', 'ผิดพลาด');
+    }
+  };
+
 
   const handleEditRole = (u: User) => {
     let currentRoles = u.roles || [];
@@ -1726,6 +1748,15 @@ export default function App() {
                         </div>
                       </td>
                       <td className="p-3 text-center flex items-center justify-center gap-2">
+                        {u.locked_until && new Date(u.locked_until) > new Date() && (
+                          <button
+                            onClick={() => handleUnlockUser(u.id)}
+                            className="bg-red-500/20 text-red-500 border border-red-500/30 hover:bg-red-500/30 text-[11px] font-semibold py-1.5 px-3 rounded-lg transition inline-flex items-center gap-1"
+                          >
+                            <Lock className="h-3.5 w-3.5" />
+                            <span>🔓 ปลดล็อค</span>
+                          </button>
+                        )}
                         <button
                           onClick={() => handleEditRole(u)}
                           className="bg-blue-500/20 text-blue-500 border border-blue-500/30 hover:bg-blue-500/30 text-[11px] font-semibold py-1.5 px-3 rounded-lg transition inline-flex items-center gap-1"

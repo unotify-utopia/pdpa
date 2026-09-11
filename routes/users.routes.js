@@ -14,7 +14,7 @@ export function createUsersRouter(dbPool, authenticateJWT, requireRole) {
   // ─────────────────────────────────────────────
   router.get('/', authenticateJWT, async (req, res) => {
     try {
-      let query = 'SELECT id, org_id, username, full_name_th as "fullName", full_name_th as "fullNameTh", full_name_en as "fullNameEn", email, role, roles, department FROM users WHERE role != $1';
+      let query = 'SELECT id, org_id, username, full_name_th as "fullName", full_name_th as "fullNameTh", full_name_en as "fullNameEn", email, role, roles, department, locked_until FROM users WHERE role != $1';
       let params = ['superadmin'];
       if (process.env.SYSTEM_MODE && process.env.SYSTEM_MODE.trim() === 'SINGLE_NODE') {
         query += ' AND org_id = $2';
@@ -108,6 +108,27 @@ export function createUsersRouter(dbPool, authenticateJWT, requireRole) {
       res.json({ success: true });
     } catch (err) {
       console.error('Error updating user:', err);
+      res.status(500).json({ success: false, error: 'Database error' });
+    }
+  });
+  // ─────────────────────────────────────────────
+  // PUT /api/users/:id/unlock
+  // Unlock user account (Admin only)
+  // ─────────────────────────────────────────────
+  router.put('/:id/unlock', authenticateJWT, requireRole(['admin', 'superadmin']), async (req, res) => {
+    const { id } = req.params;
+    try {
+      let query = 'UPDATE users SET failed_login_attempts = 0, locked_until = NULL WHERE id = $1';
+      let params = [id];
+      if (req.user.role !== 'superadmin') {
+        query += ' AND org_id = $2';
+        params.push(req.user.orgId);
+      }
+      const result = await dbPool.query(query, params);
+      if (result.rowCount === 0) return res.status(404).json({ success: false, message: 'ไม่พบผู้ใช้ หรือไม่มีสิทธิ์' });
+      res.json({ success: true, message: 'ปลดล็อคบัญชีเรียบร้อยแล้ว' });
+    } catch (err) {
+      console.error('Error unlocking user:', err);
       res.status(500).json({ success: false, error: 'Database error' });
     }
   });

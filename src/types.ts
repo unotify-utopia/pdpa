@@ -26,6 +26,7 @@ export interface User {
   mfaEnabled: boolean;
   sodWarnings?: string[]; // SOD compliance flags
   signature_image?: string | null; // Base64 image
+  locked_until?: string;
 }
 
 export type RequestStatus =

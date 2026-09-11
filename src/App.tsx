@@ -517,6 +517,27 @@ export default function App() {
     }
   };
 
+  const handleUnlockUser = async (userId: string) => {
+    if (!window.confirm('คุณต้องการปลดล็อคบัญชีนี้ใช่หรือไม่?')) return;
+    const token = sessionStorage.getItem('pdpa_token') || sessionStorage.getItem('pdpa_jwt_token');
+    try {
+      const res = await fetch(`/api/users/${userId}/unlock`, {
+        method: 'PUT',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (data.success) {
+        showNotify('ปลดล็อคบัญชีเรียบร้อยแล้ว', 'success', 'สำเร็จ');
+        reloadUsers();
+      } else {
+        showNotify(data.message || 'เกิดข้อผิดพลาดในการปลดล็อค', 'error', 'ล้มเหลว');
+      }
+    } catch (err) {
+      console.error(err);
+      showNotify('เกิดข้อผิดพลาดจากระบบ', 'error', 'ล้มเหลว');
+    }
+  };
+
   // Reload local state from DB
   const getRequestClone = (id: string): Request | undefined => {
     const r = requests.find(r => r.id === id);
@@ -6272,7 +6293,17 @@ export default function App() {
                                     </span>
                                   )}
                                 </td>
-                                <td className="p-3 text-center">
+                                <td className="p-3 flex justify-center gap-2">
+                                  {user.locked_until && new Date(user.locked_until) > new Date() && (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleUnlockUser(user.id)}
+                                      className="bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 border border-red-200 hover:border-red-300 px-2.5 py-1 rounded text-[11px] font-bold transition flex items-center gap-1"
+                                    >
+                                      <Lock className="h-3 w-3" />
+                                      ปลดล็อค
+                                    </button>
+                                  )}
                                   <button
                                     type="button"
                                     onClick={() => {
