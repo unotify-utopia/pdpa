@@ -1732,7 +1732,15 @@ export default function App() {
         status: 'Data Owner Review',
         changedAt: new Date().toISOString(),
         changedBy: activeUser.fullNameTh,
-        comment: 'งานค้นหาระบบภายในเสร็จสิ้นครบถ้วน ส่งต่อตรวจเอกสารเผยแพร่'
+        comment: 'งานค้นหาระบบภายในเสร็จสิ้นครบถ้วน เข้าสู่ขั้นตอนตรวจสอบโดย Data Owner (Data Owner Review)'
+      });
+    } else if (allDone && req.status === 'Data Owner Review') {
+      req.status = 'DPO or Legal Review';
+      req.statusHistory.push({
+        status: 'DPO or Legal Review',
+        changedAt: new Date().toISOString(),
+        changedBy: activeUser.fullNameTh,
+        comment: 'Data Owner ยืนยันข้อมูลครบถ้วน ส่งต่อให้ DPO หรือฝ่ายกฎหมายพิจารณา (DPO or Legal Review)'
       });
     }
 
@@ -5393,7 +5401,7 @@ export default function App() {
                               )}
 
                               {/* System Owner action buttons - Moved to bottom */}
-                              {['Submitted', 'Assigned', 'Documents Verified', 'Data Collection'].includes(activeRequestObj.status) && activeRequestObj.dataCollectionTasks.length > 0 && activeRequestObj.dataCollectionTasks.every((t: any) => t.status !== 'pending') && ['owner', 'admin'].includes(activeUser.role) && (
+                              {['Submitted', 'Assigned', 'Documents Verified', 'Data Collection', 'Data Owner Review'].includes(activeRequestObj.status) && activeRequestObj.dataCollectionTasks.length > 0 && activeRequestObj.dataCollectionTasks.every((t: any) => t.status !== 'pending') && ['owner', 'admin'].includes(activeUser.role) && (
                                 <div className="flex flex-col gap-2 mt-6">
                                   {!activeRequestObj.dataCollectionTasks.some((t: any) => t.status === 'not_found') ? (
                                     <button
@@ -5401,7 +5409,7 @@ export default function App() {
                                       onClick={() => handleOwnerCompleteFlow(activeRequestObj.id)}
                                       className="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold py-2.5 px-4 rounded-lg shadow-sm transition"
                                     >
-                                      ส่งเรื่องไปยัง Flow ต่อไป
+                                      {activeRequestObj.status === 'Data Owner Review' ? 'ยืนยันผลการสืบค้นและส่งต่อให้ DPO / ฝ่ายกฎหมาย' : 'รวบรวมข้อมูลเสร็จสิ้น ส่งต่อให้ Data Owner ตรวจสอบ'}
                                     </button>
                                   ) : (
                                     <button
