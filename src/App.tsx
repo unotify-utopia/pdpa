@@ -5186,7 +5186,7 @@ export default function App() {
                                   {backendUsers
                                     .filter(u => u.orgId === currentViewOrgId)
                                     .map(u => (
-                                      <option key={u.id} value={u.fullNameTh}>{u.fullNameTh} ({(u.roles && u.roles.length > 0 ? u.roles : [u.role]).join(', ')})</option>
+                                      <option key={u.id} value={u.fullNameTh}>{u.fullNameTh} ({(u.roles && u.roles.length > 0 ? u.roles : [u.role]).join(', ')}) {u.department ? `- ${u.department}` : ''}</option>
                                     ))}
                                 </select>
                               </div>
