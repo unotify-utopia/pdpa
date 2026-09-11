@@ -366,11 +366,17 @@ export default function App() {
               !currentRoles.every(r => dbRoles.includes(r));
               
             if (rolesChanged) {
-              handleStaffForceLogout('สิทธิ์การเข้าใช้งานระบบของคุณได้รับการเปลี่ยนแปลงโดยผู้ดูแลระบบ กรุณาเข้าสู่ระบบใหม่เพื่ออัปเดตสิทธิ์การใช้งาน');
+              if (!sessionStorage.getItem('role_change_notified')) {
+                showNotify('สิทธิ์การเข้าใช้งานระบบของคุณได้รับการเปลี่ยนแปลงโดยผู้ดูแลระบบ กรุณาเข้าสู่ระบบใหม่เมื่อคุณสะดวก เพื่ออัปเดตสิทธิ์ให้เป็นปัจจุบัน', 'warning', 'การเปลี่ยนแปลงสิทธิ์การใช้งาน');
+                sessionStorage.setItem('role_change_notified', 'true');
+              }
+            } else {
+              sessionStorage.removeItem('role_change_notified');
             }
           }
         } else if (res.status === 401 || res.status === 403) {
-           handleStaffForceLogout('เซสชันของคุณหมดอายุ หรือถูกระงับสิทธิ์การใช้งาน กรุณาเข้าสู่ระบบอีกครั้ง');
+           // Token is invalid/expired or account suspended -> still force logout for security
+           handleStaffForceLogout('เซสชันของคุณหมดอายุ หรือบัญชีถูกระงับสิทธิ์ กรุณาเข้าสู่ระบบอีกครั้ง');
         }
       } catch (err) {
         console.error('Failed to check user role status', err);
