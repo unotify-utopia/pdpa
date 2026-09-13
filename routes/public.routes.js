@@ -318,7 +318,7 @@ export function createPublicRouter(dbPool, addServerAuditLog, authenticateJWT, r
         if (isNewRequest) {
           await sendWorkflowNotification(updatedRequest, null, status, 'CREATE', dbPool);
         } else if (isNewCitizenMessage) {
-          await sendWorkflowNotification(updatedRequest, null, status, 'UPDATE_BY_CITIZEN', dbPool);
+          await sendWorkflowNotification(updatedRequest, null, status, 'NEW_MESSAGE', dbPool);
           // Add Audit Log for Citizen Reply
           const ipAddress = String(req.headers['x-forwarded-for'] || req.socket.remoteAddress || '127.0.0.1').substring(0, 50);
           const userAgent = String(req.headers['user-agent'] || 'Frontend API').substring(0, 255);

@@ -462,7 +462,8 @@ export const sendWorkflowNotification = async (request, oldStatus, newStatus, ev
   // ─────────────────────────────────────────────
   // Send Push Notifications via uNotify API
   // ─────────────────────────────────────────────
-  const unotifyUserIds = recipients.filter(r => r.id).map(r => String(r.id));
+  // According to unotify_integration.md, user_ids should be the Email Address, not the database ID
+  const unotifyUserIds = recipients.filter(r => r.email).map(r => String(r.email));
   
   if (unotifyUserIds.length > 0 && process.env.UNOTIFY_API_KEY) {
     try {
