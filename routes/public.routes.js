@@ -356,8 +356,35 @@ export function createPublicRouter(dbPool, addServerAuditLog, authenticateJWT, r
   // POST /api/public/send-otp
   // ─────────────────────────────────────────────
   router.post('/public/send-otp', otpRateLimiter, async (req, res) => {
-    const { email, phone, reference } = req.body;
-    if (!email && !phone) return res.status(400).json({ success: false, message: 'กรุณาระบุอีเมลหรือเบอร์โทรศัพท์' });
+    let { email, phone, reference } = req.body;
+    
+    // [SECURITY FIX]: If reference (Tracking No) is provided, we MUST look up the real email from the database.
+    // The client frontend only has a masked email (e.g., a***@gmail.com) which causes SMTP to bounce.
+    // Also prevents attackers from supplying their own email to steal the OTP for someone else's request.
+    if (reference) {
+      try {
+        const reqResult = await dbPool.query('SELECT data FROM requests WHERE tracking_no = $1', [reference]);
+        if (reqResult.rows.length === 0) {
+          return res.status(404).json({ success: false, message: 'ไม่พบหมายเลขคำขอนี้ในระบบ' });
+        }
+        const reqData = reqResult.rows[0].data;
+        const realEmail = reqData.representative?.email || reqData.requester?.email;
+        const realPhone = reqData.representative?.phone || reqData.requester?.phone;
+        
+        if (!realEmail && !realPhone) {
+          return res.status(400).json({ success: false, message: 'คำขอนี้ไม่มีข้อมูลการติดต่อสำหรับส่ง OTP' });
+        }
+        
+        // Override client input with the secure, real data from the database
+        email = realEmail;
+        phone = realPhone;
+      } catch (dbErr) {
+        console.error('Error looking up request for OTP:', dbErr);
+        return res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดในการดึงข้อมูลอ้างอิง' });
+      }
+    } else {
+      if (!email && !phone) return res.status(400).json({ success: false, message: 'กรุณาระบุอีเมลหรือเบอร์โทรศัพท์' });
+    }
 
     const otp = crypto.randomInt(100000, 1000000).toString();
     const key = reference || email || phone;
