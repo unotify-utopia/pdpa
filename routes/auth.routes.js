@@ -586,6 +586,44 @@ export function createAuthRouter(dbPool, authenticateJWT, addServerAuditLog, sen
   });
 
   // ─────────────────────────────────────────────
+  // GET /api/auth/unotify-qr
+  // Generate personalized QR code for uNotify linking
+  // ─────────────────────────────────────────────
+  router.get('/unotify-qr', authenticateJWT, async (req, res) => {
+    try {
+      const apiKey = process.env.UNOTIFY_API_KEY;
+      if (!apiKey) {
+        return res.status(500).json({ success: false, message: 'UNOTIFY_API_KEY not configured on server' });
+      }
+
+      // Generate the personalized JSON string for uNotify
+      // external_user_id uses req.user.id
+      const qrData = {
+        external_user_id: String(req.user.id),
+        external_user_name: req.user.username || 'PDPA_User',
+        unotify_api_key: apiKey
+      };
+
+      const qrString = JSON.stringify(qrData);
+
+      // Render it as a Base64 image
+      const qrImageBase64 = await QRCode.toDataURL(qrString, {
+        width: 300,
+        margin: 2,
+        color: {
+          dark: '#000000',
+          light: '#ffffff'
+        }
+      });
+
+      res.json({ success: true, qrImage: qrImageBase64 });
+    } catch (err) {
+      console.error('[uNotify QR Gen Error]', err);
+      res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดในการสร้าง QR Code' });
+    }
+  });
+
+  // ─────────────────────────────────────────────
   // PUT /api/auth/signature
   // Update user signature image
   // ─────────────────────────────────────────────

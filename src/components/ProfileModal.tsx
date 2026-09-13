@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Upload, Save, User, CheckCircle, Trash2, ShieldAlert } from 'lucide-react';
+import { X, Upload, Save, User, CheckCircle, Trash2, ShieldAlert, Bell, Smartphone } from 'lucide-react';
 
 interface ProfileModalProps {
   isOpen: boolean;
@@ -13,12 +13,33 @@ interface ProfileModalProps {
 export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, currentUser, onProfileUpdate, showNotify, onOpenTotpSetup }) => {
   const [signatureImage, setSignatureImage] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [unotifyQr, setUnotifyQr] = useState<string | null>(null);
+  const [isFetchingQr, setIsFetchingQr] = useState(false);
 
   useEffect(() => {
     if (isOpen && currentUser) {
       setSignatureImage(currentUser.signature_image || null);
+      fetchUNotifyQr();
     }
   }, [isOpen, currentUser]);
+
+  const fetchUNotifyQr = async () => {
+    setIsFetchingQr(true);
+    try {
+      const token = sessionStorage.getItem('pdpa_token') || sessionStorage.getItem('pdpa_jwt_token');
+      const res = await fetch('/api/auth/unotify-qr', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (data.success) {
+        setUnotifyQr(data.qrImage);
+      }
+    } catch (err) {
+      console.error('Error fetching uNotify QR:', err);
+    } finally {
+      setIsFetchingQr(false);
+    }
+  };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -114,6 +135,39 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, cur
             >
               ตั้งค่าแอป Authenticator
             </button>
+          </div>
+
+          <div className="bg-sky-50/50 p-4 rounded-lg border border-sky-100">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <div className="font-bold text-slate-800 text-sm flex items-center gap-1.5">
+                  <Bell className="h-4 w-4 text-sky-600" />
+                  เชื่อมต่อการแจ้งเตือน uNotify
+                </div>
+                <div className="text-xs text-slate-500 mt-1">สแกนเพื่อรับการแจ้งเตือนเมื่อมีคำร้องผ่านแอป uNotify</div>
+              </div>
+              <Smartphone className="h-5 w-5 text-sky-400 opacity-50" />
+            </div>
+            
+            <div className="bg-white rounded-lg border border-sky-100 p-4 flex flex-col items-center justify-center">
+              {isFetchingQr ? (
+                <div className="py-6 flex flex-col items-center justify-center gap-2">
+                  <span className="animate-spin rounded-full h-6 w-6 border-b-2 border-sky-600 block"></span>
+                  <span className="text-xs text-slate-400">กำลังโหลด QR Code...</span>
+                </div>
+              ) : unotifyQr ? (
+                <div className="flex flex-col items-center">
+                  <div className="p-1 bg-white border border-slate-200 rounded-lg shadow-sm mb-2">
+                    <img src={unotifyQr} alt="uNotify QR Code" className="w-32 h-32 object-contain" />
+                  </div>
+                  <span className="text-[10px] text-slate-500 font-medium">แสกนด้วยแอป uNotify ในมือถือ</span>
+                </div>
+              ) : (
+                <div className="py-4 text-xs text-rose-500 text-center">
+                  ไม่สามารถสร้าง QR Code ได้ในขณะนี้<br/>(โปรดตรวจสอบ API Key)
+                </div>
+              )}
+            </div>
           </div>
 
           <div>

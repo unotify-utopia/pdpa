@@ -1,0 +1,75 @@
+# uNotify Integration Technical Specification
+**Project:** Utopia e-Service
+**Document Purpose:** Integration summary and PDPA context for external AI/agents
+
+## 1. Overview
+ในระบบ Utopia e-Service ได้มีการตัดสินใจเปลี่ยนจากการใช้ LINE OA มาใช้บริการของ **uNotify** (`api.notify.in.th`) ในการส่งการแจ้งเตือน (Push Notification) ไปยังประชาชนเมื่อคำร้องมีการเปลี่ยนสถานะในระบบ Workflow (เช่น "รอตรวจสอบ" ไปเป็น "อนุมัติแล้ว")
+
+## 2. Architecture & Trigger Points
+การทำงานของ uNotify ถูกเชื่อมเข้ากับ Core Workflow Engine ของระบบ โดยมีลำดับเหตุการณ์ดังนี้:
+
+1. **Trigger Point:** เจ้าหน้าที่ทำการอัปเดตสถานะคำร้อง (State Transition) ผ่านระบบ Admin
+2. **Condition Check:** ระบบจะตรวจสอบตาราง `workflow_transitions` หากพบว่าเส้นทางนั้นมีการตั้งค่า `auto_action = 'NOTIFY_CITIZEN'` ระบบจะเริ่มกระบวนการแจ้งเตือน
+3. **Data Preparation:** 
+   - ดึง Email ของผู้ยื่นคำร้อง (`requester_email`) จากตาราง `requests`
+   - นำ Template ข้อความมาแทนที่ตัวแปร (Dynamic variables) เช่น `{{tracking_code}}`, `{{requester_name}}`, `{{state_name}}`, `{{comment}}`
+4. **Execution (Parallel):**
+   - **uNotify API:** ยิง HTTP POST ไปยัง uNotify API โดยใช้อีเมลเป็นตัวระบุผู้รับ (User ID)
+   - **Email Fallback:** ยิง Email ตามปกติควบคู่ไปด้วย เพื่อให้มั่นใจว่าข้อมูลจะไปถึงประชาชนอย่างแน่นอน
+
+## 3. API Integration Details
+*   **Service File:** `packages/server/src/modules/notifications/unotify.service.ts`
+*   **Endpoint:** `POST https://api.notify.in.th/api/v1/messages`
+*   **Authentication:** ใช้ Header `Api-Key: <UNOTIFY_API_KEY>` (ดึงค่าจาก `.env`)
+*   **Payload Format:**
+    ```json
+    {
+      "message": {
+        "title": "Utopia e-Service",
+        "from_name": "ระบบรับเรื่อง Utopia",
+        "subtitle": "อัปเดตสถานะคำร้อง REQ-2569-00001",
+        "detail": "เรียน คุณ สมชาย\\nคำร้องของท่านได้รับการปรับสถานะเป็น: อนุมัติแล้ว"
+      },
+      "user_ids": ["citizen@example.com"]
+    }
+    ```
+*   **Identification Strategy:** จุดเด่นของสถาปัตยกรรมนี้คือ **ไม่ได้ใช้ External UID ของ Platform โซเชียล** แต่ใช้ `user_ids` ของ uNotify เป็น **Email Address** ซึ่งทำให้ระบบสามารถจับคู่ข้อมูลที่มีอยู่แล้วตอนยื่นฟอร์มได้เลย
+
+## 4. PDPA & Privacy Considerations (จุดที่ต้องพิจารณาด้าน PDPA)
+เพื่อให้ AI ฝั่ง PDPA Project สามารถนำไปวิเคราะห์ต่อได้ นี่คือข้อมูลที่มีการส่งและประมวลผล:
+
+1. **Data in Transit (ข้อมูลที่ถูกส่งออกไปยัง 3rd Party - uNotify):**
+   - **Email Address:** ส่งไปในฐานะ `user_ids` เพื่อให้ uNotify ใช้ระบุปลายทาง
+   - **ชื่อ-นามสกุล:** ส่งไปในส่วนของเนื้อหาข้อความ `detail` (`{{requester_name}}`)
+   - **Tracking Code:** หมายเลขติดตามคำร้อง
+   - **ข้อความจากเจ้าหน้าที่ (Comment):** ข้อความชี้แจงเพิ่มเติม
+2. **Data Minimization:** ระบบหลีกเลี่ยงการส่งข้อมูลความลับอื่นๆ (PII) เช่น หมายเลขบัตรประชาชน หรือเบอร์โทรศัพท์ ออกไปยังระบบ uNotify (เว้นแต่จะมีการเขียน Hardcode ไว้ใน Template ซึ่งไม่แนะนำ)
+3. **Data Security & Failure Handling:**
+   - การเชื่อมต่อเป็น HTTPS ทั้งหมด
+   - API Key ถูกเก็บใน `.env` นอก Source Code
+   - หากไม่มี API Key ระบบข้ามการทำงานทันที (Safe fallback) โดยไม่บันทึกข้อมูลส่วนบุคคลลง Log ของเซิร์ฟเวอร์แบบพร่ำเพรื่อ
+
+## 5. Code Implementation Snippet
+ตัวอย่างส่วนของ Controller ที่รับผิดชอบการเรียกใช้ Notification:
+
+```typescript
+// packages/server/src/modules/requests/requests.controller.ts
+if (transition.auto_action === 'NOTIFY_CITIZEN') {
+    // 1. Try sending uNotify Notification
+    try {
+      const { NotificationService } = await import('../notifications/notification.service.js');
+      await NotificationService.notifyCitizen({
+        requestId: String(id),
+        trackingCode: request.tracking_code,
+        requesterName: request.requester_name || 'ผู้ใช้บริการ',
+        stateName: stateName,
+        comment: comment,
+        template: transition.auto_action_email_template || undefined,
+      });
+    } catch (uNotifyErr) {
+      console.error('Failed to send uNotify message:', uNotifyErr);
+    }
+    
+    // 2. Try sending traditional Email...
+}
+```
