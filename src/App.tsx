@@ -762,7 +762,7 @@ export default function App() {
     }
   };
 
-  const verifyRealOtp = async (email: string, phone: string, otpCodeStr: string, trackingNo?: string): Promise<boolean> => {
+  const verifyRealOtp = async (email: string, phone: string, otpCodeStr: string, trackingNo?: string): Promise<any> => {
     try {
       const res = await fetch('/api/public/verify-otp', {
         method: 'POST',
@@ -780,7 +780,8 @@ export default function App() {
         sessionStorage.setItem('pdpa_citizen_token', data.token);
       }
       
-      return true;
+      // Return the full request data if provided, otherwise true
+      return data.request || true;
     } catch (err) {
       showNotify('❌ ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์เพื่อยืนยัน OTP ได้');
       return false;
@@ -1323,6 +1324,9 @@ export default function App() {
     setOtpCode('');
     const isValid = await verifyRealOtp(trackedRequest.requester.email, trackedRequest.requester.phone, submittedOtp, trackedRequest.trackingNo);
     if (isValid) {
+      if (typeof isValid === 'object') {
+        setTrackedRequest(isValid);
+      }
       setShowOtpModal(false);
       setView('tracking');
     }

@@ -498,6 +498,7 @@ export function createPublicRouter(dbPool, addServerAuditLog, authenticateJWT, r
         
         // [SECURITY FIX] Issue a temporary JWT for the citizen to allow authenticated updates to their request
         let token = null;
+        let fullRequest = null;
         if (reference) {
           const jwtSecret = process.env.JWT_SECRET || 'pdpa-super-secret-key';
           token = jwt.sign(
@@ -505,9 +506,18 @@ export function createPublicRouter(dbPool, addServerAuditLog, authenticateJWT, r
             jwtSecret,
             { expiresIn: '1h' }
           );
+          
+          try {
+            const reqQuery = await dbPool.query('SELECT data FROM requests WHERE tracking_no = $1', [reference]);
+            if (reqQuery.rows.length > 0) {
+              fullRequest = typeof reqQuery.rows[0].data === 'string' ? JSON.parse(reqQuery.rows[0].data) : reqQuery.rows[0].data;
+            }
+          } catch (e) {
+            console.error('Error fetching full request data on OTP verify:', e);
+          }
         }
         
-        return res.json({ success: true, message: 'ยืนยันรหัส OTP สำเร็จ', token });
+        return res.json({ success: true, message: 'ยืนยันรหัส OTP สำเร็จ', token, request: fullRequest });
       } else {
         addServerAuditLog('OTP_VERIFICATION_FAILED', `Incorrect OTP attempt for key: ${key}`, null, req).catch(console.error);
         return res.status(400).json({ success: false, message: 'รหัส OTP ไม่ถูกต้อง' });
