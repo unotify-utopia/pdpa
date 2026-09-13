@@ -341,7 +341,14 @@ export const updateRequest = async (updatedReq: Request, actor: User, auditActio
   });
   
   if (!res.ok) {
-    throw new Error('การบันทึกข้อมูลไปยังฐานข้อมูลล้มเหลว กรุณาลองใหม่อีกครั้ง');
+    let errorMsg = 'การบันทึกข้อมูลไปยังฐานข้อมูลล้มเหลว กรุณาลองใหม่อีกครั้ง';
+    try {
+      const errorData = await res.json();
+      if (errorData.message) errorMsg = errorData.message;
+    } catch (e) {
+      // Ignore json parse error
+    }
+    throw new Error(errorMsg);
   }
 
   // Update local cache only if DB sync succeeds

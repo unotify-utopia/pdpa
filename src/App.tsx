@@ -2483,7 +2483,7 @@ export default function App() {
     }
   };
 
-  const handleSendMessage = (e: React.FormEvent, reqId: string, senderRole: 'staff' | 'user') => {
+  const handleSendMessage = async (e: React.FormEvent, reqId: string, senderRole: 'staff' | 'user') => {
     e.preventDefault();
     if (!chatMessage.trim()) return;
 
@@ -2500,19 +2500,24 @@ export default function App() {
 
     req.messageThread.push(newMsg);
     
-    if (senderRole === 'staff' && activeUser) {
-      updateRequest(req, activeUser, 'SEND_MESSAGE', `เจ้าหน้าที่ส่งข้อความสื่อสารเพิ่มเติมเลขคำขอ: ${req.trackingNo}`);
-    } else {
-      const mockSubjectUser: UserType = { id: 'user', orgId: 'org_dopa', username: 'data.subject', fullNameTh: 'ผู้ยื่นคำขอ', fullNameEn: 'Data Subject', email: '', role: 'intake', roles: ['intake'], mfaEnabled: false };
-      updateRequest(req, mockSubjectUser, 'SEND_MESSAGE', `ผู้ยื่นส่งข้อความติดต่อกลับเลขคำขอ: ${req.trackingNo}`);
-    }
+    try {
+      if (senderRole === 'staff' && activeUser) {
+        await updateRequest(req, activeUser, 'SEND_MESSAGE', `เจ้าหน้าที่ส่งข้อความสื่อสารเพิ่มเติมเลขคำขอ: ${req.trackingNo}`);
+      } else {
+        const mockSubjectUser: UserType = { id: 'user', orgId: 'org_dopa', username: 'data.subject', fullNameTh: 'ผู้ยื่นคำขอ', fullNameEn: 'Data Subject', email: '', role: 'intake', roles: ['intake'], mfaEnabled: false };
+        await updateRequest(req, mockSubjectUser, 'SEND_MESSAGE', `ผู้ยื่นส่งข้อความติดต่อกลับเลขคำขอ: ${req.trackingNo}`);
+      }
 
-    setChatMessage('');
-    reloadData();
-    
-    // Update tracked view if public is using it
-    if (senderRole === 'user') {
-      setTrackedRequest(req);
+      setChatMessage('');
+      reloadData();
+      
+      // Update tracked view if public is using it
+      if (senderRole === 'user') {
+        setTrackedRequest(req);
+      }
+    } catch (err: any) {
+      console.error('Failed to send message:', err);
+      showNotify(err.message || 'เกิดข้อผิดพลาดในการส่งข้อความ โปรดลองอีกครั้ง', 'error');
     }
   };
 
