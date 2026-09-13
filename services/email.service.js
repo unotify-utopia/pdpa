@@ -458,8 +458,9 @@ export const sendWorkflowNotification = async (request, oldStatus, newStatus, ev
   // ─────────────────────────────────────────────
   // Send Push Notifications via uNotify API
   // ─────────────────────────────────────────────
-  // According to unotify_integration.md, user_ids should be the Email Address, not the database ID
-  const unotifyUserIds = recipients.filter(r => r.email).map(r => String(r.email));
+  // Staff are registered via QR code using their DB 'id' (auth.routes.js)
+  // Citizens are registered via QR code using their 'email' (CREATE event email)
+  const unotifyUserIds = recipients.map(r => String(r.id || r.email)).filter(Boolean);
   
   if (unotifyUserIds.length > 0 && process.env.UNOTIFY_API_KEY) {
     try {
