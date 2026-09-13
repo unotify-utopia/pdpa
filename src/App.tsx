@@ -1352,7 +1352,7 @@ export default function App() {
 
     const updated = {
       ...trackedRequest,
-      attachments: [...trackedRequest.attachments, newAtt]
+      attachments: [...(trackedRequest.attachments || []), newAtt]
     };
 
     try {
@@ -2509,6 +2509,10 @@ export default function App() {
       message: chatMessage,
       timestamp: new Date().toISOString()
     };
+
+    if (!req.messageThread) {
+      req.messageThread = [];
+    }
 
     req.messageThread.push(newMsg);
     
