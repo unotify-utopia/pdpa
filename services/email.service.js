@@ -464,15 +464,21 @@ export const sendWorkflowNotification = async (request, oldStatus, newStatus, ev
   
   if (unotifyUserIds.length > 0 && process.env.UNOTIFY_API_KEY) {
     try {
-      // Strip HTML tags from flowMessageTh to make it readable in mobile app
-      const plainMessage = flowMessageTh.replace(/<[^>]*>?/gm, '').replace(/&nbsp;/g, ' ').trim();
+      // Convert HTML formatting to readable text format before stripping tags
+      const plainMessage = flowMessageTh
+        .replace(/<br\s*[\/]?>/gi, '\n') // Preserve line breaks
+        .replace(/<\/(div|p|h[1-6])>/gi, '\n\n') // Preserve block spacing
+        .replace(/<[^>]*>?/gm, '') // Strip remaining tags
+        .replace(/&nbsp;/g, ' ')
+        .replace(/\n\s*\n\s*\n/g, '\n\n') // Collapse excessive newlines
+        .trim();
       
       const unotifyPayload = {
         message: {
           title: "PDPA Portal",
           from_name: "ระบบแจ้งเตือนอัตโนมัติ",
           subtitle: subject,
-          detail: `${plainMessage}\n\nสถานะของคำร้อง : ${nextActionTh}`
+          detail: `${plainMessage}\n\n👉 สิ่งที่ต้องทำ: ${nextActionTh}`
         },
         user_ids: unotifyUserIds
       };
