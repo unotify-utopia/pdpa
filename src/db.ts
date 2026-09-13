@@ -321,9 +321,12 @@ export const createRequest = (requestData: Omit<Request, 'id' | 'uuid' | 'tracki
 
 // Update Request Details & Status (Section 4)
 export const updateRequest = async (updatedReq: Request, actor: User, auditAction: string, auditDetail: string) => {
-  const token = sessionStorage.getItem('pdpa_jwt_token') || sessionStorage.getItem('pdpa_token');
-  const endpoint = token ? `/api/requests/${updatedReq.id}` : '/api/public/requests';
-  const method = token ? 'PUT' : 'POST';
+  const staffToken = sessionStorage.getItem('pdpa_jwt_token') || sessionStorage.getItem('pdpa_token');
+  const citizenToken = sessionStorage.getItem('pdpa_citizen_token');
+  const token = staffToken || citizenToken;
+  
+  const endpoint = staffToken ? `/api/requests/${updatedReq.id}` : '/api/public/requests';
+  const method = staffToken ? 'PUT' : 'POST';
   
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   if (token) {

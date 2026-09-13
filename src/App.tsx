@@ -774,6 +774,12 @@ export default function App() {
         showNotify(`❌ ${data.message}`);
         return false;
       }
+      
+      // [SECURITY FIX] Save the temporary Citizen JWT for authenticated updates
+      if (data.token) {
+        sessionStorage.setItem('pdpa_citizen_token', data.token);
+      }
+      
       return true;
     } catch (err) {
       showNotify('❌ ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์เพื่อยืนยัน OTP ได้');
@@ -1269,11 +1275,11 @@ export default function App() {
   const [searchKeyword, setSearchKeyword] = useState('');
   const [searchLookupResults, setSearchLookupResults] = useState<Request[] | null>(null);
 
-  // --- PUBLIC TRACKING LOGIC (Smart Keyword-Based Search) ---
   const handleTrackSubmit = async (e?: React.FormEvent, customKeyword?: string) => {
     if (e) e.preventDefault();
     setTrackingError(null);
     setSearchLookupResults(null);
+    sessionStorage.removeItem('pdpa_citizen_token');
 
     const query = (customKeyword || searchKeyword || trackNo).trim().toUpperCase();
     if (!query) {

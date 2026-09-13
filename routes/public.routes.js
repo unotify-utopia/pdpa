@@ -9,7 +9,7 @@ import { sendMailWithFallback, sendWorkflowNotification, workflowEmailLogs, mask
 import { updateRequestSLA } from '../services/sla.service.js';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
-
+import jwt from 'jsonwebtoken';
 import { execSync } from 'child_process';
 
 export function createPublicRouter(dbPool, addServerAuditLog, authenticateJWT, requireRole) {
@@ -197,6 +197,30 @@ export function createPublicRouter(dbPool, addServerAuditLog, authenticateJWT, r
       const reqId = isNewRequest ? serverGeneratedId : clientProvidedId;
 
       if (!isNewRequest && existingData) {
+        // [SECURITY FIX] C3: Require valid JWT (Citizen or Staff) to modify existing requests
+        const authHeader = req.headers.authorization;
+        let validCitizenToken = false;
+        
+        if (authHeader && authHeader.startsWith('Bearer ')) {
+          const token = authHeader.split(' ')[1];
+          try {
+            const jwtSecret = process.env.JWT_SECRET || 'pdpa-super-secret-key';
+            const decoded = jwt.verify(token, jwtSecret);
+            if (decoded.role === 'citizen' && decoded.trackingNo === existingData.trackingNo) {
+              validCitizenToken = true;
+            } else if (['superadmin', 'admin', 'dpo', 'owner', 'intake'].includes(decoded.role)) {
+              // Staff can also update
+              validCitizenToken = true;
+            }
+          } catch (e) {
+            console.error('Invalid token in public request update:', e.message);
+          }
+        }
+        
+        if (!validCitizenToken) {
+          return res.status(403).json({ success: false, message: 'เซสชันหมดอายุ กรุณายืนยันรหัส OTP อีกครั้งก่อนทำรายการ' });
+        }
+
         // [SECURITY] C3: For existing requests from public endpoint,
         // ONLY allow: (1) appending to messageThread, (2) adding attachments when status is 'Awaiting Additional Information'
         // All other fields are preserved from the existing DB record — client cannot modify status, decision, requester info, etc.
@@ -467,7 +491,19 @@ export function createPublicRouter(dbPool, addServerAuditLog, authenticateJWT, r
       const isValidOtp = await bcrypt.compare(otp, record.otp);
       if (isValidOtp) {
         await dbPool.query('DELETE FROM public_otps WHERE key = $1', [key]);
-        return res.json({ success: true, message: 'ยืนยันรหัส OTP สำเร็จ' });
+        
+        // [SECURITY FIX] Issue a temporary JWT for the citizen to allow authenticated updates to their request
+        let token = null;
+        if (reference) {
+          const jwtSecret = process.env.JWT_SECRET || 'pdpa-super-secret-key';
+          token = jwt.sign(
+            { role: 'citizen', trackingNo: reference },
+            jwtSecret,
+            { expiresIn: '1h' }
+          );
+        }
+        
+        return res.json({ success: true, message: 'ยืนยันรหัส OTP สำเร็จ', token });
       } else {
         addServerAuditLog('OTP_VERIFICATION_FAILED', `Incorrect OTP attempt for key: ${key}`, null, req).catch(console.error);
         return res.status(400).json({ success: false, message: 'รหัส OTP ไม่ถูกต้อง' });
