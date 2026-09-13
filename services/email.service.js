@@ -471,7 +471,7 @@ export const sendWorkflowNotification = async (request, oldStatus, newStatus, ev
           title: "PDPA Portal",
           from_name: "ระบบแจ้งเตือนอัตโนมัติ",
           subtitle: subject,
-          detail: `${plainMessage}\n\nสิ่งที่ต้องทำ: ${nextActionTh}`
+          detail: `${plainMessage}\n\nสถานะของคำร้อง : ${nextActionTh}`
         },
         user_ids: unotifyUserIds
       };
