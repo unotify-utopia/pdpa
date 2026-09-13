@@ -474,9 +474,10 @@ export function createPublicRouter(dbPool, addServerAuditLog, authenticateJWT, r
   // POST /api/public/verify-otp
   // ─────────────────────────────────────────────
   router.post('/public/verify-otp', otpRateLimiter, async (req, res) => {
-    const { reference, email, phone, otp } = req.body;
+    let { reference, email, phone, otp } = req.body;
     const key = reference || email || phone;
     if (!key || !otp) return res.status(400).json({ success: false, message: 'ข้อมูลไม่ครบถ้วน' });
+    otp = String(otp).trim();
 
     try {
       const result = await dbPool.query('SELECT * FROM public_otps WHERE key = $1', [key]);
