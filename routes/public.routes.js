@@ -183,12 +183,14 @@ export function createPublicRouter(dbPool, addServerAuditLog, authenticateJWT, r
       let isNewStaffMessage = false;
 
       // Only check for existing request if client provides an ID (for messageThread append flow)
+      let dbTrackingNo = null;
       if (clientProvidedId) {
         try {
-          const existRes = await dbPool.query('SELECT status, data FROM requests WHERE id = $1', [clientProvidedId]);
+          const existRes = await dbPool.query('SELECT status, data, tracking_no FROM requests WHERE id = $1', [clientProvidedId]);
           if (existRes.rows.length > 0) {
             isNewRequest = false;
             oldStatus = existRes.rows[0].status;
+            dbTrackingNo = existRes.rows[0].tracking_no;
             existingData = typeof existRes.rows[0].data === 'string' ? JSON.parse(existRes.rows[0].data) : (existRes.rows[0].data || {});
           }
         } catch (existErr) { console.warn('Check existing request warning:', existErr.message); }
@@ -206,7 +208,8 @@ export function createPublicRouter(dbPool, addServerAuditLog, authenticateJWT, r
           try {
             const jwtSecret = process.env.JWT_SECRET || 'pdpa-super-secret-key';
             const decoded = jwt.verify(token, jwtSecret);
-            if (decoded.role === 'citizen' && decoded.trackingNo === existingData.trackingNo) {
+            const targetTrackingNo = dbTrackingNo || existingData.trackingNo;
+            if (decoded.role === 'citizen' && decoded.trackingNo === targetTrackingNo) {
               validCitizenToken = true;
             } else if (['superadmin', 'admin', 'dpo', 'owner', 'intake'].includes(decoded.role)) {
               // Staff can also update
