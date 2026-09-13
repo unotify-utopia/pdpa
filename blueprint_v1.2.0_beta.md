@@ -1,5 +1,5 @@
 # Blueprint: PDPA Compliance Management System
-**Version:** V1.1.0-beta  
+**Version:** V1.2.0-beta  
 **Last Updated:** 28 August 2026
 
 เอกสารฉบับนี้รวบรวมโครงสร้างสถาปัตยกรรม (Architecture) และองค์ประกอบทั้งหมดของระบบ PDPA เพื่อใช้เป็นแหล่งอ้างอิง (Source of Truth) ในการพัฒนาและบำรุงรักษาระบบในอนาคต

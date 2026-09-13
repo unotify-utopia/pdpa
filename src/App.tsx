@@ -7033,7 +7033,7 @@ export default function App() {
           </p>
           {typeof __APP_VERSION__ !== 'undefined' && (
             <span className="md:absolute md:right-0 text-[10px] text-slate-400 hover:text-white transition-colors font-mono mt-2 md:mt-0">
-              v1.1.0-beta • rev: {__APP_VERSION__} ({__BUILD_DATE__})
+              v1.2.0-beta • rev: {__APP_VERSION__} ({__BUILD_DATE__})
             </span>
           )}
         </div>
