@@ -5,6 +5,7 @@
 
 import nodemailer from 'nodemailer';
 import crypto from 'crypto';
+import qrcode from 'qrcode';
 import dotenv from 'dotenv';
 dotenv.config();
 
@@ -512,11 +513,42 @@ export const sendWorkflowNotification = async (request, oldStatus, newStatus, ev
       errorMsg: null
     };
     try {
+      let personalizedHtml = htmlContent;
+      
+      // Inject uNotify QR Code exclusively for the citizen on the very first ticket creation email
+      if (rcpt.roleName === 'ผู้ยื่นคำขอ' && eventType === 'CREATE' && process.env.UNOTIFY_API_KEY) {
+        try {
+          const qrData = {
+            external_user_id: rcpt.email,
+            external_user_name: `[Citizen] ${rcpt.email.split('@')[0]}`,
+            unotify_api_key: process.env.UNOTIFY_API_KEY
+          };
+          const qrDataUrl = await qrcode.toDataURL(JSON.stringify(qrData), { margin: 1 });
+          
+          const qrSection = `
+            <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; padding: 20px; border-radius: 8px; margin: 24px 0; text-align: center;">
+              <h3 style="color: #0f172a; margin-top: 0; margin-bottom: 8px;">📱 รับแจ้งเตือนผ่านแอปมือถือ (uNotify)</h3>
+              <p style="color: #475569; font-size: 14px; margin-bottom: 16px;">สแกน QR Code ด้านล่างนี้ด้วยแอป uNotify เพื่อรับการแจ้งเตือนเมื่อคำร้องของคุณมีความคืบหน้า</p>
+              <img src="${qrDataUrl}" alt="uNotify QR Code" style="width: 150px; height: 150px; display: inline-block; border: 1px solid #cbd5e1; border-radius: 8px; padding: 8px; background: white;" />
+              <p style="color: #64748b; font-size: 12px; margin-top: 12px; margin-bottom: 0;">ดาวน์โหลดแอปพลิเคชันได้จาก App Store (iOS) หรือ Google Play (Android)</p>
+            </div>
+          `;
+          
+          // Inject the QR section right before the final 'Login' button
+          personalizedHtml = personalizedHtml.replace(
+            '<div style="text-align: center; margin-top: 28px;">', 
+            `${qrSection}\n        <div style="text-align: center; margin-top: 28px;">`
+          );
+        } catch (qrErr) {
+          console.error('[QR] Failed to generate Citizen QR Code', qrErr);
+        }
+      }
+
       await sendMailWithFallback({
         from: `"PDPA Access Portal" <${process.env.OTP_SENDER_EMAIL || process.env.SMTP_USER || 'pdpa.utopia@gmail.com'}>`,
         to: rcpt.email,
         subject,
-        html: htmlContent
+        html: personalizedHtml
       });
       console.log(`📧 [Workflow Email Sent] To: ${rcpt.email} (${rcpt.roleName}) | Subject: ${subject}`);
     } catch (mailErr) {
