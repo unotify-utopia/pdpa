@@ -597,10 +597,11 @@ export function createAuthRouter(dbPool, authenticateJWT, addServerAuditLog, sen
       }
 
       // Generate the personalized JSON string for uNotify
-      // external_user_id uses req.user.id
+      // Option 1: Single Key for Multi-Tenant -> Add Org context to username
+      const orgPrefix = req.user.org_id ? `[Org-${req.user.org_id}] ` : '';
       const qrData = {
         external_user_id: String(req.user.id),
-        external_user_name: req.user.username || 'PDPA_User',
+        external_user_name: `${orgPrefix}${req.user.username || 'PDPA_User'}`,
         unotify_api_key: apiKey
       };
 
