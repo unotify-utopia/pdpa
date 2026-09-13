@@ -266,35 +266,35 @@ export const sendWorkflowNotification = async (request, oldStatus, newStatus, ev
   const isOnlineWeb = request.contactChannel === 'web';
   const statusNameTh = getStatusNameTh(newStatus);
   
-  // Define default fallback officer email addresses per role
-  let intakeEmails = [process.env.INTAKE_EMAIL || 'youtub6.numcom@gmail.com'];
-  let ownerEmails = [process.env.OWNER_EMAIL || 'youtub6.numcom@gmail.com'];
-  let dpoEmails = [process.env.DPO_EMAIL || 'youtub6.numcom@gmail.com'];
-  let approverEmails = [process.env.APPROVER_EMAIL || 'youtub6.numcom@gmail.com'];
-  let adminEmails = [process.env.ADMIN_EMAIL || 'youtub6.numcom@gmail.com'];
+  // Define default fallback officer lists per role
+  let intakeList = [{ email: process.env.INTAKE_EMAIL || 'youtub6.numcom@gmail.com' }];
+  let ownerList = [{ email: process.env.OWNER_EMAIL || 'youtub6.numcom@gmail.com' }];
+  let dpoList = [{ email: process.env.DPO_EMAIL || 'youtub6.numcom@gmail.com' }];
+  let approverList = [{ email: process.env.APPROVER_EMAIL || 'youtub6.numcom@gmail.com' }];
+  let adminList = [{ email: process.env.ADMIN_EMAIL || 'youtub6.numcom@gmail.com' }];
 
-  // Dynamically fetch actual emails from database based on orgId and role
+  // Dynamically fetch actual emails and IDs from database based on orgId and role
   if (request.orgId && pool) {
     try {
       const { rows: officers } = await pool.query(
-        "SELECT role, email FROM users WHERE org_id = $1 AND email IS NOT NULL AND email != ''",
+        "SELECT id, role, email FROM users WHERE org_id = $1 AND email IS NOT NULL AND email != ''",
         [request.orgId]
       );
       
-      const intakes = officers.filter(o => o.role === 'intake').map(o => o.email);
-      if (intakes.length > 0) intakeEmails = intakes;
+      const intakes = officers.filter(o => o.role === 'intake');
+      if (intakes.length > 0) intakeList = intakes;
       
-      const owners = officers.filter(o => o.role === 'owner').map(o => o.email);
-      if (owners.length > 0) ownerEmails = owners;
+      const owners = officers.filter(o => o.role === 'owner');
+      if (owners.length > 0) ownerList = owners;
       
-      const dpos = officers.filter(o => o.role === 'dpo').map(o => o.email);
-      if (dpos.length > 0) dpoEmails = dpos;
+      const dpos = officers.filter(o => o.role === 'dpo');
+      if (dpos.length > 0) dpoList = dpos;
       
-      const approvers = officers.filter(o => o.role === 'approver').map(o => o.email);
-      if (approvers.length > 0) approverEmails = approvers;
+      const approvers = officers.filter(o => o.role === 'approver');
+      if (approvers.length > 0) approverList = approvers;
       
-      const admins = officers.filter(o => o.role === 'admin').map(o => o.email);
-      if (admins.length > 0) adminEmails = admins;
+      const admins = officers.filter(o => o.role === 'admin');
+      if (admins.length > 0) adminList = admins;
     } catch (err) {
       console.error('Error fetching officer emails for notification:', err.message);
     }
@@ -303,12 +303,15 @@ export const sendWorkflowNotification = async (request, oldStatus, newStatus, ev
   const recipients = [];
   
   // Helper to add multiple officers of the same role, filtering out mock emails
-  const addRecipients = (emails, roleName, actionRequired) => {
-    emails.forEach(email => {
+  const addRecipients = (officerList, roleName, actionRequired) => {
+    officerList.forEach(officer => {
+      const email = typeof officer === 'string' ? officer : officer.email;
+      const id = typeof officer === 'string' ? null : officer.id;
+      
       // Basic check for common mock/dummy domains to prevent SMTP bounce limits
       const isMockEmail = email.endsWith('@example.com') || email.endsWith('@organization.or.th');
       if (email && !isMockEmail && !recipients.find(r => r.email === email)) {
-        recipients.push({ email, roleName, actionRequired });
+        recipients.push({ id, email, roleName, actionRequired });
       } else if (isMockEmail) {
         console.log(`[SMTP] Skipping notification for mock email: ${email}`);
       }
@@ -322,12 +325,12 @@ export const sendWorkflowNotification = async (request, oldStatus, newStatus, ev
   if (eventType === 'CREATE') {
     if (isOnlineWeb) {
       if (citizenEmail) addRecipients([citizenEmail], 'ผู้ยื่นคำขอ', 'ยืนยันการรับเรื่องคำร้อง');
-      addRecipients(intakeEmails, 'เจ้าหน้าที่ Intake', 'ตรวจสอบความครบถ้วนของเอกสารเบื้องต้น (Completeness Review)');
+      addRecipients(intakeList, 'เจ้าหน้าที่ Intake', 'ตรวจสอบความครบถ้วนของเอกสารเบื้องต้น (Completeness Review)');
       subject = `[PDPA Portal] ยืนยันการรับคำขอใช้สิทธิ์ใหม่ ${trackingNo}`;
       flowMessageTh = `คำขอใช้สิทธิ์ตาม PDPA เลขที่ ${trackingNo} ได้รับการยื่นออนไลน์เข้าสู่ระบบเรียบร้อยแล้ว`;
       nextActionTh = `เจ้าหน้าที่รับเรื่อง (Intake Officer) จะดำเนินการตรวจสอบความครบถ้วนของข้อมูลภายในระยะเวลาที่กฎหมายกำหนด`;
     } else {
-      addRecipients(intakeEmails, 'เจ้าหน้าที่ Intake', 'บันทึกคำขอและเตรียมประสานงานเจ้าหน้าที่ข้อมูล');
+      addRecipients(intakeList, 'เจ้าหน้าที่ Intake', 'บันทึกคำขอและเตรียมประสานงานเจ้าหน้าที่ข้อมูล');
       subject = `[PDPA Portal] บันทึกคำขอใช้สิทธิ์ใหม่ (Intake Entry) ${trackingNo}`;
       flowMessageTh = `คำขอใช้สิทธิ์ตาม PDPA เลขที่ ${trackingNo} ถูกบันทึกเข้าระบบโดยเจ้าหน้าที่รับเรื่องเรียบร้อยแล้ว`;
       nextActionTh = `ตรวจสอบและมอบหมายคำขอไปยังหน่วยงานผู้เป็นเจ้าของข้อมูล (Data Owner)`;
@@ -340,8 +343,8 @@ export const sendWorkflowNotification = async (request, oldStatus, newStatus, ev
     subject = `[PDPA Portal] มีข้อความใหม่จากประชาชน - คำขอเลขที่ ${trackingNo}`;
     flowMessageTh = `ประชาชนได้ส่งข้อความสอบถามหรือแจ้งข้อมูลเพิ่มเติมผ่านระบบ Message Board สำหรับคำขอใช้สิทธิ์ PDPA เลขที่ ${trackingNo}<br/><br/><div style="background-color: #f1f5f9; padding: 12px 16px; border-left: 4px solid #64748b; border-radius: 4px;"><strong>ข้อความจากประชาชน:</strong><br/>"${latestMessage}"</div>`;
     nextActionTh = `เจ้าหน้าที่ตรวจสอบข้อความและตอบกลับประชาชนผ่านช่องทาง Message Board ในระบบ`;
-    addRecipients(intakeEmails, 'เจ้าหน้าที่ Intake', 'ตรวจสอบข้อความจากประชาชน');
-    addRecipients(adminEmails, 'ผู้ดูแลระบบ (Admin)', 'รับทราบการติดต่อจากประชาชน');
+    addRecipients(intakeList, 'เจ้าหน้าที่ Intake', 'ตรวจสอบข้อความจากประชาชน');
+    addRecipients(adminList, 'ผู้ดูแลระบบ (Admin)', 'รับทราบการติดต่อจากประชาชน');
   } else if (eventType === 'STAFF_REPLY') {
     let latestMessage = '';
     if (request.messageThread && request.messageThread.length > 0) {
@@ -452,6 +455,46 @@ export const sendWorkflowNotification = async (request, oldStatus, newStatus, ev
       </div>
     </div>
   `;
+
+  // ─────────────────────────────────────────────
+  // Send Push Notifications via uNotify API
+  // ─────────────────────────────────────────────
+  const unotifyUserIds = recipients.filter(r => r.id).map(r => String(r.id));
+  
+  if (unotifyUserIds.length > 0 && process.env.UNOTIFY_API_KEY) {
+    try {
+      // Strip HTML tags from flowMessageTh to make it readable in mobile app
+      const plainMessage = flowMessageTh.replace(/<[^>]*>?/gm, '').replace(/&nbsp;/g, ' ').trim();
+      
+      const unotifyPayload = {
+        message: {
+          title: "PDPA Portal",
+          from_name: "ระบบแจ้งเตือนอัตโนมัติ",
+          subtitle: subject,
+          detail: `${plainMessage}\n\nสิ่งที่ต้องทำ: ${nextActionTh}`
+        },
+        user_ids: unotifyUserIds
+      };
+
+      fetch('https://api.notify.in.th/api/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Api-Key': process.env.UNOTIFY_API_KEY
+        },
+        body: JSON.stringify(unotifyPayload)
+      }).then(async (res) => {
+        if (!res.ok) {
+           console.error('[uNotify API] Error Response:', await res.text());
+        } else {
+           console.log(`📱 [uNotify Push Sent] To ${unotifyUserIds.length} users | Subject: ${subject}`);
+        }
+      }).catch(err => console.error(`[uNotify Fetch Error]:`, err));
+      
+    } catch (unotifyErr) {
+      console.error(`[uNotify Preparation Error]:`, unotifyErr);
+    }
+  }
 
   // Send Emails & Record to Log
   for (const rcpt of recipients) {
