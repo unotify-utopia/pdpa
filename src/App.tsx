@@ -1355,19 +1355,28 @@ export default function App() {
       attachments: [...trackedRequest.attachments, newAtt]
     };
 
-    const mockUser: UserType = { id: 'user', orgId: 'org_dopa', username: 'data.subject', fullNameTh: 'ผู้ยื่นคำขอ', fullNameEn: 'Data Subject', email: '', role: 'intake', roles: ['intake'], mfaEnabled: false };
-    updateRequest(updated, mockUser, 'UPLOAD_EVIDENCE', `ผู้ยื่นอัปโหลดเอกสารเพิ่มเติมชื่อ: ${fileName}`);
-    setTrackedRequest(updated);
-    
-    // Automatically transition status and resume SLA when citizen uploads additional documents
-    if (trackedRequest.status === 'Awaiting Additional Information') {
-      await changeRequestStatus(getRequestClone(trackedRequest.id), 'Completeness Review', mockUser, `ผู้ยื่นอัปโหลดเอกสารแก้ไขเรียบร้อยแล้ว (${fileName}, config || undefined) - ปลดล็อกนับเวลา SLA ต่อไป`);
-      const updatedReq = getRequestClone(trackedRequest.id);
-      if (updatedReq) setTrackedRequest(updatedReq);
+    try {
+      const mockUser: UserType = { id: 'user', orgId: 'org_dopa', username: 'data.subject', fullNameTh: 'ผู้ยื่นคำขอ', fullNameEn: 'Data Subject', email: '', role: 'intake', roles: ['intake'], mfaEnabled: false };
+      await updateRequest(updated, mockUser, 'UPLOAD_EVIDENCE', `ผู้ยื่นอัปโหลดเอกสารเพิ่มเติมชื่อ: ${fileName}`);
+      setTrackedRequest(updated);
+      
+      // Automatically transition status and resume SLA when citizen uploads additional documents
+      if (trackedRequest.status === 'Awaiting Additional Information') {
+        let clonedReq = getRequestClone(trackedRequest.id);
+        if (!clonedReq && updated.id === trackedRequest.id) clonedReq = JSON.parse(JSON.stringify(updated));
+        if (clonedReq) {
+          await changeRequestStatus(clonedReq, 'Completeness Review', mockUser, `ผู้ยื่นอัปโหลดเอกสารแก้ไขเรียบร้อยแล้ว (${fileName}, config || undefined) - ปลดล็อกนับเวลา SLA ต่อไป`);
+          const finalReq = getRequestClone(trackedRequest.id) || clonedReq;
+          if (finalReq) setTrackedRequest(finalReq);
+        }
+      }
+      
+      reloadData();
+      showNotify('✅ อัปโหลดรูปภาพบัตรประชาชน / เอกสารเพิ่มเติมเรียบร้อยแล้ว!\n\nระบบทำการปลดล็อกนับเวลา SLA และส่งเรื่องกลับหาเจ้าหน้าที่คัดกรองเรียบร้อยแล้ว');
+    } catch (err: any) {
+      console.error('Failed to upload file:', err);
+      showNotify(err.message || 'เกิดข้อผิดพลาดในการอัปโหลดไฟล์ โปรดลองอีกครั้ง', 'error');
     }
-    
-    reloadData();
-    showNotify('✅ อัปโหลดรูปภาพบัตรประชาชน / เอกสารเพิ่มเติมเรียบร้อยแล้ว!\n\nระบบทำการปลดล็อกนับเวลา SLA และส่งเรื่องกลับหาเจ้าหน้าที่คัดกรองเรียบร้อยแล้ว');
   };
 
   // --- SECURE DOWNLOAD VERIFICATION (Section 3.9) ---
@@ -2487,7 +2496,10 @@ export default function App() {
     e.preventDefault();
     if (!chatMessage.trim()) return;
 
-    const req = getRequestClone(reqId);
+    let req = getRequestClone(reqId);
+    if (!req && trackedRequest && trackedRequest.id === reqId) {
+      req = JSON.parse(JSON.stringify(trackedRequest));
+    }
     if (!req) return;
 
     const newMsg: MessageThread = {
