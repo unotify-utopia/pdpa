@@ -209,6 +209,8 @@ export async function sendMailWithFallback(mailOptions, priority = 10) {
   // Automatically assign highest priority (1) to OTP emails
   if (mailOptions.subject && mailOptions.subject.includes('OTP')) {
     priority = 1;
+    // [DEBUG] Bypass queue for OTP to immediately surface SMTP errors to the frontend
+    return executeEmailSend(mailOptions);
   }
   return enqueueEmail(mailOptions, priority);
 }
