@@ -305,18 +305,14 @@ export const sendWorkflowNotification = async (request, oldStatus, newStatus, ev
 
   const recipients = [];
   
-  // Helper to add multiple officers of the same role, filtering out mock emails
+  // Helper to add multiple officers of the same role
   const addRecipients = (officerList, roleName, actionRequired) => {
     officerList.forEach(officer => {
       const email = typeof officer === 'string' ? officer : officer.email;
       const id = typeof officer === 'string' ? null : officer.id;
       
-      // Basic check for common mock/dummy domains to prevent SMTP bounce limits
-      const isMockEmail = email.endsWith('@example.com') || email.endsWith('@organization.or.th');
-      if (email && !isMockEmail && !recipients.find(r => r.email === email)) {
+      if (email && !recipients.find(r => r.email === email)) {
         recipients.push({ id, email, roleName, actionRequired });
-      } else if (isMockEmail) {
-        console.log(`[SMTP] Skipping notification for mock email: ${email}`);
       }
     });
   };
@@ -503,6 +499,14 @@ export const sendWorkflowNotification = async (request, oldStatus, newStatus, ev
   // Send Emails & Record to Log
   for (const rcpt of recipients) {
     if (!rcpt.email) continue;
+    
+    // Basic check for common mock/dummy domains to prevent SMTP bounce limits
+    const isMockEmail = rcpt.email.endsWith('@example.com') || rcpt.email.endsWith('@organization.or.th');
+    if (isMockEmail) {
+      console.log(`[SMTP] Skipping email notification for mock email: ${rcpt.email} (uNotify may still send)`);
+      continue;
+    }
+    
     const logItem = {
       id: `elog_${Date.now()}_${crypto.randomBytes(2).toString('hex')}`,
       timestamp: new Date().toISOString(),
